@@ -833,62 +833,8 @@
     </div>
 
     <!-- Setup Instructions Modal -->
-    <div class="modal active" id="setupModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>🚀 Setup Google Drive Integration</h2>
-            </div>
-            
-            <div class="setup-instructions">
-                <h3>📋 Setup Instructions</h3>
-                <p>To enable Google Drive integration, you need to set up Google API credentials. Follow these steps:</p>
-                
-                <ol>
-                    <li>
-                        <strong>Go to Google Cloud Console:</strong><br>
-                        Visit <a href="https://console.cloud.google.com" target="_blank">console.cloud.google.com</a>
-                    </li>
-                    <li>
-                        <strong>Create a New Project:</strong><br>
-                        Click "Select a Project" → "New Project" → Name it "BYD CRM" → Create
-                    </li>
-                    <li>
-                        <strong>Enable Google Drive API:</strong><br>
-                        Go to "APIs & Services" → "Enable APIs and Services" → Search for "Google Drive API" → Enable it
-                    </li>
-                    <li>
-                        <strong>Create OAuth Credentials:</strong><br>
-                        Go to "APIs & Services" → "Credentials" → "Create Credentials" → "OAuth client ID"<br>
-                        Application type: "Web application"<br>
-                        Authorized JavaScript origins: <code>http://localhost</code> or your domain<br>
-                        Authorized redirect URIs: Add the same URL
-                    </li>
-                    <li>
-                        <strong>Copy Your Client ID:</strong><br>
-                        Copy the "Client ID" (looks like: 123456789-abc.apps.googleusercontent.com)
-                    </li>
-                    <li>
-                        <strong>Paste Below and Save:</strong><br>
-                        Enter your Client ID in the field below
-                    </li>
-                </ol>
-            </div>
-
-            <div class="form-group">
-                <label>Google API Client ID:</label>
-                <input type="text" id="clientIdInput" placeholder="123456789-abc.apps.googleusercontent.com" 
-                       style="font-family: monospace;">
-            </div>
-
-            <div class="action-buttons">
-                <button class="btn btn-primary" onclick="saveClientId()">Save & Connect</button>
-                <button class="btn btn-secondary" onclick="skipSetup()">Skip for Now (Use Manual Mode)</button>
-            </div>
-
-            <p style="font-size: 12px; color: #666; margin-top: 15px;">
-                <strong>Note:</strong> In manual mode, the CRM will help you organize files but won't automatically upload to Drive. You'll need to manually save files to Google Drive folders.
-            </p>
-        </div>
+    <div class="modal" id="setupModal" style="display: none;">
+        <!-- Modal hidden since Client ID is pre-configured -->
     </div>
 
     <!-- Google API -->
@@ -896,7 +842,7 @@
     
     <script>
         // Configuration
-        let CLIENT_ID = localStorage.getItem('googleClientId') || '';
+        let CLIENT_ID = '876961148543-8sdj3cti6q9tc523natb3g6jt789qlbr.apps.googleusercontent.com';
         const API_KEY = ''; // Not needed for OAuth 2.0
         const DISCOVERY_DOCS = ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"];
         const SCOPES = 'https://www.googleapis.com/auth/drive.file';
@@ -1000,10 +946,6 @@
 
         // Handle auth click
         function handleAuthClick() {
-            if (!CLIENT_ID) {
-                document.getElementById('setupModal').classList.add('active');
-                return;
-            }
             gapi.auth2.getAuthInstance().signIn();
         }
 
@@ -1012,29 +954,6 @@
             if (confirm('Disconnect from Google Drive? Your files will remain in Drive.')) {
                 gapi.auth2.getAuthInstance().signOut();
             }
-        }
-
-        // Save client ID
-        function saveClientId() {
-            const clientId = document.getElementById('clientIdInput').value.trim();
-            if (!clientId) {
-                alert('Please enter a valid Client ID');
-                return;
-            }
-            
-            CLIENT_ID = clientId;
-            localStorage.setItem('googleClientId', clientId);
-            document.getElementById('setupModal').classList.remove('active');
-            
-            // Initialize API with new client ID
-            initClient();
-        }
-
-        // Skip setup
-        function skipSetup() {
-            manualMode = true;
-            document.getElementById('setupModal').classList.remove('active');
-            alert('Running in Manual Mode. You will need to manually organize files in Google Drive.');
         }
 
         // Get or create root folder
@@ -1794,12 +1713,7 @@
         // Initialize
         function init() {
             loadData();
-            
-            // Check if client ID exists
-            if (CLIENT_ID) {
-                initClient();
-                document.getElementById('setupModal').classList.remove('active');
-            }
+            initClient(); // Client ID is pre-configured
         }
 
         // Start when page loads
