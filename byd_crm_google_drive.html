@@ -1,0 +1,1809 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BYD MotorEast CRM - Google Drive Edition</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 20px 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .header h1 {
+            color: #2c3e50;
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #ecf0f1;
+            color: #2c3e50;
+        }
+
+        .btn-secondary:hover {
+            background: #bdc3c7;
+        }
+
+        .btn-success {
+            background: #27ae60;
+            color: white;
+        }
+
+        .btn-danger {
+            background: #e74c3c;
+            color: white;
+            padding: 8px 16px;
+            font-size: 12px;
+        }
+
+        .btn-drive {
+            background: #4285f4;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-drive:hover {
+            background: #357ae8;
+        }
+
+        .btn-small {
+            padding: 6px 12px;
+            font-size: 12px;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 30px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+
+        .card h2 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 22px;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+
+        .auth-section {
+            background: #e3f2fd;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border-left: 4px solid #2196f3;
+        }
+
+        .auth-section.connected {
+            background: #e8f5e9;
+            border-left-color: #4caf50;
+        }
+
+        .auth-section h3 {
+            color: #1976d2;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        .auth-section.connected h3 {
+            color: #2e7d32;
+        }
+
+        .auth-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #f44336;
+        }
+
+        .status-indicator.connected {
+            background: #4caf50;
+        }
+
+        .customer-list {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .customer-item {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid #ecf0f1;
+        }
+
+        .customer-item:hover {
+            background: #f8f9fa;
+            border-color: #667eea;
+            transform: translateX(5px);
+        }
+
+        .customer-item.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: #667eea;
+        }
+
+        .customer-item h3 {
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+
+        .customer-item p {
+            font-size: 13px;
+            opacity: 0.8;
+        }
+
+        .customer-item .stage-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            margin-top: 5px;
+            font-weight: 600;
+        }
+
+        .stage-arrival { background: #3498db; color: white; }
+        .stage-consultation { background: #9b59b6; color: white; }
+        .stage-quotation { background: #f39c12; color: white; }
+        .stage-testdrive { background: #e67e22; color: white; }
+        .stage-closing { background: #27ae60; color: white; }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #2c3e50;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ecf0f1;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .checklist-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+
+        .checklist-section h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+
+        .checklist-item {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            background: white;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .checklist-item:hover {
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        }
+
+        .checklist-item input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            margin-right: 12px;
+            cursor: pointer;
+        }
+
+        .checklist-item label {
+            flex: 1;
+            cursor: pointer;
+            font-size: 14px;
+            color: #2c3e50;
+        }
+
+        .checklist-item.completed {
+            opacity: 0.6;
+        }
+
+        .checklist-item.completed label {
+            text-decoration: line-through;
+        }
+
+        .file-upload-section {
+            background: #e8f5e9;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            border: 2px dashed #27ae60;
+        }
+
+        .file-upload-section h3 {
+            color: #27ae60;
+            margin-bottom: 15px;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .upload-area {
+            background: white;
+            border: 3px dashed #27ae60;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 15px;
+        }
+
+        .upload-area:hover {
+            background: #f1f8f4;
+            border-color: #1e8449;
+        }
+
+        .upload-area.dragover {
+            background: #d5f4e6;
+            border-color: #1e8449;
+            transform: scale(1.02);
+        }
+
+        .upload-area p {
+            color: #27ae60;
+            font-size: 16px;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .upload-area small {
+            color: #7f8c8d;
+            font-size: 13px;
+        }
+
+        .file-list {
+            margin-top: 15px;
+        }
+
+        .file-item {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border: 2px solid #ecf0f1;
+            transition: all 0.3s ease;
+        }
+
+        .file-item:hover {
+            border-color: #667eea;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        }
+
+        .file-info {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .file-icon {
+            font-size: 32px;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .file-details {
+            flex: 1;
+        }
+
+        .file-details h4 {
+            color: #2c3e50;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+
+        .file-details p {
+            color: #7f8c8d;
+            font-size: 12px;
+        }
+
+        .file-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            border-radius: 10px;
+            color: white;
+        }
+
+        .stat-card h3 {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 5px;
+        }
+
+        .stat-card p {
+            font-size: 32px;
+            font-weight: 700;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #95a5a6;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-header h2 {
+            color: #2c3e50;
+            font-size: 24px;
+        }
+
+        .close-modal {
+            font-size: 28px;
+            cursor: pointer;
+            color: #95a5a6;
+            transition: color 0.3s ease;
+        }
+
+        .close-modal:hover {
+            color: #2c3e50;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #ecf0f1;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s ease;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .search-box {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 12px 40px 12px 15px;
+            border: 2px solid #ecf0f1;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .search-box::after {
+            content: '🔍';
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .file-naming {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            border-left: 4px solid #f39c12;
+        }
+
+        .file-naming h4 {
+            color: #856404;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        .file-naming code {
+            display: block;
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            margin: 5px 0;
+            color: #2c3e50;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #ecf0f1;
+        }
+
+        .tab {
+            padding: 12px 24px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            font-size: 14px;
+            font-weight: 600;
+            color: #7f8c8d;
+            transition: all 0.3s ease;
+            border-bottom: 3px solid transparent;
+        }
+
+        .tab:hover {
+            color: #667eea;
+        }
+
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .drive-folder-info {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            border-left: 4px solid #2196f3;
+        }
+
+        .drive-folder-info h4 {
+            color: #1565c0;
+            margin-bottom: 10px;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .drive-folder-info p {
+            color: #424242;
+            font-size: 14px;
+            margin: 5px 0;
+        }
+
+        .drive-folder-info a {
+            color: #1976d2;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .drive-folder-info a:hover {
+            text-decoration: underline;
+        }
+
+        .setup-instructions {
+            background: #fff3cd;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 4px solid #ff9800;
+        }
+
+        .setup-instructions h3 {
+            color: #e65100;
+            margin-bottom: 15px;
+        }
+
+        .setup-instructions ol {
+            margin-left: 20px;
+        }
+
+        .setup-instructions li {
+            margin: 10px 0;
+            color: #424242;
+        }
+
+        .setup-instructions code {
+            background: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .header {
+                text-align: center;
+            }
+
+            .header h1 {
+                font-size: 22px;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚗 BYD MotorEast CRM - Google Drive Edition</h1>
+            <div class="header-actions">
+                <button class="btn btn-primary" onclick="openAddCustomerModal()">+ Add Customer</button>
+                <button class="btn btn-secondary" onclick="exportData()">Export Data</button>
+                <button class="btn btn-secondary" onclick="importData()">Import Data</button>
+            </div>
+        </div>
+
+        <div class="auth-section" id="authSection">
+            <h3>🔐 Google Drive Connection</h3>
+            <div class="auth-status">
+                <span class="status-indicator" id="statusIndicator"></span>
+                <span id="authStatusText">Not connected to Google Drive</span>
+            </div>
+            <button class="btn btn-drive" id="authButton" onclick="handleAuthClick()">
+                <span>📁 Connect Google Drive</span>
+            </button>
+            <p style="font-size: 12px; color: #666; margin-top: 10px;">
+                Files will be stored in: <strong>Google Drive > BYD_MotorEast_Customers</strong>
+            </p>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>Total Customers</h3>
+                <p id="totalCustomers">0</p>
+            </div>
+            <div class="stat-card">
+                <h3>Active Deals</h3>
+                <p id="activeDeals">0</p>
+            </div>
+            <div class="stat-card">
+                <h3>Files in Drive</h3>
+                <p id="totalFiles">0</p>
+            </div>
+            <div class="stat-card">
+                <h3>Folders Created</h3>
+                <p id="totalFolders">0</p>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="card">
+                <h2>Customer List</h2>
+                <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="Search customers..." onkeyup="searchCustomers()">
+                </div>
+                <div class="customer-list" id="customerList">
+                    <div class="empty-state">
+                        <p>No customers yet</p>
+                        <p style="font-size: 14px; margin-top: 10px;">Click "Add Customer" to get started</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card" id="customerDetails">
+                <div class="empty-state">
+                    <p>Select a customer to view details</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Customer Modal -->
+    <div class="modal" id="addCustomerModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add New Customer</h2>
+                <span class="close-modal" onclick="closeAddCustomerModal()">&times;</span>
+            </div>
+            <form onsubmit="addCustomer(event)">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Name *</label>
+                        <input type="text" id="newCustomerName" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Contact Number *</label>
+                        <input type="tel" id="newCustomerPhone" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" id="newCustomerEmail">
+                    </div>
+                    <div class="form-group">
+                        <label>NRIC (Last 4 digits)</label>
+                        <input type="text" id="newCustomerNRIC" maxlength="4" placeholder="1234">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Interested Model</label>
+                    <select id="newCustomerModel">
+                        <option value="">Select Model</option>
+                        <option value="Seal">Seal</option>
+                        <option value="Seal 6">Seal 6</option>
+                        <option value="Sealion 6">Sealion 6</option>
+                        <option value="Sealion 7">Sealion 7</option>
+                        <option value="Dolphin">Dolphin</option>
+                        <option value="Atto 2">Atto 2</option>
+                        <option value="Atto 3">Atto 3</option>
+                        <option value="M6">M6</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Sales Stage</label>
+                    <select id="newCustomerStage">
+                        <option value="arrival">Stage 1 - Arrival</option>
+                        <option value="consultation">Stage 2 - Consultation</option>
+                        <option value="quotation">Stage 3 - Quotation</option>
+                        <option value="testdrive">Stage 4 - Test Drive</option>
+                        <option value="closing">Stage 5 - Closing</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Notes</label>
+                    <textarea id="newCustomerNotes" rows="3"></textarea>
+                </div>
+                <div class="action-buttons">
+                    <button type="submit" class="btn btn-primary">Add Customer</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeAddCustomerModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Setup Instructions Modal -->
+    <div class="modal active" id="setupModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>🚀 Setup Google Drive Integration</h2>
+            </div>
+            
+            <div class="setup-instructions">
+                <h3>📋 Setup Instructions</h3>
+                <p>To enable Google Drive integration, you need to set up Google API credentials. Follow these steps:</p>
+                
+                <ol>
+                    <li>
+                        <strong>Go to Google Cloud Console:</strong><br>
+                        Visit <a href="https://console.cloud.google.com" target="_blank">console.cloud.google.com</a>
+                    </li>
+                    <li>
+                        <strong>Create a New Project:</strong><br>
+                        Click "Select a Project" → "New Project" → Name it "BYD CRM" → Create
+                    </li>
+                    <li>
+                        <strong>Enable Google Drive API:</strong><br>
+                        Go to "APIs & Services" → "Enable APIs and Services" → Search for "Google Drive API" → Enable it
+                    </li>
+                    <li>
+                        <strong>Create OAuth Credentials:</strong><br>
+                        Go to "APIs & Services" → "Credentials" → "Create Credentials" → "OAuth client ID"<br>
+                        Application type: "Web application"<br>
+                        Authorized JavaScript origins: <code>http://localhost</code> or your domain<br>
+                        Authorized redirect URIs: Add the same URL
+                    </li>
+                    <li>
+                        <strong>Copy Your Client ID:</strong><br>
+                        Copy the "Client ID" (looks like: 123456789-abc.apps.googleusercontent.com)
+                    </li>
+                    <li>
+                        <strong>Paste Below and Save:</strong><br>
+                        Enter your Client ID in the field below
+                    </li>
+                </ol>
+            </div>
+
+            <div class="form-group">
+                <label>Google API Client ID:</label>
+                <input type="text" id="clientIdInput" placeholder="123456789-abc.apps.googleusercontent.com" 
+                       style="font-family: monospace;">
+            </div>
+
+            <div class="action-buttons">
+                <button class="btn btn-primary" onclick="saveClientId()">Save & Connect</button>
+                <button class="btn btn-secondary" onclick="skipSetup()">Skip for Now (Use Manual Mode)</button>
+            </div>
+
+            <p style="font-size: 12px; color: #666; margin-top: 15px;">
+                <strong>Note:</strong> In manual mode, the CRM will help you organize files but won't automatically upload to Drive. You'll need to manually save files to Google Drive folders.
+            </p>
+        </div>
+    </div>
+
+    <!-- Google API -->
+    <script src="https://apis.google.com/js/api.js"></script>
+    
+    <script>
+        // Configuration
+        let CLIENT_ID = localStorage.getItem('googleClientId') || '';
+        const API_KEY = ''; // Not needed for OAuth 2.0
+        const DISCOVERY_DOCS = ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"];
+        const SCOPES = 'https://www.googleapis.com/auth/drive.file';
+
+        // State
+        let customers = [];
+        let selectedCustomerId = null;
+        let isSignedIn = false;
+        let rootFolderId = null;
+        let manualMode = false;
+
+        // Document checklist templates
+        const documentChecklists = {
+            arrival: [
+                { id: 'ic_copy', name: 'IC Copy (Front & Back)', required: true },
+                { id: 'contact_form', name: 'Customer Contact Form', required: true }
+            ],
+            consultation: [
+                { id: 'ic_copy', name: 'IC Copy (Front & Back)', required: true },
+                { id: 'contact_form', name: 'Customer Contact Form', required: true },
+                { id: 'quotation', name: 'Price Quotation', required: true },
+                { id: 'product_specs', name: 'Product Specifications', required: false }
+            ],
+            quotation: [
+                { id: 'ic_copy', name: 'IC Copy (Front & Back)', required: true },
+                { id: 'contact_form', name: 'Customer Contact Form', required: true },
+                { id: 'quotation', name: 'Price Quotation', required: true },
+                { id: 'finance_application', name: 'Finance Application Form', required: false },
+                { id: 'trade_in_valuation', name: 'Trade-in Valuation (if applicable)', required: false }
+            ],
+            testdrive: [
+                { id: 'ic_copy', name: 'IC Copy (Front & Back)', required: true },
+                { id: 'driving_license', name: 'Driving License Copy', required: true },
+                { id: 'test_drive_form', name: 'Test Drive Agreement Form', required: true },
+                { id: 'quotation', name: 'Price Quotation', required: true }
+            ],
+            closing: [
+                { id: 'ic_copy', name: 'IC Copy (Original to Michelle, Copy to Wilson)', required: true },
+                { id: 'driving_license', name: 'Driving License Copy', required: true },
+                { id: 'purchase_agreement', name: 'Purchase Agreement', required: true },
+                { id: 'coe_deposit_receipt', name: 'COE Deposit Receipt ($16,350)', required: true },
+                { id: 'insurance_payment', name: 'Insurance Payment Receipt ($1,500-$3,000)', required: true },
+                { id: 'finance_approval', name: 'Finance Approval Letter (if bank loan)', required: false },
+                { id: 'admin_fee_receipt', name: 'Admin Fee Receipt ($500 if no bank loan)', required: false },
+                { id: 'first_installment', name: 'First Month Installment (if no bank loan)', required: false },
+                { id: 'trade_in_docs', name: 'Trade-in Vehicle Documents (if applicable)', required: false },
+                { id: 'log_card', name: 'Vehicle Log Card (if trade-in)', required: false }
+            ]
+        };
+
+        // Initialize Google API
+        function initClient() {
+            if (!CLIENT_ID) {
+                console.log('No Client ID configured');
+                return;
+            }
+
+            gapi.load('client:auth2', () => {
+                gapi.client.init({
+                    clientId: CLIENT_ID,
+                    discoveryDocs: DISCOVERY_DOCS,
+                    scope: SCOPES
+                }).then(() => {
+                    const authInstance = gapi.auth2.getAuthInstance();
+                    isSignedIn = authInstance.isSignedIn.get();
+                    updateSigninStatus(isSignedIn);
+                    
+                    authInstance.isSignedIn.listen(updateSigninStatus);
+                }, (error) => {
+                    console.error('Error initializing Google API:', error);
+                    alert('Error connecting to Google Drive. Please check your Client ID.');
+                });
+            });
+        }
+
+        // Update signin status
+        function updateSigninStatus(signedIn) {
+            isSignedIn = signedIn;
+            const authSection = document.getElementById('authSection');
+            const statusIndicator = document.getElementById('statusIndicator');
+            const statusText = document.getElementById('authStatusText');
+            const authButton = document.getElementById('authButton');
+
+            if (signedIn) {
+                authSection.classList.add('connected');
+                statusIndicator.classList.add('connected');
+                statusText.textContent = 'Connected to Google Drive';
+                authButton.innerHTML = '<span>🔓 Disconnect Google Drive</span>';
+                authButton.onclick = handleSignoutClick;
+                
+                // Get or create root folder
+                getRootFolder();
+            } else {
+                authSection.classList.remove('connected');
+                statusIndicator.classList.remove('connected');
+                statusText.textContent = 'Not connected to Google Drive';
+                authButton.innerHTML = '<span>📁 Connect Google Drive</span>';
+                authButton.onclick = handleAuthClick;
+            }
+        }
+
+        // Handle auth click
+        function handleAuthClick() {
+            if (!CLIENT_ID) {
+                document.getElementById('setupModal').classList.add('active');
+                return;
+            }
+            gapi.auth2.getAuthInstance().signIn();
+        }
+
+        // Handle signout click
+        function handleSignoutClick() {
+            if (confirm('Disconnect from Google Drive? Your files will remain in Drive.')) {
+                gapi.auth2.getAuthInstance().signOut();
+            }
+        }
+
+        // Save client ID
+        function saveClientId() {
+            const clientId = document.getElementById('clientIdInput').value.trim();
+            if (!clientId) {
+                alert('Please enter a valid Client ID');
+                return;
+            }
+            
+            CLIENT_ID = clientId;
+            localStorage.setItem('googleClientId', clientId);
+            document.getElementById('setupModal').classList.remove('active');
+            
+            // Initialize API with new client ID
+            initClient();
+        }
+
+        // Skip setup
+        function skipSetup() {
+            manualMode = true;
+            document.getElementById('setupModal').classList.remove('active');
+            alert('Running in Manual Mode. You will need to manually organize files in Google Drive.');
+        }
+
+        // Get or create root folder
+        async function getRootFolder() {
+            try {
+                // Search for existing folder
+                const response = await gapi.client.drive.files.list({
+                    q: "name='BYD_MotorEast_Customers' and mimeType='application/vnd.google-apps.folder' and trashed=false",
+                    spaces: 'drive',
+                    fields: 'files(id, name)'
+                });
+
+                if (response.result.files.length > 0) {
+                    rootFolderId = response.result.files[0].id;
+                } else {
+                    // Create root folder
+                    const createResponse = await gapi.client.drive.files.create({
+                        resource: {
+                            name: 'BYD_MotorEast_Customers',
+                            mimeType: 'application/vnd.google-apps.folder'
+                        },
+                        fields: 'id'
+                    });
+                    rootFolderId = createResponse.result.id;
+                }
+                
+                updateStats();
+            } catch (error) {
+                console.error('Error getting root folder:', error);
+            }
+        }
+
+        // Create customer folder
+        async function createCustomerFolder(customerName, customerId) {
+            if (!isSignedIn) return null;
+            
+            try {
+                const folderName = customerName.replace(/\s+/g, '_');
+                
+                // Check if folder exists
+                const searchResponse = await gapi.client.drive.files.list({
+                    q: `name='${folderName}' and '${rootFolderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
+                    spaces: 'drive',
+                    fields: 'files(id, name)'
+                });
+
+                if (searchResponse.result.files.length > 0) {
+                    return searchResponse.result.files[0].id;
+                }
+
+                // Create folder
+                const response = await gapi.client.drive.files.create({
+                    resource: {
+                        name: folderName,
+                        mimeType: 'application/vnd.google-apps.folder',
+                        parents: [rootFolderId]
+                    },
+                    fields: 'id, webViewLink'
+                });
+
+                const customer = customers.find(c => c.id === customerId);
+                if (customer) {
+                    customer.driveFolderId = response.result.id;
+                    customer.driveFolderLink = response.result.webViewLink;
+                    saveData();
+                }
+
+                return response.result.id;
+            } catch (error) {
+                console.error('Error creating folder:', error);
+                return null;
+            }
+        }
+
+        // Upload file to Drive
+        async function uploadFileToDrive(file, customerId, fileName) {
+            if (!isSignedIn) {
+                alert('Please connect to Google Drive first');
+                return null;
+            }
+
+            const customer = customers.find(c => c.id === customerId);
+            if (!customer) return null;
+
+            // Ensure folder exists
+            if (!customer.driveFolderId) {
+                await createCustomerFolder(customer.name, customerId);
+            }
+
+            try {
+                const metadata = {
+                    name: fileName,
+                    parents: [customer.driveFolderId]
+                };
+
+                const form = new FormData();
+                form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+                form.append('file', file);
+
+                const response = await fetch(
+                    'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,mimeType,size,webViewLink,createdTime',
+                    {
+                        method: 'POST',
+                        headers: new Headers({ 'Authorization': 'Bearer ' + gapi.auth.getToken().access_token }),
+                        body: form
+                    }
+                );
+
+                const result = await response.json();
+                return result;
+            } catch (error) {
+                console.error('Error uploading file:', error);
+                alert('Error uploading file to Google Drive');
+                return null;
+            }
+        }
+
+        // Get files from customer folder
+        async function getCustomerFiles(customerId) {
+            const customer = customers.find(c => c.id === customerId);
+            if (!customer || !customer.driveFolderId || !isSignedIn) {
+                return [];
+            }
+
+            try {
+                const response = await gapi.client.drive.files.list({
+                    q: `'${customer.driveFolderId}' in parents and trashed=false`,
+                    spaces: 'drive',
+                    fields: 'files(id, name, mimeType, size, webViewLink, createdTime)',
+                    orderBy: 'createdTime desc'
+                });
+
+                return response.result.files || [];
+            } catch (error) {
+                console.error('Error getting files:', error);
+                return [];
+            }
+        }
+
+        // Delete file from Drive
+        async function deleteFileFromDrive(fileId) {
+            if (!isSignedIn) return false;
+
+            try {
+                await gapi.client.drive.files.delete({
+                    fileId: fileId
+                });
+                return true;
+            } catch (error) {
+                console.error('Error deleting file:', error);
+                return false;
+            }
+        }
+
+        // Get file icon
+        function getFileIcon(mimeType) {
+            if (mimeType.includes('pdf')) return '📄';
+            if (mimeType.includes('image')) return '🖼️';
+            if (mimeType.includes('word') || mimeType.includes('document')) return '📝';
+            if (mimeType.includes('spreadsheet') || mimeType.includes('excel')) return '📊';
+            if (mimeType.includes('folder')) return '📁';
+            return '📎';
+        }
+
+        // Format file size
+        function formatFileSize(bytes) {
+            if (!bytes) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        }
+
+        // Load data
+        function loadData() {
+            const savedData = localStorage.getItem('bydCRM');
+            if (savedData) {
+                customers = JSON.parse(savedData);
+                renderCustomerList();
+                updateStats();
+            }
+        }
+
+        // Save data
+        function saveData() {
+            localStorage.setItem('bydCRM', JSON.stringify(customers));
+            updateStats();
+        }
+
+        // Update statistics
+        async function updateStats() {
+            document.getElementById('totalCustomers').textContent = customers.length;
+            
+            const activeDeals = customers.filter(c => !c.dealClosed).length;
+            document.getElementById('activeDeals').textContent = activeDeals;
+            
+            // Count folders
+            const foldersCreated = customers.filter(c => c.driveFolderId).length;
+            document.getElementById('totalFolders').textContent = foldersCreated;
+            
+            // Count files
+            if (isSignedIn && rootFolderId) {
+                try {
+                    let totalFiles = 0;
+                    for (const customer of customers) {
+                        if (customer.driveFolderId) {
+                            const files = await getCustomerFiles(customer.id);
+                            totalFiles += files.length;
+                        }
+                    }
+                    document.getElementById('totalFiles').textContent = totalFiles;
+                } catch (error) {
+                    document.getElementById('totalFiles').textContent = '?';
+                }
+            } else {
+                document.getElementById('totalFiles').textContent = '0';
+            }
+        }
+
+        // Open add customer modal
+        function openAddCustomerModal() {
+            document.getElementById('addCustomerModal').classList.add('active');
+        }
+
+        // Close add customer modal
+        function closeAddCustomerModal() {
+            document.getElementById('addCustomerModal').classList.remove('active');
+            document.getElementById('newCustomerName').value = '';
+            document.getElementById('newCustomerPhone').value = '';
+            document.getElementById('newCustomerEmail').value = '';
+            document.getElementById('newCustomerNRIC').value = '';
+            document.getElementById('newCustomerModel').value = '';
+            document.getElementById('newCustomerStage').value = 'arrival';
+            document.getElementById('newCustomerNotes').value = '';
+        }
+
+        // Add customer
+        async function addCustomer(event) {
+            event.preventDefault();
+            
+            const customer = {
+                id: Date.now(),
+                name: document.getElementById('newCustomerName').value,
+                phone: document.getElementById('newCustomerPhone').value,
+                email: document.getElementById('newCustomerEmail').value,
+                nric: document.getElementById('newCustomerNRIC').value,
+                model: document.getElementById('newCustomerModel').value,
+                stage: document.getElementById('newCustomerStage').value,
+                notes: document.getElementById('newCustomerNotes').value,
+                dateAdded: new Date().toISOString(),
+                checklist: {},
+                dealClosed: false,
+                driveFolderId: null,
+                driveFolderLink: null
+            };
+
+            customers.push(customer);
+            saveData();
+            
+            // Create folder in Google Drive
+            if (isSignedIn) {
+                await createCustomerFolder(customer.name, customer.id);
+            }
+            
+            renderCustomerList();
+            closeAddCustomerModal();
+            selectCustomer(customer.id);
+        }
+
+        // Render customer list
+        function renderCustomerList() {
+            const listContainer = document.getElementById('customerList');
+            
+            if (customers.length === 0) {
+                listContainer.innerHTML = `
+                    <div class="empty-state">
+                        <p>No customers yet</p>
+                        <p style="font-size: 14px; margin-top: 10px;">Click "Add Customer" to get started</p>
+                    </div>
+                `;
+                return;
+            }
+
+            listContainer.innerHTML = customers.map(customer => `
+                <div class="customer-item ${selectedCustomerId === customer.id ? 'active' : ''}" onclick="selectCustomer(${customer.id})">
+                    <h3>${customer.name} ${customer.driveFolderId ? '📁' : ''}</h3>
+                    <p>📱 ${customer.phone} ${customer.model ? '| 🚗 ' + customer.model : ''}</p>
+                    <span class="stage-badge stage-${customer.stage}">${getStageLabel(customer.stage)}</span>
+                    ${customer.dealClosed ? '<span class="stage-badge" style="background: #27ae60; margin-left: 5px;">✓ Closed</span>' : ''}
+                </div>
+            `).join('');
+        }
+
+        // Get stage label
+        function getStageLabel(stage) {
+            const labels = {
+                arrival: 'Stage 1 - Arrival',
+                consultation: 'Stage 2 - Consultation',
+                quotation: 'Stage 3 - Quotation',
+                testdrive: 'Stage 4 - Test Drive',
+                closing: 'Stage 5 - Closing'
+            };
+            return labels[stage] || stage;
+        }
+
+        // Select customer
+        function selectCustomer(customerId) {
+            selectedCustomerId = customerId;
+            renderCustomerList();
+            displayCustomerDetails(customerId);
+        }
+
+        // Display customer details
+        async function displayCustomerDetails(customerId) {
+            const customer = customers.find(c => c.id === customerId);
+            if (!customer) return;
+
+            const checklist = documentChecklists[customer.stage] || [];
+            const completedItems = Object.values(customer.checklist).filter(v => v).length;
+            const totalItems = checklist.length;
+            const progress = totalItems > 0 ? (completedItems / totalItems) * 100 : 0;
+
+            // Get files from Drive
+            const files = isSignedIn ? await getCustomerFiles(customerId) : [];
+
+            const detailsContainer = document.getElementById('customerDetails');
+            detailsContainer.innerHTML = `
+                <div class="tabs">
+                    <button class="tab active" onclick="switchTab('info')">Customer Info</button>
+                    <button class="tab" onclick="switchTab('documents')">Documents (${files.length})</button>
+                </div>
+
+                <div id="tab-info" class="tab-content active">
+                    <h2>Customer Details</h2>
+                    
+                    ${customer.driveFolderId ? `
+                        <div class="drive-folder-info">
+                            <h4>📁 Google Drive Folder</h4>
+                            <p>All documents are stored in Google Drive</p>
+                            <a href="${customer.driveFolderLink}" target="_blank">Open Folder in Drive →</a>
+                        </div>
+                    ` : ''}
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Name</label>
+                            <input type="text" value="${customer.name}" onchange="updateCustomer(${customer.id}, 'name', this.value)">
+                        </div>
+                        <div class="form-group">
+                            <label>Contact Number</label>
+                            <input type="tel" value="${customer.phone}" onchange="updateCustomer(${customer.id}, 'phone', this.value)">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Email</label>
+                            <input type="email" value="${customer.email || ''}" onchange="updateCustomer(${customer.id}, 'email', this.value)">
+                        </div>
+                        <div class="form-group">
+                            <label>NRIC (Last 4 digits)</label>
+                            <input type="text" value="${customer.nric || ''}" maxlength="4" onchange="updateCustomer(${customer.id}, 'nric', this.value)">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Interested Model</label>
+                            <select onchange="updateCustomer(${customer.id}, 'model', this.value)">
+                                <option value="">Select Model</option>
+                                <option value="Seal" ${customer.model === 'Seal' ? 'selected' : ''}>Seal</option>
+                                <option value="Seal 6" ${customer.model === 'Seal 6' ? 'selected' : ''}>Seal 6</option>
+                                <option value="Sealion 6" ${customer.model === 'Sealion 6' ? 'selected' : ''}>Sealion 6</option>
+                                <option value="Sealion 7" ${customer.model === 'Sealion 7' ? 'selected' : ''}>Sealion 7</option>
+                                <option value="Dolphin" ${customer.model === 'Dolphin' ? 'selected' : ''}>Dolphin</option>
+                                <option value="Atto 2" ${customer.model === 'Atto 2' ? 'selected' : ''}>Atto 2</option>
+                                <option value="Atto 3" ${customer.model === 'Atto 3' ? 'selected' : ''}>Atto 3</option>
+                                <option value="M6" ${customer.model === 'M6' ? 'selected' : ''}>M6</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Sales Stage</label>
+                            <select onchange="updateCustomer(${customer.id}, 'stage', this.value)">
+                                <option value="arrival" ${customer.stage === 'arrival' ? 'selected' : ''}>Stage 1 - Arrival</option>
+                                <option value="consultation" ${customer.stage === 'consultation' ? 'selected' : ''}>Stage 2 - Consultation</option>
+                                <option value="quotation" ${customer.stage === 'quotation' ? 'selected' : ''}>Stage 3 - Quotation</option>
+                                <option value="testdrive" ${customer.stage === 'testdrive' ? 'selected' : ''}>Stage 4 - Test Drive</option>
+                                <option value="closing" ${customer.stage === 'closing' ? 'selected' : ''}>Stage 5 - Closing</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Notes</label>
+                        <textarea rows="3" onchange="updateCustomer(${customer.id}, 'notes', this.value)">${customer.notes || ''}</textarea>
+                    </div>
+
+                    <div class="checklist-section">
+                        <h3>📋 Document Checklist - ${getStageLabel(customer.stage)}</h3>
+                        <p style="margin-bottom: 15px; color: #7f8c8d; font-size: 13px;">
+                            Progress: ${completedItems}/${totalItems} documents
+                        </p>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${progress}%"></div>
+                        </div>
+                        <div style="margin-top: 15px;">
+                            ${checklist.map(item => `
+                                <div class="checklist-item ${customer.checklist[item.id] ? 'completed' : ''}">
+                                    <input type="checkbox" id="check_${item.id}" 
+                                        ${customer.checklist[item.id] ? 'checked' : ''}
+                                        onchange="toggleChecklistItem(${customer.id}, '${item.id}')">
+                                    <label for="check_${item.id}">
+                                        ${item.name} ${item.required ? '<span style="color: #e74c3c;">*</span>' : ''}
+                                    </label>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+
+                    <div class="action-buttons">
+                        ${!customer.dealClosed ? `
+                            <button class="btn btn-success" onclick="markDealClosed(${customer.id})">
+                                ✓ Mark Deal as Closed
+                            </button>
+                        ` : `
+                            <button class="btn btn-secondary" onclick="markDealOpen(${customer.id})">
+                                Reopen Deal
+                            </button>
+                        `}
+                        ${customer.driveFolderId ? `
+                            <button class="btn btn-drive" onclick="window.open('${customer.driveFolderLink}', '_blank')">
+                                📁 Open Drive Folder
+                            </button>
+                        ` : isSignedIn ? `
+                            <button class="btn btn-drive" onclick="createCustomerFolder('${customer.name}', ${customer.id}).then(() => selectCustomer(${customer.id}))">
+                                📁 Create Drive Folder
+                            </button>
+                        ` : ''}
+                        <button class="btn btn-danger" onclick="deleteCustomer(${customer.id})">
+                            Delete Customer
+                        </button>
+                    </div>
+                </div>
+
+                <div id="tab-documents" class="tab-content">
+                    <h2>Document Management</h2>
+                    
+                    ${!isSignedIn ? `
+                        <div class="auth-section">
+                            <h3>⚠️ Not Connected to Google Drive</h3>
+                            <p>Connect to Google Drive to upload and manage files directly.</p>
+                            <button class="btn btn-drive" onclick="handleAuthClick()">
+                                📁 Connect Google Drive
+                            </button>
+                        </div>
+                    ` : !customer.driveFolderId ? `
+                        <div class="auth-section">
+                            <h3>📁 Create Customer Folder</h3>
+                            <p>Create a folder in Google Drive for ${customer.name}'s documents.</p>
+                            <button class="btn btn-drive" onclick="createCustomerFolder('${customer.name}', ${customer.id}).then(() => selectCustomer(${customer.id}))">
+                                Create Folder
+                            </button>
+                        </div>
+                    ` : `
+                        <div class="file-naming">
+                            <h4>📁 File Naming Convention</h4>
+                            <p style="font-size: 13px; color: #856404; margin-bottom: 10px;">
+                                Files will be automatically named as:
+                            </p>
+                            <code>${customer.name.replace(/\s+/g, '_')}_${customer.nric || 'XXXX'}_[Document_Type].[ext]</code>
+                        </div>
+
+                        <div class="file-upload-section">
+                            <h3>
+                                <img src="https://www.gstatic.com/images/branding/product/1x/drive_2020q4_48dp.png" 
+                                     style="width: 24px; height: 24px;">
+                                Upload to Google Drive
+                            </h3>
+                            <div class="upload-area" id="uploadArea_${customerId}" 
+                                 ondrop="handleDrop(event, ${customerId})" 
+                                 ondragover="handleDragOver(event)"
+                                 ondragleave="handleDragLeave(event)"
+                                 onclick="document.getElementById('fileInput_${customerId}').click()">
+                                <p>🗂️ Drag & Drop Files Here</p>
+                                <small>or click to browse • Files upload directly to Google Drive</small>
+                                <input type="file" id="fileInput_${customerId}" multiple 
+                                       style="display: none;" 
+                                       onchange="handleFileSelect(event, ${customerId})">
+                            </div>
+                            <p style="font-size: 12px; color: #7f8c8d; margin-top: 10px;">
+                                ✓ Unlimited storage in Google Drive<br>
+                                ✓ Access from any device<br>
+                                ✓ Share with team members
+                            </p>
+                        </div>
+
+                        <div class="file-list" id="fileList_${customerId}">
+                            ${files.length > 0 ? files.map(file => `
+                                <div class="file-item">
+                                    <div class="file-info">
+                                        <div class="file-icon">${getFileIcon(file.mimeType)}</div>
+                                        <div class="file-details">
+                                            <h4>${file.name}</h4>
+                                            <p>${formatFileSize(file.size)} • ${new Date(file.createdTime).toLocaleDateString()}</p>
+                                        </div>
+                                    </div>
+                                    <div class="file-actions">
+                                        <button class="btn btn-secondary btn-small" onclick="window.open('${file.webViewLink}', '_blank')">
+                                            👁️ View
+                                        </button>
+                                        <button class="btn btn-danger btn-small" onclick="deleteFileConfirm('${file.id}', ${customerId}, '${file.name}')">
+                                            🗑️ Delete
+                                        </button>
+                                    </div>
+                                </div>
+                            `).join('') : '<p style="text-align: center; color: #95a5a6; padding: 20px;">No documents uploaded yet</p>'}
+                        </div>
+                    `}
+                </div>
+            `;
+        }
+
+        // Switch tabs
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById('tab-' + tabName).classList.add('active');
+        }
+
+        // Handle file drop
+        function handleDrop(event, customerId) {
+            event.preventDefault();
+            event.stopPropagation();
+            event.target.classList.remove('dragover');
+            
+            const files = event.dataTransfer.files;
+            uploadFiles(files, customerId);
+        }
+
+        // Handle drag over
+        function handleDragOver(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            event.target.classList.add('dragover');
+        }
+
+        // Handle drag leave
+        function handleDragLeave(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            event.target.classList.remove('dragover');
+        }
+
+        // Handle file select
+        function handleFileSelect(event, customerId) {
+            const files = event.target.files;
+            uploadFiles(files, customerId);
+        }
+
+        // Upload files
+        async function uploadFiles(files, customerId) {
+            const customer = customers.find(c => c.id === customerId);
+            if (!customer) return;
+
+            if (!isSignedIn) {
+                alert('Please connect to Google Drive first');
+                return;
+            }
+
+            const uploadArea = document.getElementById(`uploadArea_${customerId}`);
+            const originalContent = uploadArea.innerHTML;
+            uploadArea.innerHTML = '<div class="loading"></div><p style="color: #27ae60; margin-top: 10px;">Uploading files...</p>';
+
+            let successCount = 0;
+            let errorCount = 0;
+
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                
+                const fileExt = file.name.split('.').pop();
+                const docType = prompt(`Enter document type for ${file.name}:`, 'Document') || 'Document';
+                const fileName = `${customer.name.replace(/\s+/g, '_')}_${customer.nric || 'XXXX'}_${docType.replace(/\s+/g, '_')}.${fileExt}`;
+                
+                const result = await uploadFileToDrive(file, customerId, fileName);
+                if (result) {
+                    successCount++;
+                } else {
+                    errorCount++;
+                }
+            }
+
+            uploadArea.innerHTML = originalContent;
+            
+            if (successCount > 0) {
+                alert(`Successfully uploaded ${successCount} file(s) to Google Drive!`);
+            }
+            if (errorCount > 0) {
+                alert(`Failed to upload ${errorCount} file(s).`);
+            }
+            
+            displayCustomerDetails(customerId);
+            updateStats();
+        }
+
+        // Delete file confirm
+        async function deleteFileConfirm(fileId, customerId, fileName) {
+            if (confirm(`Delete "${fileName}" from Google Drive?`)) {
+                const success = await deleteFileFromDrive(fileId);
+                if (success) {
+                    alert('File deleted successfully');
+                    displayCustomerDetails(customerId);
+                    updateStats();
+                } else {
+                    alert('Error deleting file');
+                }
+            }
+        }
+
+        // Update customer
+        function updateCustomer(customerId, field, value) {
+            const customer = customers.find(c => c.id === customerId);
+            if (customer) {
+                customer[field] = value;
+                saveData();
+                renderCustomerList();
+            }
+        }
+
+        // Toggle checklist item
+        function toggleChecklistItem(customerId, itemId) {
+            const customer = customers.find(c => c.id === customerId);
+            if (customer) {
+                customer.checklist[itemId] = !customer.checklist[itemId];
+                saveData();
+                displayCustomerDetails(customerId);
+            }
+        }
+
+        // Mark deal closed
+        function markDealClosed(customerId) {
+            const customer = customers.find(c => c.id === customerId);
+            if (customer && confirm(`Mark deal as closed for ${customer.name}?`)) {
+                customer.dealClosed = true;
+                customer.closedDate = new Date().toISOString();
+                saveData();
+                renderCustomerList();
+                displayCustomerDetails(customerId);
+            }
+        }
+
+        // Mark deal open
+        function markDealOpen(customerId) {
+            const customer = customers.find(c => c.id === customerId);
+            if (customer) {
+                customer.dealClosed = false;
+                customer.closedDate = null;
+                saveData();
+                renderCustomerList();
+                displayCustomerDetails(customerId);
+            }
+        }
+
+        // Delete customer
+        async function deleteCustomer(customerId) {
+            const customer = customers.find(c => c.id === customerId);
+            if (!customer) return;
+
+            const confirmMsg = customer.driveFolderId 
+                ? `Delete ${customer.name}? The Google Drive folder will remain, but you can manually delete it later.`
+                : `Delete ${customer.name}? This cannot be undone.`;
+
+            if (confirm(confirmMsg)) {
+                customers = customers.filter(c => c.id !== customerId);
+                saveData();
+                renderCustomerList();
+                document.getElementById('customerDetails').innerHTML = `
+                    <div class="empty-state">
+                        <p>Select a customer to view details</p>
+                    </div>
+                `;
+                updateStats();
+            }
+        }
+
+        // Search customers
+        function searchCustomers() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const listContainer = document.getElementById('customerList');
+            
+            const filteredCustomers = customers.filter(c => 
+                c.name.toLowerCase().includes(searchTerm) ||
+                c.phone.includes(searchTerm) ||
+                (c.model && c.model.toLowerCase().includes(searchTerm)) ||
+                (c.email && c.email.toLowerCase().includes(searchTerm))
+            );
+
+            if (filteredCustomers.length === 0) {
+                listContainer.innerHTML = `
+                    <div class="empty-state">
+                        <p>No customers found</p>
+                    </div>
+                `;
+                return;
+            }
+
+            listContainer.innerHTML = filteredCustomers.map(customer => `
+                <div class="customer-item ${selectedCustomerId === customer.id ? 'active' : ''}" onclick="selectCustomer(${customer.id})">
+                    <h3>${customer.name} ${customer.driveFolderId ? '📁' : ''}</h3>
+                    <p>📱 ${customer.phone} ${customer.model ? '| 🚗 ' + customer.model : ''}</p>
+                    <span class="stage-badge stage-${customer.stage}">${getStageLabel(customer.stage)}</span>
+                    ${customer.dealClosed ? '<span class="stage-badge" style="background: #27ae60; margin-left: 5px;">✓ Closed</span>' : ''}
+                </div>
+            `).join('');
+        }
+
+        // Export data
+        function exportData() {
+            const dataStr = JSON.stringify(customers, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `BYD_CRM_Export_${new Date().toISOString().split('T')[0]}.json`;
+            link.click();
+            URL.revokeObjectURL(url);
+            alert('Customer data exported! Files remain in Google Drive.');
+        }
+
+        // Import data
+        function importData() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = function(e) {
+                const file = e.target.files[0];
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    try {
+                        const importedData = JSON.parse(event.target.result);
+                        if (confirm(`Import ${importedData.length} customers? This will replace current data.`)) {
+                            customers = importedData;
+                            saveData();
+                            renderCustomerList();
+                            alert('Data imported successfully!');
+                        }
+                    } catch (error) {
+                        alert('Error importing data. Please check the file format.');
+                    }
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        }
+
+        // Initialize
+        function init() {
+            loadData();
+            
+            // Check if client ID exists
+            if (CLIENT_ID) {
+                initClient();
+                document.getElementById('setupModal').classList.remove('active');
+            }
+        }
+
+        // Start when page loads
+        window.onload = init;
+    </script>
+</body>
+</html>
