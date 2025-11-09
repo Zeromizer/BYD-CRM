@@ -725,7 +725,49 @@
             <p style="font-size: 12px; color: #666; margin-top: 10px;">
                 Files will be stored in: <strong>Google Drive > BYD_MotorEast_Customers</strong>
             </p>
+
+            <!-- Setup help section -->
+            <details style="margin-top: 15px; background: white; padding: 15px; border-radius: 8px;">
+                <summary style="cursor: pointer; font-weight: 600; color: #1976d2;">
+                    ℹ️ Having connection issues? Click here for setup instructions
+                </summary>
+                <div style="margin-top: 15px; font-size: 13px; color: #424242; line-height: 1.6;">
+                    <p><strong>If you're getting connection errors:</strong></p>
+                    <ol style="margin-left: 20px; margin-top: 10px;">
+                        <li><strong>Check your URL:</strong> Make sure you're accessing via HTTPS or http://localhost (NOT file://)</li>
+                        <li><strong>Configure Google Cloud Console:</strong>
+                            <ul style="margin-left: 20px; margin-top: 5px;">
+                                <li>Go to: <a href="https://console.cloud.google.com/apis/credentials" target="_blank" style="color: #1976d2;">Google Cloud Console</a></li>
+                                <li>Click on your OAuth Client ID</li>
+                                <li>Add your website URL to <strong>Authorized JavaScript origins</strong></li>
+                                <li>Add your website URL to <strong>Authorized redirect URIs</strong></li>
+                            </ul>
+                        </li>
+                        <li><strong>Example configuration:</strong>
+                            <ul style="margin-left: 20px; margin-top: 5px;">
+                                <li>For GitHub Pages: <code style="background: #f5f5f5; padding: 2px 6px; border-radius: 3px;">https://yourusername.github.io</code></li>
+                                <li>For local testing: <code style="background: #f5f5f5; padding: 2px 6px; border-radius: 3px;">http://localhost:8000</code></li>
+                            </ul>
+                        </li>
+                        <li><strong>Enable the API:</strong> Make sure Google Drive API is enabled in your Google Cloud project</li>
+                        <li><strong>Check browser console:</strong> Press F12 and check the Console tab for detailed error messages</li>
+                    </ol>
+                    <p style="margin-top: 10px; padding: 10px; background: #fff3cd; border-radius: 5px; border-left: 4px solid #ff9800;">
+                        <strong>Current page URL:</strong> <span id="currentUrl" style="font-family: monospace;"></span>
+                    </p>
+                </div>
+            </details>
         </div>
+
+        <script>
+            // Show current URL for debugging
+            document.addEventListener('DOMContentLoaded', function() {
+                const urlElement = document.getElementById('currentUrl');
+                if (urlElement) {
+                    urlElement.textContent = window.location.href;
+                }
+            });
+        </script>
 
         <div class="stats-grid">
             <div class="stat-card">
@@ -897,25 +939,71 @@
         function initClient() {
             if (!CLIENT_ID) {
                 console.log('No Client ID configured');
+                showSetupError('No Client ID configured. Please configure your Google OAuth Client ID.');
                 return;
             }
 
+            console.log('Initializing Google API with Client ID:', CLIENT_ID);
+
             gapi.load('client:auth2', () => {
+                console.log('Google API loaded, initializing client...');
+
                 gapi.client.init({
                     clientId: CLIENT_ID,
                     discoveryDocs: DISCOVERY_DOCS,
-                    scope: SCOPES
+                    scope: SCOPES,
+                    plugin_name: 'BYD_CRM' // Required for newer Google API
                 }).then(() => {
+                    console.log('Google API client initialized successfully');
                     const authInstance = gapi.auth2.getAuthInstance();
                     isSignedIn = authInstance.isSignedIn.get();
                     updateSigninStatus(isSignedIn);
-                    
+
                     authInstance.isSignedIn.listen(updateSigninStatus);
                 }, (error) => {
                     console.error('Error initializing Google API:', error);
-                    alert('Error connecting to Google Drive. Please check your Client ID.');
+                    console.error('Error details:', JSON.stringify(error, null, 2));
+
+                    let errorMessage = 'Error connecting to Google Drive.\n\n';
+
+                    if (error.details) {
+                        errorMessage += 'Error: ' + error.details + '\n\n';
+                    }
+
+                    if (error.error === 'idpiframe_initialization_failed') {
+                        errorMessage += 'SOLUTION:\n';
+                        errorMessage += '1. Make sure you are accessing this page via HTTPS or http://localhost\n';
+                        errorMessage += '2. Check that your Google Cloud Console has the correct Authorized JavaScript origins:\n';
+                        errorMessage += '   - For local testing: http://localhost or http://127.0.0.1\n';
+                        errorMessage += '   - For GitHub Pages: https://yourusername.github.io\n';
+                        errorMessage += '3. Authorized redirect URIs should include:\n';
+                        errorMessage += '   - http://localhost\n';
+                        errorMessage += '   - Your actual hosted URL\n\n';
+                        errorMessage += 'Visit: https://console.cloud.google.com/apis/credentials\n';
+                        errorMessage += 'to configure your OAuth client.';
+                    } else if (error.error === 'popup_blocked_by_browser') {
+                        errorMessage += 'Your browser blocked the popup. Please allow popups for this site.';
+                    } else {
+                        errorMessage += 'Error code: ' + (error.error || 'unknown') + '\n';
+                        errorMessage += 'Please check browser console for details.';
+                    }
+
+                    showSetupError(errorMessage);
                 });
             });
+        }
+
+        // Show setup error with detailed message
+        function showSetupError(message) {
+            const authSection = document.getElementById('authSection');
+            authSection.style.background = '#ffebee';
+            authSection.style.borderLeftColor = '#f44336';
+
+            const statusText = document.getElementById('authStatusText');
+            statusText.innerHTML = `<strong style="color: #c62828;">Connection Error</strong><br>
+                <small style="color: #666; display: block; margin-top: 8px; white-space: pre-wrap; text-align: left;">${message.replace(/\n/g, '<br>')}</small>`;
+
+            document.getElementById('authButton').style.display = 'none';
         }
 
         // Update signin status
@@ -946,7 +1034,38 @@
 
         // Handle auth click
         function handleAuthClick() {
-            gapi.auth2.getAuthInstance().signIn();
+            console.log('Attempting to sign in to Google...');
+
+            // Check if we're on file:// protocol
+            if (window.location.protocol === 'file:') {
+                alert('ERROR: Google OAuth does not work with file:// protocol.\n\n' +
+                      'You need to:\n' +
+                      '1. Host this file on a web server (even localhost works)\n' +
+                      '2. For local testing, use: python -m http.server 8000\n' +
+                      '3. Then open: http://localhost:8000\n\n' +
+                      'OR upload to GitHub Pages or any web hosting service.');
+                return;
+            }
+
+            try {
+                gapi.auth2.getAuthInstance().signIn({
+                    prompt: 'select_account'
+                }).then(() => {
+                    console.log('Sign-in successful');
+                }, (error) => {
+                    console.error('Sign-in error:', error);
+                    if (error.error === 'popup_closed_by_user') {
+                        console.log('User closed the popup');
+                    } else if (error.error === 'access_denied') {
+                        alert('Access denied. Please grant permission to access Google Drive.');
+                    } else {
+                        alert('Sign-in failed: ' + (error.error || 'Unknown error'));
+                    }
+                });
+            } catch (error) {
+                console.error('Exception during sign-in:', error);
+                alert('Error during sign-in. Please check console for details.');
+            }
         }
 
         // Handle signout click
