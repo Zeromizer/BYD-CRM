@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BYD MotorEast CRM - Google Drive Edition</title>
+    <title>BYD MotorEast CRM</title>
     <style>
         * {
             margin: 0;
@@ -12,10 +12,11 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f7fa;
             min-height: 100vh;
             padding: 20px;
+            color: #2d3748;
         }
 
         .container {
@@ -25,70 +26,78 @@
 
         .header {
             background: white;
-            padding: 20px 30px;
-            border-radius: 15px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-            margin-bottom: 30px;
+            padding: 24px 32px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 24px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
-            gap: 15px;
+            gap: 16px;
         }
 
         .header h1 {
-            color: #2c3e50;
-            font-size: 28px;
-            font-weight: 700;
+            color: #1a202c;
+            font-size: 24px;
+            font-weight: 600;
+            letter-spacing: -0.5px;
         }
 
         .header-actions {
             display: flex;
-            gap: 10px;
+            gap: 12px;
             flex-wrap: wrap;
         }
 
         .btn {
-            padding: 12px 24px;
+            padding: 10px 20px;
             border: none;
-            border-radius: 8px;
+            border-radius: 6px;
             font-size: 14px;
-            font-weight: 600;
+            font-weight: 500;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
             text-decoration: none;
             display: inline-block;
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #3182ce;
             color: white;
         }
 
         .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+            background: #2c5282;
         }
 
         .btn-secondary {
-            background: #ecf0f1;
-            color: #2c3e50;
+            background: #e2e8f0;
+            color: #4a5568;
         }
 
         .btn-secondary:hover {
-            background: #bdc3c7;
+            background: #cbd5e0;
         }
 
         .btn-success {
-            background: #27ae60;
+            background: #38a169;
             color: white;
         }
 
+        .btn-success:hover {
+            background: #2f855a;
+        }
+
         .btn-danger {
-            background: #e74c3c;
+            background: #e53e3e;
             color: white;
             padding: 8px 16px;
             font-size: 12px;
+        }
+
+        .btn-danger:hover {
+            background: #c53030;
         }
 
         .btn-drive {
@@ -100,7 +109,7 @@
         }
 
         .btn-drive:hover {
-            background: #357ae8;
+            background: #3367d6;
         }
 
         .btn-small {
@@ -111,45 +120,47 @@
         .main-content {
             display: grid;
             grid-template-columns: 1fr 2fr;
-            gap: 30px;
+            gap: 24px;
         }
 
         .card {
             background: white;
-            border-radius: 15px;
-            padding: 25px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            padding: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
 
         .card h2 {
-            color: #2c3e50;
+            color: #1a202c;
             margin-bottom: 20px;
-            font-size: 22px;
-            border-bottom: 3px solid #667eea;
-            padding-bottom: 10px;
+            font-size: 18px;
+            font-weight: 600;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 12px;
         }
 
         .auth-section {
-            background: #e3f2fd;
+            background: #edf2f7;
             padding: 20px;
-            border-radius: 10px;
+            border-radius: 8px;
             margin-bottom: 20px;
-            border-left: 4px solid #2196f3;
+            border-left: 4px solid #3182ce;
         }
 
         .auth-section.connected {
-            background: #e8f5e9;
-            border-left-color: #4caf50;
+            background: #f0fdf4;
+            border-left-color: #38a169;
         }
 
         .auth-section h3 {
-            color: #1976d2;
-            margin-bottom: 10px;
+            color: #2d3748;
+            margin-bottom: 12px;
             font-size: 16px;
+            font-weight: 600;
         }
 
         .auth-section.connected h3 {
-            color: #2e7d32;
+            color: #2d3748;
         }
 
         .auth-status {
@@ -160,14 +171,14 @@
         }
 
         .status-indicator {
-            width: 12px;
-            height: 12px;
+            width: 10px;
+            height: 10px;
             border-radius: 50%;
-            background: #f44336;
+            background: #fc8181;
         }
 
         .status-indicator.connected {
-            background: #4caf50;
+            background: #48bb78;
         }
 
         .customer-list {
@@ -176,60 +187,61 @@
         }
 
         .customer-item {
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 10px;
+            padding: 16px;
+            border-radius: 6px;
+            margin-bottom: 8px;
             cursor: pointer;
-            transition: all 0.3s ease;
-            border: 2px solid #ecf0f1;
+            transition: all 0.2s ease;
+            border: 1px solid #e2e8f0;
+            background: white;
         }
 
         .customer-item:hover {
-            background: #f8f9fa;
-            border-color: #667eea;
-            transform: translateX(5px);
+            background: #f7fafc;
+            border-color: #cbd5e0;
         }
 
         .customer-item.active {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #3182ce;
             color: white;
-            border-color: #667eea;
+            border-color: #3182ce;
         }
 
         .customer-item h3 {
-            font-size: 16px;
-            margin-bottom: 5px;
+            font-size: 15px;
+            margin-bottom: 6px;
+            font-weight: 600;
         }
 
         .customer-item p {
             font-size: 13px;
-            opacity: 0.8;
+            opacity: 0.85;
         }
 
         .customer-item .stage-badge {
             display: inline-block;
-            padding: 4px 12px;
-            border-radius: 20px;
+            padding: 4px 10px;
+            border-radius: 4px;
             font-size: 11px;
-            margin-top: 5px;
-            font-weight: 600;
+            margin-top: 8px;
+            font-weight: 500;
         }
 
-        .stage-arrival { background: #3498db; color: white; }
-        .stage-consultation { background: #9b59b6; color: white; }
-        .stage-quotation { background: #f39c12; color: white; }
-        .stage-testdrive { background: #e67e22; color: white; }
-        .stage-closing { background: #27ae60; color: white; }
+        .stage-arrival { background: #bee3f8; color: #2c5282; }
+        .stage-consultation { background: #d6bcfa; color: #553c9a; }
+        .stage-quotation { background: #fbd38d; color: #7c2d12; }
+        .stage-testdrive { background: #fbb6ce; color: #97266d; }
+        .stage-closing { background: #9ae6b4; color: #22543d; }
 
         .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 18px;
         }
 
         .form-group label {
             display: block;
-            margin-bottom: 8px;
-            color: #2c3e50;
-            font-weight: 600;
+            margin-bottom: 6px;
+            color: #2d3748;
+            font-weight: 500;
             font-size: 14px;
         }
 
@@ -237,18 +249,20 @@
         .form-group select,
         .form-group textarea {
             width: 100%;
-            padding: 12px;
-            border: 2px solid #ecf0f1;
-            border-radius: 8px;
+            padding: 10px 12px;
+            border: 1px solid #cbd5e0;
+            border-radius: 6px;
             font-size: 14px;
-            transition: border 0.3s ease;
+            transition: border 0.2s ease;
+            font-family: inherit;
         }
 
         .form-group input:focus,
         .form-group select:focus,
         .form-group textarea:focus {
             outline: none;
-            border-color: #667eea;
+            border-color: #3182ce;
+            box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.1);
         }
 
         .form-row {
@@ -258,16 +272,18 @@
         }
 
         .checklist-section {
-            background: #f8f9fa;
+            background: #f7fafc;
             padding: 20px;
-            border-radius: 10px;
+            border-radius: 8px;
             margin-top: 20px;
+            border: 1px solid #e2e8f0;
         }
 
         .checklist-section h3 {
-            color: #2c3e50;
+            color: #2d3748;
             margin-bottom: 15px;
-            font-size: 18px;
+            font-size: 16px;
+            font-weight: 600;
         }
 
         .checklist-item {
@@ -275,13 +291,14 @@
             align-items: center;
             padding: 12px;
             background: white;
-            border-radius: 8px;
-            margin-bottom: 10px;
-            transition: all 0.3s ease;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            transition: all 0.2s ease;
+            border: 1px solid #e2e8f0;
         }
 
         .checklist-item:hover {
-            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+            background: #f7fafc;
         }
 
         .checklist-item input[type="checkbox"] {
@@ -307,17 +324,18 @@
         }
 
         .file-upload-section {
-            background: #e8f5e9;
+            background: #f0fdf4;
             padding: 20px;
-            border-radius: 10px;
+            border-radius: 8px;
             margin-top: 20px;
-            border: 2px dashed #27ae60;
+            border: 1px solid #9ae6b4;
         }
 
         .file-upload-section h3 {
-            color: #27ae60;
+            color: #2d3748;
             margin-bottom: 15px;
-            font-size: 18px;
+            font-size: 16px;
+            font-weight: 600;
             display: flex;
             align-items: center;
             gap: 10px;
@@ -325,35 +343,34 @@
 
         .upload-area {
             background: white;
-            border: 3px dashed #27ae60;
-            border-radius: 10px;
+            border: 2px dashed #cbd5e0;
+            border-radius: 8px;
             padding: 40px;
             text-align: center;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
             margin-bottom: 15px;
         }
 
         .upload-area:hover {
-            background: #f1f8f4;
-            border-color: #1e8449;
+            border-color: #3182ce;
+            background: #f7fafc;
         }
 
         .upload-area.dragover {
-            background: #d5f4e6;
-            border-color: #1e8449;
-            transform: scale(1.02);
+            background: #ebf8ff;
+            border-color: #3182ce;
         }
 
         .upload-area p {
-            color: #27ae60;
-            font-size: 16px;
-            margin-bottom: 10px;
-            font-weight: 600;
+            color: #2d3748;
+            font-size: 15px;
+            margin-bottom: 8px;
+            font-weight: 500;
         }
 
         .upload-area small {
-            color: #7f8c8d;
+            color: #718096;
             font-size: 13px;
         }
 
@@ -419,26 +436,31 @@
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-bottom: 20px;
+            gap: 16px;
+            margin-bottom: 24px;
         }
 
         .stat-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: white;
             padding: 20px;
-            border-radius: 10px;
-            color: white;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
 
         .stat-card h3 {
-            font-size: 14px;
-            opacity: 0.9;
-            margin-bottom: 5px;
+            font-size: 13px;
+            color: #718096;
+            margin-bottom: 8px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .stat-card p {
-            font-size: 32px;
-            font-weight: 700;
+            font-size: 28px;
+            font-weight: 600;
+            color: #2d3748;
         }
 
         .empty-state {
@@ -454,7 +476,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.5);
+            background: rgba(0,0,0,0.6);
             z-index: 1000;
             justify-content: center;
             align-items: center;
@@ -466,49 +488,51 @@
 
         .modal-content {
             background: white;
-            padding: 30px;
-            border-radius: 15px;
+            padding: 32px;
+            border-radius: 8px;
             max-width: 600px;
             width: 90%;
             max-height: 90vh;
             overflow-y: auto;
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);
         }
 
         .modal-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
+            margin-bottom: 24px;
         }
 
         .modal-header h2 {
-            color: #2c3e50;
-            font-size: 24px;
+            color: #1a202c;
+            font-size: 20px;
+            font-weight: 600;
         }
 
         .close-modal {
-            font-size: 28px;
+            font-size: 24px;
             cursor: pointer;
-            color: #95a5a6;
-            transition: color 0.3s ease;
+            color: #a0aec0;
+            transition: color 0.2s ease;
         }
 
         .close-modal:hover {
-            color: #2c3e50;
+            color: #2d3748;
         }
 
         .progress-bar {
             width: 100%;
-            height: 8px;
-            background: #ecf0f1;
-            border-radius: 10px;
+            height: 6px;
+            background: #e2e8f0;
+            border-radius: 3px;
             overflow: hidden;
             margin-top: 10px;
         }
 
         .progress-fill {
             height: 100%;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #3182ce;
             transition: width 0.3s ease;
         }
 
@@ -541,56 +565,59 @@
         }
 
         .file-naming {
-            background: #fff3cd;
-            padding: 15px;
+            background: #fffbeb;
+            padding: 16px;
             border-radius: 8px;
             margin-top: 15px;
-            border-left: 4px solid #f39c12;
+            border-left: 3px solid #f59e0b;
         }
 
         .file-naming h4 {
-            color: #856404;
+            color: #2d3748;
             margin-bottom: 10px;
-            font-size: 16px;
+            font-size: 15px;
+            font-weight: 600;
         }
 
         .file-naming code {
             display: block;
             background: white;
-            padding: 10px;
-            border-radius: 5px;
+            padding: 10px 12px;
+            border-radius: 6px;
             font-family: 'Courier New', monospace;
             font-size: 13px;
-            margin: 5px 0;
-            color: #2c3e50;
+            margin: 8px 0;
+            color: #2d3748;
+            border: 1px solid #fde68a;
         }
 
         .tabs {
             display: flex;
-            gap: 10px;
+            gap: 0;
             margin-bottom: 20px;
-            border-bottom: 2px solid #ecf0f1;
+            border-bottom: 1px solid #e2e8f0;
         }
 
         .tab {
-            padding: 12px 24px;
+            padding: 12px 20px;
             cursor: pointer;
             border: none;
             background: none;
             font-size: 14px;
-            font-weight: 600;
-            color: #7f8c8d;
-            transition: all 0.3s ease;
-            border-bottom: 3px solid transparent;
+            font-weight: 500;
+            color: #718096;
+            transition: all 0.2s ease;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -1px;
         }
 
         .tab:hover {
-            color: #667eea;
+            color: #3182ce;
         }
 
         .tab.active {
-            color: #667eea;
-            border-bottom-color: #667eea;
+            color: #3182ce;
+            border-bottom-color: #3182ce;
         }
 
         .tab-content {
@@ -602,32 +629,33 @@
         }
 
         .drive-folder-info {
-            background: #e3f2fd;
-            padding: 15px;
+            background: #ebf8ff;
+            padding: 16px;
             border-radius: 8px;
             margin-top: 15px;
-            border-left: 4px solid #2196f3;
+            border-left: 3px solid #3182ce;
         }
 
         .drive-folder-info h4 {
-            color: #1565c0;
-            margin-bottom: 10px;
-            font-size: 16px;
+            color: #2d3748;
+            margin-bottom: 8px;
+            font-size: 15px;
+            font-weight: 600;
             display: flex;
             align-items: center;
             gap: 8px;
         }
 
         .drive-folder-info p {
-            color: #424242;
+            color: #4a5568;
             font-size: 14px;
             margin: 5px 0;
         }
 
         .drive-folder-info a {
-            color: #1976d2;
+            color: #3182ce;
             text-decoration: none;
-            font-weight: 600;
+            font-weight: 500;
         }
 
         .drive-folder-info a:hover {
@@ -635,16 +663,17 @@
         }
 
         .setup-instructions {
-            background: #fff3cd;
+            background: #fffbeb;
             padding: 20px;
-            border-radius: 10px;
+            border-radius: 8px;
             margin: 20px 0;
-            border-left: 4px solid #ff9800;
+            border-left: 3px solid #f59e0b;
         }
 
         .setup-instructions h3 {
-            color: #e65100;
+            color: #2d3748;
             margin-bottom: 15px;
+            font-weight: 600;
         }
 
         .setup-instructions ol {
@@ -705,31 +734,31 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🚗 BYD MotorEast CRM - Google Drive Edition</h1>
+            <h1>BYD MotorEast CRM</h1>
             <div class="header-actions">
-                <button class="btn btn-primary" onclick="openAddCustomerModal()">+ Add Customer</button>
+                <button class="btn btn-primary" onclick="openAddCustomerModal()">Add Customer</button>
                 <button class="btn btn-secondary" onclick="exportData()">Export Data</button>
                 <button class="btn btn-secondary" onclick="importData()">Import Data</button>
             </div>
         </div>
 
         <div class="auth-section" id="authSection">
-            <h3>🔐 Google Drive Connection</h3>
+            <h3>Google Drive Connection</h3>
             <div class="auth-status">
                 <span class="status-indicator" id="statusIndicator"></span>
                 <span id="authStatusText">Not connected to Google Drive</span>
             </div>
             <button class="btn btn-drive" id="authButton" onclick="handleAuthClick()" disabled>
-                <span>📁 Connect Google Drive</span>
+                <span>Connect Google Drive</span>
             </button>
             <p style="font-size: 12px; color: #666; margin-top: 10px;">
                 Files will be stored in: <strong>Google Drive > BYD_MotorEast_Customers</strong>
             </p>
 
             <!-- Setup help section -->
-            <details style="margin-top: 15px; background: white; padding: 15px; border-radius: 8px;">
-                <summary style="cursor: pointer; font-weight: 600; color: #1976d2;">
-                    ℹ️ Having connection issues? Click here for setup instructions
+            <details style="margin-top: 15px; background: white; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                <summary style="cursor: pointer; font-weight: 500; color: #3182ce; font-size: 14px;">
+                    Having connection issues? Click here for setup instructions
                 </summary>
                 <div style="margin-top: 15px; font-size: 13px; color: #424242; line-height: 1.6;">
                     <p><strong>If you're getting connection errors:</strong></p>
