@@ -30,6 +30,7 @@
             color: white;
             padding: 10px 15px 15px 15px;
             margin-bottom: 20px;
+            position: relative;
         }
 
         .header h1 {
@@ -46,6 +47,48 @@
             gap: 12px;
             flex-wrap: wrap;
             justify-content: center;
+        }
+
+        .google-drive-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            padding: 8px 16px;
+            background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: white;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .google-drive-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+        }
+
+        .google-drive-btn.connected {
+            background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
+            border-color: rgba(39, 174, 96, 0.3);
+        }
+
+        .google-drive-btn .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #e74c3c;
+            box-shadow: 0 0 8px rgba(231, 76, 60, 0.5);
+        }
+
+        .google-drive-btn.connected .status-dot {
+            background: #2ecc71;
+            box-shadow: 0 0 8px rgba(46, 204, 113, 0.5);
         }
 
         .btn {
@@ -150,54 +193,6 @@
             padding-bottom: 10px;
             border-bottom: 2px solid;
             border-image: linear-gradient(to right, #00bcd4, #0097a7) 1;
-        }
-
-        .auth-section {
-            background: linear-gradient(135deg, rgba(0, 188, 212, 0.1) 0%, rgba(0, 151, 167, 0.1) 100%);
-            padding: 20px;
-            border-radius: 15px;
-            margin-bottom: 20px;
-            border: 2px solid rgba(0, 188, 212, 0.3);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
-        }
-
-        .auth-section.connected {
-            background: linear-gradient(135deg, rgba(39, 174, 96, 0.1) 0%, rgba(34, 153, 84, 0.1) 100%);
-            border-color: rgba(39, 174, 96, 0.3);
-        }
-
-        .auth-section h3 {
-            color: #00bcd4;
-            margin-bottom: 12px;
-            font-size: 1.1em;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 1.5px;
-        }
-
-        .auth-section.connected h3 {
-            color: #27ae60;
-        }
-
-        .auth-status {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-top: 10px;
-            margin-bottom: 15px;
-        }
-
-        .status-indicator {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            background: #e74c3c;
-            box-shadow: 0 0 10px rgba(231, 76, 60, 0.5);
-        }
-
-        .status-indicator.connected {
-            background: #27ae60;
-            box-shadow: 0 0 10px rgba(39, 174, 96, 0.5);
         }
 
         .customer-list {
@@ -753,10 +748,18 @@
 
             .header {
                 text-align: center;
+                padding-top: 50px;
             }
 
             .header h1 {
                 font-size: 22px;
+            }
+
+            .google-drive-btn {
+                top: 10px;
+                right: 10px;
+                font-size: 11px;
+                padding: 6px 12px;
             }
 
             .stats-grid {
@@ -783,6 +786,10 @@
 <body>
     <div class="container">
         <div class="header">
+            <button class="google-drive-btn" id="authButton" onclick="handleAuthClick()" disabled title="Google Drive Connection">
+                <span class="status-dot"></span>
+                <span id="authButtonText">Google Drive</span>
+            </button>
             <h1>BYD MotorEast CRM</h1>
             <div class="header-actions">
                 <button class="btn btn-primary" onclick="openAddCustomerModal()">Add Customer</button>
@@ -790,62 +797,6 @@
                 <button class="btn btn-secondary" onclick="importData()">Import Data</button>
             </div>
         </div>
-
-        <div class="auth-section" id="authSection">
-            <h3>Google Drive Connection</h3>
-            <div class="auth-status">
-                <span class="status-indicator" id="statusIndicator"></span>
-                <span id="authStatusText">Not connected to Google Drive</span>
-            </div>
-            <button class="btn btn-drive" id="authButton" onclick="handleAuthClick()" disabled>
-                <span>Connect Google Drive</span>
-            </button>
-            <p style="font-size: 12px; color: #666; margin-top: 10px;">
-                Files will be stored in: <strong>Google Drive > BYD_MotorEast_Customers</strong>
-            </p>
-
-            <!-- Setup help section -->
-            <details style="margin-top: 15px; background: white; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0;">
-                <summary style="cursor: pointer; font-weight: 500; color: #3182ce; font-size: 14px;">
-                    Having connection issues? Click here for setup instructions
-                </summary>
-                <div style="margin-top: 15px; font-size: 13px; color: #424242; line-height: 1.6;">
-                    <p><strong>If you're getting connection errors:</strong></p>
-                    <ol style="margin-left: 20px; margin-top: 10px;">
-                        <li><strong>Check your URL:</strong> Make sure you're accessing via HTTPS or http://localhost (NOT file://)</li>
-                        <li><strong>Configure Google Cloud Console:</strong>
-                            <ul style="margin-left: 20px; margin-top: 5px;">
-                                <li>Go to: <a href="https://console.cloud.google.com/apis/credentials" target="_blank" style="color: #1976d2;">Google Cloud Console</a></li>
-                                <li>Click on your OAuth Client ID</li>
-                                <li>Add your website URL to <strong>Authorized JavaScript origins</strong></li>
-                                <li>Add your website URL to <strong>Authorized redirect URIs</strong></li>
-                            </ul>
-                        </li>
-                        <li><strong>Example configuration:</strong>
-                            <ul style="margin-left: 20px; margin-top: 5px;">
-                                <li>For GitHub Pages: <code style="background: #f5f5f5; padding: 2px 6px; border-radius: 3px;">https://yourusername.github.io</code></li>
-                                <li>For local testing: <code style="background: #f5f5f5; padding: 2px 6px; border-radius: 3px;">http://localhost:8000</code></li>
-                            </ul>
-                        </li>
-                        <li><strong>Enable the API:</strong> Make sure Google Drive API is enabled in your Google Cloud project</li>
-                        <li><strong>Check browser console:</strong> Press F12 and check the Console tab for detailed error messages</li>
-                    </ol>
-                    <p style="margin-top: 10px; padding: 10px; background: #fff3cd; border-radius: 5px; border-left: 4px solid #ff9800;">
-                        <strong>Current page URL:</strong> <span id="currentUrl" style="font-family: monospace;"></span>
-                    </p>
-                </div>
-            </details>
-        </div>
-
-        <script>
-            // Show current URL for debugging
-            document.addEventListener('DOMContentLoaded', function() {
-                const urlElement = document.getElementById('currentUrl');
-                if (urlElement) {
-                    urlElement.textContent = window.location.href;
-                }
-            });
-        </script>
 
         <div class="stats-grid">
             <div class="stat-card">
@@ -1095,39 +1046,35 @@
 
         // Show setup error with detailed message
         function showSetupError(message) {
-            const authSection = document.getElementById('authSection');
-            authSection.style.background = '#ffebee';
-            authSection.style.borderLeftColor = '#f44336';
+            const authButton = document.getElementById('authButton');
+            const authButtonText = document.getElementById('authButtonText');
 
-            const statusText = document.getElementById('authStatusText');
-            statusText.innerHTML = `<strong style="color: #c62828;">Connection Error</strong><br>
-                <small style="color: #666; display: block; margin-top: 8px; white-space: pre-wrap; text-align: left;">${message.replace(/\n/g, '<br>')}</small>`;
+            authButton.style.background = 'linear-gradient(135deg, #e74c3c 0%, #c0392b 100%)';
+            authButton.style.borderColor = 'rgba(231, 76, 60, 0.5)';
+            authButton.title = 'Connection Error: ' + message;
+            authButtonText.textContent = 'Error';
 
-            document.getElementById('authButton').style.display = 'none';
+            console.error('Google Drive setup error:', message);
         }
 
         // Update signin status
         function updateSigninStatus(signedIn) {
             isSignedIn = signedIn;
-            const authSection = document.getElementById('authSection');
-            const statusIndicator = document.getElementById('statusIndicator');
-            const statusText = document.getElementById('authStatusText');
             const authButton = document.getElementById('authButton');
+            const authButtonText = document.getElementById('authButtonText');
 
             if (signedIn) {
-                authSection.classList.add('connected');
-                statusIndicator.classList.add('connected');
-                statusText.textContent = 'Connected to Google Drive';
-                authButton.innerHTML = '<span>🔓 Disconnect Google Drive</span>';
+                authButton.classList.add('connected');
+                authButton.title = 'Connected to Google Drive - Click to disconnect';
+                authButtonText.textContent = 'Connected';
                 authButton.onclick = handleSignoutClick;
-                
+
                 // Get or create root folder
                 getRootFolder();
             } else {
-                authSection.classList.remove('connected');
-                statusIndicator.classList.remove('connected');
-                statusText.textContent = 'Not connected to Google Drive';
-                authButton.innerHTML = '<span>📁 Connect Google Drive</span>';
+                authButton.classList.remove('connected');
+                authButton.title = 'Click to connect to Google Drive';
+                authButtonText.textContent = 'Google Drive';
                 authButton.onclick = handleAuthClick;
             }
         }
