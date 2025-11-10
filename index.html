@@ -719,7 +719,7 @@
                 <span class="status-indicator" id="statusIndicator"></span>
                 <span id="authStatusText">Not connected to Google Drive</span>
             </div>
-            <button class="btn btn-drive" id="authButton" onclick="handleAuthClick()">
+            <button class="btn btn-drive" id="authButton" onclick="handleAuthClick()" disabled>
                 <span>📁 Connect Google Drive</span>
             </button>
             <p style="font-size: 12px; color: #666; margin-top: 10px;">
@@ -879,13 +879,14 @@
         <!-- Modal hidden since Client ID is pre-configured -->
     </div>
 
-    <!-- Google API -->
+    <!-- Google Identity Services (New Library) -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <!-- Google API for Drive operations -->
     <script src="https://apis.google.com/js/api.js"></script>
     
     <script>
         // Configuration
         let CLIENT_ID = '876961148543-8sdj3cti6q9tc523natb3g6jt789qlbr.apps.googleusercontent.com';
-        const API_KEY = ''; // Not needed for OAuth 2.0
         const DISCOVERY_DOCS = ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"];
         const SCOPES = 'https://www.googleapis.com/auth/drive.file';
 
@@ -895,6 +896,10 @@
         let isSignedIn = false;
         let rootFolderId = null;
         let manualMode = false;
+        let tokenClient = null;
+        let accessToken = null;
+        let gapiInited = false;
+        let gisInited = false;
 
         // Document checklist templates
         const documentChecklists = {
@@ -935,62 +940,79 @@
             ]
         };
 
-        // Initialize Google API
-        function initClient() {
+        // Initialize GAPI client for Drive API
+        function gapiLoaded() {
+            console.log('GAPI loaded, initializing client...');
+            gapi.load('client', async () => {
+                try {
+                    await gapi.client.init({
+                        discoveryDocs: DISCOVERY_DOCS,
+                    });
+                    gapiInited = true;
+                    console.log('GAPI client initialized successfully');
+                    maybeEnableButtons();
+                } catch (error) {
+                    console.error('Error initializing GAPI client:', error);
+                    showSetupError('Error initializing Google Drive API: ' + error.message);
+                }
+            });
+        }
+
+        // Initialize GIS (Google Identity Services) for authentication
+        function gisLoaded() {
+            console.log('GIS loaded, creating token client...');
+
             if (!CLIENT_ID) {
-                console.log('No Client ID configured');
                 showSetupError('No Client ID configured. Please configure your Google OAuth Client ID.');
                 return;
             }
 
-            console.log('Initializing Google API with Client ID:', CLIENT_ID);
-
-            gapi.load('client:auth2', () => {
-                console.log('Google API loaded, initializing client...');
-
-                gapi.client.init({
-                    clientId: CLIENT_ID,
-                    discoveryDocs: DISCOVERY_DOCS,
+            try {
+                tokenClient = google.accounts.oauth2.initTokenClient({
+                    client_id: CLIENT_ID,
                     scope: SCOPES,
-                    plugin_name: 'BYD_CRM' // Required for newer Google API
-                }).then(() => {
-                    console.log('Google API client initialized successfully');
-                    const authInstance = gapi.auth2.getAuthInstance();
-                    isSignedIn = authInstance.isSignedIn.get();
-                    updateSigninStatus(isSignedIn);
+                    callback: (response) => {
+                        if (response.error !== undefined) {
+                            console.error('Token response error:', response);
+                            showSetupError('Authentication error: ' + response.error);
+                            return;
+                        }
+                        console.log('Access token received');
+                        accessToken = response.access_token;
+                        isSignedIn = true;
+                        updateSigninStatus(true);
 
-                    authInstance.isSignedIn.listen(updateSigninStatus);
-                }, (error) => {
-                    console.error('Error initializing Google API:', error);
-                    console.error('Error details:', JSON.stringify(error, null, 2));
+                        // Store token expiry time
+                        const expiresIn = response.expires_in || 3600;
+                        localStorage.setItem('tokenExpiry', Date.now() + (expiresIn * 1000));
 
-                    let errorMessage = 'Error connecting to Google Drive.\n\n';
-
-                    if (error.details) {
-                        errorMessage += 'Error: ' + error.details + '\n\n';
-                    }
-
-                    if (error.error === 'idpiframe_initialization_failed') {
-                        errorMessage += 'SOLUTION:\n';
-                        errorMessage += '1. Make sure you are accessing this page via HTTPS or http://localhost\n';
-                        errorMessage += '2. Check that your Google Cloud Console has the correct Authorized JavaScript origins:\n';
-                        errorMessage += '   - For local testing: http://localhost or http://127.0.0.1\n';
-                        errorMessage += '   - For GitHub Pages: https://yourusername.github.io\n';
-                        errorMessage += '3. Authorized redirect URIs should include:\n';
-                        errorMessage += '   - http://localhost\n';
-                        errorMessage += '   - Your actual hosted URL\n\n';
-                        errorMessage += 'Visit: https://console.cloud.google.com/apis/credentials\n';
-                        errorMessage += 'to configure your OAuth client.';
-                    } else if (error.error === 'popup_blocked_by_browser') {
-                        errorMessage += 'Your browser blocked the popup. Please allow popups for this site.';
-                    } else {
-                        errorMessage += 'Error code: ' + (error.error || 'unknown') + '\n';
-                        errorMessage += 'Please check browser console for details.';
-                    }
-
-                    showSetupError(errorMessage);
+                        // Get or create root folder
+                        getRootFolder();
+                    },
                 });
-            });
+                gisInited = true;
+                console.log('GIS token client initialized successfully');
+                maybeEnableButtons();
+            } catch (error) {
+                console.error('Error initializing GIS:', error);
+                showSetupError('Error initializing authentication: ' + error.message);
+            }
+        }
+
+        // Enable buttons when both libraries are loaded
+        function maybeEnableButtons() {
+            if (gapiInited && gisInited) {
+                console.log('Both GAPI and GIS initialized - ready to authenticate');
+                document.getElementById('authButton').disabled = false;
+
+                // Check if we have a valid token
+                const tokenExpiry = localStorage.getItem('tokenExpiry');
+                if (tokenExpiry && Date.now() < parseInt(tokenExpiry)) {
+                    console.log('Found valid token in storage');
+                    // Token might still be valid, but we need to re-authenticate
+                    // as we can't retrieve the token from localStorage
+                }
+            }
         }
 
         // Show setup error with detailed message
@@ -1047,31 +1069,33 @@
                 return;
             }
 
+            if (!tokenClient) {
+                alert('Authentication not initialized yet. Please wait a moment and try again.');
+                return;
+            }
+
             try {
-                gapi.auth2.getAuthInstance().signIn({
-                    prompt: 'select_account'
-                }).then(() => {
-                    console.log('Sign-in successful');
-                }, (error) => {
-                    console.error('Sign-in error:', error);
-                    if (error.error === 'popup_closed_by_user') {
-                        console.log('User closed the popup');
-                    } else if (error.error === 'access_denied') {
-                        alert('Access denied. Please grant permission to access Google Drive.');
-                    } else {
-                        alert('Sign-in failed: ' + (error.error || 'Unknown error'));
-                    }
-                });
+                // Request an access token
+                tokenClient.requestAccessToken({ prompt: 'consent' });
             } catch (error) {
                 console.error('Exception during sign-in:', error);
-                alert('Error during sign-in. Please check console for details.');
+                alert('Error during sign-in: ' + error.message);
             }
         }
 
         // Handle signout click
         function handleSignoutClick() {
             if (confirm('Disconnect from Google Drive? Your files will remain in Drive.')) {
-                gapi.auth2.getAuthInstance().signOut();
+                if (accessToken) {
+                    // Revoke the token
+                    google.accounts.oauth2.revoke(accessToken, () => {
+                        console.log('Token revoked');
+                    });
+                }
+                accessToken = null;
+                isSignedIn = false;
+                localStorage.removeItem('tokenExpiry');
+                updateSigninStatus(false);
             }
         }
 
@@ -1176,7 +1200,7 @@
                     'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,mimeType,size,webViewLink,createdTime',
                     {
                         method: 'POST',
-                        headers: new Headers({ 'Authorization': 'Bearer ' + gapi.auth.getToken().access_token }),
+                        headers: new Headers({ 'Authorization': 'Bearer ' + accessToken }),
                         body: form
                     }
                 );
@@ -1832,7 +1856,9 @@
         // Initialize
         function init() {
             loadData();
-            initClient(); // Client ID is pre-configured
+            // Initialize both GAPI and GIS
+            gapiLoaded();
+            gisLoaded();
         }
 
         // Start when page loads
