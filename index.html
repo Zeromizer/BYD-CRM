@@ -929,6 +929,109 @@
         let accessToken = null;
         let gapiInited = false;
         let gisInited = false;
+        let tokenRefreshTimer = null;
+
+        // Token Storage and Management Functions
+        function saveTokenToStorage(token, expiresIn) {
+            const expiryTime = Date.now() + (expiresIn * 1000);
+            localStorage.setItem('googleAccessToken', token);
+            localStorage.setItem('googleTokenExpiry', expiryTime.toString());
+            console.log('Token saved to localStorage, expires in', expiresIn, 'seconds');
+        }
+
+        function getTokenFromStorage() {
+            const token = localStorage.getItem('googleAccessToken');
+            const expiry = localStorage.getItem('googleTokenExpiry');
+
+            if (!token || !expiry) {
+                return null;
+            }
+
+            const expiryTime = parseInt(expiry);
+            const now = Date.now();
+
+            // Check if token is still valid (with 5 minute buffer)
+            if (now >= expiryTime - (5 * 60 * 1000)) {
+                console.log('Token expired or expiring soon');
+                clearTokenFromStorage();
+                return null;
+            }
+
+            console.log('Valid token found in storage');
+            return { token, expiryTime };
+        }
+
+        function clearTokenFromStorage() {
+            localStorage.removeItem('googleAccessToken');
+            localStorage.removeItem('googleTokenExpiry');
+            localStorage.removeItem('tokenExpiry'); // Clean up old key
+            console.log('Token cleared from storage');
+        }
+
+        function scheduleTokenRefresh(expiresIn) {
+            // Clear any existing timer
+            if (tokenRefreshTimer) {
+                clearTimeout(tokenRefreshTimer);
+            }
+
+            // Schedule refresh 5 minutes before expiry
+            const refreshTime = (expiresIn - 300) * 1000; // 5 minutes before expiry
+
+            if (refreshTime > 0) {
+                console.log('Token refresh scheduled in', refreshTime / 1000, 'seconds');
+                tokenRefreshTimer = setTimeout(() => {
+                    console.log('Auto-refreshing token...');
+                    refreshTokenSilently();
+                }, refreshTime);
+            }
+        }
+
+        function refreshTokenSilently() {
+            if (!tokenClient) {
+                console.error('Token client not initialized');
+                return;
+            }
+
+            try {
+                // Try to refresh silently (no user prompt)
+                tokenClient.requestAccessToken({ prompt: '' });
+            } catch (error) {
+                console.error('Silent token refresh failed:', error);
+                // If silent refresh fails, user will need to re-authenticate manually
+                clearTokenFromStorage();
+                accessToken = null;
+                isSignedIn = false;
+                updateSigninStatus(false);
+                alert('Your Google Drive session has expired. Please reconnect.');
+            }
+        }
+
+        function setAccessToken(token, expiresIn) {
+            accessToken = token;
+            gapi.client.setToken({ access_token: token });
+            saveTokenToStorage(token, expiresIn);
+            scheduleTokenRefresh(expiresIn);
+        }
+
+        function restoreTokenFromStorage() {
+            const tokenData = getTokenFromStorage();
+
+            if (tokenData) {
+                accessToken = tokenData.token;
+                gapi.client.setToken({ access_token: tokenData.token });
+                isSignedIn = true;
+
+                // Calculate remaining time
+                const remainingTime = Math.floor((tokenData.expiryTime - Date.now()) / 1000);
+                scheduleTokenRefresh(remainingTime);
+
+                updateSigninStatus(true);
+                console.log('Session restored from storage');
+                return true;
+            }
+
+            return false;
+        }
 
         // Document folder categories
         const documentFolders = [
@@ -1113,13 +1216,13 @@
                             return;
                         }
                         console.log('Access token received');
-                        accessToken = response.access_token;
+
+                        // Store token and set up auto-refresh
+                        const expiresIn = response.expires_in || 3600;
+                        setAccessToken(response.access_token, expiresIn);
+
                         isSignedIn = true;
                         updateSigninStatus(true);
-
-                        // Store token expiry time
-                        const expiresIn = response.expires_in || 3600;
-                        localStorage.setItem('tokenExpiry', Date.now() + (expiresIn * 1000));
 
                         // Get or create root folder
                         getRootFolder();
@@ -1140,12 +1243,13 @@
                 console.log('Both GAPI and GIS initialized - ready to authenticate');
                 document.getElementById('authButton').disabled = false;
 
-                // Check if we have a valid token
-                const tokenExpiry = localStorage.getItem('tokenExpiry');
-                if (tokenExpiry && Date.now() < parseInt(tokenExpiry)) {
-                    console.log('Found valid token in storage');
-                    // Token might still be valid, but we need to re-authenticate
-                    // as we can't retrieve the token from localStorage
+                // Try to restore token from storage
+                if (restoreTokenFromStorage()) {
+                    console.log('Successfully restored session from storage');
+                    // Get or create root folder
+                    getRootFolder();
+                } else {
+                    console.log('No valid token in storage, user needs to authenticate');
                 }
             }
         }
@@ -1217,15 +1321,22 @@
         // Handle signout click
         function handleSignoutClick() {
             if (confirm('Disconnect from Google Drive? Your files will remain in Drive.')) {
+                // Clear token refresh timer
+                if (tokenRefreshTimer) {
+                    clearTimeout(tokenRefreshTimer);
+                    tokenRefreshTimer = null;
+                }
+
                 if (accessToken) {
                     // Revoke the token
                     google.accounts.oauth2.revoke(accessToken, () => {
                         console.log('Token revoked');
                     });
                 }
+
                 accessToken = null;
                 isSignedIn = false;
-                localStorage.removeItem('tokenExpiry');
+                clearTokenFromStorage();
                 updateSigninStatus(false);
             }
         }
