@@ -990,6 +990,91 @@
             ]
         };
 
+        // Document classification patterns - maps keywords to document types
+        const documentClassificationPatterns = {
+            'nirc_fin': {
+                folderId: 'nirc_fin',
+                checklistId: 'nirc_fin',
+                keywords: ['nirc', 'nric', 'fin', 'ic', 'identity', 'identification'],
+                displayName: 'NIRC/FIN'
+            },
+            'test_drive': {
+                folderId: 'test_drive',
+                checklistId: 'test_drive',
+                keywords: ['test drive', 'testdrive', 'test-drive', 'driving test', 'trial'],
+                displayName: 'Test Drive'
+            },
+            'vsa': {
+                folderId: 'vsa',
+                checklistId: 'vsa',
+                keywords: ['vsa', 'vehicle sales agreement', 'sales agreement', 'purchase agreement', 'vehicle agreement'],
+                displayName: 'VSA'
+            },
+            'trade_in': {
+                folderId: 'trade_in',
+                checklistId: 'trade_in',
+                keywords: ['trade in', 'tradein', 'trade-in', 'valuation', 'vehicle exchange'],
+                displayName: 'Trade In'
+            },
+            'pdpa_coe': {
+                folderId: 'pdpa_coe',
+                checklistId: 'pdpa_coe',
+                keywords: ['pdpa', 'coe', 'coe bidding', 'bidding', 'consent', 'data protection'],
+                displayName: 'PDPA & COE Bidding'
+            },
+            'ic_copy': {
+                folderId: 'nirc_fin',
+                checklistId: 'ic_copy',
+                keywords: ['ic copy', 'ic front', 'ic back', 'identity card'],
+                displayName: 'IC Copy'
+            },
+            'driving_license': {
+                folderId: 'test_drive',
+                checklistId: 'driving_license',
+                keywords: ['driving license', 'driving licence', 'license', 'licence', 'driver license'],
+                displayName: 'Driving License'
+            },
+            'quotation': {
+                folderId: 'other',
+                checklistId: 'quotation',
+                keywords: ['quotation', 'quote', 'price quotation', 'pricing'],
+                displayName: 'Quotation'
+            },
+            'contact_form': {
+                folderId: 'other',
+                checklistId: 'contact_form',
+                keywords: ['contact form', 'customer form', 'contact information'],
+                displayName: 'Contact Form'
+            }
+        };
+
+        // Auto-classify document based on filename
+        function classifyDocument(fileName) {
+            const lowerFileName = fileName.toLowerCase();
+
+            // Try to match each pattern
+            for (const [key, pattern] of Object.entries(documentClassificationPatterns)) {
+                for (const keyword of pattern.keywords) {
+                    if (lowerFileName.includes(keyword.toLowerCase())) {
+                        return {
+                            folderId: pattern.folderId,
+                            checklistId: pattern.checklistId,
+                            displayName: pattern.displayName,
+                            confidence: 'high'
+                        };
+                    }
+                }
+            }
+
+            // Default to other documents
+            return {
+                folderId: 'other',
+                checklistId: null,
+                displayName: 'Other Documents',
+                confidence: 'low'
+            };
+        }
+
         // Initialize GAPI client for Drive API
         function gapiLoaded() {
             console.log('GAPI loaded, initializing client...');
@@ -1706,8 +1791,26 @@
                                 Upload to Google Drive
                             </h3>
 
-                            <div class="form-group" style="margin-bottom: 15px;">
-                                <label for="documentTypeSelect_${customerId}">📂 Select Document Folder</label>
+                            <div style="margin-bottom: 20px; padding: 15px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 10px; color: white;">
+                                <div style="display: flex; align-items: center; justify-content: space-between;">
+                                    <div>
+                                        <label style="display: flex; align-items: center; cursor: pointer;">
+                                            <input type="checkbox" id="autoClassifyToggle_${customerId}"
+                                                   style="width: 20px; height: 20px; margin-right: 10px; cursor: pointer;"
+                                                   onchange="toggleAutoClassify(${customerId})" checked>
+                                            <div>
+                                                <strong style="font-size: 16px;">🤖 Smart Auto-Classify</strong>
+                                                <p style="margin: 5px 0 0 0; font-size: 12px; opacity: 0.9;">
+                                                    AI will detect document type, organize into folders, and tick checklists automatically
+                                                </p>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group" id="manualFolderSelect_${customerId}" style="margin-bottom: 15px; display: none;">
+                                <label for="documentTypeSelect_${customerId}">📂 Select Document Folder (Manual Mode)</label>
                                 <select id="documentTypeSelect_${customerId}" style="width: 100%; padding: 10px; border: 1px solid #dfe6e9; border-radius: 8px; font-size: 14px; background: white;">
                                     ${documentFolders.map(folder => `
                                         <option value="${folder.id}">${folder.name.replace(/_/g, ' ')}</option>
@@ -1779,6 +1882,20 @@
             uploadFiles(files, customerId);
         }
 
+        // Toggle auto-classify mode
+        function toggleAutoClassify(customerId) {
+            const toggle = document.getElementById(`autoClassifyToggle_${customerId}`);
+            const manualSelect = document.getElementById(`manualFolderSelect_${customerId}`);
+
+            if (toggle && manualSelect) {
+                if (toggle.checked) {
+                    manualSelect.style.display = 'none';
+                } else {
+                    manualSelect.style.display = 'block';
+                }
+            }
+        }
+
         // Handle drag over
         function handleDragOver(event) {
             event.preventDefault();
@@ -1809,42 +1926,97 @@
                 return;
             }
 
-            // Get selected document type from dropdown
-            const documentTypeSelect = document.getElementById(`documentTypeSelect_${customerId}`);
-            const documentType = documentTypeSelect ? documentTypeSelect.value : 'other';
-            const folderName = documentFolders.find(f => f.id === documentType)?.name || 'Other_Documents';
+            // Check if auto-classify is enabled
+            const autoClassifyToggle = document.getElementById(`autoClassifyToggle_${customerId}`);
+            const isAutoClassify = autoClassifyToggle ? autoClassifyToggle.checked : true;
 
             const uploadArea = document.getElementById(`uploadArea_${customerId}`);
             const originalContent = uploadArea.innerHTML;
-            uploadArea.innerHTML = '<div class="loading"></div><p style="color: #27ae60; margin-top: 10px;">Uploading files to ' + folderName.replace(/_/g, ' ') + '...</p>';
 
             let successCount = 0;
             let errorCount = 0;
+            const classificationResults = [];
 
-            for (let i = 0; i < files.length; i++) {
-                const file = files[i];
+            if (isAutoClassify) {
+                // Auto-classify mode
+                uploadArea.innerHTML = '<div class="loading"></div><p style="color: #27ae60; margin-top: 10px;">🤖 Auto-classifying and uploading files...</p>';
 
-                const fileExt = file.name.split('.').pop();
-                const docType = prompt(`Enter document type for ${file.name}:`, folderName.replace(/_/g, ' ')) || folderName.replace(/_/g, ' ');
-                const fileName = `${customer.name.replace(/\s+/g, '_')}_${customer.nric || 'XXXX'}_${docType.replace(/\s+/g, '_')}.${fileExt}`;
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    const fileExt = file.name.split('.').pop();
 
-                const result = await uploadFileToDrive(file, customerId, fileName, documentType);
-                if (result) {
-                    successCount++;
-                } else {
-                    errorCount++;
+                    // Auto-classify the document
+                    const classification = classifyDocument(file.name);
+                    const documentType = classification.folderId;
+                    const displayName = classification.displayName;
+
+                    // Create standardized filename
+                    const fileName = `${customer.name.replace(/\s+/g, '_')}_${customer.nric || 'XXXX'}_${displayName.replace(/\s+/g, '_')}.${fileExt}`;
+
+                    const result = await uploadFileToDrive(file, customerId, fileName, documentType);
+                    if (result) {
+                        successCount++;
+                        classificationResults.push({
+                            originalName: file.name,
+                            detectedType: displayName,
+                            checklistId: classification.checklistId,
+                            confidence: classification.confidence
+                        });
+
+                        // Auto-tick checklist if applicable
+                        if (classification.checklistId) {
+                            toggleChecklistItem(customerId, classification.checklistId, true);
+                        }
+                    } else {
+                        errorCount++;
+                    }
+                }
+
+                // Show detailed results
+                let resultMessage = `✅ Successfully uploaded ${successCount} file(s)!\n\n📋 Auto-classified documents:\n`;
+                classificationResults.forEach(result => {
+                    resultMessage += `\n• ${result.originalName}\n  → ${result.detectedType}`;
+                    if (result.checklistId) {
+                        resultMessage += ` ✓ (checklist updated)`;
+                    }
+                });
+                if (errorCount > 0) {
+                    resultMessage += `\n\n❌ Failed to upload ${errorCount} file(s).`;
+                }
+                alert(resultMessage);
+
+            } else {
+                // Manual mode
+                const documentTypeSelect = document.getElementById(`documentTypeSelect_${customerId}`);
+                const documentType = documentTypeSelect ? documentTypeSelect.value : 'other';
+                const folderName = documentFolders.find(f => f.id === documentType)?.name || 'Other_Documents';
+
+                uploadArea.innerHTML = '<div class="loading"></div><p style="color: #27ae60; margin-top: 10px;">Uploading files to ' + folderName.replace(/_/g, ' ') + '...</p>';
+
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+
+                    const fileExt = file.name.split('.').pop();
+                    const docType = prompt(`Enter document type for ${file.name}:`, folderName.replace(/_/g, ' ')) || folderName.replace(/_/g, ' ');
+                    const fileName = `${customer.name.replace(/\s+/g, '_')}_${customer.nric || 'XXXX'}_${docType.replace(/\s+/g, '_')}.${fileExt}`;
+
+                    const result = await uploadFileToDrive(file, customerId, fileName, documentType);
+                    if (result) {
+                        successCount++;
+                    } else {
+                        errorCount++;
+                    }
+                }
+
+                if (successCount > 0) {
+                    alert(`Successfully uploaded ${successCount} file(s) to ${folderName.replace(/_/g, ' ')} folder!`);
+                }
+                if (errorCount > 0) {
+                    alert(`Failed to upload ${errorCount} file(s).`);
                 }
             }
 
             uploadArea.innerHTML = originalContent;
-
-            if (successCount > 0) {
-                alert(`Successfully uploaded ${successCount} file(s) to ${folderName.replace(/_/g, ' ')} folder!`);
-            }
-            if (errorCount > 0) {
-                alert(`Failed to upload ${errorCount} file(s).`);
-            }
-
             displayCustomerDetails(customerId);
             updateStats();
         }
@@ -1874,10 +2046,15 @@
         }
 
         // Toggle checklist item
-        function toggleChecklistItem(customerId, itemId) {
+        function toggleChecklistItem(customerId, itemId, setValue = null) {
             const customer = customers.find(c => c.id === customerId);
             if (customer) {
-                customer.checklist[itemId] = !customer.checklist[itemId];
+                // If setValue is provided, use it; otherwise toggle
+                if (setValue !== null) {
+                    customer.checklist[itemId] = setValue;
+                } else {
+                    customer.checklist[itemId] = !customer.checklist[itemId];
+                }
                 saveData();
                 displayCustomerDetails(customerId);
             }
