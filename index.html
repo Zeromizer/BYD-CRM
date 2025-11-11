@@ -1373,7 +1373,26 @@
 
         // Create customer folder
         async function createCustomerFolder(customerName, customerId) {
-            if (!isSignedIn) return null;
+            if (!isSignedIn) {
+                alert('Please connect to Google Drive first.');
+                return null;
+            }
+
+            // Ensure root folder is ready
+            if (!rootFolderId) {
+                console.log('Root folder not ready, fetching...');
+                try {
+                    await getRootFolder();
+                    if (!rootFolderId) {
+                        alert('Failed to initialize Google Drive folder. Please try reconnecting.');
+                        return null;
+                    }
+                } catch (error) {
+                    console.error('Error getting root folder:', error);
+                    alert('Failed to access Google Drive. Error: ' + error.message);
+                    return null;
+                }
+            }
 
             try {
                 const folderName = customerName.replace(/\s+/g, '_');
@@ -1387,12 +1406,23 @@
 
                 if (searchResponse.result.files.length > 0) {
                     const folderId = searchResponse.result.files[0].id;
+                    console.log('Folder already exists, using existing folder:', folderId);
+
+                    // Update customer record
+                    const customer = customers.find(c => c.id === customerId);
+                    if (customer && !customer.driveFolderId) {
+                        customer.driveFolderId = folderId;
+                        saveData();
+                    }
+
                     // Create document subfolders
                     await createDocumentSubfolders(folderId, customerId);
+                    alert('Folder created successfully for ' + customerName);
                     return folderId;
                 }
 
                 // Create folder
+                console.log('Creating new folder:', folderName);
                 const response = await gapi.client.drive.files.create({
                     resource: {
                         name: folderName,
@@ -1401,6 +1431,8 @@
                     },
                     fields: 'id, webViewLink'
                 });
+
+                console.log('Folder created:', response.result.id);
 
                 const customer = customers.find(c => c.id === customerId);
                 if (customer) {
@@ -1412,9 +1444,24 @@
                 // Create document subfolders
                 await createDocumentSubfolders(response.result.id, customerId);
 
+                alert('Folder created successfully for ' + customerName);
                 return response.result.id;
             } catch (error) {
                 console.error('Error creating folder:', error);
+
+                // Provide specific error messages
+                if (error.status === 401) {
+                    alert('Your Google Drive session has expired. Please reconnect.');
+                    clearTokenFromStorage();
+                    accessToken = null;
+                    isSignedIn = false;
+                    updateSigninStatus(false);
+                } else if (error.status === 403) {
+                    alert('Permission denied. Please ensure you have granted the necessary permissions.');
+                } else {
+                    alert('Failed to create folder: ' + (error.message || 'Unknown error'));
+                }
+
                 return null;
             }
         }
