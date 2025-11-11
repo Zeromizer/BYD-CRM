@@ -930,41 +930,62 @@
         let gapiInited = false;
         let gisInited = false;
 
+        // Document folder categories
+        const documentFolders = [
+            { id: 'nirc_fin', name: 'NIRC_FIN' },
+            { id: 'test_drive', name: 'Test_Drive' },
+            { id: 'vsa', name: 'VSA' },
+            { id: 'trade_in', name: 'Trade_In' },
+            { id: 'pdpa_coe', name: 'PDPA_COE_Bidding' },
+            { id: 'other', name: 'Other_Documents' }
+        ];
+
         // Document checklist templates
         const documentChecklists = {
             arrival: [
                 { id: 'ic_copy', name: 'IC Copy (Front & Back)', required: true },
-                { id: 'contact_form', name: 'Customer Contact Form', required: true }
+                { id: 'nirc_fin', name: 'NIRC/FIN', required: true },
+                { id: 'contact_form', name: 'Customer Contact Form', required: true },
+                { id: 'pdpa_coe', name: 'PDPA & COE Bidding', required: true }
             ],
             consultation: [
                 { id: 'ic_copy', name: 'IC Copy (Front & Back)', required: true },
+                { id: 'nirc_fin', name: 'NIRC/FIN', required: true },
                 { id: 'contact_form', name: 'Customer Contact Form', required: true },
                 { id: 'quotation', name: 'Price Quotation', required: true },
+                { id: 'pdpa_coe', name: 'PDPA & COE Bidding', required: true },
                 { id: 'product_specs', name: 'Product Specifications', required: false }
             ],
             quotation: [
                 { id: 'ic_copy', name: 'IC Copy (Front & Back)', required: true },
+                { id: 'nirc_fin', name: 'NIRC/FIN', required: true },
                 { id: 'contact_form', name: 'Customer Contact Form', required: true },
                 { id: 'quotation', name: 'Price Quotation', required: true },
+                { id: 'pdpa_coe', name: 'PDPA & COE Bidding', required: true },
                 { id: 'finance_application', name: 'Finance Application Form', required: false },
-                { id: 'trade_in_valuation', name: 'Trade-in Valuation (if applicable)', required: false }
+                { id: 'trade_in', name: 'Trade In (if required)', required: false }
             ],
             testdrive: [
                 { id: 'ic_copy', name: 'IC Copy (Front & Back)', required: true },
+                { id: 'nirc_fin', name: 'NIRC/FIN', required: true },
                 { id: 'driving_license', name: 'Driving License Copy', required: true },
-                { id: 'test_drive_form', name: 'Test Drive Agreement Form', required: true },
-                { id: 'quotation', name: 'Price Quotation', required: true }
+                { id: 'test_drive', name: 'Test Drive Agreement Form', required: true },
+                { id: 'quotation', name: 'Price Quotation', required: true },
+                { id: 'pdpa_coe', name: 'PDPA & COE Bidding', required: true }
             ],
             closing: [
                 { id: 'ic_copy', name: 'IC Copy (Original to Michelle, Copy to Wilson)', required: true },
+                { id: 'nirc_fin', name: 'NIRC/FIN', required: true },
                 { id: 'driving_license', name: 'Driving License Copy', required: true },
-                { id: 'purchase_agreement', name: 'Purchase Agreement', required: true },
+                { id: 'vsa', name: 'VSA (Vehicle Sales Agreement)', required: true },
+                { id: 'test_drive', name: 'Test Drive Agreement Form', required: true },
+                { id: 'pdpa_coe', name: 'PDPA & COE Bidding', required: true },
                 { id: 'coe_deposit_receipt', name: 'COE Deposit Receipt ($16,350)', required: true },
                 { id: 'insurance_payment', name: 'Insurance Payment Receipt ($1,500-$3,000)', required: true },
                 { id: 'finance_approval', name: 'Finance Approval Letter (if bank loan)', required: false },
                 { id: 'admin_fee_receipt', name: 'Admin Fee Receipt ($500 if no bank loan)', required: false },
                 { id: 'first_installment', name: 'First Month Installment (if no bank loan)', required: false },
-                { id: 'trade_in_docs', name: 'Trade-in Vehicle Documents (if applicable)', required: false },
+                { id: 'trade_in', name: 'Trade In (if required)', required: false },
                 { id: 'log_card', name: 'Vehicle Log Card (if trade-in)', required: false }
             ]
         };
@@ -1157,10 +1178,10 @@
         // Create customer folder
         async function createCustomerFolder(customerName, customerId) {
             if (!isSignedIn) return null;
-            
+
             try {
                 const folderName = customerName.replace(/\s+/g, '_');
-                
+
                 // Check if folder exists
                 const searchResponse = await gapi.client.drive.files.list({
                     q: `name='${folderName}' and '${rootFolderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
@@ -1169,7 +1190,10 @@
                 });
 
                 if (searchResponse.result.files.length > 0) {
-                    return searchResponse.result.files[0].id;
+                    const folderId = searchResponse.result.files[0].id;
+                    // Create document subfolders
+                    await createDocumentSubfolders(folderId, customerId);
+                    return folderId;
                 }
 
                 // Create folder
@@ -1189,6 +1213,9 @@
                     saveData();
                 }
 
+                // Create document subfolders
+                await createDocumentSubfolders(response.result.id, customerId);
+
                 return response.result.id;
             } catch (error) {
                 console.error('Error creating folder:', error);
@@ -1196,8 +1223,56 @@
             }
         }
 
+        // Create document subfolders for organizing files
+        async function createDocumentSubfolders(customerFolderId, customerId) {
+            if (!isSignedIn || !customerFolderId) return;
+
+            const customer = customers.find(c => c.id === customerId);
+            if (!customer) return;
+
+            // Initialize document folders map if not exists
+            if (!customer.documentFolders) {
+                customer.documentFolders = {};
+            }
+
+            try {
+                // Create a subfolder for each document type
+                for (const folder of documentFolders) {
+                    // Check if subfolder already exists
+                    const searchResponse = await gapi.client.drive.files.list({
+                        q: `name='${folder.name}' and '${customerFolderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
+                        spaces: 'drive',
+                        fields: 'files(id, name)'
+                    });
+
+                    let subfolderId;
+                    if (searchResponse.result.files.length > 0) {
+                        subfolderId = searchResponse.result.files[0].id;
+                    } else {
+                        // Create subfolder
+                        const createResponse = await gapi.client.drive.files.create({
+                            resource: {
+                                name: folder.name,
+                                mimeType: 'application/vnd.google-apps.folder',
+                                parents: [customerFolderId]
+                            },
+                            fields: 'id'
+                        });
+                        subfolderId = createResponse.result.id;
+                    }
+
+                    // Store subfolder ID
+                    customer.documentFolders[folder.id] = subfolderId;
+                }
+
+                saveData();
+            } catch (error) {
+                console.error('Error creating document subfolders:', error);
+            }
+        }
+
         // Upload file to Drive
-        async function uploadFileToDrive(file, customerId, fileName) {
+        async function uploadFileToDrive(file, customerId, fileName, documentType = 'other') {
             if (!isSignedIn) {
                 alert('Please connect to Google Drive first');
                 return null;
@@ -1211,10 +1286,20 @@
                 await createCustomerFolder(customer.name, customerId);
             }
 
+            // Ensure document subfolders exist
+            if (!customer.documentFolders || !customer.documentFolders[documentType]) {
+                await createDocumentSubfolders(customer.driveFolderId, customerId);
+            }
+
             try {
+                // Determine target folder (subfolder or main customer folder)
+                const targetFolderId = customer.documentFolders && customer.documentFolders[documentType]
+                    ? customer.documentFolders[documentType]
+                    : customer.driveFolderId;
+
                 const metadata = {
                     name: fileName,
-                    parents: [customer.driveFolderId]
+                    parents: [targetFolderId]
                 };
 
                 const form = new FormData();
@@ -1239,7 +1324,7 @@
             }
         }
 
-        // Get files from customer folder
+        // Get files from customer folder and all subfolders
         async function getCustomerFiles(customerId) {
             const customer = customers.find(c => c.id === customerId);
             if (!customer || !customer.driveFolderId || !isSignedIn) {
@@ -1247,14 +1332,34 @@
             }
 
             try {
-                const response = await gapi.client.drive.files.list({
-                    q: `'${customer.driveFolderId}' in parents and trashed=false`,
+                let allFiles = [];
+
+                // Get files from main customer folder
+                const mainResponse = await gapi.client.drive.files.list({
+                    q: `'${customer.driveFolderId}' in parents and mimeType != 'application/vnd.google-apps.folder' and trashed=false`,
                     spaces: 'drive',
                     fields: 'files(id, name, mimeType, size, webViewLink, createdTime)',
                     orderBy: 'createdTime desc'
                 });
+                allFiles = allFiles.concat(mainResponse.result.files || []);
 
-                return response.result.files || [];
+                // Get files from all document subfolders
+                if (customer.documentFolders) {
+                    for (const folderId of Object.values(customer.documentFolders)) {
+                        const subResponse = await gapi.client.drive.files.list({
+                            q: `'${folderId}' in parents and mimeType != 'application/vnd.google-apps.folder' and trashed=false`,
+                            spaces: 'drive',
+                            fields: 'files(id, name, mimeType, size, webViewLink, createdTime)',
+                            orderBy: 'createdTime desc'
+                        });
+                        allFiles = allFiles.concat(subResponse.result.files || []);
+                    }
+                }
+
+                // Sort all files by creation time (newest first)
+                allFiles.sort((a, b) => new Date(b.createdTime) - new Date(a.createdTime));
+
+                return allFiles;
             } catch (error) {
                 console.error('Error getting files:', error);
                 return [];
@@ -1596,19 +1701,30 @@
 
                         <div class="file-upload-section">
                             <h3>
-                                <img src="https://www.gstatic.com/images/branding/product/1x/drive_2020q4_48dp.png" 
+                                <img src="https://www.gstatic.com/images/branding/product/1x/drive_2020q4_48dp.png"
                                      style="width: 24px; height: 24px;">
                                 Upload to Google Drive
                             </h3>
-                            <div class="upload-area" id="uploadArea_${customerId}" 
-                                 ondrop="handleDrop(event, ${customerId})" 
+
+                            <div class="form-group" style="margin-bottom: 15px;">
+                                <label for="documentTypeSelect_${customerId}">📂 Select Document Folder</label>
+                                <select id="documentTypeSelect_${customerId}" style="width: 100%; padding: 10px; border: 1px solid #dfe6e9; border-radius: 8px; font-size: 14px; background: white;">
+                                    ${documentFolders.map(folder => `
+                                        <option value="${folder.id}">${folder.name.replace(/_/g, ' ')}</option>
+                                    `).join('')}
+                                </select>
+                                <small style="color: #7f8c8d; font-size: 12px;">Files will be organized into the selected folder</small>
+                            </div>
+
+                            <div class="upload-area" id="uploadArea_${customerId}"
+                                 ondrop="handleDrop(event, ${customerId})"
                                  ondragover="handleDragOver(event)"
                                  ondragleave="handleDragLeave(event)"
                                  onclick="document.getElementById('fileInput_${customerId}').click()">
                                 <p>🗂️ Drag & Drop Files Here</p>
                                 <small>or click to browse • Files upload directly to Google Drive</small>
-                                <input type="file" id="fileInput_${customerId}" multiple 
-                                       style="display: none;" 
+                                <input type="file" id="fileInput_${customerId}" multiple
+                                       style="display: none;"
                                        onchange="handleFileSelect(event, ${customerId})">
                             </div>
                             <p style="font-size: 12px; color: #7f8c8d; margin-top: 10px;">
@@ -1693,21 +1809,26 @@
                 return;
             }
 
+            // Get selected document type from dropdown
+            const documentTypeSelect = document.getElementById(`documentTypeSelect_${customerId}`);
+            const documentType = documentTypeSelect ? documentTypeSelect.value : 'other';
+            const folderName = documentFolders.find(f => f.id === documentType)?.name || 'Other_Documents';
+
             const uploadArea = document.getElementById(`uploadArea_${customerId}`);
             const originalContent = uploadArea.innerHTML;
-            uploadArea.innerHTML = '<div class="loading"></div><p style="color: #27ae60; margin-top: 10px;">Uploading files...</p>';
+            uploadArea.innerHTML = '<div class="loading"></div><p style="color: #27ae60; margin-top: 10px;">Uploading files to ' + folderName.replace(/_/g, ' ') + '...</p>';
 
             let successCount = 0;
             let errorCount = 0;
 
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
-                
+
                 const fileExt = file.name.split('.').pop();
-                const docType = prompt(`Enter document type for ${file.name}:`, 'Document') || 'Document';
+                const docType = prompt(`Enter document type for ${file.name}:`, folderName.replace(/_/g, ' ')) || folderName.replace(/_/g, ' ');
                 const fileName = `${customer.name.replace(/\s+/g, '_')}_${customer.nric || 'XXXX'}_${docType.replace(/\s+/g, '_')}.${fileExt}`;
-                
-                const result = await uploadFileToDrive(file, customerId, fileName);
+
+                const result = await uploadFileToDrive(file, customerId, fileName, documentType);
                 if (result) {
                     successCount++;
                 } else {
@@ -1716,14 +1837,14 @@
             }
 
             uploadArea.innerHTML = originalContent;
-            
+
             if (successCount > 0) {
-                alert(`Successfully uploaded ${successCount} file(s) to Google Drive!`);
+                alert(`Successfully uploaded ${successCount} file(s) to ${folderName.replace(/_/g, ' ')} folder!`);
             }
             if (errorCount > 0) {
                 alert(`Failed to upload ${errorCount} file(s).`);
             }
-            
+
             displayCustomerDetails(customerId);
             updateStats();
         }
