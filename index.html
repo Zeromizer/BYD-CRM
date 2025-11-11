@@ -1514,6 +1514,47 @@
             }
         }
 
+        // Handle folder creation button click with UI feedback
+        let isCreatingFolder = false; // Prevent duplicate operations
+
+        async function handleCreateFolderClick(customerName, customerId) {
+            // Prevent duplicate clicks
+            if (isCreatingFolder) {
+                console.log('Folder creation already in progress...');
+                return;
+            }
+
+            isCreatingFolder = true;
+            const customer = customers.find(c => c.id === customerId);
+
+            // Check if folder already exists
+            if (customer && customer.driveFolderId) {
+                alert(`Folder already exists for ${customerName}!`);
+                isCreatingFolder = false;
+                return;
+            }
+
+            try {
+                console.log('Starting folder creation for:', customerName);
+
+                // Create the folder
+                const folderId = await createCustomerFolder(customerName, customerId);
+
+                if (folderId) {
+                    console.log('Folder created successfully:', folderId);
+                    // Refresh the customer view
+                    selectCustomer(customerId);
+                } else {
+                    console.error('Folder creation returned null');
+                }
+            } catch (error) {
+                console.error('Error in handleCreateFolderClick:', error);
+                alert('An unexpected error occurred: ' + error.message);
+            } finally {
+                isCreatingFolder = false;
+            }
+        }
+
         // Upload file to Drive
         async function uploadFileToDrive(file, customerId, fileName, documentType = 'other') {
             if (!isSignedIn) {
@@ -1904,7 +1945,7 @@
                                 📁 Open Drive Folder
                             </button>
                         ` : isSignedIn ? `
-                            <button class="btn btn-drive" onclick="createCustomerFolder('${customer.name}', ${customer.id}).then(() => selectCustomer(${customer.id}))">
+                            <button class="btn btn-drive" onclick="handleCreateFolderClick('${customer.name}', ${customer.id})">
                                 📁 Create Drive Folder
                             </button>
                         ` : ''}
@@ -1929,7 +1970,7 @@
                         <div class="auth-section">
                             <h3>📁 Create Customer Folder</h3>
                             <p>Create a folder in Google Drive for ${customer.name}'s documents.</p>
-                            <button class="btn btn-drive" onclick="createCustomerFolder('${customer.name}', ${customer.id}).then(() => selectCustomer(${customer.id}))">
+                            <button class="btn btn-drive" onclick="handleCreateFolderClick('${customer.name}', ${customer.id})">
                                 Create Folder
                             </button>
                         </div>
