@@ -2815,6 +2815,9 @@
                                         <button class="btn btn-secondary btn-small" onclick="window.open('${file.webViewLink}', '_blank')">
                                             👁️ View
                                         </button>
+                                        <button class="btn btn-secondary btn-small" onclick="showMoveFileDialog('${file.id}', '${file.name}', ${customerId})">
+                                            📁 Move
+                                        </button>
                                         <button class="btn btn-danger btn-small" onclick="deleteFileConfirm('${file.id}', ${customerId}, '${file.name}')">
                                             🗑️ Delete
                                         </button>
@@ -2996,6 +2999,135 @@
                 } else {
                     alert('Error deleting file');
                 }
+            }
+        }
+
+        // Show move file dialog
+        function showMoveFileDialog(fileId, fileName, customerId) {
+            const customer = customers.find(c => c.id === customerId);
+            if (!customer || !customer.documentFolders) {
+                alert('Customer folders not found. Please create folder first.');
+                return;
+            }
+
+            // Build folder options
+            let optionsHTML = '<option value="">Select a folder</option>';
+            for (const folder of documentFolders) {
+                const folderName = folder.name.replace(/_/g, ' ');
+                optionsHTML += `<option value="${folder.id}">${folderName}</option>`;
+            }
+
+            // Create custom dialog HTML
+            const dialogHTML = `
+                <div style="padding: 20px;">
+                    <h3 style="margin-bottom: 15px; color: #2c3e50;">Move Document</h3>
+                    <p style="margin-bottom: 15px; color: #7f8c8d;">
+                        <strong>${fileName}</strong>
+                    </p>
+                    <label style="display: block; margin-bottom: 8px; color: #2d3748; font-weight: 500;">
+                        Select destination folder:
+                    </label>
+                    <select id="moveToFolderSelect" style="width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 14px; margin-bottom: 20px;">
+                        ${optionsHTML}
+                    </select>
+                    <div style="display: flex; gap: 10px;">
+                        <button onclick="executeMoveFile('${fileId}', ${customerId}, '${fileName}')" class="btn btn-primary" style="flex: 1;">
+                            Move
+                        </button>
+                        <button onclick="closeMoveDialog()" class="btn btn-secondary" style="flex: 1;">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            // Show dialog using a simple modal approach
+            const existingDialog = document.getElementById('moveFileDialog');
+            if (existingDialog) {
+                existingDialog.remove();
+            }
+
+            const dialog = document.createElement('div');
+            dialog.id = 'moveFileDialog';
+            dialog.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 10000;';
+            dialog.innerHTML = `
+                <div style="background: white; border-radius: 12px; max-width: 500px; width: 90%; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
+                    ${dialogHTML}
+                </div>
+            `;
+
+            document.body.appendChild(dialog);
+        }
+
+        // Close move dialog
+        function closeMoveDialog() {
+            const dialog = document.getElementById('moveFileDialog');
+            if (dialog) {
+                dialog.remove();
+            }
+        }
+
+        // Execute move file
+        async function executeMoveFile(fileId, customerId, fileName) {
+            const select = document.getElementById('moveToFolderSelect');
+            const targetFolderId = select.value;
+
+            if (!targetFolderId) {
+                alert('Please select a destination folder');
+                return;
+            }
+
+            const customer = customers.find(c => c.id === customerId);
+            if (!customer || !customer.documentFolders || !customer.documentFolders[targetFolderId]) {
+                alert('Destination folder not found');
+                return;
+            }
+
+            const targetDriveFolderId = customer.documentFolders[targetFolderId];
+
+            // Close dialog and show progress
+            closeMoveDialog();
+
+            const success = await moveFileToFolder(fileId, targetDriveFolderId);
+
+            if (success) {
+                const folderName = documentFolders.find(f => f.id === targetFolderId)?.name.replace(/_/g, ' ') || 'selected folder';
+                alert(`✅ "${fileName}" moved to ${folderName} successfully!`);
+                displayCustomerDetails(customerId);
+            } else {
+                alert('❌ Error moving file. Please try again.');
+            }
+        }
+
+        // Move file to folder in Google Drive
+        async function moveFileToFolder(fileId, newParentId) {
+            if (!isSignedIn) {
+                alert('Please connect to Google Drive first');
+                return false;
+            }
+
+            try {
+                // First, get the current file to find its current parents
+                const getResponse = await gapi.client.drive.files.get({
+                    fileId: fileId,
+                    fields: 'parents'
+                });
+
+                const previousParents = getResponse.result.parents ? getResponse.result.parents.join(',') : '';
+
+                // Update file to remove from old parent and add to new parent
+                const updateResponse = await gapi.client.drive.files.update({
+                    fileId: fileId,
+                    addParents: newParentId,
+                    removeParents: previousParents,
+                    fields: 'id, parents'
+                });
+
+                console.log('File moved successfully:', updateResponse.result);
+                return true;
+            } catch (error) {
+                console.error('Error moving file:', error);
+                return false;
             }
         }
 
