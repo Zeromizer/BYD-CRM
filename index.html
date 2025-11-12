@@ -1026,6 +1026,23 @@
                 transform: scale(1.3);
                 margin-right: 10px;
             }
+
+            /* Move dialog mobile */
+            #moveFileDialog input[type="text"] {
+                font-size: 16px; /* Prevents zoom on iOS */
+                padding: 12px;
+            }
+
+            #moveFileDialog select {
+                font-size: 16px; /* Prevents zoom on iOS */
+                padding: 12px;
+            }
+
+            #moveFileDialog button {
+                font-size: 14px;
+                padding: 12px 16px;
+                min-height: 44px;
+            }
         }
 
         .loading {
@@ -3010,6 +3027,11 @@
                 return;
             }
 
+            // Extract file extension
+            const lastDotIndex = fileName.lastIndexOf('.');
+            const fileExtension = lastDotIndex > -1 ? fileName.substring(lastDotIndex) : '';
+            const fileNameWithoutExt = lastDotIndex > -1 ? fileName.substring(0, lastDotIndex) : fileName;
+
             // Build folder options
             let optionsHTML = '<option value="">Select a folder</option>';
             for (const folder of documentFolders) {
@@ -3017,22 +3039,33 @@
                 optionsHTML += `<option value="${folder.id}">${folderName}</option>`;
             }
 
+            // Escape filename for HTML attributes
+            const escapedFileName = fileName.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+
             // Create custom dialog HTML
             const dialogHTML = `
                 <div style="padding: 20px;">
-                    <h3 style="margin-bottom: 15px; color: #2c3e50;">Move Document</h3>
-                    <p style="margin-bottom: 15px; color: #7f8c8d;">
-                        <strong>${fileName}</strong>
-                    </p>
+                    <h3 style="margin-bottom: 15px; color: #2c3e50;">Move & Rename Document</h3>
+
                     <label style="display: block; margin-bottom: 8px; color: #2d3748; font-weight: 500;">
-                        Select destination folder:
+                        Document name:
+                    </label>
+                    <input type="text" id="moveFileNameInput" value="${fileNameWithoutExt}"
+                           style="width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 14px; margin-bottom: 5px;">
+                    <p style="margin: 0 0 15px 0; color: #7f8c8d; font-size: 12px;">
+                        File extension: <strong>${fileExtension || 'none'}</strong>
+                    </p>
+
+                    <label style="display: block; margin-bottom: 8px; color: #2d3748; font-weight: 500;">
+                        Move to folder:
                     </label>
                     <select id="moveToFolderSelect" style="width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 14px; margin-bottom: 20px;">
                         ${optionsHTML}
                     </select>
+
                     <div style="display: flex; gap: 10px;">
-                        <button onclick="executeMoveFile('${fileId}', ${customerId}, '${fileName}')" class="btn btn-primary" style="flex: 1;">
-                            Move
+                        <button onclick="executeMoveFile('${fileId}', ${customerId}, '${escapedFileName}', '${fileExtension}')" class="btn btn-primary" style="flex: 1;">
+                            Move & Rename
                         </button>
                         <button onclick="closeMoveDialog()" class="btn btn-secondary" style="flex: 1;">
                             Cancel
@@ -3057,6 +3090,15 @@
             `;
 
             document.body.appendChild(dialog);
+
+            // Focus the name input
+            setTimeout(() => {
+                const nameInput = document.getElementById('moveFileNameInput');
+                if (nameInput) {
+                    nameInput.focus();
+                    nameInput.select();
+                }
+            }, 100);
         }
 
         // Close move dialog
@@ -3068,14 +3110,25 @@
         }
 
         // Execute move file
-        async function executeMoveFile(fileId, customerId, fileName) {
+        async function executeMoveFile(fileId, customerId, oldFileName, fileExtension) {
             const select = document.getElementById('moveToFolderSelect');
+            const nameInput = document.getElementById('moveFileNameInput');
             const targetFolderId = select.value;
 
             if (!targetFolderId) {
                 alert('Please select a destination folder');
                 return;
             }
+
+            // Get new filename from input
+            let newFileNameWithoutExt = nameInput.value.trim();
+            if (!newFileNameWithoutExt) {
+                alert('Please enter a document name');
+                return;
+            }
+
+            // Add extension back
+            const newFileName = newFileNameWithoutExt + fileExtension;
 
             const customer = customers.find(c => c.id === customerId);
             if (!customer || !customer.documentFolders || !customer.documentFolders[targetFolderId]) {
@@ -3088,19 +3141,19 @@
             // Close dialog and show progress
             closeMoveDialog();
 
-            const success = await moveFileToFolder(fileId, targetDriveFolderId);
+            const success = await moveFileToFolder(fileId, targetDriveFolderId, newFileName);
 
             if (success) {
                 const folderName = documentFolders.find(f => f.id === targetFolderId)?.name.replace(/_/g, ' ') || 'selected folder';
-                alert(`✅ "${fileName}" moved to ${folderName} successfully!`);
+                alert(`✅ "${newFileName}" moved to ${folderName} successfully!`);
                 displayCustomerDetails(customerId);
             } else {
                 alert('❌ Error moving file. Please try again.');
             }
         }
 
-        // Move file to folder in Google Drive
-        async function moveFileToFolder(fileId, newParentId) {
+        // Move file to folder in Google Drive (and optionally rename)
+        async function moveFileToFolder(fileId, newParentId, newFileName) {
             if (!isSignedIn) {
                 alert('Please connect to Google Drive first');
                 return false;
@@ -3110,18 +3163,30 @@
                 // First, get the current file to find its current parents
                 const getResponse = await gapi.client.drive.files.get({
                     fileId: fileId,
-                    fields: 'parents'
+                    fields: 'parents, name'
                 });
 
                 const previousParents = getResponse.result.parents ? getResponse.result.parents.join(',') : '';
+                const currentFileName = getResponse.result.name;
 
-                // Update file to remove from old parent and add to new parent
-                const updateResponse = await gapi.client.drive.files.update({
+                // Prepare update parameters
+                const updateParams = {
                     fileId: fileId,
                     addParents: newParentId,
                     removeParents: previousParents,
-                    fields: 'id, parents'
-                });
+                    fields: 'id, parents, name'
+                };
+
+                // If filename changed, add rename to the update
+                if (newFileName && newFileName !== currentFileName) {
+                    updateParams.resource = {
+                        name: newFileName
+                    };
+                    console.log(`Renaming file from "${currentFileName}" to "${newFileName}"`);
+                }
+
+                // Update file to remove from old parent, add to new parent, and optionally rename
+                const updateResponse = await gapi.client.drive.files.update(updateParams);
 
                 console.log('File moved successfully:', updateResponse.result);
                 return true;
