@@ -2024,8 +2024,10 @@
                                  ondragleave="handleDragLeave(event)"
                                  onclick="document.getElementById('fileInput_${customerId}').click()">
                                 <p>🗂️ Drag & Drop Files Here</p>
-                                <small>or click to browse • Files upload directly to Google Drive</small>
+                                <small>or click to browse/take photo • Files upload directly to Google Drive</small>
                                 <input type="file" id="fileInput_${customerId}" multiple
+                                       accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,*"
+                                       capture="environment"
                                        style="display: none;"
                                        onchange="handleFileSelect(event, ${customerId})">
                             </div>
