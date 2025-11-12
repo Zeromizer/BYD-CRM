@@ -1384,60 +1384,126 @@
         };
 
         // Document classification patterns - maps keywords to document types
+        // Patterns are checked in order - more specific patterns first!
         const documentClassificationPatterns = {
-            'nirc_fin': {
-                folderId: 'nirc_fin',
-                checklistId: 'nirc_fin',
-                keywords: ['nirc', 'nric', 'fin', 'ic', 'identity', 'identification'],
-                displayName: 'NIRC/FIN'
+            // Financial documents (check these first to avoid "fin" matching FIN/NIRC)
+            'finance_application': {
+                folderId: 'other',
+                checklistId: 'finance_application',
+                keywords: ['finance application', 'loan application', 'bank application', 'credit application', 'hire purchase'],
+                excludeKeywords: [],
+                displayName: 'Finance Application',
+                priority: 1
             },
-            'test_drive': {
-                folderId: 'test_drive',
-                checklistId: 'test_drive',
-                keywords: ['test drive', 'testdrive', 'test-drive', 'driving test', 'trial'],
-                displayName: 'Test Drive'
+            'finance_approval': {
+                folderId: 'other',
+                checklistId: 'finance_approval',
+                keywords: ['finance approval', 'loan approval', 'bank approval', 'credit approval', 'approval letter'],
+                excludeKeywords: [],
+                displayName: 'Finance Approval',
+                priority: 1
             },
-            'vsa': {
-                folderId: 'vsa',
-                checklistId: 'vsa',
-                keywords: ['vsa', 'vehicle sales agreement', 'sales agreement', 'purchase agreement', 'vehicle agreement'],
-                displayName: 'VSA'
+            'insurance': {
+                folderId: 'other',
+                checklistId: 'insurance_payment',
+                keywords: ['insurance', 'coverage', 'policy', 'premium'],
+                excludeKeywords: [],
+                displayName: 'Insurance',
+                priority: 1
             },
-            'trade_in': {
-                folderId: 'trade_in',
-                checklistId: 'trade_in',
-                keywords: ['trade in', 'tradein', 'trade-in', 'valuation', 'vehicle exchange'],
-                displayName: 'Trade In'
+            'receipt': {
+                folderId: 'other',
+                checklistId: null,
+                keywords: ['receipt', 'payment receipt', 'deposit receipt', 'admin fee receipt'],
+                excludeKeywords: [],
+                displayName: 'Receipt',
+                priority: 1
             },
-            'pdpa_coe': {
-                folderId: 'pdpa_coe',
-                checklistId: 'pdpa_coe',
-                keywords: ['pdpa', 'coe', 'coe bidding', 'bidding', 'consent', 'data protection'],
-                displayName: 'PDPA & COE Bidding'
-            },
+
+            // Specific ID documents (higher priority, more specific)
             'ic_copy': {
                 folderId: 'nirc_fin',
                 checklistId: 'ic_copy',
-                keywords: ['ic copy', 'ic front', 'ic back', 'identity card'],
-                displayName: 'IC Copy'
+                keywords: ['ic copy', 'ic front', 'ic back', 'identity card copy', 'nric copy', 'nric front', 'nric back'],
+                excludeKeywords: ['application', 'form', 'loan', 'finance'],
+                displayName: 'IC Copy',
+                priority: 2
+            },
+            'nirc_fin': {
+                folderId: 'nirc_fin',
+                checklistId: 'nirc_fin',
+                keywords: ['nirc', 'nric', 'fin number', 'fin card', 'foreign identification'],
+                excludeKeywords: ['application', 'form', 'loan', 'finance', 'bank'],
+                displayName: 'NIRC/FIN',
+                priority: 2
             },
             'driving_license': {
                 folderId: 'test_drive',
                 checklistId: 'driving_license',
-                keywords: ['driving license', 'driving licence', 'license', 'licence', 'driver license'],
-                displayName: 'Driving License'
+                keywords: ['driving license', 'driving licence', 'driver license', 'driver licence', 'driving permit'],
+                excludeKeywords: ['application', 'form'],
+                displayName: 'Driving License',
+                priority: 2
+            },
+
+            // Vehicle documents
+            'vsa': {
+                folderId: 'vsa',
+                checklistId: 'vsa',
+                keywords: ['vsa', 'vehicle sales agreement', 'sales agreement', 'purchase agreement'],
+                excludeKeywords: [],
+                displayName: 'VSA',
+                priority: 3
+            },
+            'test_drive': {
+                folderId: 'test_drive',
+                checklistId: 'test_drive',
+                keywords: ['test drive', 'testdrive', 'test-drive', 'trial drive'],
+                excludeKeywords: [],
+                displayName: 'Test Drive',
+                priority: 3
+            },
+            'trade_in': {
+                folderId: 'trade_in',
+                checklistId: 'trade_in',
+                keywords: ['trade in', 'tradein', 'trade-in', 'vehicle exchange', 'car exchange'],
+                excludeKeywords: [],
+                displayName: 'Trade In',
+                priority: 3
+            },
+            'log_card': {
+                folderId: 'trade_in',
+                checklistId: 'log_card',
+                keywords: ['log card', 'logcard', 'vehicle log'],
+                excludeKeywords: [],
+                displayName: 'Vehicle Log Card',
+                priority: 3
+            },
+
+            // Forms and agreements
+            'pdpa_coe': {
+                folderId: 'pdpa_coe',
+                checklistId: 'pdpa_coe',
+                keywords: ['pdpa', 'coe', 'coe bidding', 'consent form', 'data protection'],
+                excludeKeywords: [],
+                displayName: 'PDPA & COE Bidding',
+                priority: 4
             },
             'quotation': {
                 folderId: 'other',
                 checklistId: 'quotation',
                 keywords: ['quotation', 'quote', 'price quotation', 'pricing'],
-                displayName: 'Quotation'
+                excludeKeywords: [],
+                displayName: 'Quotation',
+                priority: 4
             },
             'contact_form': {
                 folderId: 'other',
                 checklistId: 'contact_form',
-                keywords: ['contact form', 'customer form', 'contact information'],
-                displayName: 'Contact Form'
+                keywords: ['contact form', 'customer form', 'customer information'],
+                excludeKeywords: [],
+                displayName: 'Contact Form',
+                priority: 4
             }
         };
 
@@ -1445,21 +1511,53 @@
         function classifyDocument(fileName) {
             const lowerFileName = fileName.toLowerCase();
 
-            // Try to match each pattern
-            for (const [key, pattern] of Object.entries(documentClassificationPatterns)) {
+            // Convert patterns object to array and sort by priority
+            const patternsArray = Object.entries(documentClassificationPatterns).map(([key, pattern]) => ({
+                key,
+                ...pattern
+            })).sort((a, b) => (a.priority || 999) - (b.priority || 999));
+
+            let bestMatch = null;
+            let bestMatchLength = 0;
+
+            // Try to match each pattern in priority order
+            for (const pattern of patternsArray) {
+                // Check if any exclude keywords are present
+                const hasExcludeKeyword = pattern.excludeKeywords.some(exclude =>
+                    lowerFileName.includes(exclude.toLowerCase())
+                );
+
+                if (hasExcludeKeyword) {
+                    continue; // Skip this pattern if exclude keyword found
+                }
+
+                // Check for keyword matches
                 for (const keyword of pattern.keywords) {
-                    if (lowerFileName.includes(keyword.toLowerCase())) {
-                        return {
-                            folderId: pattern.folderId,
-                            checklistId: pattern.checklistId,
-                            displayName: pattern.displayName,
-                            confidence: 'high'
-                        };
+                    const lowerKeyword = keyword.toLowerCase();
+                    if (lowerFileName.includes(lowerKeyword)) {
+                        // Prefer longer matches (more specific)
+                        if (lowerKeyword.length > bestMatchLength) {
+                            bestMatch = {
+                                folderId: pattern.folderId,
+                                checklistId: pattern.checklistId,
+                                displayName: pattern.displayName,
+                                confidence: 'high',
+                                matchedKeyword: keyword
+                            };
+                            bestMatchLength = lowerKeyword.length;
+                        }
                     }
                 }
             }
 
+            // Return best match if found
+            if (bestMatch) {
+                console.log(`📄 Classified "${fileName}" as "${bestMatch.displayName}" (matched: "${bestMatch.matchedKeyword}")`);
+                return bestMatch;
+            }
+
             // Default to other documents
+            console.log(`📄 "${fileName}" - no specific match, using Other Documents`);
             return {
                 folderId: 'other',
                 checklistId: null,
