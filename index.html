@@ -863,8 +863,8 @@
                         <input type="email" id="newCustomerEmail">
                     </div>
                     <div class="form-group">
-                        <label>NRIC (Last 4 digits)</label>
-                        <input type="text" id="newCustomerNRIC" maxlength="4" placeholder="1234">
+                        <label>NRIC/FIN</label>
+                        <input type="text" id="newCustomerNRIC" placeholder="S1234567A or F1234567N">
                     </div>
                 </div>
                 <div class="form-group">
@@ -1871,8 +1871,8 @@
                             <input type="email" value="${customer.email || ''}" onchange="updateCustomer(${customer.id}, 'email', this.value)">
                         </div>
                         <div class="form-group">
-                            <label>NRIC (Last 4 digits)</label>
-                            <input type="text" value="${customer.nric || ''}" maxlength="4" onchange="updateCustomer(${customer.id}, 'nric', this.value)">
+                            <label>NRIC/FIN</label>
+                            <input type="text" value="${customer.nric || ''}" onchange="updateCustomer(${customer.id}, 'nric', this.value)" placeholder="S1234567A or F1234567N">
                         </div>
                     </div>
 
