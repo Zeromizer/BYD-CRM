@@ -793,6 +793,7 @@
             <h1>BYD MotorEast CRM <span id="syncStatus" style="font-size: 14px; font-weight: normal; margin-left: 10px;"></span></h1>
             <div class="header-actions">
                 <button class="btn btn-primary" onclick="openAddCustomerModal()">Add Customer</button>
+                <button class="btn btn-secondary" onclick="forceSyncFromDrive()" title="Reload data from Google Drive">🔄 Force Sync</button>
                 <button class="btn btn-secondary" onclick="exportData()">Export Data</button>
                 <button class="btn btn-secondary" onclick="importData()">Import Data</button>
             </div>
@@ -1127,19 +1128,26 @@
                 });
 
                 const driveData = response.result;
+                console.log('✓ Downloaded data from Drive:', driveData);
 
                 if (driveData && driveData.customers) {
+                    console.log('✓ Drive has', driveData.customers.length, 'customers');
+
                     // Merge with local data if needed
                     const localData = localStorage.getItem('bydCRM');
                     const localCustomers = localData ? JSON.parse(localData) : [];
+                    console.log('  Local cache has', localCustomers.length, 'customers');
 
                     // Use Drive data as source of truth, but preserve any local-only data
                     if (localCustomers.length > driveData.customers.length) {
-                        console.log('Local has more data, merging...');
+                        console.log('⚠️  Local has more data, merging...');
+                        console.log('  Drive:', driveData.customers.length, 'Local:', localCustomers.length);
                         customers = mergeCustomerData(driveData.customers, localCustomers);
+                        console.log('  Merged:', customers.length, 'customers');
                         // Save merged data back to Drive
                         await saveDataToDrive();
                     } else {
+                        console.log('✓ Using Drive data as source of truth');
                         customers = driveData.customers || [];
                     }
 
@@ -1151,9 +1159,11 @@
                     updateStats();
                     updateSyncStatus('synced');
 
-                    console.log('Data loaded from Drive:', customers.length, 'customers');
+                    console.log('✓ Data loaded from Drive:', customers.length, 'customers');
                     isSyncing = false;
                     return true;
+                } else {
+                    console.log('⚠️  No customer data in Drive file');
                 }
 
                 isSyncing = false;
@@ -1992,6 +2002,36 @@
             await saveDataToDrive();
         }
 
+        // Force sync from Drive (clears local cache and reloads)
+        async function forceSyncFromDrive() {
+            if (!isSignedIn) {
+                alert('Please connect to Google Drive first.');
+                return;
+            }
+
+            if (!rootFolderId) {
+                alert('Google Drive not ready. Please wait...');
+                return;
+            }
+
+            if (confirm('This will reload all data from Google Drive and replace any local changes. Continue?')) {
+                console.log('Force syncing from Drive...');
+
+                // Clear local cache
+                localStorage.removeItem('bydCRM');
+                customers = [];
+
+                // Force reload from Drive
+                const success = await loadDataFromDrive();
+
+                if (success) {
+                    alert('Data synced successfully from Google Drive!');
+                } else {
+                    alert('Failed to sync from Google Drive. Check console for errors.');
+                }
+            }
+        }
+
         // Update statistics
         async function updateStats() {
             document.getElementById('totalCustomers').textContent = customers.length;
@@ -2674,17 +2714,17 @@
             // Set initial sync status
             updateSyncStatus('offline');
 
-            // Load data from localStorage initially
-            const savedData = localStorage.getItem('bydCRM');
-            if (savedData) {
-                customers = JSON.parse(savedData);
-                renderCustomerList();
-                updateStats();
-            }
+            // Don't load from localStorage yet - wait for Drive connection
+            // This ensures Drive is the source of truth
+            console.log('Waiting for Google Drive connection...');
 
             // Initialize both GAPI and GIS
             gapiLoaded();
             gisLoaded();
+
+            // Show empty state until Drive loads
+            renderCustomerList();
+            updateStats();
         }
 
         // Start when page loads
