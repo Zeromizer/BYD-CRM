@@ -1071,6 +1071,7 @@
             <h1>BYD MotorEast CRM <span id="syncStatus" style="font-size: 14px; font-weight: normal; margin-left: 10px;"></span></h1>
             <div class="header-actions">
                 <button class="btn btn-primary" onclick="openAddCustomerModal()">Add Customer</button>
+                <button class="btn btn-secondary" onclick="openFormsModal()">📄 Manage Forms</button>
                 <button class="btn btn-secondary" onclick="forceSyncFromDrive()" title="Reload data from Google Drive">🔄 Force Sync</button>
                 <button class="btn btn-secondary" onclick="exportData()">Export Data</button>
                 <button class="btn btn-secondary" onclick="importData()">Import Data</button>
@@ -1195,6 +1196,68 @@
         <!-- Modal hidden since Client ID is pre-configured -->
     </div>
 
+    <!-- Forms Management Modal -->
+    <div class="modal" id="formsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📄 Forms Management</h2>
+                <span class="close-modal" onclick="closeFormsModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div id="formsModalContent">
+                    <div style="margin-bottom: 20px; padding: 15px; background: linear-gradient(135deg, rgba(0, 188, 212, 0.1) 0%, rgba(0, 151, 167, 0.1) 100%); border-radius: 10px; border: 2px solid rgba(0, 188, 212, 0.3);">
+                        <h3 style="color: #00bcd4; margin-bottom: 10px;">About Form Templates</h3>
+                        <p style="color: #2c3e50; font-size: 14px; margin-bottom: 8px;">
+                            Upload your form templates here (PDF format). Once uploaded, you can easily view and print them from customer profiles.
+                        </p>
+                        <p style="color: #7f8c8d; font-size: 13px;">
+                            Forms are stored in Google Drive and will be accessible across all sessions.
+                        </p>
+                    </div>
+
+                    <div id="formsNotConnected" style="display: none;">
+                        <div class="auth-section">
+                            <h3>⚠️ Not Connected to Google Drive</h3>
+                            <p>Connect to Google Drive to manage form templates.</p>
+                            <button class="btn btn-drive" onclick="handleAuthClick()">
+                                📁 Connect Google Drive
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="formsConnected" style="display: none;">
+                        <div style="margin-bottom: 20px;">
+                            <h3 style="color: #1a1a2e; margin-bottom: 15px;">Upload New Form</h3>
+                            <div style="margin-bottom: 15px;">
+                                <label style="display: block; margin-bottom: 8px; color: #2c3e50; font-weight: 500;">Form Type:</label>
+                                <select id="formTypeSelect" style="width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 14px;">
+                                    <option value="test_drive">Test Drive Agreement Form</option>
+                                    <option value="vsa">Vehicle Sales Agreement</option>
+                                    <option value="pdpa">PDPA Consent Form</option>
+                                    <option value="other">Other Form</option>
+                                </select>
+                            </div>
+                            <div style="margin-bottom: 15px;">
+                                <label style="display: block; margin-bottom: 8px; color: #2c3e50; font-weight: 500;">Select PDF File:</label>
+                                <input type="file" id="formFileInput" accept=".pdf" style="width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 14px;">
+                            </div>
+                            <button class="btn btn-success" onclick="uploadFormTemplate()">Upload Form</button>
+                        </div>
+
+                        <div style="border-top: 2px solid #ecf0f1; padding-top: 20px;">
+                            <h3 style="color: #1a1a2e; margin-bottom: 15px;">Uploaded Forms</h3>
+                            <div id="formsListContainer">
+                                <div class="loading-forms" style="text-align: center; padding: 20px; color: #7f8c8d;">
+                                    Loading forms...
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Google Identity Services (New Library) -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <!-- Google API for Drive operations -->
@@ -1211,6 +1274,8 @@
         let selectedCustomerId = null;
         let isSignedIn = false;
         let rootFolderId = null;
+        let formsFolderId = null; // Google Drive folder ID for form templates
+        let formTemplates = {}; // Store form template file IDs
         let manualMode = false;
         let tokenClient = null;
         let accessToken = null;
@@ -2538,6 +2603,277 @@
             }
         }
 
+        // Forms Management Functions
+
+        // Open forms modal
+        async function openFormsModal() {
+            const modal = document.getElementById('formsModal');
+            modal.classList.add('active');
+
+            // Check if signed in
+            if (!isSignedIn) {
+                document.getElementById('formsNotConnected').style.display = 'block';
+                document.getElementById('formsConnected').style.display = 'none';
+            } else {
+                document.getElementById('formsNotConnected').style.display = 'none';
+                document.getElementById('formsConnected').style.display = 'block';
+
+                // Ensure forms folder exists
+                await getOrCreateFormsFolder();
+
+                // Load form templates
+                await loadFormTemplates();
+                displayFormsList();
+            }
+        }
+
+        // Close forms modal
+        function closeFormsModal() {
+            document.getElementById('formsModal').classList.remove('active');
+            document.getElementById('formFileInput').value = '';
+        }
+
+        // Get or create forms folder in Google Drive
+        async function getOrCreateFormsFolder() {
+            if (!isSignedIn || !rootFolderId) {
+                console.log('Cannot create forms folder: not signed in or no root folder');
+                return null;
+            }
+
+            try {
+                // Check if Forms folder exists
+                const searchResponse = await gapi.client.drive.files.list({
+                    q: `name='Forms' and '${rootFolderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
+                    spaces: 'drive',
+                    fields: 'files(id, name)'
+                });
+
+                if (searchResponse.result.files.length > 0) {
+                    formsFolderId = searchResponse.result.files[0].id;
+                    console.log('Forms folder found:', formsFolderId);
+                } else {
+                    // Create Forms folder
+                    console.log('Creating Forms folder...');
+                    const createResponse = await gapi.client.drive.files.create({
+                        resource: {
+                            name: 'Forms',
+                            mimeType: 'application/vnd.google-apps.folder',
+                            parents: [rootFolderId]
+                        },
+                        fields: 'id'
+                    });
+                    formsFolderId = createResponse.result.id;
+                    console.log('Forms folder created:', formsFolderId);
+                }
+
+                return formsFolderId;
+            } catch (error) {
+                console.error('Error creating forms folder:', error);
+                alert('Failed to create forms folder: ' + error.message);
+                return null;
+            }
+        }
+
+        // Load form templates from localStorage and Google Drive
+        async function loadFormTemplates() {
+            // Load from localStorage
+            const stored = localStorage.getItem('formTemplates');
+            if (stored) {
+                try {
+                    formTemplates = JSON.parse(stored);
+                } catch (e) {
+                    console.error('Error parsing stored form templates:', e);
+                    formTemplates = {};
+                }
+            }
+        }
+
+        // Save form templates to localStorage
+        function saveFormTemplates() {
+            localStorage.setItem('formTemplates', JSON.stringify(formTemplates));
+        }
+
+        // Upload form template
+        async function uploadFormTemplate() {
+            const fileInput = document.getElementById('formFileInput');
+            const formTypeSelect = document.getElementById('formTypeSelect');
+
+            if (!fileInput.files || fileInput.files.length === 0) {
+                alert('Please select a PDF file to upload');
+                return;
+            }
+
+            const file = fileInput.files[0];
+            const formType = formTypeSelect.value;
+
+            if (!file.type.includes('pdf')) {
+                alert('Please select a PDF file');
+                return;
+            }
+
+            if (!formsFolderId) {
+                await getOrCreateFormsFolder();
+                if (!formsFolderId) {
+                    alert('Failed to create forms folder');
+                    return;
+                }
+            }
+
+            try {
+                // Show uploading message
+                const listContainer = document.getElementById('formsListContainer');
+                listContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: #27ae60;"><div class="loading"></div><p style="margin-top: 10px;">Uploading form...</p></div>';
+
+                // Upload file to Google Drive
+                const metadata = {
+                    name: file.name,
+                    mimeType: 'application/pdf',
+                    parents: [formsFolderId]
+                };
+
+                const form = new FormData();
+                form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+                form.append('file', file);
+
+                const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink,webContentLink', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + gapi.client.getToken().access_token
+                    },
+                    body: form
+                });
+
+                if (!response.ok) {
+                    throw new Error('Upload failed: ' + response.statusText);
+                }
+
+                const result = await response.json();
+
+                // Store form template info
+                formTemplates[formType] = {
+                    fileId: result.id,
+                    fileName: result.name,
+                    webViewLink: result.webViewLink,
+                    webContentLink: result.webContentLink,
+                    uploadDate: new Date().toISOString()
+                };
+
+                saveFormTemplates();
+
+                // Clear file input
+                fileInput.value = '';
+
+                // Refresh forms list
+                displayFormsList();
+
+                alert('Form template uploaded successfully!');
+            } catch (error) {
+                console.error('Error uploading form:', error);
+                alert('Failed to upload form: ' + error.message);
+                displayFormsList();
+            }
+        }
+
+        // Display forms list
+        function displayFormsList() {
+            const container = document.getElementById('formsListContainer');
+
+            const formTypeNames = {
+                'test_drive': 'Test Drive Agreement',
+                'vsa': 'Vehicle Sales Agreement',
+                'pdpa': 'PDPA Consent Form',
+                'other': 'Other Form'
+            };
+
+            if (Object.keys(formTemplates).length === 0) {
+                container.innerHTML = '<div style="text-align: center; padding: 20px; color: #7f8c8d;">No forms uploaded yet</div>';
+                return;
+            }
+
+            let html = '';
+            for (const [formType, formData] of Object.entries(formTemplates)) {
+                const formName = formTypeNames[formType] || formType;
+                const uploadDate = new Date(formData.uploadDate).toLocaleDateString();
+
+                html += `
+                    <div class="file-item">
+                        <div class="file-info">
+                            <div class="file-icon">📄</div>
+                            <div class="file-details">
+                                <h4>${formName}</h4>
+                                <p>${formData.fileName} • Uploaded: ${uploadDate}</p>
+                            </div>
+                        </div>
+                        <div class="file-actions">
+                            <button class="btn btn-small btn-primary" onclick="viewForm('${formType}')">View</button>
+                            <button class="btn btn-small btn-danger" onclick="deleteForm('${formType}')">Delete</button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            container.innerHTML = html;
+        }
+
+        // View form
+        function viewForm(formType) {
+            const formData = formTemplates[formType];
+            if (formData && formData.webViewLink) {
+                window.open(formData.webViewLink, '_blank');
+            } else {
+                alert('Form not found');
+            }
+        }
+
+        // Delete form
+        async function deleteForm(formType) {
+            if (!confirm('Are you sure you want to delete this form template?')) {
+                return;
+            }
+
+            const formData = formTemplates[formType];
+            if (!formData) {
+                return;
+            }
+
+            try {
+                // Delete from Google Drive
+                await gapi.client.drive.files.delete({
+                    fileId: formData.fileId
+                });
+
+                // Remove from local storage
+                delete formTemplates[formType];
+                saveFormTemplates();
+
+                // Refresh list
+                displayFormsList();
+
+                alert('Form template deleted successfully');
+            } catch (error) {
+                console.error('Error deleting form:', error);
+                alert('Failed to delete form: ' + error.message);
+            }
+        }
+
+        // Print form for customer (will be called from customer view)
+        function printFormForCustomer(formType, customerId) {
+            const customer = customers.find(c => c.id === customerId);
+            const formData = formTemplates[formType];
+
+            if (!formData) {
+                alert('Form template not found. Please upload it first from Forms Management.');
+                return;
+            }
+
+            if (formData.webViewLink) {
+                // Open form in new tab for viewing/printing
+                window.open(formData.webViewLink, '_blank');
+            } else {
+                alert('Form link not available');
+            }
+        }
+
         // Add customer
         // Prevent duplicate customer creation
         let isAddingCustomer = false;
@@ -2775,6 +3111,13 @@
                     </div>
 
                     <div class="action-buttons">
+                        ${customer.stage === 'testdrive' ? `
+                            <button class="btn btn-primary" onclick="printFormForCustomer('test_drive', ${customer.id})"
+                                    style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); display: flex; align-items: center; gap: 8px; justify-content: center;">
+                                <span>📄</span>
+                                <span>Print Test Drive Form</span>
+                            </button>
+                        ` : ''}
                         ${!customer.dealClosed ? `
                             <button class="btn btn-success" onclick="markDealClosed(${customer.id})">
                                 ✓ Mark Deal as Closed
@@ -3444,6 +3787,9 @@
         function init() {
             // Set initial sync status
             updateSyncStatus('offline');
+
+            // Load form templates from localStorage
+            loadFormTemplates();
 
             // Don't load from localStorage yet - wait for Drive connection
             // This ensures Drive is the source of truth
