@@ -3248,13 +3248,7 @@
                                     };
                                     return Object.entries(formTemplates).map(([formType, formData]) => {
                                         const formName = formTypeNames[formType] || formType;
-                                        return \`
-                                            <button class="btn btn-primary" onclick="printFormForCustomer('\${formType}', ${customer.id})"
-                                                    style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); display: flex; align-items: center; gap: 8px; justify-content: center; width: 100%;">
-                                                <span>📄</span>
-                                                <span>Print \${formName}</span>
-                                            </button>
-                                        \`;
+                                        return '<button class="btn btn-primary" onclick="printFormForCustomer(\'' + formType + '\', ' + customer.id + ')" style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); display: flex; align-items: center; gap: 8px; justify-content: center; width: 100%;"><span>📄</span><span>Print ' + formName + '</span></button>';
                                     }).join('');
                                 })()}
                             </div>
