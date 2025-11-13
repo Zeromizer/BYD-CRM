@@ -1276,6 +1276,7 @@
         let rootFolderId = null;
         let formsFolderId = null; // Google Drive folder ID for form templates
         let formTemplates = {}; // Store form template file IDs
+        let formsDataFileId = null; // Google Drive file ID for forms metadata
         let manualMode = false;
         let tokenClient = null;
         let accessToken = null;
@@ -2106,6 +2107,16 @@
 
                 // Load data from Drive after root folder is ready
                 await loadData();
+
+                // Load forms after root folder is ready
+                await getOrCreateFormsFolder();
+                await loadFormTemplates();
+
+                // Refresh customer view if one is selected
+                if (selectedCustomerId) {
+                    displayCustomerDetails(selectedCustomerId);
+                }
+
                 updateStats();
             } catch (error) {
                 console.error('Error getting root folder:', error);
@@ -2674,13 +2685,129 @@
             }
         }
 
-        // Load form templates from localStorage and Google Drive
+        // Get or create the forms data file in Google Drive
+        async function getOrCreateFormsDataFile() {
+            if (!isSignedIn || !formsFolderId) {
+                console.log('Cannot sync forms: not signed in or no forms folder');
+                return null;
+            }
+
+            try {
+                const FORMS_DATA_FILE_NAME = 'Forms_Data.json';
+
+                // Search for existing forms data file
+                const searchResponse = await gapi.client.drive.files.list({
+                    q: `name='${FORMS_DATA_FILE_NAME}' and '${formsFolderId}' in parents and trashed=false`,
+                    spaces: 'drive',
+                    fields: 'files(id, name, modifiedTime)'
+                });
+
+                if (searchResponse.result.files.length > 0) {
+                    formsDataFileId = searchResponse.result.files[0].id;
+                    console.log('Found existing forms data file:', formsDataFileId);
+                    return formsDataFileId;
+                }
+
+                // Create new forms data file
+                console.log('Creating new forms data file...');
+                const createResponse = await gapi.client.drive.files.create({
+                    resource: {
+                        name: FORMS_DATA_FILE_NAME,
+                        mimeType: 'application/json',
+                        parents: [formsFolderId]
+                    },
+                    fields: 'id'
+                });
+
+                formsDataFileId = createResponse.result.id;
+                console.log('Created forms data file:', formsDataFileId);
+
+                // Initialize with empty object
+                await updateFormsDataFile({});
+
+                return formsDataFileId;
+            } catch (error) {
+                console.error('Error with forms data file:', error);
+                return null;
+            }
+        }
+
+        // Update the forms data file content in Drive
+        async function updateFormsDataFile(data) {
+            if (!formsDataFileId) {
+                console.error('No forms data file ID');
+                return false;
+            }
+
+            const boundary = '-------314159265358979323846';
+            const delimiter = "\r\n--" + boundary + "\r\n";
+            const close_delim = "\r\n--" + boundary + "--";
+
+            const contentType = 'application/json';
+            const metadata = {
+                mimeType: contentType
+            };
+
+            const multipartRequestBody =
+                delimiter +
+                'Content-Type: application/json\r\n\r\n' +
+                JSON.stringify(metadata) +
+                delimiter +
+                'Content-Type: ' + contentType + '\r\n\r\n' +
+                JSON.stringify(data, null, 2) +
+                close_delim;
+
+            const response = await fetch(
+                `https://www.googleapis.com/upload/drive/v3/files/${formsDataFileId}?uploadType=multipart`,
+                {
+                    method: 'PATCH',
+                    headers: {
+                        'Authorization': 'Bearer ' + gapi.client.getToken().access_token,
+                        'Content-Type': 'multipart/related; boundary="' + boundary + '"'
+                    },
+                    body: multipartRequestBody
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error('Failed to update forms data file');
+            }
+
+            return true;
+        }
+
+        // Load form templates from Google Drive and localStorage
         async function loadFormTemplates() {
-            // Load from localStorage
+            // Try to load from Google Drive first
+            if (isSignedIn && formsFolderId) {
+                try {
+                    await getOrCreateFormsDataFile();
+
+                    if (formsDataFileId) {
+                        const response = await gapi.client.drive.files.get({
+                            fileId: formsDataFileId,
+                            alt: 'media'
+                        });
+
+                        if (response.result) {
+                            formTemplates = response.result;
+                            // Cache in localStorage
+                            localStorage.setItem('formTemplates', JSON.stringify(formTemplates));
+                            console.log('Loaded form templates from Drive:', Object.keys(formTemplates).length);
+                            return;
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error loading forms from Drive:', error);
+                }
+            }
+
+            // Fallback to localStorage
             const stored = localStorage.getItem('formTemplates');
             if (stored) {
                 try {
                     formTemplates = JSON.parse(stored);
+                    console.log('Loaded form templates from localStorage:', Object.keys(formTemplates).length);
                 } catch (e) {
                     console.error('Error parsing stored form templates:', e);
                     formTemplates = {};
@@ -2688,9 +2815,26 @@
             }
         }
 
-        // Save form templates to localStorage
-        function saveFormTemplates() {
+        // Save form templates to Google Drive and localStorage
+        async function saveFormTemplates() {
+            // Save to localStorage for quick access
             localStorage.setItem('formTemplates', JSON.stringify(formTemplates));
+
+            // Save to Google Drive for cross-device sync
+            if (isSignedIn && formsFolderId) {
+                try {
+                    if (!formsDataFileId) {
+                        await getOrCreateFormsDataFile();
+                    }
+
+                    if (formsDataFileId) {
+                        await updateFormsDataFile(formTemplates);
+                        console.log('Saved form templates to Drive');
+                    }
+                } catch (error) {
+                    console.error('Error saving forms to Drive:', error);
+                }
+            }
         }
 
         // Upload form template
@@ -2758,7 +2902,7 @@
                     uploadDate: new Date().toISOString()
                 };
 
-                saveFormTemplates();
+                await saveFormTemplates();
 
                 // Clear file input
                 fileInput.value = '';
@@ -2844,7 +2988,7 @@
 
                 // Remove from local storage
                 delete formTemplates[formType];
-                saveFormTemplates();
+                await saveFormTemplates();
 
                 // Refresh list
                 displayFormsList();
@@ -3088,6 +3232,35 @@
                         <textarea rows="3" onchange="updateCustomer(${customer.id}, 'notes', this.value)">${customer.notes || ''}</textarea>
                     </div>
 
+                    ${Object.keys(formTemplates).length > 0 ? `
+                        <div class="checklist-section" style="background: linear-gradient(135deg, rgba(231, 76, 60, 0.1) 0%, rgba(192, 57, 43, 0.1) 100%); border: 2px solid rgba(231, 76, 60, 0.3);">
+                            <h3 style="color: #e74c3c;">📄 Forms</h3>
+                            <p style="margin-bottom: 15px; color: #7f8c8d; font-size: 13px;">
+                                Available forms for ${customer.name}
+                            </p>
+                            <div style="display: flex; flex-direction: column; gap: 10px;">
+                                ${(() => {
+                                    const formTypeNames = {
+                                        'test_drive': 'Test Drive Agreement',
+                                        'vsa': 'Vehicle Sales Agreement',
+                                        'pdpa': 'PDPA Consent Form',
+                                        'other': 'Other Form'
+                                    };
+                                    return Object.entries(formTemplates).map(([formType, formData]) => {
+                                        const formName = formTypeNames[formType] || formType;
+                                        return \`
+                                            <button class="btn btn-primary" onclick="printFormForCustomer('\${formType}', ${customer.id})"
+                                                    style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); display: flex; align-items: center; gap: 8px; justify-content: center; width: 100%;">
+                                                <span>📄</span>
+                                                <span>Print \${formName}</span>
+                                            </button>
+                                        \`;
+                                    }).join('');
+                                })()}
+                            </div>
+                        </div>
+                    ` : ''}
+
                     <div class="checklist-section">
                         <h3>📋 Document Checklist - ${getStageLabel(customer.stage)}</h3>
                         <p style="margin-bottom: 15px; color: #7f8c8d; font-size: 13px;">
@@ -3111,13 +3284,6 @@
                     </div>
 
                     <div class="action-buttons">
-                        ${customer.stage === 'testdrive' ? `
-                            <button class="btn btn-primary" onclick="printFormForCustomer('test_drive', ${customer.id})"
-                                    style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); display: flex; align-items: center; gap: 8px; justify-content: center;">
-                                <span>📄</span>
-                                <span>Print Test Drive Form</span>
-                            </button>
-                        ` : ''}
                         ${!customer.dealClosed ? `
                             <button class="btn btn-success" onclick="markDealClosed(${customer.id})">
                                 ✓ Mark Deal as Closed
