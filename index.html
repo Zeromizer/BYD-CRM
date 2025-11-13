@@ -3088,6 +3088,35 @@
                         <textarea rows="3" onchange="updateCustomer(${customer.id}, 'notes', this.value)">${customer.notes || ''}</textarea>
                     </div>
 
+                    ${Object.keys(formTemplates).length > 0 ? `
+                        <div class="checklist-section" style="background: linear-gradient(135deg, rgba(231, 76, 60, 0.1) 0%, rgba(192, 57, 43, 0.1) 100%); border: 2px solid rgba(231, 76, 60, 0.3);">
+                            <h3 style="color: #e74c3c;">📄 Forms</h3>
+                            <p style="margin-bottom: 15px; color: #7f8c8d; font-size: 13px;">
+                                Available forms for ${customer.name}
+                            </p>
+                            <div style="display: flex; flex-direction: column; gap: 10px;">
+                                ${(() => {
+                                    const formTypeNames = {
+                                        'test_drive': 'Test Drive Agreement',
+                                        'vsa': 'Vehicle Sales Agreement',
+                                        'pdpa': 'PDPA Consent Form',
+                                        'other': 'Other Form'
+                                    };
+                                    return Object.entries(formTemplates).map(([formType, formData]) => {
+                                        const formName = formTypeNames[formType] || formType;
+                                        return \`
+                                            <button class="btn btn-primary" onclick="printFormForCustomer('\${formType}', ${customer.id})"
+                                                    style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); display: flex; align-items: center; gap: 8px; justify-content: center; width: 100%;">
+                                                <span>📄</span>
+                                                <span>Print \${formName}</span>
+                                            </button>
+                                        \`;
+                                    }).join('');
+                                })()}
+                            </div>
+                        </div>
+                    ` : ''}
+
                     <div class="checklist-section">
                         <h3>📋 Document Checklist - ${getStageLabel(customer.stage)}</h3>
                         <p style="margin-bottom: 15px; color: #7f8c8d; font-size: 13px;">
@@ -3111,13 +3140,6 @@
                     </div>
 
                     <div class="action-buttons">
-                        ${customer.stage === 'testdrive' ? `
-                            <button class="btn btn-primary" onclick="printFormForCustomer('test_drive', ${customer.id})"
-                                    style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); display: flex; align-items: center; gap: 8px; justify-content: center;">
-                                <span>📄</span>
-                                <span>Print Test Drive Form</span>
-                            </button>
-                        ` : ''}
                         ${!customer.dealClosed ? `
                             <button class="btn btn-success" onclick="markDealClosed(${customer.id})">
                                 ✓ Mark Deal as Closed
