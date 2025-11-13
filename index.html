@@ -2155,8 +2155,8 @@
             }
 
             try {
-                // Create a subfolder for each document type
-                for (const folder of documentFolders) {
+                // Create all subfolders in parallel for faster performance
+                const folderPromises = documentFolders.map(async (folder) => {
                     // Check if subfolder already exists
                     const searchResponse = await gapi.client.drive.files.list({
                         q: `name='${folder.name}' and '${customerFolderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
@@ -2180,9 +2180,20 @@
                         subfolderId = createResponse.result.id;
                     }
 
-                    // Store subfolder ID
-                    customer.documentFolders[folder.id] = subfolderId;
-                }
+                    return { folderId: folder.id, subfolderId };
+                });
+
+                // Wait for all folder operations to complete
+                const results = await Promise.allSettled(folderPromises);
+
+                // Store successful subfolder IDs
+                results.forEach((result, index) => {
+                    if (result.status === 'fulfilled' && result.value) {
+                        customer.documentFolders[result.value.folderId] = result.value.subfolderId;
+                    } else if (result.status === 'rejected') {
+                        console.error(`Failed to create folder ${documentFolders[index].name}:`, result.reason);
+                    }
+                });
 
                 saveData();
             } catch (error) {
@@ -2292,29 +2303,45 @@
             }
 
             try {
-                let allFiles = [];
+                // Fetch all folders in parallel for faster performance
+                const fetchPromises = [];
 
                 // Get files from main customer folder
-                const mainResponse = await gapi.client.drive.files.list({
-                    q: `'${customer.driveFolderId}' in parents and mimeType != 'application/vnd.google-apps.folder' and trashed=false`,
-                    spaces: 'drive',
-                    fields: 'files(id, name, mimeType, size, webViewLink, createdTime)',
-                    orderBy: 'createdTime desc'
-                });
-                allFiles = allFiles.concat(mainResponse.result.files || []);
+                fetchPromises.push(
+                    gapi.client.drive.files.list({
+                        q: `'${customer.driveFolderId}' in parents and mimeType != 'application/vnd.google-apps.folder' and trashed=false`,
+                        spaces: 'drive',
+                        fields: 'files(id, name, mimeType, size, webViewLink, createdTime)',
+                        orderBy: 'createdTime desc'
+                    })
+                );
 
-                // Get files from all document subfolders
+                // Get files from all document subfolders in parallel
                 if (customer.documentFolders) {
                     for (const folderId of Object.values(customer.documentFolders)) {
-                        const subResponse = await gapi.client.drive.files.list({
-                            q: `'${folderId}' in parents and mimeType != 'application/vnd.google-apps.folder' and trashed=false`,
-                            spaces: 'drive',
-                            fields: 'files(id, name, mimeType, size, webViewLink, createdTime)',
-                            orderBy: 'createdTime desc'
-                        });
-                        allFiles = allFiles.concat(subResponse.result.files || []);
+                        fetchPromises.push(
+                            gapi.client.drive.files.list({
+                                q: `'${folderId}' in parents and mimeType != 'application/vnd.google-apps.folder' and trashed=false`,
+                                spaces: 'drive',
+                                fields: 'files(id, name, mimeType, size, webViewLink, createdTime)',
+                                orderBy: 'createdTime desc'
+                            })
+                        );
                     }
                 }
+
+                // Wait for all fetch operations to complete
+                const results = await Promise.allSettled(fetchPromises);
+
+                // Combine all files from successful requests
+                let allFiles = [];
+                results.forEach(result => {
+                    if (result.status === 'fulfilled' && result.value.result.files) {
+                        allFiles = allFiles.concat(result.value.result.files);
+                    } else if (result.status === 'rejected') {
+                        console.error('Failed to fetch files:', result.reason);
+                    }
+                });
 
                 // Sort all files by creation time (newest first)
                 allFiles.sort((a, b) => new Date(b.createdTime) - new Date(a.createdTime));
@@ -2417,33 +2444,70 @@
         }
 
         // Update statistics
-        async function updateStats() {
+        // Cache for file counts to avoid repeated API calls
+        let statsCache = {
+            totalFiles: 0,
+            lastUpdate: 0,
+            cacheTimeout: 30000 // 30 seconds cache
+        };
+
+        async function updateStats(forceRefresh = false) {
             document.getElementById('totalCustomers').textContent = customers.length;
-            
+
             const activeDeals = customers.filter(c => !c.dealClosed).length;
             document.getElementById('activeDeals').textContent = activeDeals;
-            
+
             // Count folders
             const foldersCreated = customers.filter(c => c.driveFolderId).length;
             document.getElementById('totalFolders').textContent = foldersCreated;
-            
-            // Count files
+
+            // Count files with caching and parallel execution
             if (isSignedIn && rootFolderId) {
-                try {
-                    let totalFiles = 0;
-                    for (const customer of customers) {
-                        if (customer.driveFolderId) {
-                            const files = await getCustomerFiles(customer.id);
-                            totalFiles += files.length;
-                        }
+                const now = Date.now();
+                const cacheValid = !forceRefresh && (now - statsCache.lastUpdate) < statsCache.cacheTimeout;
+
+                if (cacheValid) {
+                    // Use cached value
+                    document.getElementById('totalFiles').textContent = statsCache.totalFiles;
+                } else {
+                    try {
+                        // Show loading indicator
+                        document.getElementById('totalFiles').textContent = '...';
+
+                        // Fetch file counts for all customers in parallel
+                        const customersWithFolders = customers.filter(c => c.driveFolderId);
+                        const filePromises = customersWithFolders.map(customer =>
+                            getCustomerFiles(customer.id)
+                        );
+
+                        const results = await Promise.allSettled(filePromises);
+
+                        // Count total files from successful requests
+                        let totalFiles = 0;
+                        results.forEach(result => {
+                            if (result.status === 'fulfilled' && result.value) {
+                                totalFiles += result.value.length;
+                            }
+                        });
+
+                        // Update cache
+                        statsCache.totalFiles = totalFiles;
+                        statsCache.lastUpdate = now;
+
+                        document.getElementById('totalFiles').textContent = totalFiles;
+                    } catch (error) {
+                        console.error('Error updating stats:', error);
+                        document.getElementById('totalFiles').textContent = '?';
                     }
-                    document.getElementById('totalFiles').textContent = totalFiles;
-                } catch (error) {
-                    document.getElementById('totalFiles').textContent = '?';
                 }
             } else {
                 document.getElementById('totalFiles').textContent = '0';
             }
+        }
+
+        // Helper function to invalidate stats cache when files change
+        function invalidateStatsCache() {
+            statsCache.lastUpdate = 0;
         }
 
         // Open add customer modal
@@ -2922,38 +2986,57 @@
             const classificationResults = [];
 
             if (isAutoClassify) {
-                // Auto-classify mode
+                // Auto-classify mode with parallel uploads
                 uploadArea.innerHTML = '<div class="loading"></div><p style="color: #27ae60; margin-top: 10px;">🤖 Auto-classifying and uploading files...</p>';
 
-                for (let i = 0; i < files.length; i++) {
-                    const file = files[i];
+                // Prepare all upload tasks
+                const uploadTasks = Array.from(files).map(file => {
                     const fileExt = file.name.split('.').pop();
-
-                    // Auto-classify the document
                     const classification = classifyDocument(file.name);
                     const documentType = classification.folderId;
                     const displayName = classification.displayName;
-
-                    // Create standardized filename
                     const fileName = `${customer.name.replace(/\s+/g, '_')}_${customer.nric || 'XXXX'}_${displayName.replace(/\s+/g, '_')}.${fileExt}`;
 
-                    const result = await uploadFileToDrive(file, customerId, fileName, documentType);
-                    if (result) {
-                        successCount++;
-                        classificationResults.push({
-                            originalName: file.name,
-                            detectedType: displayName,
-                            checklistId: classification.checklistId,
-                            confidence: classification.confidence
-                        });
+                    return {
+                        file,
+                        fileName,
+                        documentType,
+                        classification
+                    };
+                });
 
-                        // Auto-tick checklist if applicable
-                        if (classification.checklistId) {
-                            toggleChecklistItem(customerId, classification.checklistId, true);
+                // Upload with concurrency limit (3 files at a time to avoid overwhelming API)
+                const concurrencyLimit = 3;
+                for (let i = 0; i < uploadTasks.length; i += concurrencyLimit) {
+                    const batch = uploadTasks.slice(i, i + concurrencyLimit);
+                    const batchPromises = batch.map(async (task) => {
+                        const result = await uploadFileToDrive(task.file, customerId, task.fileName, task.documentType);
+                        return {
+                            success: result,
+                            task
+                        };
+                    });
+
+                    const batchResults = await Promise.allSettled(batchPromises);
+
+                    batchResults.forEach(result => {
+                        if (result.status === 'fulfilled' && result.value.success) {
+                            successCount++;
+                            classificationResults.push({
+                                originalName: result.value.task.file.name,
+                                detectedType: result.value.task.classification.displayName,
+                                checklistId: result.value.task.classification.checklistId,
+                                confidence: result.value.task.classification.confidence
+                            });
+
+                            // Auto-tick checklist if applicable
+                            if (result.value.task.classification.checklistId) {
+                                toggleChecklistItem(customerId, result.value.task.classification.checklistId, true);
+                            }
+                        } else {
+                            errorCount++;
                         }
-                    } else {
-                        errorCount++;
-                    }
+                    });
                 }
 
                 // Show detailed results
@@ -2970,26 +3053,43 @@
                 alert(resultMessage);
 
             } else {
-                // Manual mode
+                // Manual mode with parallel uploads
                 const documentTypeSelect = document.getElementById(`documentTypeSelect_${customerId}`);
                 const documentType = documentTypeSelect ? documentTypeSelect.value : 'other';
                 const folderName = documentFolders.find(f => f.id === documentType)?.name || 'Other_Documents';
 
                 uploadArea.innerHTML = '<div class="loading"></div><p style="color: #27ae60; margin-top: 10px;">Uploading files to ' + folderName.replace(/_/g, ' ') + '...</p>';
 
-                for (let i = 0; i < files.length; i++) {
-                    const file = files[i];
-
+                // Prepare all upload tasks
+                const uploadTasks = Array.from(files).map(file => {
                     const fileExt = file.name.split('.').pop();
-                    const docType = prompt(`Enter document type for ${file.name}:`, folderName.replace(/_/g, ' ')) || folderName.replace(/_/g, ' ');
+                    const docType = folderName.replace(/_/g, ' '); // Use folder name for all files in manual mode
                     const fileName = `${customer.name.replace(/\s+/g, '_')}_${customer.nric || 'XXXX'}_${docType.replace(/\s+/g, '_')}.${fileExt}`;
 
-                    const result = await uploadFileToDrive(file, customerId, fileName, documentType);
-                    if (result) {
-                        successCount++;
-                    } else {
-                        errorCount++;
-                    }
+                    return {
+                        file,
+                        fileName,
+                        documentType
+                    };
+                });
+
+                // Upload with concurrency limit (3 files at a time)
+                const concurrencyLimit = 3;
+                for (let i = 0; i < uploadTasks.length; i += concurrencyLimit) {
+                    const batch = uploadTasks.slice(i, i + concurrencyLimit);
+                    const batchPromises = batch.map(task =>
+                        uploadFileToDrive(task.file, customerId, task.fileName, task.documentType)
+                    );
+
+                    const batchResults = await Promise.allSettled(batchPromises);
+
+                    batchResults.forEach(result => {
+                        if (result.status === 'fulfilled' && result.value) {
+                            successCount++;
+                        } else {
+                            errorCount++;
+                        }
+                    });
                 }
 
                 if (successCount > 0) {
@@ -3001,6 +3101,7 @@
             }
 
             uploadArea.innerHTML = originalContent;
+            invalidateStatsCache(); // Invalidate cache after upload
             displayCustomerDetails(customerId);
             updateStats();
         }
@@ -3011,6 +3112,7 @@
                 const success = await deleteFileFromDrive(fileId);
                 if (success) {
                     alert('File deleted successfully');
+                    invalidateStatsCache(); // Invalidate cache after deletion
                     displayCustomerDetails(customerId);
                     updateStats();
                 } else {
@@ -3146,6 +3248,7 @@
             if (success) {
                 const folderName = documentFolders.find(f => f.id === targetFolderId)?.name.replace(/_/g, ' ') || 'selected folder';
                 alert(`✅ "${newFileName}" moved to ${folderName} successfully!`);
+                invalidateStatsCache(); // Invalidate cache to ensure fresh data
                 displayCustomerDetails(customerId);
             } else {
                 alert('❌ Error moving file. Please try again.');
