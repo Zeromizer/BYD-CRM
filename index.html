@@ -3086,7 +3086,7 @@
                 return;
             }
 
-            // For test drive form, create combined print view
+            // For test drive form, create combined print view with images
             if (formType === 'test_drive' && customer.testDriveDocs) {
                 const docs = customer.testDriveDocs;
                 const hasAllDocs = docs.icFront && docs.icBack && docs.licenseFront && docs.licenseBack;
@@ -3096,55 +3096,94 @@
                     if (!proceed) return;
                 }
 
-                // Build HTML string for print page
-                let html = '<!DOCTYPE html><html><head><title>Test Drive Form - ' + customer.name + '</title>';
+                // Build HTML for print page with images
+                let html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Test Drive Documents - ' + customer.name + '</title>';
                 html += '<style>';
-                html += '@page { size: A4; margin: 0; }';
-                html += '* { margin: 0; padding: 0; box-sizing: border-box; }';
-                html += 'body { font-family: Arial, sans-serif; }';
-                html += '.page { width: 100%; height: 100vh; page-break-after: always; display: flex; align-items: center; justify-content: center; background: white; }';
-                html += '.page:last-child { page-break-after: auto; }';
-                html += '.form-page { position: relative; width: 100%; height: 100%; }';
-                html += '.form-page iframe { width: 100%; height: 100%; border: none; }';
-                html += '.doc-page { padding: 20px; display: flex; flex-direction: column; gap: 20px; }';
-                html += '.doc-container { flex: 1; display: flex; align-items: center; justify-content: center; border: 2px solid #ddd; padding: 10px; }';
-                html += '.doc-container img { max-width: 100%; max-height: 100%; object-fit: contain; }';
-                html += '.doc-label { text-align: center; font-weight: bold; margin-bottom: 10px; font-size: 14px; color: #333; }';
-                html += '@media print { .no-print { display: none; } body { print-color-adjust: exact; -webkit-print-color-adjust: exact; } }';
+                html += '@page { size: A4; margin: 10mm; }';
+                html += 'body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }';
+                html += 'h1 { color: #e74c3c; margin-bottom: 10px; font-size: 24px; }';
+                html += 'h2 { color: #2c3e50; margin-top: 30px; margin-bottom: 15px; font-size: 18px; page-break-before: always; }';
+                html += 'h2:first-of-type { page-break-before: avoid; }';
+                html += '.instructions { background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #e74c3c; }';
+                html += '.instructions p { margin: 5px 0; color: #555; font-size: 14px; }';
+                html += '.form-link { display: inline-block; padding: 12px 24px; background: #e74c3c; color: white; text-decoration: none; border-radius: 5px; margin: 15px 0; font-weight: 600; }';
+                html += '.form-link:hover { background: #c0392b; }';
+                html += '.doc-section { margin-bottom: 40px; page-break-inside: avoid; }';
+                html += '.doc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 15px; }';
+                html += '.doc-item { text-align: center; }';
+                html += '.doc-item h3 { font-size: 14px; color: #555; margin-bottom: 10px; }';
+                html += '.doc-item img { max-width: 100%; height: auto; border: 2px solid #ddd; border-radius: 5px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }';
+                html += '.single-doc { max-width: 600px; margin: 0 auto; }';
+                html += '.single-doc img { width: 100%; }';
+                html += '.print-btn { position: fixed; top: 20px; right: 20px; padding: 12px 24px; background: #27ae60; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: 600; box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 1000; }';
+                html += '.print-btn:hover { background: #229954; }';
+                html += '@media print { .no-print { display: none !important; } }';
                 html += '</style></head><body>';
 
-                // Page 1: Form
-                html += '<div class="page form-page"><iframe src="' + formData.webViewLink + '"></iframe></div>';
+                // Print button (hidden when printing)
+                html += '<button class="print-btn no-print" onclick="window.print()">🖨️ Print All</button>';
 
-                // Page 2: IC Front & Back
-                if (docs.icFront) {
-                    html += '<div class="page doc-page">';
-                    html += '<div style="flex: 1;"><div class="doc-label">IC Front</div><div class="doc-container"><img src="' + docs.icFront.webContentLink + '" alt="IC Front"></div></div>';
-                    if (docs.icBack) {
-                        html += '<div style="flex: 1;"><div class="doc-label">IC Back</div><div class="doc-container"><img src="' + docs.icBack.webContentLink + '" alt="IC Back"></div></div>';
-                    }
+                // Header
+                html += '<h1>Test Drive Documents - ' + customer.name + '</h1>';
+
+                // Instructions
+                html += '<div class="instructions no-print">';
+                html += '<p><strong>📋 Instructions:</strong></p>';
+                html += '<p>1. Click the link below to open and print the Test Drive Form (PDF)</p>';
+                html += '<p>2. Print the IC and Driver\'s License images below (will print on separate pages)</p>';
+                html += '<p>3. Attach all pages together</p>';
+                html += '</div>';
+
+                // Form PDF link
+                html += '<div class="no-print" style="margin: 20px 0; padding: 20px; background: #fff3cd; border-radius: 8px; border: 2px solid #ffc107;">';
+                html += '<h3 style="margin-top: 0; color: #856404;">📄 Test Drive Agreement Form (PDF)</h3>';
+                html += '<a href="' + formData.webViewLink + '" target="_blank" class="form-link">Open Test Drive Form PDF →</a>';
+                html += '<p style="color: #856404; font-size: 13px; margin-top: 10px;">Click to open in a new tab, then print from there</p>';
+                html += '</div>';
+
+                // For printing: Show form reference
+                html += '<div style="display: none;" class="print-only">';
+                html += '<h2>📄 Test Drive Agreement Form</h2>';
+                html += '<p style="padding: 40px; background: #f8f9fa; border: 2px dashed #ddd; text-align: center; color: #555;">';
+                html += 'Print the Test Drive Form PDF separately from:<br><strong>' + formData.fileName + '</strong>';
+                html += '</p>';
+                html += '</div>';
+                html += '<style>.print-only { display: none; } @media print { .print-only { display: block !important; } }</style>';
+
+                // IC Front & Back
+                html += '<h2>🪪 IC (Front & Back)</h2>';
+                if (docs.icFront && docs.icBack) {
+                    html += '<div class="doc-grid">';
+                    html += '<div class="doc-item"><h3>IC Front</h3><img src="' + docs.icFront.webViewLink + '" alt="IC Front" onerror="this.src=\'' + docs.icFront.webContentLink + '\'"></div>';
+                    html += '<div class="doc-item"><h3>IC Back</h3><img src="' + docs.icBack.webViewLink + '" alt="IC Back" onerror="this.src=\'' + docs.icBack.webContentLink + '\'"></div>';
                     html += '</div>';
+                } else if (docs.icFront) {
+                    html += '<div class="single-doc"><h3>IC Front</h3><img src="' + docs.icFront.webViewLink + '" alt="IC Front"></div>';
+                } else if (docs.icBack) {
+                    html += '<div class="single-doc"><h3>IC Back</h3><img src="' + docs.icBack.webViewLink + '" alt="IC Back"></div>';
                 }
 
-                // Page 3: License Front & Back
-                if (docs.licenseFront) {
-                    html += '<div class="page doc-page">';
-                    html += '<div style="flex: 1;"><div class="doc-label">Driver\'s License Front</div><div class="doc-container"><img src="' + docs.licenseFront.webContentLink + '" alt="License Front"></div></div>';
-                    if (docs.licenseBack) {
-                        html += '<div style="flex: 1;"><div class="doc-label">Driver\'s License Back</div><div class="doc-container"><img src="' + docs.licenseBack.webContentLink + '" alt="License Back"></div></div>';
-                    }
+                // Driver's License Front & Back
+                html += '<h2>🚗 Driver\'s License (Front & Back)</h2>';
+                if (docs.licenseFront && docs.licenseBack) {
+                    html += '<div class="doc-grid">';
+                    html += '<div class="doc-item"><h3>License Front</h3><img src="' + docs.licenseFront.webViewLink + '" alt="License Front" onerror="this.src=\'' + docs.licenseFront.webContentLink + '\'"></div>';
+                    html += '<div class="doc-item"><h3>License Back</h3><img src="' + docs.licenseBack.webViewLink + '" alt="License Back" onerror="this.src=\'' + docs.licenseBack.webContentLink + '\'"></div>';
                     html += '</div>';
+                } else if (docs.licenseFront) {
+                    html += '<div class="single-doc"><h3>License Front</h3><img src="' + docs.licenseFront.webViewLink + '" alt="License Front"></div>';
+                } else if (docs.licenseBack) {
+                    html += '<div class="single-doc"><h3>License Back</h3><img src="' + docs.licenseBack.webViewLink + '" alt="License Back"></div>';
                 }
 
-                // Print buttons
-                html += '<div class="no-print" style="position: fixed; bottom: 20px; right: 20px; background: white; padding: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); border-radius: 8px;">';
-                html += '<button onclick="window.print()" style="padding: 10px 20px; background: #e74c3c; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: 600;">🖨️ Print All Pages</button><br><br>';
-                html += '<button onclick="window.close()" style="padding: 10px 20px; background: #95a5a6; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: 600;">Close</button>';
+                // Footer
+                html += '<div class="no-print" style="margin-top: 40px; padding: 15px; background: #e8f5e9; border-radius: 8px; text-align: center;">';
+                html += '<p style="color: #27ae60; margin: 0;">✓ Ready to print! Click the green "Print All" button at the top right</p>';
                 html += '</div>';
 
                 html += '</body></html>';
 
-                // Open and write
+                // Open in new window
                 const printWindow = window.open('', '_blank');
                 printWindow.document.write(html);
                 printWindow.document.close();
