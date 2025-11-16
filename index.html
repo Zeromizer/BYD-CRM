@@ -276,6 +276,15 @@
             box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.1);
         }
 
+        .form-group input:read-only,
+        .form-group select:disabled,
+        .form-group textarea:read-only {
+            background-color: #f7fafc;
+            color: #4a5568;
+            cursor: not-allowed;
+            border-color: #e2e8f0;
+        }
+
         .form-row {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -1330,6 +1339,8 @@
         let dataFileId = null; // Google Drive file ID for synced data
         let isSyncing = false; // Prevent concurrent syncs
         let lastSyncTime = null; // Track last successful sync
+        let isEditingCustomer = false; // Track if customer info is being edited
+        let customerBackup = null; // Backup of customer data before editing
 
         // Token Storage and Management Functions
         function saveTokenToStorage(token, expiresIn) {
@@ -3793,6 +3804,9 @@
         // Select customer
         function selectCustomer(customerId) {
             selectedCustomerId = customerId;
+            // Reset edit mode when selecting a different customer
+            isEditingCustomer = false;
+            customerBackup = null;
             renderCustomerList();
             displayCustomerDetails(customerId);
         }
@@ -3818,34 +3832,50 @@
                 </div>
 
                 <div id="tab-info" class="tab-content active">
-                    <h2>Customer Details</h2>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h2 style="margin: 0;">Customer Details</h2>
+                        <div id="editButtons">
+                            ${!isEditingCustomer ? `
+                                <button class="btn btn-primary" onclick="enableCustomerEdit(${customer.id})" style="background: #3498db;">
+                                    Edit Info
+                                </button>
+                            ` : `
+                                <button class="btn btn-success" onclick="saveCustomerEdit(${customer.id})" style="background: #27ae60; margin-right: 10px;">
+                                    Save Changes
+                                </button>
+                                <button class="btn btn-secondary" onclick="cancelCustomerEdit(${customer.id})" style="background: #95a5a6;">
+                                    Cancel
+                                </button>
+                            `}
+                        </div>
+                    </div>
 
                     <div class="form-row">
                         <div class="form-group">
                             <label>Name</label>
-                            <input type="text" value="${customer.name}" onchange="updateCustomer(${customer.id}, 'name', this.value)">
+                            <input type="text" id="customer_name" value="${customer.name}" ${!isEditingCustomer ? 'readonly' : ''}>
                         </div>
                         <div class="form-group">
                             <label>Contact Number</label>
-                            <input type="tel" value="${customer.phone}" onchange="updateCustomer(${customer.id}, 'phone', this.value)">
+                            <input type="tel" id="customer_phone" value="${customer.phone}" ${!isEditingCustomer ? 'readonly' : ''}>
                         </div>
                     </div>
 
                     <div class="form-row">
                         <div class="form-group">
                             <label>Email</label>
-                            <input type="email" value="${customer.email || ''}" onchange="updateCustomer(${customer.id}, 'email', this.value)">
+                            <input type="email" id="customer_email" value="${customer.email || ''}" ${!isEditingCustomer ? 'readonly' : ''}>
                         </div>
                         <div class="form-group">
                             <label>NRIC/FIN</label>
-                            <input type="text" value="${customer.nric || ''}" onchange="updateCustomer(${customer.id}, 'nric', this.value)" placeholder="S1234567A or F1234567N">
+                            <input type="text" id="customer_nric" value="${customer.nric || ''}" ${!isEditingCustomer ? 'readonly' : ''} placeholder="S1234567A or F1234567N">
                         </div>
                     </div>
 
                     <div class="form-row">
                         <div class="form-group">
                             <label>Interested Model</label>
-                            <select onchange="updateCustomer(${customer.id}, 'model', this.value)">
+                            <select id="customer_model" ${!isEditingCustomer ? 'disabled' : ''}>
                                 <option value="">Select Model</option>
                                 <option value="Seal" ${customer.model === 'Seal' ? 'selected' : ''}>Seal</option>
                                 <option value="Seal 6" ${customer.model === 'Seal 6' ? 'selected' : ''}>Seal 6</option>
@@ -3861,7 +3891,7 @@
 
                     <div class="form-group">
                         <label>Notes</label>
-                        <textarea rows="3" onchange="updateCustomer(${customer.id}, 'notes', this.value)">${customer.notes || ''}</textarea>
+                        <textarea rows="3" id="customer_notes" ${!isEditingCustomer ? 'readonly' : ''}>${customer.notes || ''}</textarea>
                     </div>
 
                     ${Object.keys(formTemplates).length > 0 ? `
@@ -4480,6 +4510,52 @@
                 renderCustomerList();
                 displayCustomerDetails(customerId);
             }
+        }
+
+        // Enable customer edit mode
+        function enableCustomerEdit(customerId) {
+            const customer = customers.find(c => c.id === customerId);
+            if (customer) {
+                // Backup current customer data
+                customerBackup = JSON.parse(JSON.stringify(customer));
+                isEditingCustomer = true;
+                displayCustomerDetails(customerId);
+            }
+        }
+
+        // Save customer edits
+        function saveCustomerEdit(customerId) {
+            const customer = customers.find(c => c.id === customerId);
+            if (customer) {
+                // Get values from form fields
+                customer.name = document.getElementById('customer_name').value;
+                customer.phone = document.getElementById('customer_phone').value;
+                customer.email = document.getElementById('customer_email').value;
+                customer.nric = document.getElementById('customer_nric').value;
+                customer.model = document.getElementById('customer_model').value;
+                customer.notes = document.getElementById('customer_notes').value;
+
+                // Save and exit edit mode
+                saveData();
+                renderCustomerList();
+                isEditingCustomer = false;
+                customerBackup = null;
+                displayCustomerDetails(customerId);
+            }
+        }
+
+        // Cancel customer edits
+        function cancelCustomerEdit(customerId) {
+            if (customerBackup) {
+                // Restore customer data from backup
+                const customer = customers.find(c => c.id === customerId);
+                if (customer) {
+                    Object.assign(customer, customerBackup);
+                }
+            }
+            isEditingCustomer = false;
+            customerBackup = null;
+            displayCustomerDetails(customerId);
         }
 
         // Toggle checklist item
