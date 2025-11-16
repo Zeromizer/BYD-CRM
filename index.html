@@ -282,6 +282,26 @@
             box-shadow: 0 0 0 3px rgba(49, 130, 206, 0.1);
         }
 
+        /* Read-only and editable field styles */
+        .readonly-field {
+            background-color: #f8f9fa !important;
+            color: #495057 !important;
+            cursor: default !important;
+            border-color: #dee2e6 !important;
+        }
+
+        .editable-field {
+            background-color: #fff3cd !important;
+            border: 2px solid #ffc107 !important;
+            box-shadow: 0 0 0 3px rgba(255, 193, 7, 0.1) !important;
+        }
+
+        .editable-field:focus {
+            background-color: #ffffff !important;
+            border-color: #ff9800 !important;
+            box-shadow: 0 0 0 3px rgba(255, 152, 0, 0.2) !important;
+        }
+
         .form-row {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -3878,8 +3898,17 @@
                 </div>
 
                 <div id="tab-info" class="tab-content active">
-                    <h2>Customer Details</h2>
-                    
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h2 style="margin: 0;">Customer Details</h2>
+                        <button id="editBtn_${customer.id}" class="btn btn-primary" onclick="toggleEditMode(${customer.id}, true)" style="background: #00bcd4;">
+                            ✏️ Edit Info
+                        </button>
+                        <div id="editActions_${customer.id}" style="display: none; gap: 10px;">
+                            <button class="btn btn-success" onclick="saveCustomerEdit(${customer.id})">💾 Save Changes</button>
+                            <button class="btn btn-secondary" onclick="toggleEditMode(${customer.id}, false)">✖ Cancel</button>
+                        </div>
+                    </div>
+
                     ${customer.driveFolderId ? `
                         <div class="drive-folder-info">
                             <h4>📁 Google Drive Folder</h4>
@@ -3891,29 +3920,29 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label>Name</label>
-                            <input type="text" value="${customer.name}" onchange="updateCustomer(${customer.id}, 'name', this.value)">
+                            <input type="text" id="name_${customer.id}" value="${customer.name}" readonly class="readonly-field">
                         </div>
                         <div class="form-group">
                             <label>Contact Number</label>
-                            <input type="tel" value="${customer.phone}" onchange="updateCustomer(${customer.id}, 'phone', this.value)">
+                            <input type="tel" id="phone_${customer.id}" value="${customer.phone}" readonly class="readonly-field">
                         </div>
                     </div>
 
                     <div class="form-row">
                         <div class="form-group">
                             <label>Email</label>
-                            <input type="email" value="${customer.email || ''}" onchange="updateCustomer(${customer.id}, 'email', this.value)">
+                            <input type="email" id="email_${customer.id}" value="${customer.email || ''}" readonly class="readonly-field">
                         </div>
                         <div class="form-group">
                             <label>NRIC/FIN</label>
-                            <input type="text" value="${customer.nric || ''}" onchange="updateCustomer(${customer.id}, 'nric', this.value)" placeholder="S1234567A or F1234567N">
+                            <input type="text" id="nric_${customer.id}" value="${customer.nric || ''}" placeholder="S1234567A or F1234567N" readonly class="readonly-field">
                         </div>
                     </div>
 
                     <div class="form-row">
                         <div class="form-group">
                             <label>Interested Model</label>
-                            <select onchange="updateCustomer(${customer.id}, 'model', this.value)">
+                            <select id="model_${customer.id}" disabled class="readonly-field">
                                 <option value="">Select Model</option>
                                 <option value="Seal" ${customer.model === 'Seal' ? 'selected' : ''}>Seal</option>
                                 <option value="Seal 6" ${customer.model === 'Seal 6' ? 'selected' : ''}>Seal 6</option>
@@ -3927,7 +3956,7 @@
                         </div>
                         <div class="form-group">
                             <label>Sales Stage</label>
-                            <select onchange="updateCustomer(${customer.id}, 'stage', this.value)">
+                            <select id="stage_${customer.id}" disabled class="readonly-field">
                                 <option value="arrival" ${customer.stage === 'arrival' ? 'selected' : ''}>Stage 1 - Arrival</option>
                                 <option value="consultation" ${customer.stage === 'consultation' ? 'selected' : ''}>Stage 2 - Consultation</option>
                                 <option value="quotation" ${customer.stage === 'quotation' ? 'selected' : ''}>Stage 3 - Quotation</option>
@@ -3939,7 +3968,7 @@
 
                     <div class="form-group">
                         <label>Notes</label>
-                        <textarea rows="3" onchange="updateCustomer(${customer.id}, 'notes', this.value)">${customer.notes || ''}</textarea>
+                        <textarea id="notes_${customer.id}" rows="3" readonly class="readonly-field">${customer.notes || ''}</textarea>
                     </div>
 
                     ${Object.keys(formTemplates).length > 0 ? `
@@ -4550,6 +4579,79 @@
                 saveData();
                 renderCustomerList();
             }
+        }
+
+        // Toggle edit mode for customer details
+        function toggleEditMode(customerId, enable) {
+            const fields = ['name', 'phone', 'email', 'nric', 'model', 'stage', 'notes'];
+            const editBtn = document.getElementById('editBtn_' + customerId);
+            const editActions = document.getElementById('editActions_' + customerId);
+
+            if (enable) {
+                // Enable editing
+                fields.forEach(field => {
+                    const element = document.getElementById(field + '_' + customerId);
+                    if (element) {
+                        if (element.tagName === 'SELECT') {
+                            element.disabled = false;
+                        } else {
+                            element.removeAttribute('readonly');
+                        }
+                        element.classList.remove('readonly-field');
+                        element.classList.add('editable-field');
+                    }
+                });
+
+                // Show save/cancel buttons, hide edit button
+                if (editBtn) editBtn.style.display = 'none';
+                if (editActions) editActions.style.display = 'flex';
+            } else {
+                // Disable editing (cancel)
+                fields.forEach(field => {
+                    const element = document.getElementById(field + '_' + customerId);
+                    if (element) {
+                        if (element.tagName === 'SELECT') {
+                            element.disabled = true;
+                        } else {
+                            element.setAttribute('readonly', true);
+                        }
+                        element.classList.remove('editable-field');
+                        element.classList.add('readonly-field');
+                    }
+                });
+
+                // Show edit button, hide save/cancel buttons
+                if (editBtn) editBtn.style.display = 'inline-block';
+                if (editActions) editActions.style.display = 'none';
+
+                // Reload customer details to revert changes
+                displayCustomerDetails(customerId);
+            }
+        }
+
+        // Save customer edit
+        async function saveCustomerEdit(customerId) {
+            const customer = customers.find(c => c.id === customerId);
+            if (!customer) return;
+
+            // Get values from fields
+            const fields = ['name', 'phone', 'email', 'nric', 'model', 'stage', 'notes'];
+            fields.forEach(field => {
+                const element = document.getElementById(field + '_' + customerId);
+                if (element) {
+                    customer[field] = element.value;
+                }
+            });
+
+            // Save to localStorage and Drive
+            await saveData();
+
+            // Refresh UI
+            renderCustomerList();
+            displayCustomerDetails(customerId);
+
+            // Show success message
+            alert('Customer information updated successfully!');
         }
 
         // Toggle checklist item
