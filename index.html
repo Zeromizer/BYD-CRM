@@ -3000,76 +3000,76 @@
             }
         }
 
-        // Upload document image (IC/License photos)
+        // Upload document image (IC/License photos) - Store as base64 for offline access
         async function uploadDocImage(customerId, docType, file) {
             if (!file) return;
 
             const customer = customers.find(c => c.id === customerId);
             if (!customer) return;
 
-            if (!isSignedIn) {
-                alert('Please connect to Google Drive first');
-                return;
-            }
-
-            if (!customer.driveFolderId) {
-                alert('Please create a Google Drive folder for this customer first');
-                return;
-            }
-
             try {
-                // Get NIRC_FIN subfolder (where IC and license should go)
-                let nirc_fin_folderId = customer.documentFolders?.nirc_fin;
+                // Convert image to base64 for local storage and printing
+                const reader = new FileReader();
+                reader.onload = async function(e) {
+                    const base64Data = e.target.result;
 
-                if (!nirc_fin_folderId) {
-                    alert('Customer folder structure not ready. Please try again.');
-                    return;
-                }
+                    // Store in customer data as base64
+                    if (!customer.testDriveDocs) {
+                        customer.testDriveDocs = {};
+                    }
 
-                // Upload image to Google Drive
-                const metadata = {
-                    name: `${customer.name}_${docType}_${Date.now()}.${file.name.split('.').pop()}`,
-                    mimeType: file.type,
-                    parents: [nirc_fin_folderId]
+                    customer.testDriveDocs[docType] = {
+                        fileName: file.name,
+                        base64: base64Data,
+                        uploadDate: new Date().toISOString()
+                    };
+
+                    // Also upload to Google Drive if connected (for backup)
+                    if (isSignedIn && customer.driveFolderId && customer.documentFolders?.nirc_fin) {
+                        try {
+                            const metadata = {
+                                name: `${customer.name}_${docType}_${Date.now()}.${file.name.split('.').pop()}`,
+                                mimeType: file.type,
+                                parents: [customer.documentFolders.nirc_fin]
+                            };
+
+                            const form = new FormData();
+                            form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+                            form.append('file', file);
+
+                            const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name', {
+                                method: 'POST',
+                                headers: {
+                                    'Authorization': 'Bearer ' + gapi.client.getToken().access_token
+                                },
+                                body: form
+                            });
+
+                            if (response.ok) {
+                                const result = await response.json();
+                                customer.testDriveDocs[docType].driveFileId = result.id;
+                                console.log('Also backed up to Google Drive:', result.id);
+                            }
+                        } catch (driveError) {
+                            console.warn('Could not backup to Drive, but image saved locally:', driveError);
+                        }
+                    }
+
+                    // Save customer data
+                    await saveData();
+
+                    // Refresh customer view
+                    displayCustomerDetails(customerId);
+
+                    alert(`${docType} uploaded successfully!`);
                 };
 
-                const form = new FormData();
-                form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-                form.append('file', file);
-
-                const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink,webContentLink', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': 'Bearer ' + gapi.client.getToken().access_token
-                    },
-                    body: form
-                });
-
-                if (!response.ok) {
-                    throw new Error('Upload failed');
-                }
-
-                const result = await response.json();
-
-                // Store reference in customer data
-                if (!customer.testDriveDocs) {
-                    customer.testDriveDocs = {};
-                }
-
-                customer.testDriveDocs[docType] = {
-                    fileId: result.id,
-                    fileName: result.name,
-                    webViewLink: result.webViewLink,
-                    webContentLink: result.webContentLink
+                reader.onerror = function(error) {
+                    console.error('Error reading file:', error);
+                    alert('Failed to read image file');
                 };
 
-                // Save customer data
-                await saveData();
-
-                // Refresh customer view
-                displayCustomerDetails(customerId);
-
-                alert(`${docType} uploaded successfully!`);
+                reader.readAsDataURL(file);
             } catch (error) {
                 console.error('Error uploading document image:', error);
                 alert('Failed to upload image: ' + error.message);
@@ -3135,8 +3135,8 @@
                 // IC Front (Top Left)
                 html += '<div class="id-box">';
                 html += '<div class="id-label">IC Front</div>';
-                if (docs.icFront) {
-                    html += '<img src="' + docs.icFront.webViewLink + '" alt="IC Front">';
+                if (docs.icFront && docs.icFront.base64) {
+                    html += '<img src="' + docs.icFront.base64 + '" alt="IC Front">';
                 } else {
                     html += '<div class="placeholder">IC Front<br>Not Uploaded</div>';
                 }
@@ -3144,8 +3144,8 @@
                 // IC Back (Top Right)
                 html += '<div class="id-box">';
                 html += '<div class="id-label">IC Back</div>';
-                if (docs.icBack) {
-                    html += '<img src="' + docs.icBack.webViewLink + '" alt="IC Back">';
+                if (docs.icBack && docs.icBack.base64) {
+                    html += '<img src="' + docs.icBack.base64 + '" alt="IC Back">';
                 } else {
                     html += '<div class="placeholder">IC Back<br>Not Uploaded</div>';
                 }
@@ -3157,8 +3157,8 @@
                 // License Front (Bottom Left)
                 html += '<div class="id-box">';
                 html += '<div class="id-label">License Front</div>';
-                if (docs.licenseFront) {
-                    html += '<img src="' + docs.licenseFront.webViewLink + '" alt="License Front">';
+                if (docs.licenseFront && docs.licenseFront.base64) {
+                    html += '<img src="' + docs.licenseFront.base64 + '" alt="License Front">';
                 } else {
                     html += '<div class="placeholder">License Front<br>Not Uploaded</div>';
                 }
@@ -3166,8 +3166,8 @@
                 // License Back (Bottom Right)
                 html += '<div class="id-box">';
                 html += '<div class="id-label">License Back</div>';
-                if (docs.licenseBack) {
-                    html += '<img src="' + docs.licenseBack.webViewLink + '" alt="License Back">';
+                if (docs.licenseBack && docs.licenseBack.base64) {
+                    html += '<img src="' + docs.licenseBack.base64 + '" alt="License Back">';
                 } else {
                     html += '<div class="placeholder">License Back<br>Not Uploaded</div>';
                 }
