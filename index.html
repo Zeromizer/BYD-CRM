@@ -1150,6 +1150,20 @@
                         <input type="text" id="newCustomerNRIC" placeholder="S1234567A or F1234567N">
                     </div>
                 </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Sales Consultant</label>
+                        <input type="text" id="newCustomerSalesConsultant">
+                    </div>
+                    <div class="form-group">
+                        <label>VSA No</label>
+                        <input type="text" id="newCustomerVsaNo" placeholder="VSA Number">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Address</label>
+                    <textarea id="newCustomerAddress" rows="2"></textarea>
+                </div>
                 <div class="form-group">
                     <label>Interested Model</label>
                     <select id="newCustomerModel">
@@ -1277,6 +1291,10 @@
                             <option value="name">Customer Name</option>
                             <option value="phone">Phone Number</option>
                             <option value="email">Email</option>
+                            <option value="nric">NRIC/FIN</option>
+                            <option value="address">Address</option>
+                            <option value="salesConsultant">Sales Consultant</option>
+                            <option value="vsaNo">VSA No</option>
                             <option value="model">Car Model</option>
                             <option value="date">Today's Date</option>
                         </select>
@@ -3537,6 +3555,10 @@
                         'name': customer.name || '',
                         'phone': customer.phone || '',
                         'email': customer.email || '',
+                        'nric': customer.nric || '',
+                        'address': customer.address || '',
+                        'salesConsultant': customer.salesConsultant || '',
+                        'vsaNo': customer.vsaNo || '',
                         'model': customer.model || '',
                         'date': today
                     };
@@ -3731,6 +3753,9 @@
                     phone: document.getElementById('newCustomerPhone').value,
                     email: document.getElementById('newCustomerEmail').value,
                     nric: document.getElementById('newCustomerNRIC').value,
+                    salesConsultant: document.getElementById('newCustomerSalesConsultant').value,
+                    vsaNo: document.getElementById('newCustomerVsaNo').value,
+                    address: document.getElementById('newCustomerAddress').value,
                     model: document.getElementById('newCustomerModel').value,
                     notes: document.getElementById('newCustomerNotes').value,
                     dateAdded: new Date().toISOString(),
@@ -3870,6 +3895,22 @@
                             <label>NRIC/FIN</label>
                             <input type="text" id="customer_nric" value="${customer.nric || ''}" ${!isEditingCustomer ? 'readonly' : ''} placeholder="S1234567A or F1234567N">
                         </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Sales Consultant</label>
+                            <input type="text" id="customer_salesConsultant" value="${customer.salesConsultant || ''}" ${!isEditingCustomer ? 'readonly' : ''}>
+                        </div>
+                        <div class="form-group">
+                            <label>VSA No</label>
+                            <input type="text" id="customer_vsaNo" value="${customer.vsaNo || ''}" ${!isEditingCustomer ? 'readonly' : ''} placeholder="VSA Number">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Address</label>
+                        <textarea rows="2" id="customer_address" ${!isEditingCustomer ? 'readonly' : ''}>${customer.address || ''}</textarea>
                     </div>
 
                     <div class="form-row">
@@ -4532,6 +4573,9 @@
                 customer.phone = document.getElementById('customer_phone').value;
                 customer.email = document.getElementById('customer_email').value;
                 customer.nric = document.getElementById('customer_nric').value;
+                customer.salesConsultant = document.getElementById('customer_salesConsultant').value;
+                customer.vsaNo = document.getElementById('customer_vsaNo').value;
+                customer.address = document.getElementById('customer_address').value;
                 customer.model = document.getElementById('customer_model').value;
                 customer.notes = document.getElementById('customer_notes').value;
 
