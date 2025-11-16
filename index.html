@@ -3466,8 +3466,11 @@
                 // Read the Excel file as ArrayBuffer
                 const arrayBuffer = await file.arrayBuffer();
 
-                // Parse with SheetJS
-                const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+                // Parse with SheetJS - preserve all formatting and styles
+                const workbook = XLSX.read(arrayBuffer, {
+                    type: 'array',
+                    cellStyles: true  // Preserve cell styles, colors, fonts, etc.
+                });
 
                 // Store template data
                 const templateId = 'excel_' + Date.now();
@@ -3807,8 +3810,11 @@
                 // Convert stored array back to Uint8Array
                 const uint8Array = new Uint8Array(template.arrayBuffer);
 
-                // Read the workbook
-                const workbook = XLSX.read(uint8Array, { type: 'array' });
+                // Read the workbook - preserve all formatting and styles
+                const workbook = XLSX.read(uint8Array, {
+                    type: 'array',
+                    cellStyles: true  // Preserve cell styles, colors, fonts, etc.
+                });
 
                 // Get first sheet (or we could let user select)
                 const sheetName = workbook.SheetNames[0];
@@ -3827,16 +3833,29 @@
                     'date': new Date().toLocaleDateString()
                 };
 
-                // Apply mappings
+                // Apply mappings - preserve original formatting
                 for (const mapping of Object.values(template.fieldMappings)) {
                     const value = dataMapping[mapping.fieldType];
                     if (value) {
-                        worksheet[mapping.cellRef] = { v: value, t: 's' }; // v = value, t = type (s = string)
+                        // Check if cell exists in the worksheet
+                        if (worksheet[mapping.cellRef]) {
+                            // Cell exists - preserve all formatting and only update the value
+                            worksheet[mapping.cellRef].v = value;
+                            worksheet[mapping.cellRef].w = value; // Formatted text representation
+                            // Keep existing properties: t (type), s (style), z (number format), etc.
+                        } else {
+                            // Cell doesn't exist - create new cell
+                            worksheet[mapping.cellRef] = { v: value, t: 's' };
+                        }
                     }
                 }
 
-                // Generate Excel file
-                const wbout = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+                // Generate Excel file - preserve all formatting and styles
+                const wbout = XLSX.write(workbook, {
+                    bookType: 'xlsx',
+                    type: 'array',
+                    cellStyles: true  // Preserve cell styles and formatting
+                });
 
                 // Create blob and download
                 const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
