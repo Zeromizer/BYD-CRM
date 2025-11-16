@@ -3066,6 +3066,104 @@
         }
 
         // Upload document image (IC/License photos) - Store as base64 for offline access
+        // Upload multiple document images at once
+        async function uploadMultipleDocImages(customerId, files) {
+            if (!files || files.length === 0) return;
+
+            if (files.length > 4) {
+                alert('Please select up to 4 images only');
+                return;
+            }
+
+            const customer = customers.find(c => c.id === customerId);
+            if (!customer) return;
+
+            try {
+                // Initialize testDriveDocs if needed
+                if (!customer.testDriveDocs) {
+                    customer.testDriveDocs = {};
+                }
+
+                // Clear existing images
+                customer.testDriveDocs = {};
+
+                let uploadCount = 0;
+                const totalFiles = files.length;
+
+                // Process each file
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    const docKey = 'doc' + (i + 1); // doc1, doc2, doc3, doc4
+
+                    await new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onload = async function(e) {
+                            const base64Data = e.target.result;
+
+                            // Store in customer data as base64
+                            customer.testDriveDocs[docKey] = {
+                                fileName: file.name,
+                                base64: base64Data,
+                                uploadDate: new Date().toISOString()
+                            };
+
+                            // Also upload to Google Drive if connected (for backup)
+                            if (isSignedIn && customer.driveFolderId && customer.documentFolders?.nirc_fin) {
+                                try {
+                                    const metadata = {
+                                        name: `${customer.name}_doc${i + 1}_${Date.now()}.${file.name.split('.').pop()}`,
+                                        mimeType: file.type,
+                                        parents: [customer.documentFolders.nirc_fin]
+                                    };
+
+                                    const form = new FormData();
+                                    form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+                                    form.append('file', file);
+
+                                    const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name', {
+                                        method: 'POST',
+                                        headers: {
+                                            'Authorization': 'Bearer ' + gapi.client.getToken().access_token
+                                        },
+                                        body: form
+                                    });
+
+                                    if (response.ok) {
+                                        const result = await response.json();
+                                        customer.testDriveDocs[docKey].driveFileId = result.id;
+                                        console.log('Also backed up to Google Drive:', result.id);
+                                    }
+                                } catch (driveError) {
+                                    console.warn('Could not backup to Drive, but image saved locally:', driveError);
+                                }
+                            }
+
+                            uploadCount++;
+                            resolve();
+                        };
+
+                        reader.onerror = function(error) {
+                            console.error('Error reading file:', error);
+                            reject(error);
+                        };
+
+                        reader.readAsDataURL(file);
+                    });
+                }
+
+                // Save customer data
+                await saveData();
+
+                // Refresh customer view
+                displayCustomerDetails(customerId);
+
+                alert(`${uploadCount} image(s) uploaded successfully!`);
+            } catch (error) {
+                console.error('Error uploading document images:', error);
+                alert('Failed to upload images: ' + error.message);
+            }
+        }
+
         async function uploadDocImage(customerId, docType, file) {
             if (!file) return;
 
@@ -3171,10 +3269,9 @@
                 // Page 2: ID Documents in 2x2 grid
                 html += '.id-page { display: grid; grid-template-rows: 1fr 1fr; gap: 0; height: 100%; }';
                 html += '.id-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }';
-                html += '.id-box { display: flex; align-items: center; justify-content: center; overflow: hidden; background: #fafafa; position: relative; }';
-                html += '.id-box img { width: 100%; height: 100%; object-fit: contain; padding: 10px; }';
+                html += '.id-box { display: flex; align-items: center; justify-content: center; overflow: hidden; background: #fafafa; }';
+                html += '.id-box img { width: 100%; height: 100%; object-fit: contain; }';
                 html += '.id-box .placeholder { color: #ccc; font-size: 18px; text-align: center; }';
-                html += '.id-label { position: absolute; top: 15px; left: 15px; background: rgba(231,76,60,0.9); color: white; padding: 6px 14px; font-size: 12px; font-weight: 700; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px; z-index: 10; }';
 
                 // Print button styles
                 html += '.print-btn { position: fixed; top: 20px; right: 20px; padding: 14px 28px; background: #27ae60; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 15px; font-weight: 700; box-shadow: 0 6px 16px rgba(0,0,0,0.3); z-index: 1000; transition: all 0.3s; }';
@@ -3197,50 +3294,46 @@
                 }
                 html += '</div>';
 
-                // PAGE 2: ID Documents Grid
+                // PAGE 2: ID Documents Grid (2x2)
                 html += '<div class="page">';
                 html += '<div class="id-page">';
 
-                // Top Row: IC
+                // Top Row
                 html += '<div class="id-row">';
-                // IC Front (Top Left)
+                // Top Left (doc1)
                 html += '<div class="id-box">';
-                html += '<div class="id-label">IC Front</div>';
-                if (docs.icFront && docs.icFront.base64) {
-                    html += '<img src="' + docs.icFront.base64 + '" alt="IC Front">';
+                if (docs.doc1 && docs.doc1.base64) {
+                    html += '<img src="' + docs.doc1.base64 + '" alt="Document 1">';
                 } else {
-                    html += '<div class="placeholder">IC Front<br>Not Uploaded</div>';
+                    html += '<div class="placeholder">No Image</div>';
                 }
                 html += '</div>';
-                // IC Back (Top Right)
+                // Top Right (doc2)
                 html += '<div class="id-box">';
-                html += '<div class="id-label">IC Back</div>';
-                if (docs.icBack && docs.icBack.base64) {
-                    html += '<img src="' + docs.icBack.base64 + '" alt="IC Back">';
+                if (docs.doc2 && docs.doc2.base64) {
+                    html += '<img src="' + docs.doc2.base64 + '" alt="Document 2">';
                 } else {
-                    html += '<div class="placeholder">IC Back<br>Not Uploaded</div>';
+                    html += '<div class="placeholder">No Image</div>';
                 }
                 html += '</div>';
                 html += '</div>';
 
-                // Bottom Row: Driver's License
+                // Bottom Row
                 html += '<div class="id-row">';
-                // License Front (Bottom Left)
+                // Bottom Left (doc3)
                 html += '<div class="id-box">';
-                html += '<div class="id-label">License Front</div>';
-                if (docs.licenseFront && docs.licenseFront.base64) {
-                    html += '<img src="' + docs.licenseFront.base64 + '" alt="License Front">';
+                if (docs.doc3 && docs.doc3.base64) {
+                    html += '<img src="' + docs.doc3.base64 + '" alt="Document 3">';
                 } else {
-                    html += '<div class="placeholder">License Front<br>Not Uploaded</div>';
+                    html += '<div class="placeholder">No Image</div>';
                 }
                 html += '</div>';
-                // License Back (Bottom Right)
+                // Bottom Right (doc4)
                 html += '<div class="id-box">';
-                html += '<div class="id-label">License Back</div>';
-                if (docs.licenseBack && docs.licenseBack.base64) {
-                    html += '<img src="' + docs.licenseBack.base64 + '" alt="License Back">';
+                if (docs.doc4 && docs.doc4.base64) {
+                    html += '<img src="' + docs.doc4.base64 + '" alt="Document 4">';
                 } else {
-                    html += '<div class="placeholder">License Back<br>Not Uploaded</div>';
+                    html += '<div class="placeholder">No Image</div>';
                 }
                 html += '</div>';
                 html += '</div>';
@@ -3488,30 +3581,21 @@
                             ${formTemplates.test_drive ? `
                                 <div style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 2px solid rgba(0, 188, 212, 0.2);">
                                     <h4 style="color: #00bcd4; margin-bottom: 10px; font-size: 14px;">📸 Test Drive Required Documents</h4>
-                                    <p style="font-size: 12px; color: #7f8c8d; margin-bottom: 10px;">Upload IC and Driver's License photos to print with the form</p>
+                                    <p style="font-size: 12px; color: #7f8c8d; margin-bottom: 10px;">Upload up to 4 ID images to print with the form (they will appear in order on page 2)</p>
 
-                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
-                                        <div>
-                                            <label style="font-size: 12px; font-weight: 600; color: #2c3e50; display: block; margin-bottom: 5px;">IC Front</label>
-                                            <input type="file" accept="image/*" id="icFront_${customer.id}" onchange="uploadDocImage(${customer.id}, 'icFront', this.files[0])" style="font-size: 11px; padding: 5px; width: 100%;">
-                                            ${customer.testDriveDocs?.icFront ? '<p style="font-size: 11px; color: #27ae60; margin-top: 3px;">✓ Uploaded</p>' : ''}
-                                        </div>
-                                        <div>
-                                            <label style="font-size: 12px; font-weight: 600; color: #2c3e50; display: block; margin-bottom: 5px;">IC Back</label>
-                                            <input type="file" accept="image/*" id="icBack_${customer.id}" onchange="uploadDocImage(${customer.id}, 'icBack', this.files[0])" style="font-size: 11px; padding: 5px; width: 100%;">
-                                            ${customer.testDriveDocs?.icBack ? '<p style="font-size: 11px; color: #27ae60; margin-top: 3px;">✓ Uploaded</p>' : ''}
-                                        </div>
-                                        <div>
-                                            <label style="font-size: 12px; font-weight: 600; color: #2c3e50; display: block; margin-bottom: 5px;">License Front</label>
-                                            <input type="file" accept="image/*" id="licenseFront_${customer.id}" onchange="uploadDocImage(${customer.id}, 'licenseFront', this.files[0])" style="font-size: 11px; padding: 5px; width: 100%;">
-                                            ${customer.testDriveDocs?.licenseFront ? '<p style="font-size: 11px; color: #27ae60; margin-top: 3px;">✓ Uploaded</p>' : ''}
-                                        </div>
-                                        <div>
-                                            <label style="font-size: 12px; font-weight: 600; color: #2c3e50; display: block; margin-bottom: 5px;">License Back</label>
-                                            <input type="file" accept="image/*" id="licenseBack_${customer.id}" onchange="uploadDocImage(${customer.id}, 'licenseBack', this.files[0])" style="font-size: 11px; padding: 5px; width: 100%;">
-                                            ${customer.testDriveDocs?.licenseBack ? '<p style="font-size: 11px; color: #27ae60; margin-top: 3px;">✓ Uploaded</p>' : ''}
-                                        </div>
+                                    <div style="margin-bottom: 10px;">
+                                        <input type="file" accept="image/*" multiple id="docImages_${customer.id}" onchange="uploadMultipleDocImages(${customer.id}, this.files)" style="font-size: 12px; padding: 8px; width: 100%; border: 2px dashed #00bcd4; border-radius: 6px; background: rgba(0, 188, 212, 0.05);">
+                                        <p style="font-size: 11px; color: #7f8c8d; margin-top: 5px;">Select up to 4 images at once</p>
                                     </div>
+
+                                    ${(() => {
+                                        const docs = customer.testDriveDocs || {};
+                                        const uploadedCount = Object.keys(docs).length;
+                                        if (uploadedCount > 0) {
+                                            return '<p style="font-size: 12px; color: #27ae60; font-weight: 600;">✓ ' + uploadedCount + ' image(s) uploaded</p>';
+                                        }
+                                        return '';
+                                    })()}
                                 </div>
                             ` : ''}
 
