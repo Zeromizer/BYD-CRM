@@ -3066,6 +3066,41 @@
         }
 
         // Upload document image (IC/License photos) - Store as base64 for offline access
+        // Compress image for faster storage and printing
+        function compressImage(file, maxWidth = 1200, quality = 0.85) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = new Image();
+                    img.onload = function() {
+                        const canvas = document.createElement('canvas');
+                        let width = img.width;
+                        let height = img.height;
+
+                        // Scale down if image is too large
+                        if (width > maxWidth) {
+                            height = (height / width) * maxWidth;
+                            width = maxWidth;
+                        }
+
+                        canvas.width = width;
+                        canvas.height = height;
+
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+
+                        // Convert to base64 with compression
+                        const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
+                        resolve(compressedBase64);
+                    };
+                    img.onerror = reject;
+                    img.src = e.target.result;
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
         // Upload multiple document images at once
         async function uploadMultipleDocImages(customerId, files) {
             if (!files || files.length === 0) return;
@@ -3078,7 +3113,19 @@
             const customer = customers.find(c => c.id === customerId);
             if (!customer) return;
 
+            // Get progress elements
+            const progressContainer = document.getElementById('uploadProgress_' + customerId);
+            const progressBar = document.getElementById('uploadBar_' + customerId);
+            const progressText = document.getElementById('uploadText_' + customerId);
+
             try {
+                // Show progress bar
+                if (progressContainer) {
+                    progressContainer.style.display = 'block';
+                    progressBar.style.width = '0%';
+                    progressText.textContent = 'Compressing images...';
+                }
+
                 // Initialize testDriveDocs if needed
                 if (!customer.testDriveDocs) {
                     customer.testDriveDocs = {};
@@ -3095,72 +3142,97 @@
                     const file = files[i];
                     const docKey = 'doc' + (i + 1); // doc1, doc2, doc3, doc4
 
-                    await new Promise((resolve, reject) => {
-                        const reader = new FileReader();
-                        reader.onload = async function(e) {
-                            const base64Data = e.target.result;
+                    // Update progress
+                    const progress = Math.round((i / totalFiles) * 100);
+                    if (progressBar && progressText) {
+                        progressBar.style.width = progress + '%';
+                        progressText.textContent = 'Processing image ' + (i + 1) + ' of ' + totalFiles + '...';
+                    }
 
-                            // Store in customer data as base64
-                            customer.testDriveDocs[docKey] = {
-                                fileName: file.name,
-                                base64: base64Data,
-                                uploadDate: new Date().toISOString()
-                            };
+                    // Compress image for faster storage
+                    const compressedBase64 = await compressImage(file);
 
-                            // Also upload to Google Drive if connected (for backup)
-                            if (isSignedIn && customer.driveFolderId && customer.documentFolders?.nirc_fin) {
-                                try {
-                                    const metadata = {
-                                        name: `${customer.name}_doc${i + 1}_${Date.now()}.${file.name.split('.').pop()}`,
-                                        mimeType: file.type,
-                                        parents: [customer.documentFolders.nirc_fin]
-                                    };
+                    // Store in customer data as base64
+                    customer.testDriveDocs[docKey] = {
+                        fileName: file.name,
+                        base64: compressedBase64,
+                        uploadDate: new Date().toISOString()
+                    };
 
-                                    const form = new FormData();
-                                    form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-                                    form.append('file', file);
+                    uploadCount++;
 
-                                    const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name', {
-                                        method: 'POST',
-                                        headers: {
-                                            'Authorization': 'Bearer ' + gapi.client.getToken().access_token
-                                        },
-                                        body: form
-                                    });
+                    // Upload to Google Drive in background (non-blocking)
+                    if (isSignedIn && customer.driveFolderId && customer.documentFolders?.nirc_fin) {
+                        // Don't await - let it run in background
+                        (async function(docKey, file, i) {
+                            try {
+                                const metadata = {
+                                    name: customer.name + '_doc' + (i + 1) + '_' + Date.now() + '.' + file.name.split('.').pop(),
+                                    mimeType: file.type,
+                                    parents: [customer.documentFolders.nirc_fin]
+                                };
 
-                                    if (response.ok) {
-                                        const result = await response.json();
-                                        customer.testDriveDocs[docKey].driveFileId = result.id;
-                                        console.log('Also backed up to Google Drive:', result.id);
-                                    }
-                                } catch (driveError) {
-                                    console.warn('Could not backup to Drive, but image saved locally:', driveError);
+                                const form = new FormData();
+                                form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+                                form.append('file', file);
+
+                                const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Authorization': 'Bearer ' + gapi.client.getToken().access_token
+                                    },
+                                    body: form
+                                });
+
+                                if (response.ok) {
+                                    const result = await response.json();
+                                    customer.testDriveDocs[docKey].driveFileId = result.id;
+                                    await saveData();
+                                    console.log('Backed up to Google Drive:', result.id);
                                 }
+                            } catch (driveError) {
+                                console.warn('Could not backup to Drive, but image saved locally:', driveError);
                             }
+                        })(docKey, file, i);
+                    }
+                }
 
-                            uploadCount++;
-                            resolve();
-                        };
-
-                        reader.onerror = function(error) {
-                            console.error('Error reading file:', error);
-                            reject(error);
-                        };
-
-                        reader.readAsDataURL(file);
-                    });
+                // Complete progress
+                if (progressBar && progressText) {
+                    progressBar.style.width = '100%';
+                    progressText.textContent = 'Saving...';
                 }
 
                 // Save customer data
                 await saveData();
 
+                // Complete!
+                if (progressText) {
+                    progressText.textContent = '✓ Complete!';
+                    setTimeout(() => {
+                        if (progressContainer) {
+                            progressContainer.style.display = 'none';
+                        }
+                    }, 1500);
+                }
+
                 // Refresh customer view
                 displayCustomerDetails(customerId);
 
-                alert(`${uploadCount} image(s) uploaded successfully!`);
+                // Clear file input
+                const fileInput = document.getElementById('docImages_' + customerId);
+                if (fileInput) {
+                    fileInput.value = '';
+                }
+
             } catch (error) {
                 console.error('Error uploading document images:', error);
                 alert('Failed to upload images: ' + error.message);
+
+                // Hide progress bar on error
+                if (progressContainer) {
+                    progressContainer.style.display = 'none';
+                }
             }
         }
 
@@ -3586,6 +3658,14 @@
                                     <div style="margin-bottom: 10px;">
                                         <input type="file" accept="image/*" multiple id="docImages_${customer.id}" onchange="uploadMultipleDocImages(${customer.id}, this.files)" style="font-size: 12px; padding: 8px; width: 100%; border: 2px dashed #00bcd4; border-radius: 6px; background: rgba(0, 188, 212, 0.05);">
                                         <p style="font-size: 11px; color: #7f8c8d; margin-top: 5px;">Select up to 4 images at once</p>
+                                    </div>
+
+                                    <div id="uploadProgress_${customer.id}" style="display: none; margin-bottom: 10px;">
+                                        <div style="background: #ecf0f1; border-radius: 10px; height: 24px; overflow: hidden; position: relative;">
+                                            <div id="uploadBar_${customer.id}" style="background: linear-gradient(90deg, #00bcd4 0%, #00acc1 100%); height: 100%; width: 0%; transition: width 0.3s; display: flex; align-items: center; justify-content: center;">
+                                                <span id="uploadText_${customer.id}" style="color: white; font-size: 12px; font-weight: 600; position: absolute; left: 50%; transform: translateX(-50%);"></span>
+                                            </div>
+                                        </div>
                                     </div>
 
                                     ${(() => {
