@@ -3728,11 +3728,7 @@
                                 Reopen Deal
                             </button>
                         `}
-                        ${customer.driveFolderId ? `
-                            <button class="btn btn-drive" onclick="window.open('${customer.driveFolderLink}', '_blank')">
-                                📁 Open Drive Folder
-                            </button>
-                        ` : isSignedIn ? `
+                        ${!customer.driveFolderId && isSignedIn ? `
                             <button class="btn btn-drive" onclick="handleCreateFolderClick('${customer.name}', ${customer.id})">
                                 📁 Create Drive Folder
                             </button>
@@ -3744,8 +3740,19 @@
                 </div>
 
                 <div id="tab-documents" class="tab-content">
-                    <h2>Document Management</h2>
-                    
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px;">
+                        <h2 style="margin: 0;">Document Management</h2>
+                        ${customer.driveFolderId ? `
+                            <button onclick="window.open('${customer.driveFolderLink}', '_blank')"
+                                    style="background: none; border: none; cursor: pointer; font-size: 24px; padding: 8px; border-radius: 8px; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center;"
+                                    onmouseover="this.style.background='rgba(0, 188, 212, 0.1)'"
+                                    onmouseout="this.style.background='none'"
+                                    title="Open folder in Google Drive">
+                                📁
+                            </button>
+                        ` : ''}
+                    </div>
+
                     ${!isSignedIn ? `
                         <div class="auth-section">
                             <h3>⚠️ Not Connected to Google Drive</h3>
