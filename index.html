@@ -1075,6 +1075,7 @@
             <div class="header-actions">
                 <button class="btn btn-primary" onclick="openAddCustomerModal()">Add Customer</button>
                 <button class="btn btn-secondary" onclick="openFormsModal()">📄 Manage Forms</button>
+                <button class="btn btn-secondary" onclick="openExcelModal()">📊 Manage Excel</button>
                 <button class="btn btn-secondary" onclick="forceSyncFromDrive()" title="Reload data from Google Drive">🔄 Force Sync</button>
                 <button class="btn btn-secondary" onclick="exportData()">Export Data</button>
                 <button class="btn btn-secondary" onclick="importData()">Import Data</button>
@@ -1329,11 +1330,146 @@
         </div>
     </div>
 
+    <!-- Excel Templates Management Modal -->
+    <div class="modal" id="excelModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📊 Excel Templates Management</h2>
+                <span class="close-modal" onclick="closeExcelModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div id="excelModalContent">
+                    <div style="margin-bottom: 20px; padding: 15px; background: linear-gradient(135deg, rgba(76, 175, 80, 0.1) 0%, rgba(56, 142, 60, 0.1) 100%); border-radius: 10px; border: 2px solid rgba(76, 175, 80, 0.3);">
+                        <h3 style="color: #4caf50; margin-bottom: 10px;">About Excel Templates</h3>
+                        <p style="color: #2c3e50; font-size: 14px; margin-bottom: 8px;">
+                            Upload your Excel templates (.xlsx files). You can map customer fields to specific cells, then populate and download completed Excel files with customer data.
+                        </p>
+                        <p style="color: #7f8c8d; font-size: 13px;">
+                            Excel templates are stored locally and will be accessible across all sessions.
+                        </p>
+                    </div>
+
+                    <div style="margin-bottom: 20px;">
+                        <h3 style="color: #1a1a2e; margin-bottom: 15px;">Upload New Excel Template</h3>
+                        <div style="margin-bottom: 15px;">
+                            <label style="display: block; margin-bottom: 8px; color: #2c3e50; font-weight: 500;">Template Name:</label>
+                            <input type="text" id="excelTemplateName" placeholder="e.g., Contract Template, Invoice Template" style="width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 14px;">
+                        </div>
+                        <div style="margin-bottom: 15px;">
+                            <label style="display: block; margin-bottom: 8px; color: #2c3e50; font-weight: 500;">Select Excel File (.xlsx):</label>
+                            <input type="file" id="excelFileInput" accept=".xlsx" style="width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 14px;">
+                        </div>
+                        <button class="btn btn-success" onclick="uploadExcelTemplate()">Upload Excel Template</button>
+                    </div>
+
+                    <div style="border-top: 2px solid #ecf0f1; padding-top: 20px;">
+                        <h3 style="color: #1a1a2e; margin-bottom: 15px;">Uploaded Excel Templates</h3>
+                        <div id="excelListContainer">
+                            <div class="loading-excel" style="text-align: center; padding: 20px; color: #7f8c8d;">
+                                No templates uploaded yet
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Excel Field Mapping Modal -->
+    <div class="modal" id="excelMappingModal" style="display: none;">
+        <div class="modal-content" style="max-width: 900px;">
+            <div class="modal-header">
+                <h2>📝 Map Excel Fields</h2>
+                <span class="close-modal" onclick="closeExcelMappingModal()">&times;</span>
+            </div>
+            <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+                <div style="background: rgba(33, 150, 243, 0.1); border: 2px solid rgba(33, 150, 243, 0.5); border-radius: 8px; padding: 15px; margin-bottom: 20px;">
+                    <h4 style="color: #2196f3; margin-bottom: 10px;">📍 How to Map Excel Fields</h4>
+                    <ol style="color: #2c3e50; font-size: 14px; margin-left: 20px;">
+                        <li>Select which customer field you want to map</li>
+                        <li>Enter the Excel cell reference (e.g., A1, B5, C10)</li>
+                        <li>Click "Add Mapping" to add it to the list</li>
+                        <li>Repeat for all fields you want to auto-fill</li>
+                        <li>Click "Save Mappings" when done</li>
+                    </ol>
+                </div>
+
+                <div style="background: white; border: 2px solid #e0e0e0; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+                    <h4 style="color: #1a1a2e; margin-bottom: 15px;">Add Field Mapping</h4>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr auto; gap: 15px; align-items: end;">
+                        <div>
+                            <label style="display: block; margin-bottom: 5px; color: #2c3e50; font-weight: 500;">Customer Field:</label>
+                            <select id="excelFieldType" style="width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 14px;">
+                                <option value="name">Customer Name</option>
+                                <option value="phone">Phone Number</option>
+                                <option value="email">Email</option>
+                                <option value="nric">NRIC/FIN</option>
+                                <option value="address">Address</option>
+                                <option value="salesConsultant">Sales Consultant</option>
+                                <option value="vsaNo">VSA No</option>
+                                <option value="model">Car Model</option>
+                                <option value="date">Today's Date</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 5px; color: #2c3e50; font-weight: 500;">Excel Cell (e.g., A1):</label>
+                            <input type="text" id="excelCellRef" placeholder="A1" style="width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 14px; text-transform: uppercase;">
+                        </div>
+                        <div>
+                            <button class="btn btn-primary" onclick="addExcelMapping()" style="background: #2196f3; white-space: nowrap;">Add Mapping</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="background: rgba(76, 175, 80, 0.1); border: 2px solid rgba(76, 175, 80, 0.3); border-radius: 8px; padding: 15px;">
+                    <h4 style="color: #4caf50; margin-bottom: 10px;">Current Mappings</h4>
+                    <div id="excelMappingsList">
+                        <p style="color: #7f8c8d; font-style: italic;">No mappings added yet</p>
+                    </div>
+                </div>
+            </div>
+            <div style="padding: 15px; border-top: 2px solid #ecf0f1; background: #f8f9fa; display: flex; gap: 10px; justify-content: flex-end;">
+                <button class="btn btn-secondary" onclick="closeExcelMappingModal()">Cancel</button>
+                <button class="btn btn-success" onclick="saveExcelMappings()">Save Mappings</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Excel Populate Modal -->
+    <div class="modal" id="excelPopulateModal" style="display: none;">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2>📊 Populate Excel with Customer Data</h2>
+                <span class="close-modal" onclick="closeExcelPopulateModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; color: #2c3e50; font-weight: 500;">Select Excel Template:</label>
+                    <select id="excelTemplateSelect" style="width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 14px;">
+                        <option value="">-- Select a template --</option>
+                    </select>
+                </div>
+                <div style="background: rgba(33, 150, 243, 0.1); border: 2px solid rgba(33, 150, 243, 0.3); border-radius: 8px; padding: 15px; margin-bottom: 20px;">
+                    <h4 style="color: #2196f3; margin-bottom: 10px;">Customer Information</h4>
+                    <div id="excelCustomerPreview" style="color: #2c3e50; font-size: 14px;">
+                        <p>Select a template to continue...</p>
+                    </div>
+                </div>
+            </div>
+            <div style="padding: 15px; border-top: 2px solid #ecf0f1; background: #f8f9fa; display: flex; gap: 10px; justify-content: flex-end;">
+                <button class="btn btn-secondary" onclick="closeExcelPopulateModal()">Cancel</button>
+                <button class="btn btn-success" onclick="downloadPopulatedExcel()" id="downloadExcelBtn" disabled>Download Populated Excel</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Google Identity Services (New Library) -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <!-- Google API for Drive operations -->
     <script src="https://apis.google.com/js/api.js"></script>
-    
+    <!-- SheetJS for Excel file handling -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+
     <script>
         // Configuration
         let CLIENT_ID = '876961148543-8sdj3cti6q9tc523natb3g6jt789qlbr.apps.googleusercontent.com';
@@ -1348,6 +1484,8 @@
         let formsFolderId = null; // Google Drive folder ID for form templates
         let formTemplates = {}; // Store form template file IDs
         let formsDataFileId = null; // Google Drive file ID for forms metadata
+        let excelTemplates = {}; // Store Excel template data
+        let excelDataFileId = null; // Google Drive file ID for Excel templates metadata
         let manualMode = false;
         let tokenClient = null;
         let accessToken = null;
@@ -3284,6 +3422,441 @@
             tempFieldMappings = {};
         }
 
+        // ========== EXCEL TEMPLATES MANAGEMENT ==========
+
+        // Open Excel modal
+        function openExcelModal() {
+            const modal = document.getElementById('excelModal');
+            modal.classList.add('active');
+            loadExcelTemplates();
+            displayExcelList();
+        }
+
+        // Close Excel modal
+        function closeExcelModal() {
+            document.getElementById('excelModal').classList.remove('active');
+            document.getElementById('excelFileInput').value = '';
+            document.getElementById('excelTemplateName').value = '';
+        }
+
+        // Upload Excel template
+        async function uploadExcelTemplate() {
+            const nameInput = document.getElementById('excelTemplateName');
+            const fileInput = document.getElementById('excelFileInput');
+
+            const name = nameInput.value.trim();
+            const file = fileInput.files[0];
+
+            if (!name) {
+                alert('Please enter a template name');
+                return;
+            }
+
+            if (!file) {
+                alert('Please select an Excel file');
+                return;
+            }
+
+            if (!file.name.endsWith('.xlsx')) {
+                alert('Please select a valid .xlsx file');
+                return;
+            }
+
+            try {
+                // Read the Excel file as ArrayBuffer
+                const arrayBuffer = await file.arrayBuffer();
+
+                // Parse with SheetJS
+                const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+
+                // Store template data
+                const templateId = 'excel_' + Date.now();
+                excelTemplates[templateId] = {
+                    id: templateId,
+                    name: name,
+                    fileName: file.name,
+                    uploadDate: new Date().toISOString(),
+                    arrayBuffer: Array.from(new Uint8Array(arrayBuffer)), // Convert to array for JSON storage
+                    sheetNames: workbook.SheetNames,
+                    fieldMappings: {} // Will be populated by user
+                };
+
+                // Save to localStorage
+                saveExcelTemplates();
+
+                // Update display
+                displayExcelList();
+
+                // Clear inputs
+                nameInput.value = '';
+                fileInput.value = '';
+
+                alert('Excel template uploaded successfully!');
+            } catch (error) {
+                console.error('Error uploading Excel template:', error);
+                alert('Failed to upload Excel template: ' + error.message);
+            }
+        }
+
+        // Display Excel templates list
+        function displayExcelList() {
+            const container = document.getElementById('excelListContainer');
+
+            if (Object.keys(excelTemplates).length === 0) {
+                container.innerHTML = '<div style="text-align: center; padding: 20px; color: #7f8c8d;">No templates uploaded yet</div>';
+                return;
+            }
+
+            let html = '<div style="display: flex; flex-direction: column; gap: 10px;">';
+
+            for (const [templateId, template] of Object.entries(excelTemplates)) {
+                const mappingCount = Object.keys(template.fieldMappings || {}).length;
+                html += `
+                    <div style="background: white; border: 2px solid #e0e0e0; border-radius: 8px; padding: 15px;">
+                        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
+                            <div>
+                                <h4 style="color: #1a1a2e; margin-bottom: 5px;">${template.name}</h4>
+                                <p style="color: #7f8c8d; font-size: 13px; margin-bottom: 3px;">${template.fileName}</p>
+                                <p style="color: #7f8c8d; font-size: 12px;">Uploaded: ${new Date(template.uploadDate).toLocaleDateString()}</p>
+                                <p style="color: #4caf50; font-size: 13px; font-weight: 600; margin-top: 5px;">${mappingCount} field${mappingCount !== 1 ? 's' : ''} mapped</p>
+                            </div>
+                            <button class="btn btn-danger" onclick="deleteExcelTemplate('${templateId}')" style="padding: 8px 12px; font-size: 13px;">Delete</button>
+                        </div>
+                        <div style="display: flex; gap: 10px; margin-top: 10px;">
+                            <button class="btn btn-primary" onclick="openExcelMappingModal('${templateId}')" style="flex: 1; background: #2196f3;">Map Fields</button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        // Delete Excel template
+        function deleteExcelTemplate(templateId) {
+            if (!confirm('Are you sure you want to delete this Excel template?')) {
+                return;
+            }
+
+            delete excelTemplates[templateId];
+            saveExcelTemplates();
+            displayExcelList();
+        }
+
+        // Save Excel templates to localStorage
+        function saveExcelTemplates() {
+            try {
+                localStorage.setItem('excelTemplates', JSON.stringify(excelTemplates));
+            } catch (error) {
+                console.error('Error saving Excel templates:', error);
+            }
+        }
+
+        // Load Excel templates from localStorage
+        function loadExcelTemplates() {
+            try {
+                const stored = localStorage.getItem('excelTemplates');
+                if (stored) {
+                    excelTemplates = JSON.parse(stored);
+                }
+            } catch (error) {
+                console.error('Error loading Excel templates:', error);
+            }
+        }
+
+        // Variables for Excel mapping
+        let currentExcelTemplateId = null;
+        let tempExcelMappings = {};
+
+        // Open Excel mapping modal
+        function openExcelMappingModal(templateId) {
+            currentExcelTemplateId = templateId;
+            const template = excelTemplates[templateId];
+
+            if (!template) {
+                alert('Template not found');
+                return;
+            }
+
+            // Load existing mappings
+            tempExcelMappings = { ...(template.fieldMappings || {}) };
+
+            // Show modal
+            document.getElementById('excelMappingModal').style.display = 'flex';
+
+            // Update display
+            updateExcelMappingsList();
+        }
+
+        // Close Excel mapping modal
+        function closeExcelMappingModal() {
+            document.getElementById('excelMappingModal').style.display = 'none';
+            currentExcelTemplateId = null;
+            tempExcelMappings = {};
+        }
+
+        // Add Excel field mapping
+        function addExcelMapping() {
+            const fieldType = document.getElementById('excelFieldType').value;
+            const cellRef = document.getElementById('excelCellRef').value.trim().toUpperCase();
+
+            if (!cellRef) {
+                alert('Please enter a cell reference (e.g., A1)');
+                return;
+            }
+
+            // Validate cell reference format (simple validation)
+            if (!/^[A-Z]+[0-9]+$/.test(cellRef)) {
+                alert('Invalid cell reference. Please use format like A1, B5, C10, etc.');
+                return;
+            }
+
+            // Add mapping
+            const mappingId = 'mapping_' + Date.now();
+            tempExcelMappings[mappingId] = {
+                fieldType: fieldType,
+                cellRef: cellRef
+            };
+
+            // Clear input
+            document.getElementById('excelCellRef').value = '';
+
+            // Update display
+            updateExcelMappingsList();
+        }
+
+        // Remove Excel mapping
+        function removeExcelMapping(mappingId) {
+            delete tempExcelMappings[mappingId];
+            updateExcelMappingsList();
+        }
+
+        // Update Excel mappings list display
+        function updateExcelMappingsList() {
+            const container = document.getElementById('excelMappingsList');
+
+            if (Object.keys(tempExcelMappings).length === 0) {
+                container.innerHTML = '<p style="color: #7f8c8d; font-style: italic;">No mappings added yet</p>';
+                return;
+            }
+
+            const fieldNames = {
+                'name': 'Customer Name',
+                'phone': 'Phone Number',
+                'email': 'Email',
+                'nric': 'NRIC/FIN',
+                'address': 'Address',
+                'salesConsultant': 'Sales Consultant',
+                'vsaNo': 'VSA No',
+                'model': 'Car Model',
+                'date': 'Today\'s Date'
+            };
+
+            let html = '<div style="display: flex; flex-direction: column; gap: 8px;">';
+
+            for (const [mappingId, mapping] of Object.entries(tempExcelMappings)) {
+                html += `
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: white; border-radius: 6px; border: 1px solid #e0e0e0;">
+                        <div>
+                            <strong>${fieldNames[mapping.fieldType]}</strong> → Cell <strong>${mapping.cellRef}</strong>
+                        </div>
+                        <button class="btn btn-small btn-danger" onclick="removeExcelMapping('${mappingId}')" style="padding: 5px 10px; font-size: 12px;">Remove</button>
+                    </div>
+                `;
+            }
+
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        // Save Excel mappings
+        function saveExcelMappings() {
+            if (!currentExcelTemplateId) {
+                return;
+            }
+
+            const template = excelTemplates[currentExcelTemplateId];
+            if (!template) {
+                alert('Template not found');
+                return;
+            }
+
+            template.fieldMappings = tempExcelMappings;
+            saveExcelTemplates();
+
+            alert('Field mappings saved successfully!');
+            closeExcelMappingModal();
+            displayExcelList();
+        }
+
+        // Open Excel populate modal
+        let currentPopulateCustomerId = null;
+
+        function openExcelPopulateModal(customerId) {
+            currentPopulateCustomerId = customerId;
+            const modal = document.getElementById('excelPopulateModal');
+            modal.style.display = 'flex';
+
+            // Populate template select
+            const select = document.getElementById('excelTemplateSelect');
+            select.innerHTML = '<option value="">-- Select a template --</option>';
+
+            for (const [templateId, template] of Object.entries(excelTemplates)) {
+                const mappingCount = Object.keys(template.fieldMappings || {}).length;
+                select.innerHTML += `<option value="${templateId}">${template.name} (${mappingCount} fields mapped)</option>`;
+            }
+
+            // Add change event listener
+            select.onchange = function() {
+                updateExcelCustomerPreview();
+            };
+
+            updateExcelCustomerPreview();
+        }
+
+        // Close Excel populate modal
+        function closeExcelPopulateModal() {
+            document.getElementById('excelPopulateModal').style.display = 'none';
+            currentPopulateCustomerId = null;
+        }
+
+        // Update customer preview in Excel populate modal
+        function updateExcelCustomerPreview() {
+            const select = document.getElementById('excelTemplateSelect');
+            const templateId = select.value;
+            const downloadBtn = document.getElementById('downloadExcelBtn');
+            const previewContainer = document.getElementById('excelCustomerPreview');
+
+            if (!templateId) {
+                previewContainer.innerHTML = '<p>Select a template to continue...</p>';
+                downloadBtn.disabled = true;
+                return;
+            }
+
+            const template = excelTemplates[templateId];
+            const customer = customers.find(c => c.id === currentPopulateCustomerId);
+
+            if (!customer) {
+                previewContainer.innerHTML = '<p style="color: #e74c3c;">Customer not found</p>';
+                downloadBtn.disabled = true;
+                return;
+            }
+
+            const mappingCount = Object.keys(template.fieldMappings || {}).length;
+
+            if (mappingCount === 0) {
+                previewContainer.innerHTML = '<p style="color: #f39c12;">⚠️ No field mappings configured for this template. Please map fields first.</p>';
+                downloadBtn.disabled = true;
+                return;
+            }
+
+            // Show customer data preview
+            const fieldNames = {
+                'name': 'Customer Name',
+                'phone': 'Phone Number',
+                'email': 'Email',
+                'nric': 'NRIC/FIN',
+                'address': 'Address',
+                'salesConsultant': 'Sales Consultant',
+                'vsaNo': 'VSA No',
+                'model': 'Car Model',
+                'date': 'Today\'s Date'
+            };
+
+            let html = '<div style="font-size: 13px;">';
+            html += '<p style="margin-bottom: 10px;"><strong>The following data will be populated:</strong></p>';
+
+            for (const mapping of Object.values(template.fieldMappings)) {
+                const fieldName = fieldNames[mapping.fieldType];
+                let value = '';
+
+                if (mapping.fieldType === 'date') {
+                    value = new Date().toLocaleDateString();
+                } else {
+                    value = customer[mapping.fieldType] || '(empty)';
+                }
+
+                html += `<p style="margin: 5px 0;"><strong>Cell ${mapping.cellRef}:</strong> ${fieldName} = "${value}"</p>`;
+            }
+
+            html += '</div>';
+            previewContainer.innerHTML = html;
+            downloadBtn.disabled = false;
+        }
+
+        // Download populated Excel
+        function downloadPopulatedExcel() {
+            const select = document.getElementById('excelTemplateSelect');
+            const templateId = select.value;
+
+            if (!templateId) {
+                alert('Please select a template');
+                return;
+            }
+
+            const template = excelTemplates[templateId];
+            const customer = customers.find(c => c.id === currentPopulateCustomerId);
+
+            if (!customer) {
+                alert('Customer not found');
+                return;
+            }
+
+            try {
+                // Convert stored array back to Uint8Array
+                const uint8Array = new Uint8Array(template.arrayBuffer);
+
+                // Read the workbook
+                const workbook = XLSX.read(uint8Array, { type: 'array' });
+
+                // Get first sheet (or we could let user select)
+                const sheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[sheetName];
+
+                // Populate fields
+                const dataMapping = {
+                    'name': customer.name || '',
+                    'phone': customer.phone || '',
+                    'email': customer.email || '',
+                    'nric': customer.nric || '',
+                    'address': customer.address || '',
+                    'salesConsultant': customer.salesConsultant || '',
+                    'vsaNo': customer.vsaNo || '',
+                    'model': customer.model || '',
+                    'date': new Date().toLocaleDateString()
+                };
+
+                // Apply mappings
+                for (const mapping of Object.values(template.fieldMappings)) {
+                    const value = dataMapping[mapping.fieldType];
+                    if (value) {
+                        worksheet[mapping.cellRef] = { v: value, t: 's' }; // v = value, t = type (s = string)
+                    }
+                }
+
+                // Generate Excel file
+                const wbout = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+
+                // Create blob and download
+                const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${template.name}_${customer.name}_${Date.now()}.xlsx`;
+                a.click();
+                URL.revokeObjectURL(url);
+
+                alert('Excel file downloaded successfully!');
+                closeExcelPopulateModal();
+            } catch (error) {
+                console.error('Error generating Excel file:', error);
+                alert('Failed to generate Excel file: ' + error.message);
+            }
+        }
+
+        // ========== END EXCEL TEMPLATES MANAGEMENT ==========
+
         // Upload document image (IC/License photos) - Store as base64 for offline access
         // Compress image for faster storage and printing
         function compressImage(file, maxWidth = 1200, quality = 0.85) {
@@ -3984,6 +4557,15 @@
                                         return '<button class="btn btn-primary" onclick="printFormForCustomer(\'' + formType + '\', ' + customer.id + ')" style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); display: flex; align-items: center; gap: 8px; justify-content: center; width: 100%;"><span>📄</span><span>Print ' + formName + '</span></button>';
                                     }).join('');
                                 })()}
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    ${Object.keys(excelTemplates).length > 0 ? `
+                        <div style="margin-bottom: 25px; padding: 20px; background: linear-gradient(135deg, rgba(76, 175, 80, 0.1) 0%, rgba(56, 142, 60, 0.1) 100%); border-radius: 10px; border: 2px solid rgba(76, 175, 80, 0.3);">
+                            <h3 style="color: #4caf50; margin-bottom: 15px;">📊 Excel Templates</h3>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px;">
+                                <button class="btn btn-success" onclick="openExcelPopulateModal(${customer.id})" style="background: linear-gradient(135deg, #4caf50 0%, #388e3c 100%); display: flex; align-items: center; gap: 8px; justify-content: center; width: 100%;"><span>📊</span><span>Populate Excel Template</span></button>
                             </div>
                         </div>
                     ` : ''}
@@ -4739,6 +5321,9 @@
 
             // Load form templates from localStorage
             loadFormTemplates();
+
+            // Load Excel templates from localStorage
+            loadExcelTemplates();
 
             // Don't load from localStorage yet - wait for Drive connection
             // This ensures Drive is the source of truth
