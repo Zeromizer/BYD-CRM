@@ -1467,8 +1467,8 @@
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <!-- Google API for Drive operations -->
     <script src="https://apis.google.com/js/api.js"></script>
-    <!-- SheetJS for Excel file handling -->
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <!-- ExcelJS for Excel file handling with full formatting support -->
+    <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 
     <script>
         // Configuration
@@ -3466,11 +3466,12 @@
                 // Read the Excel file as ArrayBuffer
                 const arrayBuffer = await file.arrayBuffer();
 
-                // Parse with SheetJS - preserve all formatting and styles
-                const workbook = XLSX.read(arrayBuffer, {
-                    type: 'array',
-                    cellStyles: true  // Preserve cell styles, colors, fonts, etc.
-                });
+                // Parse with ExcelJS - automatically preserves ALL formatting, styles, colors, fonts, borders, etc.
+                const workbook = new ExcelJS.Workbook();
+                await workbook.xlsx.load(arrayBuffer);
+
+                // Get sheet names
+                const sheetNames = workbook.worksheets.map(sheet => sheet.name);
 
                 // Store template data
                 const templateId = 'excel_' + Date.now();
@@ -3480,7 +3481,7 @@
                     fileName: file.name,
                     uploadDate: new Date().toISOString(),
                     arrayBuffer: Array.from(new Uint8Array(arrayBuffer)), // Convert to array for JSON storage
-                    sheetNames: workbook.SheetNames,
+                    sheetNames: sheetNames,
                     fieldMappings: {} // Will be populated by user
                 };
 
@@ -3810,15 +3811,12 @@
                 // Convert stored array back to Uint8Array
                 const uint8Array = new Uint8Array(template.arrayBuffer);
 
-                // Read the workbook - preserve all formatting and styles
-                const workbook = XLSX.read(uint8Array, {
-                    type: 'array',
-                    cellStyles: true  // Preserve cell styles, colors, fonts, etc.
-                });
+                // Load the workbook with ExcelJS - automatically preserves ALL formatting
+                const workbook = new ExcelJS.Workbook();
+                await workbook.xlsx.load(uint8Array.buffer);
 
                 // Get first sheet (or we could let user select)
-                const sheetName = workbook.SheetNames[0];
-                const worksheet = workbook.Sheets[sheetName];
+                const worksheet = workbook.worksheets[0];
 
                 // Populate fields
                 const dataMapping = {
@@ -3833,32 +3831,22 @@
                     'date': new Date().toLocaleDateString()
                 };
 
-                // Apply mappings - preserve original formatting
+                // Apply mappings - ExcelJS automatically preserves all cell formatting
                 for (const mapping of Object.values(template.fieldMappings)) {
                     const value = dataMapping[mapping.fieldType];
                     if (value) {
-                        // Check if cell exists in the worksheet
-                        if (worksheet[mapping.cellRef]) {
-                            // Cell exists - preserve all formatting and only update the value
-                            worksheet[mapping.cellRef].v = value;
-                            worksheet[mapping.cellRef].w = value; // Formatted text representation
-                            // Keep existing properties: t (type), s (style), z (number format), etc.
-                        } else {
-                            // Cell doesn't exist - create new cell
-                            worksheet[mapping.cellRef] = { v: value, t: 's' };
-                        }
+                        // Get the cell (this preserves all existing formatting)
+                        const cell = worksheet.getCell(mapping.cellRef);
+                        // Update only the value - all formatting (colors, fonts, borders, etc.) is preserved
+                        cell.value = value;
                     }
                 }
 
-                // Generate Excel file - preserve all formatting and styles
-                const wbout = XLSX.write(workbook, {
-                    bookType: 'xlsx',
-                    type: 'array',
-                    cellStyles: true  // Preserve cell styles and formatting
-                });
+                // Generate Excel file - ExcelJS automatically preserves all formatting
+                const buffer = await workbook.xlsx.writeBuffer();
 
                 // Create blob and download
-                const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
