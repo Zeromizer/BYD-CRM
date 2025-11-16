@@ -244,12 +244,6 @@
             font-weight: 600;
         }
 
-        .stage-arrival { background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); color: white; }
-        .stage-consultation { background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%); color: white; }
-        .stage-quotation { background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%); color: white; }
-        .stage-testdrive { background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); color: white; }
-        .stage-closing { background: linear-gradient(135deg, #27ae60 0%, #229954 100%); color: white; }
-
         .form-group {
             margin-bottom: 18px;
         }
@@ -1162,16 +1156,6 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>Sales Stage</label>
-                    <select id="newCustomerStage">
-                        <option value="arrival">Stage 1 - Arrival</option>
-                        <option value="consultation">Stage 2 - Consultation</option>
-                        <option value="quotation">Stage 3 - Quotation</option>
-                        <option value="testdrive">Stage 4 - Test Drive</option>
-                        <option value="closing">Stage 5 - Closing</option>
-                    </select>
-                </div>
-                <div class="form-group">
                     <label>Notes</label>
                     <textarea id="newCustomerNotes" rows="3"></textarea>
                 </div>
@@ -1685,55 +1669,26 @@
             { id: 'other', name: 'Other_Documents' }
         ];
 
-        // Document checklist templates
-        const documentChecklists = {
-            arrival: [
-                { id: 'ic_copy', name: 'IC Copy (Front & Back)', required: true },
-                { id: 'nirc_fin', name: 'NIRC/FIN', required: true },
-                { id: 'contact_form', name: 'Customer Contact Form', required: true },
-                { id: 'pdpa_coe', name: 'PDPA & COE Bidding', required: true }
-            ],
-            consultation: [
-                { id: 'ic_copy', name: 'IC Copy (Front & Back)', required: true },
-                { id: 'nirc_fin', name: 'NIRC/FIN', required: true },
-                { id: 'contact_form', name: 'Customer Contact Form', required: true },
-                { id: 'quotation', name: 'Price Quotation', required: true },
-                { id: 'pdpa_coe', name: 'PDPA & COE Bidding', required: true },
-                { id: 'product_specs', name: 'Product Specifications', required: false }
-            ],
-            quotation: [
-                { id: 'ic_copy', name: 'IC Copy (Front & Back)', required: true },
-                { id: 'nirc_fin', name: 'NIRC/FIN', required: true },
-                { id: 'contact_form', name: 'Customer Contact Form', required: true },
-                { id: 'quotation', name: 'Price Quotation', required: true },
-                { id: 'pdpa_coe', name: 'PDPA & COE Bidding', required: true },
-                { id: 'finance_application', name: 'Finance Application Form', required: false },
-                { id: 'trade_in', name: 'Trade In (if required)', required: false }
-            ],
-            testdrive: [
-                { id: 'ic_copy', name: 'IC Copy (Front & Back)', required: true },
-                { id: 'nirc_fin', name: 'NIRC/FIN', required: true },
-                { id: 'driving_license', name: 'Driving License Copy', required: true },
-                { id: 'test_drive', name: 'Test Drive Agreement Form', required: true },
-                { id: 'quotation', name: 'Price Quotation', required: true },
-                { id: 'pdpa_coe', name: 'PDPA & COE Bidding', required: true }
-            ],
-            closing: [
-                { id: 'ic_copy', name: 'IC Copy (Original to Michelle, Copy to Wilson)', required: true },
-                { id: 'nirc_fin', name: 'NIRC/FIN', required: true },
-                { id: 'driving_license', name: 'Driving License Copy', required: true },
-                { id: 'vsa', name: 'VSA (Vehicle Sales Agreement)', required: true },
-                { id: 'test_drive', name: 'Test Drive Agreement Form', required: true },
-                { id: 'pdpa_coe', name: 'PDPA & COE Bidding', required: true },
-                { id: 'coe_deposit_receipt', name: 'COE Deposit Receipt ($16,350)', required: true },
-                { id: 'insurance_payment', name: 'Insurance Payment Receipt ($1,500-$3,000)', required: true },
-                { id: 'finance_approval', name: 'Finance Approval Letter (if bank loan)', required: false },
-                { id: 'admin_fee_receipt', name: 'Admin Fee Receipt ($500 if no bank loan)', required: false },
-                { id: 'first_installment', name: 'First Month Installment (if no bank loan)', required: false },
-                { id: 'trade_in', name: 'Trade In (if required)', required: false },
-                { id: 'log_card', name: 'Vehicle Log Card (if trade-in)', required: false }
-            ]
-        };
+        // Document checklist template
+        const documentChecklist = [
+            { id: 'ic_copy', name: 'IC Copy (Front & Back)', required: true },
+            { id: 'nirc_fin', name: 'NIRC/FIN', required: true },
+            { id: 'driving_license', name: 'Driving License Copy', required: true },
+            { id: 'contact_form', name: 'Customer Contact Form', required: true },
+            { id: 'quotation', name: 'Price Quotation', required: true },
+            { id: 'pdpa_coe', name: 'PDPA & COE Bidding', required: true },
+            { id: 'test_drive', name: 'Test Drive Agreement Form', required: true },
+            { id: 'vsa', name: 'VSA (Vehicle Sales Agreement)', required: true },
+            { id: 'coe_deposit_receipt', name: 'COE Deposit Receipt ($16,350)', required: true },
+            { id: 'insurance_payment', name: 'Insurance Payment Receipt ($1,500-$3,000)', required: true },
+            { id: 'product_specs', name: 'Product Specifications', required: false },
+            { id: 'finance_application', name: 'Finance Application Form', required: false },
+            { id: 'finance_approval', name: 'Finance Approval Letter (if bank loan)', required: false },
+            { id: 'admin_fee_receipt', name: 'Admin Fee Receipt ($500 if no bank loan)', required: false },
+            { id: 'first_installment', name: 'First Month Installment (if no bank loan)', required: false },
+            { id: 'trade_in', name: 'Trade In (if required)', required: false },
+            { id: 'log_card', name: 'Vehicle Log Card (if trade-in)', required: false }
+        ];
 
         // Document classification patterns - maps keywords to document types
         // Patterns are checked in order - more specific patterns first!
@@ -2599,7 +2554,6 @@
             document.getElementById('newCustomerEmail').value = '';
             document.getElementById('newCustomerNRIC').value = '';
             document.getElementById('newCustomerModel').value = '';
-            document.getElementById('newCustomerStage').value = 'arrival';
             document.getElementById('newCustomerNotes').value = '';
 
             // Reset progress UI
@@ -3468,7 +3422,6 @@
                     email: document.getElementById('newCustomerEmail').value,
                     nric: document.getElementById('newCustomerNRIC').value,
                     model: document.getElementById('newCustomerModel').value,
-                    stage: document.getElementById('newCustomerStage').value,
                     notes: document.getElementById('newCustomerNotes').value,
                     dateAdded: new Date().toISOString(),
                     checklist: {},
@@ -3533,22 +3486,9 @@
                 <div class="customer-item ${selectedCustomerId === customer.id ? 'active' : ''}" onclick="selectCustomer(${customer.id})">
                     <h3>${customer.name} ${customer.driveFolderId ? '📁' : ''}</h3>
                     <p>📱 ${customer.phone} ${customer.model ? '| 🚗 ' + customer.model : ''}</p>
-                    <span class="stage-badge stage-${customer.stage}">${getStageLabel(customer.stage)}</span>
                     ${customer.dealClosed ? '<span class="stage-badge" style="background: #27ae60; margin-left: 5px;">✓ Closed</span>' : ''}
                 </div>
             `).join('');
-        }
-
-        // Get stage label
-        function getStageLabel(stage) {
-            const labels = {
-                arrival: 'Stage 1 - Arrival',
-                consultation: 'Stage 2 - Consultation',
-                quotation: 'Stage 3 - Quotation',
-                testdrive: 'Stage 4 - Test Drive',
-                closing: 'Stage 5 - Closing'
-            };
-            return labels[stage] || stage;
         }
 
         // Select customer
@@ -3563,7 +3503,7 @@
             const customer = customers.find(c => c.id === customerId);
             if (!customer) return;
 
-            const checklist = documentChecklists[customer.stage] || [];
+            const checklist = documentChecklist;
             const completedItems = Object.values(customer.checklist).filter(v => v).length;
             const totalItems = checklist.length;
             const progress = totalItems > 0 ? (completedItems / totalItems) * 100 : 0;
@@ -3616,16 +3556,6 @@
                                 <option value="Atto 2" ${customer.model === 'Atto 2' ? 'selected' : ''}>Atto 2</option>
                                 <option value="Atto 3" ${customer.model === 'Atto 3' ? 'selected' : ''}>Atto 3</option>
                                 <option value="M6" ${customer.model === 'M6' ? 'selected' : ''}>M6</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>Sales Stage</label>
-                            <select onchange="updateCustomer(${customer.id}, 'stage', this.value)">
-                                <option value="arrival" ${customer.stage === 'arrival' ? 'selected' : ''}>Stage 1 - Arrival</option>
-                                <option value="consultation" ${customer.stage === 'consultation' ? 'selected' : ''}>Stage 2 - Consultation</option>
-                                <option value="quotation" ${customer.stage === 'quotation' ? 'selected' : ''}>Stage 3 - Quotation</option>
-                                <option value="testdrive" ${customer.stage === 'testdrive' ? 'selected' : ''}>Stage 4 - Test Drive</option>
-                                <option value="closing" ${customer.stage === 'closing' ? 'selected' : ''}>Stage 5 - Closing</option>
                             </select>
                         </div>
                     </div>
@@ -3689,7 +3619,7 @@
                     ` : ''}
 
                     <div class="checklist-section">
-                        <h3>📋 Document Checklist - ${getStageLabel(customer.stage)}</h3>
+                        <h3>📋 Document Checklist</h3>
                         <p style="margin-bottom: 15px; color: #7f8c8d; font-size: 13px;">
                             Progress: ${completedItems}/${totalItems} documents
                         </p>
@@ -4338,7 +4268,6 @@
                 <div class="customer-item ${selectedCustomerId === customer.id ? 'active' : ''}" onclick="selectCustomer(${customer.id})">
                     <h3>${customer.name} ${customer.driveFolderId ? '📁' : ''}</h3>
                     <p>📱 ${customer.phone} ${customer.model ? '| 🚗 ' + customer.model : ''}</p>
-                    <span class="stage-badge stage-${customer.stage}">${getStageLabel(customer.stage)}</span>
                     ${customer.dealClosed ? '<span class="stage-badge" style="background: #27ae60; margin-left: 5px;">✓ Closed</span>' : ''}
                 </div>
             `).join('');
