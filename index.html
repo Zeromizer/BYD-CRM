@@ -4227,15 +4227,61 @@
                 // Generate Excel file as blob - PERFECT preservation of all formatting
                 const blob = await workbook.outputAsync();
 
-                // Create download link
+                // Determine document type based on template name
+                let documentType = 'other'; // Default folder
+                const templateNameLower = template.name.toLowerCase();
+                if (templateNameLower.includes('vsa') || templateNameLower.includes('sales agreement')) {
+                    documentType = 'vsa';
+                } else if (templateNameLower.includes('trade')) {
+                    documentType = 'trade_in';
+                } else if (templateNameLower.includes('test drive')) {
+                    documentType = 'test_drive';
+                } else if (templateNameLower.includes('pdpa') || templateNameLower.includes('coe')) {
+                    documentType = 'pdpa_coe';
+                }
+
+                // Create filename for Google Drive
+                const timestamp = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+                const driveFileName = `${customer.name.replace(/\s+/g, '_')}_${template.name.replace(/\s+/g, '_')}_${timestamp}.xlsx`;
+
+                // Convert blob to File object for upload
+                const excelFile = new File([blob], driveFileName, {
+                    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+                });
+
+                // Upload to Google Drive
+                let uploadSuccess = false;
+                if (isSignedIn) {
+                    try {
+                        const uploadResult = await uploadFileToDrive(excelFile, currentPopulateCustomerId, driveFileName, documentType);
+                        if (uploadResult) {
+                            uploadSuccess = true;
+                        }
+                    } catch (uploadError) {
+                        console.error('Error uploading to Drive:', uploadError);
+                    }
+                }
+
+                // Create download link for local copy
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `${template.name}_${customer.name}_${Date.now()}.xlsx`;
+                a.download = `${template.name}_${customer.name}_${timestamp}.xlsx`;
                 a.click();
                 URL.revokeObjectURL(url);
 
-                alert('Excel file downloaded successfully!');
+                // Show success message
+                if (uploadSuccess) {
+                    alert('Excel file generated successfully!\n\n✅ Downloaded to your computer\n✅ Saved to customer folder in Google Drive\n\nYou can view it in the Documents tab.');
+                    // Refresh the customer details to show the new file
+                    invalidateStatsCache();
+                    displayCustomerDetails(currentPopulateCustomerId);
+                } else if (!isSignedIn) {
+                    alert('Excel file downloaded successfully!\n\n⚠️ Not connected to Google Drive - file not saved to customer folder.\n\nConnect to Google Drive to automatically save files.');
+                } else {
+                    alert('Excel file downloaded successfully!\n\n⚠️ Could not save to Google Drive. Please check your connection and try again.');
+                }
+
                 closeExcelPopulateModal();
             } catch (error) {
                 console.error('Error generating Excel file:', error);
