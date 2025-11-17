@@ -1161,9 +1161,15 @@
                         <input type="text" id="newCustomerVsaNo" placeholder="VSA Number">
                     </div>
                 </div>
-                <div class="form-group">
-                    <label>Address</label>
-                    <textarea id="newCustomerAddress" rows="2"></textarea>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Address</label>
+                        <input type="text" id="newCustomerAddress" placeholder="e.g., 99 YISHUN AVE 1, 13-39">
+                    </div>
+                    <div class="form-group">
+                        <label>Address Continue</label>
+                        <input type="text" id="newCustomerAddressContinue" placeholder="e.g., SINGAPORE 769139">
+                    </div>
                 </div>
                 <div class="form-group">
                     <label>Interested Model</label>
@@ -1294,6 +1300,7 @@
                             <option value="email">Email</option>
                             <option value="nric">NRIC/FIN</option>
                             <option value="address">Address</option>
+                            <option value="addressContinue">Address Continue</option>
                             <option value="salesConsultant">Sales Consultant</option>
                             <option value="vsaNo">VSA No</option>
                             <option value="model">Car Model</option>
@@ -1427,6 +1434,7 @@
                                 <option value="email">Email</option>
                                 <option value="nric">NRIC/FIN</option>
                                 <option value="address">Address</option>
+                                <option value="addressContinue">Address Continue</option>
                                 <option value="salesConsultant">Sales Consultant</option>
                                 <option value="vsaNo">VSA No</option>
                                 <option value="model">Car Model</option>
@@ -3010,6 +3018,10 @@
             document.getElementById('newCustomerPhone').value = '';
             document.getElementById('newCustomerEmail').value = '';
             document.getElementById('newCustomerNRIC').value = '';
+            document.getElementById('newCustomerSalesConsultant').value = '';
+            document.getElementById('newCustomerVsaNo').value = '';
+            document.getElementById('newCustomerAddress').value = '';
+            document.getElementById('newCustomerAddressContinue').value = '';
             document.getElementById('newCustomerModel').value = '';
             document.getElementById('newCustomerNotes').value = '';
 
@@ -3848,6 +3860,7 @@
                 'email': 'Email',
                 'nric': 'NRIC/FIN',
                 'address': 'Address',
+                'addressContinue': 'Address Continue',
                 'salesConsultant': 'Sales Consultant',
                 'vsaNo': 'VSA No',
                 'model': 'Car Model',
@@ -3977,6 +3990,7 @@
                 'email': 'Email',
                 'nric': 'NRIC/FIN',
                 'address': 'Address',
+                'addressContinue': 'Address Continue',
                 'salesConsultant': 'Sales Consultant',
                 'vsaNo': 'VSA No',
                 'model': 'Car Model',
@@ -4066,6 +4080,7 @@
                     'email': customer.email || '',
                     'nric': customer.nric || '',
                     'address': customer.address || '',
+                    'addressContinue': customer.addressContinue || '',
                     'salesConsultant': customer.salesConsultant || '',
                     'vsaNo': customer.vsaNo || '',
                     'model': customer.model || '',
@@ -4610,6 +4625,7 @@
                     salesConsultant: document.getElementById('newCustomerSalesConsultant').value,
                     vsaNo: document.getElementById('newCustomerVsaNo').value,
                     address: document.getElementById('newCustomerAddress').value,
+                    addressContinue: document.getElementById('newCustomerAddressContinue').value,
                     model: document.getElementById('newCustomerModel').value,
                     notes: document.getElementById('newCustomerNotes').value,
                     dateAdded: new Date().toISOString(),
@@ -4756,9 +4772,15 @@
                         </div>
                     </div>
 
-                    <div class="form-group">
-                        <label>Address</label>
-                        <textarea rows="2" id="customer_address">${customer.address || ''}</textarea>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Address</label>
+                            <input type="text" id="customer_address" value="${customer.address || ''}" placeholder="e.g., 99 YISHUN AVE 1, 13-39">
+                        </div>
+                        <div class="form-group">
+                            <label>Address Continue</label>
+                            <input type="text" id="customer_addressContinue" value="${customer.addressContinue || ''}" placeholder="e.g., SINGAPORE 769139">
+                        </div>
                     </div>
 
                     <div class="form-row">
@@ -5562,6 +5584,7 @@
                 customer.salesConsultant = document.getElementById('customer_salesConsultant').value;
                 customer.vsaNo = document.getElementById('customer_vsaNo').value;
                 customer.address = document.getElementById('customer_address').value;
+                customer.addressContinue = document.getElementById('customer_addressContinue').value;
                 customer.model = document.getElementById('customer_model').value;
                 customer.notes = document.getElementById('customer_notes').value;
 
