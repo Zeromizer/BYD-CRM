@@ -3808,12 +3808,13 @@
             }
 
             try {
-                // Convert stored array back to Uint8Array
+                // Convert stored array back to ArrayBuffer properly
                 const uint8Array = new Uint8Array(template.arrayBuffer);
+                const arrayBuffer = uint8Array.buffer.slice(uint8Array.byteOffset, uint8Array.byteOffset + uint8Array.byteLength);
 
                 // Load the workbook with ExcelJS - automatically preserves ALL formatting
                 const workbook = new ExcelJS.Workbook();
-                await workbook.xlsx.load(uint8Array.buffer);
+                await workbook.xlsx.load(arrayBuffer);
 
                 // Get first sheet (or we could let user select)
                 const worksheet = workbook.worksheets[0];
