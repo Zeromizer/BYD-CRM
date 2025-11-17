@@ -2945,6 +2945,129 @@
             }
         }
 
+        // Open customer folder in local file explorer
+        function openLocalFolder(customerName) {
+            // Get configured local Google Drive path from localStorage
+            let drivePath = localStorage.getItem('localGoogleDrivePath');
+
+            // If not configured, prompt user to set it up
+            if (!drivePath) {
+                const isWindows = navigator.platform.toLowerCase().includes('win');
+                const isMac = navigator.platform.toLowerCase().includes('mac');
+
+                let defaultPath = '';
+                let examplePath = '';
+
+                if (isWindows) {
+                    defaultPath = 'C:\\Users\\' + (process?.env?.USERNAME || 'YourUsername') + '\\Google Drive';
+                    examplePath = 'C:\\Users\\YourName\\Google Drive\\BYD-CRM';
+                } else if (isMac) {
+                    defaultPath = '/Users/' + (process?.env?.USER || 'YourUsername') + '/Google Drive';
+                    examplePath = '/Users/YourName/Google Drive/BYD-CRM';
+                } else {
+                    defaultPath = '/home/' + (process?.env?.USER || 'YourUsername') + '/Google Drive';
+                    examplePath = '/home/YourName/Google Drive/BYD-CRM';
+                }
+
+                const userPath = prompt(
+                    '📂 Configure Local Google Drive Path\n\n' +
+                    'Enter the full path to your BYD-CRM folder in Google Drive:\n\n' +
+                    'Example:\n' + examplePath + '\n\n' +
+                    'This setting will be saved for future use.\n' +
+                    'You can update it anytime by clicking this button again with Ctrl/Cmd held down.',
+                    defaultPath + '\\BYD-CRM'
+                );
+
+                if (!userPath) {
+                    return; // User cancelled
+                }
+
+                drivePath = userPath.trim();
+                localStorage.setItem('localGoogleDrivePath', drivePath);
+                alert('✅ Google Drive path saved!\n\nPath: ' + drivePath + '\n\nYou can now open customer folders in File Explorer.');
+            }
+
+            // Allow reconfiguration if Ctrl/Cmd key is held
+            if (event && (event.ctrlKey || event.metaKey)) {
+                const newPath = prompt(
+                    '📂 Update Local Google Drive Path\n\n' +
+                    'Current path:\n' + drivePath + '\n\n' +
+                    'Enter new path to your BYD-CRM folder in Google Drive:',
+                    drivePath
+                );
+
+                if (newPath && newPath.trim()) {
+                    drivePath = newPath.trim();
+                    localStorage.setItem('localGoogleDrivePath', drivePath);
+                    alert('✅ Google Drive path updated!\n\nNew path: ' + drivePath);
+                }
+                return;
+            }
+
+            // Construct the full path to customer folder
+            const folderName = customerName.replace(/\s+/g, '_');
+            const separator = drivePath.includes('\\') ? '\\' : '/';
+            const fullPath = drivePath + separator + folderName;
+
+            // Try to open in file explorer
+            try {
+                // For browsers, we need to use file:// protocol
+                // Note: This may not work in all browsers due to security restrictions
+                const fileUrl = 'file:///' + fullPath.replace(/\\/g, '/');
+
+                // Try opening in a new window
+                const opened = window.open(fileUrl, '_blank');
+
+                if (!opened) {
+                    // Fallback: show the path and copy to clipboard
+                    if (navigator.clipboard) {
+                        navigator.clipboard.writeText(fullPath).then(() => {
+                            alert(
+                                '📂 Local Folder Path\n\n' +
+                                fullPath + '\n\n' +
+                                '✅ Path copied to clipboard!\n\n' +
+                                'Note: Your browser may block direct file access.\n' +
+                                'Please paste this path in your File Explorer address bar.'
+                            );
+                        }).catch(() => {
+                            alert(
+                                '📂 Local Folder Path\n\n' +
+                                fullPath + '\n\n' +
+                                'Please copy this path and paste it in your File Explorer address bar.\n\n' +
+                                'Tip: Press Ctrl+L in File Explorer to access the address bar.'
+                            );
+                        });
+                    } else {
+                        alert(
+                            '📂 Local Folder Path\n\n' +
+                            fullPath + '\n\n' +
+                            'Please copy this path and paste it in your File Explorer address bar.\n\n' +
+                            'Tip: Press Ctrl+L in File Explorer to access the address bar.'
+                        );
+                    }
+                }
+            } catch (error) {
+                console.error('Error opening folder:', error);
+                // Show the path and copy to clipboard as fallback
+                if (navigator.clipboard) {
+                    navigator.clipboard.writeText(fullPath).then(() => {
+                        alert(
+                            '📂 Local Folder Path\n\n' +
+                            fullPath + '\n\n' +
+                            '✅ Path copied to clipboard!\n\n' +
+                            'Please paste this path in your File Explorer address bar.'
+                        );
+                    }).catch(() => {
+                        alert(
+                            '📂 Local Folder Path\n\n' +
+                            fullPath + '\n\n' +
+                            'Please copy this path and paste it in your File Explorer address bar.'
+                        );
+                    });
+                }
+            }
+        }
+
         // Get file icon
         function getFileIcon(mimeType) {
             if (mimeType.includes('pdf')) return '📄';
@@ -5134,13 +5257,22 @@
                     <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px;">
                         <h2 style="margin: 0;">Document Management</h2>
                         ${customer.driveFolderId ? `
-                            <button onclick="window.open('${customer.driveFolderLink}', '_blank')"
-                                    style="background: none; border: none; cursor: pointer; font-size: 24px; padding: 8px; border-radius: 8px; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center;"
-                                    onmouseover="this.style.background='rgba(0, 188, 212, 0.1)'"
-                                    onmouseout="this.style.background='none'"
-                                    title="Open folder in Google Drive">
-                                📁
-                            </button>
+                            <div style="display: flex; gap: 8px;">
+                                <button onclick="window.open('${customer.driveFolderLink}', '_blank')"
+                                        style="background: none; border: none; cursor: pointer; font-size: 24px; padding: 8px; border-radius: 8px; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center;"
+                                        onmouseover="this.style.background='rgba(0, 188, 212, 0.1)'"
+                                        onmouseout="this.style.background='none'"
+                                        title="Open folder in Google Drive (Web)">
+                                    🌐
+                                </button>
+                                <button onclick="openLocalFolder('${customer.name}')"
+                                        style="background: none; border: none; cursor: pointer; font-size: 24px; padding: 8px; border-radius: 8px; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center;"
+                                        onmouseover="this.style.background='rgba(52, 152, 219, 0.1)'"
+                                        onmouseout="this.style.background='none'"
+                                        title="Open folder in File Explorer">
+                                    📂
+                                </button>
+                            </div>
                         ` : ''}
                     </div>
 
