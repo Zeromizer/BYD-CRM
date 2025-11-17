@@ -4249,13 +4249,56 @@
                     type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
                 });
 
-                // Upload to Google Drive
+                // Upload to Google Drive subfolder only
                 let uploadSuccess = false;
                 if (isSignedIn) {
                     try {
-                        const uploadResult = await uploadFileToDrive(excelFile, currentPopulateCustomerId, driveFileName, documentType);
-                        if (uploadResult) {
-                            uploadSuccess = true;
+                        // Ensure customer folder and subfolders exist first
+                        if (!customer.driveFolderId) {
+                            await createCustomerFolder(customer.name, currentPopulateCustomerId);
+                            // Reload customer after folder creation
+                            const updatedCustomer = customers.find(c => c.id === currentPopulateCustomerId);
+                            if (updatedCustomer) {
+                                Object.assign(customer, updatedCustomer);
+                            }
+                        }
+
+                        // Ensure document subfolders exist
+                        if (!customer.documentFolders || !customer.documentFolders[documentType]) {
+                            await createDocumentSubfolders(customer.driveFolderId, currentPopulateCustomerId);
+                            // Reload customer after subfolder creation
+                            const updatedCustomer = customers.find(c => c.id === currentPopulateCustomerId);
+                            if (updatedCustomer) {
+                                Object.assign(customer, updatedCustomer);
+                            }
+                        }
+
+                        // Now upload directly to the subfolder
+                        const targetFolderId = customer.documentFolders[documentType];
+
+                        if (targetFolderId) {
+                            const metadata = {
+                                name: driveFileName,
+                                parents: [targetFolderId]
+                            };
+
+                            const form = new FormData();
+                            form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+                            form.append('file', excelFile);
+
+                            const response = await fetch(
+                                'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,mimeType,size,webViewLink,createdTime',
+                                {
+                                    method: 'POST',
+                                    headers: new Headers({ 'Authorization': 'Bearer ' + accessToken }),
+                                    body: form
+                                }
+                            );
+
+                            const result = await response.json();
+                            if (result && result.id) {
+                                uploadSuccess = true;
+                            }
                         }
                     } catch (uploadError) {
                         console.error('Error uploading to Drive:', uploadError);
