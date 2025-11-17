@@ -1153,6 +1153,16 @@
                 </div>
                 <div class="form-row">
                     <div class="form-group">
+                        <label>Occupation</label>
+                        <input type="text" id="newCustomerOccupation" placeholder="e.g., Engineer, Teacher">
+                    </div>
+                    <div class="form-group">
+                        <label>Date of Birth</label>
+                        <input type="date" id="newCustomerDOB">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
                         <label>Sales Consultant</label>
                         <input type="text" id="newCustomerSalesConsultant">
                     </div>
@@ -1299,6 +1309,8 @@
                             <option value="phone">Phone Number</option>
                             <option value="email">Email</option>
                             <option value="nric">NRIC/FIN</option>
+                            <option value="occupation">Occupation</option>
+                            <option value="dob">Date of Birth</option>
                             <option value="address">Address</option>
                             <option value="addressContinue">Address Continue</option>
                             <option value="salesConsultant">Sales Consultant</option>
@@ -1433,6 +1445,8 @@
                                 <option value="phone">Phone Number</option>
                                 <option value="email">Email</option>
                                 <option value="nric">NRIC/FIN</option>
+                                <option value="occupation">Occupation</option>
+                                <option value="dob">Date of Birth</option>
                                 <option value="address">Address</option>
                                 <option value="addressContinue">Address Continue</option>
                                 <option value="salesConsultant">Sales Consultant</option>
@@ -3018,6 +3032,8 @@
             document.getElementById('newCustomerPhone').value = '';
             document.getElementById('newCustomerEmail').value = '';
             document.getElementById('newCustomerNRIC').value = '';
+            document.getElementById('newCustomerOccupation').value = '';
+            document.getElementById('newCustomerDOB').value = '';
             document.getElementById('newCustomerSalesConsultant').value = '';
             document.getElementById('newCustomerVsaNo').value = '';
             document.getElementById('newCustomerAddress').value = '';
@@ -3859,6 +3875,8 @@
                 'phone': 'Phone Number',
                 'email': 'Email',
                 'nric': 'NRIC/FIN',
+                'occupation': 'Occupation',
+                'dob': 'Date of Birth',
                 'address': 'Address',
                 'addressContinue': 'Address Continue',
                 'salesConsultant': 'Sales Consultant',
@@ -3989,6 +4007,8 @@
                 'phone': 'Phone Number',
                 'email': 'Email',
                 'nric': 'NRIC/FIN',
+                'occupation': 'Occupation',
+                'dob': 'Date of Birth',
                 'address': 'Address',
                 'addressContinue': 'Address Continue',
                 'salesConsultant': 'Sales Consultant',
@@ -4079,6 +4099,8 @@
                     'phone': customer.phone || '',
                     'email': customer.email || '',
                     'nric': customer.nric || '',
+                    'occupation': customer.occupation || '',
+                    'dob': customer.dob || '',
                     'address': customer.address || '',
                     'addressContinue': customer.addressContinue || '',
                     'salesConsultant': customer.salesConsultant || '',
@@ -4622,6 +4644,8 @@
                     phone: document.getElementById('newCustomerPhone').value,
                     email: document.getElementById('newCustomerEmail').value,
                     nric: document.getElementById('newCustomerNRIC').value,
+                    occupation: document.getElementById('newCustomerOccupation').value,
+                    dob: document.getElementById('newCustomerDOB').value,
                     salesConsultant: document.getElementById('newCustomerSalesConsultant').value,
                     vsaNo: document.getElementById('newCustomerVsaNo').value,
                     address: document.getElementById('newCustomerAddress').value,
@@ -4758,6 +4782,17 @@
                         <div class="form-group">
                             <label>NRIC/FIN</label>
                             <input type="text" id="customer_nric" value="${customer.nric || ''}" placeholder="S1234567A or F1234567N">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Occupation</label>
+                            <input type="text" id="customer_occupation" value="${customer.occupation || ''}" placeholder="e.g., Engineer, Teacher">
+                        </div>
+                        <div class="form-group">
+                            <label>Date of Birth</label>
+                            <input type="date" id="customer_dob" value="${customer.dob || ''}">
                         </div>
                     </div>
 
@@ -5581,6 +5616,8 @@
                 customer.phone = document.getElementById('customer_phone').value;
                 customer.email = document.getElementById('customer_email').value;
                 customer.nric = document.getElementById('customer_nric').value;
+                customer.occupation = document.getElementById('customer_occupation').value;
+                customer.dob = document.getElementById('customer_dob').value;
                 customer.salesConsultant = document.getElementById('customer_salesConsultant').value;
                 customer.vsaNo = document.getElementById('customer_vsaNo').value;
                 customer.address = document.getElementById('customer_address').value;
