@@ -1337,6 +1337,7 @@
                             <optgroup label="VSA - Trade in Car">
                                 <option value="vsa_tradeInCarNo">Trade in Car No</option>
                                 <option value="vsa_tradeInCarModel">Trade in Car Model</option>
+                                <option value="vsa_tradeInAmount">Trade In Amount</option>
                             </optgroup>
                             <optgroup label="VSA - Remarks">
                                 <option value="vsa_remarks1">Remarks 1</option>
@@ -1481,6 +1482,7 @@
                                 <optgroup label="VSA - Trade in Car">
                                     <option value="vsa_tradeInCarNo">Trade in Car No</option>
                                     <option value="vsa_tradeInCarModel">Trade in Car Model</option>
+                                    <option value="vsa_tradeInAmount">Trade In Amount</option>
                                 </optgroup>
                                 <optgroup label="VSA - Remarks">
                                     <option value="vsa_remarks1">Remarks 1</option>
@@ -1706,6 +1708,11 @@
                             <label>Trade in Car Model</label>
                             <input type="text" id="vsa_tradeInCarModel" placeholder="e.g., Toyota Corolla">
                         </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Trade In Amount</label>
+                        <input type="text" id="vsa_tradeInAmount" placeholder="e.g., $50,000">
                     </div>
                 </div>
 
@@ -3957,6 +3964,7 @@
                 'vsa_deliveryDate': 'VSA - Approximate Delivery Date',
                 'vsa_tradeInCarNo': 'VSA - Trade in Car No',
                 'vsa_tradeInCarModel': 'VSA - Trade in Car Model',
+                'vsa_tradeInAmount': 'VSA - Trade In Amount',
                 'vsa_remarks1': 'VSA - Remarks 1',
                 'vsa_remarks2': 'VSA - Remarks 2',
                 'vsa_loanAmount': 'VSA - Loan Amount',
@@ -4095,6 +4103,7 @@
                 'vsa_deliveryDate': 'VSA - Approximate Delivery Date',
                 'vsa_tradeInCarNo': 'VSA - Trade in Car No',
                 'vsa_tradeInCarModel': 'VSA - Trade in Car Model',
+                'vsa_tradeInAmount': 'VSA - Trade In Amount',
                 'vsa_remarks1': 'VSA - Remarks 1',
                 'vsa_remarks2': 'VSA - Remarks 2',
                 'vsa_loanAmount': 'VSA - Loan Amount',
@@ -4193,6 +4202,7 @@
                     'vsa_deliveryDate': customer.vsaDetails?.deliveryDate || '',
                     'vsa_tradeInCarNo': customer.vsaDetails?.tradeInCarNo || '',
                     'vsa_tradeInCarModel': customer.vsaDetails?.tradeInCarModel || '',
+                    'vsa_tradeInAmount': customer.vsaDetails?.tradeInAmount || '',
                     'vsa_remarks1': customer.vsaDetails?.remarks1 || '',
                     'vsa_remarks2': customer.vsaDetails?.remarks2 || '',
                     'vsa_loanAmount': customer.vsaDetails?.loanAmount || '',
@@ -5185,6 +5195,7 @@
                     deliveryDate: '',
                     tradeInCarNo: '',
                     tradeInCarModel: '',
+                    tradeInAmount: '',
                     remarks1: '',
                     remarks2: '',
                     loanAmount: '',
@@ -5213,6 +5224,7 @@
             document.getElementById('vsa_deliveryDate').value = customer.vsaDetails.deliveryDate || '';
             document.getElementById('vsa_tradeInCarNo').value = customer.vsaDetails.tradeInCarNo || '';
             document.getElementById('vsa_tradeInCarModel').value = customer.vsaDetails.tradeInCarModel || '';
+            document.getElementById('vsa_tradeInAmount').value = customer.vsaDetails.tradeInAmount || '';
             document.getElementById('vsa_remarks1').value = customer.vsaDetails.remarks1 || '';
             document.getElementById('vsa_remarks2').value = customer.vsaDetails.remarks2 || '';
             document.getElementById('vsa_loanAmount').value = customer.vsaDetails.loanAmount || '';
@@ -5261,6 +5273,7 @@
             customer.vsaDetails.deliveryDate = document.getElementById('vsa_deliveryDate').value;
             customer.vsaDetails.tradeInCarNo = document.getElementById('vsa_tradeInCarNo').value;
             customer.vsaDetails.tradeInCarModel = document.getElementById('vsa_tradeInCarModel').value;
+            customer.vsaDetails.tradeInAmount = document.getElementById('vsa_tradeInAmount').value;
             customer.vsaDetails.remarks1 = document.getElementById('vsa_remarks1').value;
             customer.vsaDetails.remarks2 = document.getElementById('vsa_remarks2').value;
             customer.vsaDetails.loanAmount = document.getElementById('vsa_loanAmount').value;
