@@ -2947,124 +2947,49 @@
 
         // Open customer folder in local file explorer
         function openLocalFolder(customerName) {
-            // Get configured local Google Drive path from localStorage
-            let drivePath = localStorage.getItem('localGoogleDrivePath');
-
-            // If not configured, prompt user to set it up
-            if (!drivePath) {
-                const isWindows = navigator.platform.toLowerCase().includes('win');
-                const isMac = navigator.platform.toLowerCase().includes('mac');
-
-                let defaultPath = '';
-                let examplePath = '';
-
-                if (isWindows) {
-                    defaultPath = 'C:\\Users\\' + (process?.env?.USERNAME || 'YourUsername') + '\\Google Drive';
-                    examplePath = 'C:\\Users\\YourName\\Google Drive\\BYD-CRM';
-                } else if (isMac) {
-                    defaultPath = '/Users/' + (process?.env?.USER || 'YourUsername') + '/Google Drive';
-                    examplePath = '/Users/YourName/Google Drive/BYD-CRM';
-                } else {
-                    defaultPath = '/home/' + (process?.env?.USER || 'YourUsername') + '/Google Drive';
-                    examplePath = '/home/YourName/Google Drive/BYD-CRM';
-                }
-
-                const userPath = prompt(
-                    '📂 Configure Local Google Drive Path\n\n' +
-                    'Enter the full path to your BYD-CRM folder in Google Drive:\n\n' +
-                    'Example:\n' + examplePath + '\n\n' +
-                    'This setting will be saved for future use.\n' +
-                    'You can update it anytime by clicking this button again with Ctrl/Cmd held down.',
-                    defaultPath + '\\BYD-CRM'
-                );
-
-                if (!userPath) {
-                    return; // User cancelled
-                }
-
-                drivePath = userPath.trim();
-                localStorage.setItem('localGoogleDrivePath', drivePath);
-                alert('✅ Google Drive path saved!\n\nPath: ' + drivePath + '\n\nYou can now open customer folders in File Explorer.');
-            }
-
-            // Allow reconfiguration if Ctrl/Cmd key is held
-            if (event && (event.ctrlKey || event.metaKey)) {
-                const newPath = prompt(
-                    '📂 Update Local Google Drive Path\n\n' +
-                    'Current path:\n' + drivePath + '\n\n' +
-                    'Enter new path to your BYD-CRM folder in Google Drive:',
-                    drivePath
-                );
-
-                if (newPath && newPath.trim()) {
-                    drivePath = newPath.trim();
-                    localStorage.setItem('localGoogleDrivePath', drivePath);
-                    alert('✅ Google Drive path updated!\n\nNew path: ' + drivePath);
-                }
-                return;
-            }
+            // Hardcoded Google Drive path
+            const drivePath = 'G:\\My Drive\\BYD_MotorEast_Customers (2)';
 
             // Construct the full path to customer folder
             const folderName = customerName.replace(/\s+/g, '_');
-            const separator = drivePath.includes('\\') ? '\\' : '/';
-            const fullPath = drivePath + separator + folderName;
+            const fullPath = drivePath + '\\' + folderName;
 
-            // Try to open in file explorer
+            // Copy path to clipboard and show it to user
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(fullPath).then(() => {
+                    alert(
+                        '📂 Customer Folder Path\n\n' +
+                        fullPath + '\n\n' +
+                        '✅ Path copied to clipboard!\n\n' +
+                        'Opening in File Explorer...\n' +
+                        'If it doesn\'t open automatically, paste the path (Ctrl+V) in File Explorer\'s address bar.'
+                    );
+                }).catch(() => {
+                    alert(
+                        '📂 Customer Folder Path\n\n' +
+                        fullPath + '\n\n' +
+                        'Copy this path and paste it in File Explorer\'s address bar (Ctrl+L to focus address bar).'
+                    );
+                });
+            } else {
+                alert(
+                    '📂 Customer Folder Path\n\n' +
+                    fullPath + '\n\n' +
+                    'Copy this path and paste it in File Explorer\'s address bar.'
+                );
+            }
+
+            // Try to open using file explorer
             try {
-                // For browsers, we need to use file:// protocol
-                // Note: This may not work in all browsers due to security restrictions
-                const fileUrl = 'file:///' + fullPath.replace(/\\/g, '/');
-
-                // Try opening in a new window
-                const opened = window.open(fileUrl, '_blank');
-
-                if (!opened) {
-                    // Fallback: show the path and copy to clipboard
-                    if (navigator.clipboard) {
-                        navigator.clipboard.writeText(fullPath).then(() => {
-                            alert(
-                                '📂 Local Folder Path\n\n' +
-                                fullPath + '\n\n' +
-                                '✅ Path copied to clipboard!\n\n' +
-                                'Note: Your browser may block direct file access.\n' +
-                                'Please paste this path in your File Explorer address bar.'
-                            );
-                        }).catch(() => {
-                            alert(
-                                '📂 Local Folder Path\n\n' +
-                                fullPath + '\n\n' +
-                                'Please copy this path and paste it in your File Explorer address bar.\n\n' +
-                                'Tip: Press Ctrl+L in File Explorer to access the address bar.'
-                            );
-                        });
-                    } else {
-                        alert(
-                            '📂 Local Folder Path\n\n' +
-                            fullPath + '\n\n' +
-                            'Please copy this path and paste it in your File Explorer address bar.\n\n' +
-                            'Tip: Press Ctrl+L in File Explorer to access the address bar.'
-                        );
-                    }
-                }
+                // Create a temporary link element
+                const link = document.createElement('a');
+                link.href = 'file:///' + fullPath.replace(/\\/g, '/');
+                link.target = '_blank';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
             } catch (error) {
-                console.error('Error opening folder:', error);
-                // Show the path and copy to clipboard as fallback
-                if (navigator.clipboard) {
-                    navigator.clipboard.writeText(fullPath).then(() => {
-                        alert(
-                            '📂 Local Folder Path\n\n' +
-                            fullPath + '\n\n' +
-                            '✅ Path copied to clipboard!\n\n' +
-                            'Please paste this path in your File Explorer address bar.'
-                        );
-                    }).catch(() => {
-                        alert(
-                            '📂 Local Folder Path\n\n' +
-                            fullPath + '\n\n' +
-                            'Please copy this path and paste it in your File Explorer address bar.'
-                        );
-                    });
-                }
+                console.log('Could not open folder directly (expected browser security):', error);
             }
         }
 
