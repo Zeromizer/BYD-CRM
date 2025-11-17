@@ -1298,6 +1298,32 @@
                             <option value="vsaNo">VSA No</option>
                             <option value="model">Car Model</option>
                             <option value="date">Today's Date</option>
+                            <optgroup label="VSA - New Car Details">
+                                <option value="vsa_makeModel">Make & Model</option>
+                                <option value="vsa_yom">YOM (Year of Manufacture)</option>
+                                <option value="vsa_bodyColour">Body Colour</option>
+                                <option value="vsa_upholstery">Upholstery</option>
+                                <option value="vsa_przType">P/R/Z Type</option>
+                            </optgroup>
+                            <optgroup label="VSA - New Car Package">
+                                <option value="vsa_package">Package</option>
+                                <option value="vsa_sellingWithCOE">Selling with COE</option>
+                                <option value="vsa_sellingPriceList">Selling Price on Price List</option>
+                                <option value="vsa_coeRebateLevel">COE Rebate Level</option>
+                                <option value="vsa_deposit">Deposit</option>
+                                <option value="vsa_lessOthers">Less: Others</option>
+                                <option value="vsa_addOthers">Add: Others</option>
+                                <option value="vsa_deliveryDate">Approximate Delivery Date</option>
+                            </optgroup>
+                            <optgroup label="VSA - Trade in Car">
+                                <option value="vsa_tradeInCarNo">Trade in Car No</option>
+                                <option value="vsa_tradeInCarModel">Trade in Car Model</option>
+                            </optgroup>
+                            <optgroup label="VSA - Remarks">
+                                <option value="vsa_remarks1">Remarks 1</option>
+                                <option value="vsa_remarks2">Remarks 2</option>
+                                <option value="vsa_loanAmount">Loan Amount</option>
+                            </optgroup>
                         </select>
                     </div>
                     <div>
@@ -1405,6 +1431,32 @@
                                 <option value="vsaNo">VSA No</option>
                                 <option value="model">Car Model</option>
                                 <option value="date">Today's Date</option>
+                                <optgroup label="VSA - New Car Details">
+                                    <option value="vsa_makeModel">Make & Model</option>
+                                    <option value="vsa_yom">YOM (Year of Manufacture)</option>
+                                    <option value="vsa_bodyColour">Body Colour</option>
+                                    <option value="vsa_upholstery">Upholstery</option>
+                                    <option value="vsa_przType">P/R/Z Type</option>
+                                </optgroup>
+                                <optgroup label="VSA - New Car Package">
+                                    <option value="vsa_package">Package</option>
+                                    <option value="vsa_sellingWithCOE">Selling with COE</option>
+                                    <option value="vsa_sellingPriceList">Selling Price on Price List</option>
+                                    <option value="vsa_coeRebateLevel">COE Rebate Level</option>
+                                    <option value="vsa_deposit">Deposit</option>
+                                    <option value="vsa_lessOthers">Less: Others</option>
+                                    <option value="vsa_addOthers">Add: Others</option>
+                                    <option value="vsa_deliveryDate">Approximate Delivery Date</option>
+                                </optgroup>
+                                <optgroup label="VSA - Trade in Car">
+                                    <option value="vsa_tradeInCarNo">Trade in Car No</option>
+                                    <option value="vsa_tradeInCarModel">Trade in Car Model</option>
+                                </optgroup>
+                                <optgroup label="VSA - Remarks">
+                                    <option value="vsa_remarks1">Remarks 1</option>
+                                    <option value="vsa_remarks2">Remarks 2</option>
+                                    <option value="vsa_loanAmount">Loan Amount</option>
+                                </optgroup>
                             </select>
                         </div>
                         <div>
@@ -3799,7 +3851,25 @@
                 'salesConsultant': 'Sales Consultant',
                 'vsaNo': 'VSA No',
                 'model': 'Car Model',
-                'date': 'Today\'s Date'
+                'date': 'Today\'s Date',
+                'vsa_makeModel': 'VSA - Make & Model',
+                'vsa_yom': 'VSA - YOM (Year of Manufacture)',
+                'vsa_bodyColour': 'VSA - Body Colour',
+                'vsa_upholstery': 'VSA - Upholstery',
+                'vsa_przType': 'VSA - P/R/Z Type',
+                'vsa_package': 'VSA - Package',
+                'vsa_sellingWithCOE': 'VSA - Selling with COE',
+                'vsa_sellingPriceList': 'VSA - Selling Price on Price List',
+                'vsa_coeRebateLevel': 'VSA - COE Rebate Level',
+                'vsa_deposit': 'VSA - Deposit',
+                'vsa_lessOthers': 'VSA - Less: Others',
+                'vsa_addOthers': 'VSA - Add: Others',
+                'vsa_deliveryDate': 'VSA - Approximate Delivery Date',
+                'vsa_tradeInCarNo': 'VSA - Trade in Car No',
+                'vsa_tradeInCarModel': 'VSA - Trade in Car Model',
+                'vsa_remarks1': 'VSA - Remarks 1',
+                'vsa_remarks2': 'VSA - Remarks 2',
+                'vsa_loanAmount': 'VSA - Loan Amount'
             };
 
             let html = '<div style="display: flex; flex-direction: column; gap: 8px;">';
@@ -3910,7 +3980,25 @@
                 'salesConsultant': 'Sales Consultant',
                 'vsaNo': 'VSA No',
                 'model': 'Car Model',
-                'date': 'Today\'s Date'
+                'date': 'Today\'s Date',
+                'vsa_makeModel': 'VSA - Make & Model',
+                'vsa_yom': 'VSA - YOM (Year of Manufacture)',
+                'vsa_bodyColour': 'VSA - Body Colour',
+                'vsa_upholstery': 'VSA - Upholstery',
+                'vsa_przType': 'VSA - P/R/Z Type',
+                'vsa_package': 'VSA - Package',
+                'vsa_sellingWithCOE': 'VSA - Selling with COE',
+                'vsa_sellingPriceList': 'VSA - Selling Price on Price List',
+                'vsa_coeRebateLevel': 'VSA - COE Rebate Level',
+                'vsa_deposit': 'VSA - Deposit',
+                'vsa_lessOthers': 'VSA - Less: Others',
+                'vsa_addOthers': 'VSA - Add: Others',
+                'vsa_deliveryDate': 'VSA - Approximate Delivery Date',
+                'vsa_tradeInCarNo': 'VSA - Trade in Car No',
+                'vsa_tradeInCarModel': 'VSA - Trade in Car Model',
+                'vsa_remarks1': 'VSA - Remarks 1',
+                'vsa_remarks2': 'VSA - Remarks 2',
+                'vsa_loanAmount': 'VSA - Loan Amount'
             };
 
             let html = '<div style="font-size: 13px;">';
@@ -3981,7 +4069,25 @@
                     'salesConsultant': customer.salesConsultant || '',
                     'vsaNo': customer.vsaNo || '',
                     'model': customer.model || '',
-                    'date': new Date().toLocaleDateString()
+                    'date': new Date().toLocaleDateString(),
+                    'vsa_makeModel': customer.vsaDetails?.makeModel || '',
+                    'vsa_yom': customer.vsaDetails?.yom || '',
+                    'vsa_bodyColour': customer.vsaDetails?.bodyColour || '',
+                    'vsa_upholstery': customer.vsaDetails?.upholstery || '',
+                    'vsa_przType': customer.vsaDetails?.przType || '',
+                    'vsa_package': customer.vsaDetails?.package || '',
+                    'vsa_sellingWithCOE': customer.vsaDetails?.sellingWithCOE || '',
+                    'vsa_sellingPriceList': customer.vsaDetails?.sellingPriceList || '',
+                    'vsa_coeRebateLevel': customer.vsaDetails?.coeRebateLevel || '',
+                    'vsa_deposit': customer.vsaDetails?.deposit || '',
+                    'vsa_lessOthers': customer.vsaDetails?.lessOthers || '',
+                    'vsa_addOthers': customer.vsaDetails?.addOthers || '',
+                    'vsa_deliveryDate': customer.vsaDetails?.deliveryDate || '',
+                    'vsa_tradeInCarNo': customer.vsaDetails?.tradeInCarNo || '',
+                    'vsa_tradeInCarModel': customer.vsaDetails?.tradeInCarModel || '',
+                    'vsa_remarks1': customer.vsaDetails?.remarks1 || '',
+                    'vsa_remarks2': customer.vsaDetails?.remarks2 || '',
+                    'vsa_loanAmount': customer.vsaDetails?.loanAmount || ''
                 };
 
                 // Apply mappings - xlsx-populate preserves ALL formatting perfectly
@@ -4290,7 +4396,25 @@
                         'salesConsultant': customer.salesConsultant || '',
                         'vsaNo': customer.vsaNo || '',
                         'model': customer.model || '',
-                        'date': today
+                        'date': today,
+                        'vsa_makeModel': customer.vsaDetails?.makeModel || '',
+                        'vsa_yom': customer.vsaDetails?.yom || '',
+                        'vsa_bodyColour': customer.vsaDetails?.bodyColour || '',
+                        'vsa_upholstery': customer.vsaDetails?.upholstery || '',
+                        'vsa_przType': customer.vsaDetails?.przType || '',
+                        'vsa_package': customer.vsaDetails?.package || '',
+                        'vsa_sellingWithCOE': customer.vsaDetails?.sellingWithCOE || '',
+                        'vsa_sellingPriceList': customer.vsaDetails?.sellingPriceList || '',
+                        'vsa_coeRebateLevel': customer.vsaDetails?.coeRebateLevel || '',
+                        'vsa_deposit': customer.vsaDetails?.deposit || '',
+                        'vsa_lessOthers': customer.vsaDetails?.lessOthers || '',
+                        'vsa_addOthers': customer.vsaDetails?.addOthers || '',
+                        'vsa_deliveryDate': customer.vsaDetails?.deliveryDate || '',
+                        'vsa_tradeInCarNo': customer.vsaDetails?.tradeInCarNo || '',
+                        'vsa_tradeInCarModel': customer.vsaDetails?.tradeInCarModel || '',
+                        'vsa_remarks1': customer.vsaDetails?.remarks1 || '',
+                        'vsa_remarks2': customer.vsaDetails?.remarks2 || '',
+                        'vsa_loanAmount': customer.vsaDetails?.loanAmount || ''
                     };
 
                     // Draw each field
@@ -4922,7 +5046,12 @@
                     lessOthers: '',
                     deposit: '',
                     addOthers: '',
-                    deliveryDate: ''
+                    deliveryDate: '',
+                    tradeInCarNo: '',
+                    tradeInCarModel: '',
+                    remarks1: '',
+                    remarks2: '',
+                    loanAmount: ''
                 };
             }
 
@@ -4930,16 +5059,21 @@
             document.getElementById('vsa_makeModel').value = customer.vsaDetails.makeModel || '';
             document.getElementById('vsa_yom').value = customer.vsaDetails.yom || '';
             document.getElementById('vsa_bodyColour').value = customer.vsaDetails.bodyColour || '';
-            document.getElementById('vsa_upholstery').value = customer.vsaDetails.upholstery || '';
+            document.getElementById('vsa_upholstery').value = customer.vsaDetails.upholstery || 'Standard';
             document.getElementById('vsa_przType').value = customer.vsaDetails.przType || '';
-            document.getElementById('vsa_package').value = customer.vsaDetails.package || '';
-            document.getElementById('vsa_sellingWithCOE').value = customer.vsaDetails.sellingWithCOE || '';
+            document.getElementById('vsa_package').value = customer.vsaDetails.package || 'Excite';
+            document.getElementById('vsa_sellingWithCOE').value = customer.vsaDetails.sellingWithCOE || 'WITH';
             document.getElementById('vsa_sellingPriceList').value = customer.vsaDetails.sellingPriceList || '';
             document.getElementById('vsa_coeRebateLevel').value = customer.vsaDetails.coeRebateLevel || '';
             document.getElementById('vsa_lessOthers').value = customer.vsaDetails.lessOthers || '';
             document.getElementById('vsa_deposit').value = customer.vsaDetails.deposit || '';
             document.getElementById('vsa_addOthers').value = customer.vsaDetails.addOthers || '';
             document.getElementById('vsa_deliveryDate').value = customer.vsaDetails.deliveryDate || '';
+            document.getElementById('vsa_tradeInCarNo').value = customer.vsaDetails.tradeInCarNo || '';
+            document.getElementById('vsa_tradeInCarModel').value = customer.vsaDetails.tradeInCarModel || '';
+            document.getElementById('vsa_remarks1').value = customer.vsaDetails.remarks1 || '';
+            document.getElementById('vsa_remarks2').value = customer.vsaDetails.remarks2 || '';
+            document.getElementById('vsa_loanAmount').value = customer.vsaDetails.loanAmount || '';
 
             // Store customer ID for saving later
             window.currentVsaCustomerId = customerId;
@@ -4977,6 +5111,11 @@
             customer.vsaDetails.deposit = document.getElementById('vsa_deposit').value;
             customer.vsaDetails.addOthers = document.getElementById('vsa_addOthers').value;
             customer.vsaDetails.deliveryDate = document.getElementById('vsa_deliveryDate').value;
+            customer.vsaDetails.tradeInCarNo = document.getElementById('vsa_tradeInCarNo').value;
+            customer.vsaDetails.tradeInCarModel = document.getElementById('vsa_tradeInCarModel').value;
+            customer.vsaDetails.remarks1 = document.getElementById('vsa_remarks1').value;
+            customer.vsaDetails.remarks2 = document.getElementById('vsa_remarks2').value;
+            customer.vsaDetails.loanAmount = document.getElementById('vsa_loanAmount').value;
 
             // Save to storage
             saveData();
