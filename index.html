@@ -1344,6 +1344,12 @@
                                 <option value="vsa_loanAmount">Loan Amount</option>
                                 <option value="vsa_interest">Interest</option>
                                 <option value="vsa_tenure">Tenure</option>
+                                <option value="vsa_monthlyPayment">Monthly Payment</option>
+                                <option value="vsa_financeCompany">Finance Company</option>
+                            </optgroup>
+                            <optgroup label="VSA - Insurance">
+                                <option value="vsa_insuranceCompany">Insurance Company</option>
+                                <option value="vsa_insuranceFee">Insurance Fee</option>
                             </optgroup>
                         </select>
                     </div>
@@ -1482,6 +1488,12 @@
                                     <option value="vsa_loanAmount">Loan Amount</option>
                                     <option value="vsa_interest">Interest</option>
                                     <option value="vsa_tenure">Tenure</option>
+                                    <option value="vsa_monthlyPayment">Monthly Payment</option>
+                                    <option value="vsa_financeCompany">Finance Company</option>
+                                </optgroup>
+                                <optgroup label="VSA - Insurance">
+                                    <option value="vsa_insuranceCompany">Insurance Company</option>
+                                    <option value="vsa_insuranceFee">Insurance Fee</option>
                                 </optgroup>
                             </select>
                         </div>
@@ -1560,6 +1572,7 @@
                     <button class="tab active" onclick="switchVsaTab('newCarDetails')">BYD New Car Details</button>
                     <button class="tab" onclick="switchVsaTab('newCarPackage')">BYD New Car Package</button>
                     <button class="tab" onclick="switchVsaTab('tradeInCar')">Trade in Car Details</button>
+                    <button class="tab" onclick="switchVsaTab('insurance')">Insurance</button>
                     <button class="tab" onclick="switchVsaTab('remarks')">Remarks</button>
                 </div>
 
@@ -1723,6 +1736,32 @@
                     <div class="form-group">
                         <label>Tenure</label>
                         <input type="text" id="vsa_tenure" placeholder="e.g., 84 months">
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Monthly Payment</label>
+                            <input type="text" id="vsa_monthlyPayment" placeholder="e.g., $2,500">
+                        </div>
+                        <div class="form-group">
+                            <label>Finance Company</label>
+                            <input type="text" id="vsa_financeCompany" placeholder="e.g., DBS Bank">
+                        </div>
+                    </div>
+                </div>
+
+                <div id="vsa-tab-insurance" class="tab-content" style="display: none;">
+                    <h3 style="color: #2c3e50; margin-bottom: 15px;">Insurance</h3>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Insurance Company</label>
+                            <input type="text" id="vsa_insuranceCompany" placeholder="e.g., AIG Insurance">
+                        </div>
+                        <div class="form-group">
+                            <label>Insurance Fee</label>
+                            <input type="text" id="vsa_insuranceFee" placeholder="e.g., $1,200">
+                        </div>
                     </div>
                 </div>
 
@@ -3922,7 +3961,11 @@
                 'vsa_remarks2': 'VSA - Remarks 2',
                 'vsa_loanAmount': 'VSA - Loan Amount',
                 'vsa_interest': 'VSA - Interest',
-                'vsa_tenure': 'VSA - Tenure'
+                'vsa_tenure': 'VSA - Tenure',
+                'vsa_monthlyPayment': 'VSA - Monthly Payment',
+                'vsa_financeCompany': 'VSA - Finance Company',
+                'vsa_insuranceCompany': 'VSA - Insurance Company',
+                'vsa_insuranceFee': 'VSA - Insurance Fee'
             };
 
             let html = '<div style="display: flex; flex-direction: column; gap: 8px;">';
@@ -4056,7 +4099,11 @@
                 'vsa_remarks2': 'VSA - Remarks 2',
                 'vsa_loanAmount': 'VSA - Loan Amount',
                 'vsa_interest': 'VSA - Interest',
-                'vsa_tenure': 'VSA - Tenure'
+                'vsa_tenure': 'VSA - Tenure',
+                'vsa_monthlyPayment': 'VSA - Monthly Payment',
+                'vsa_financeCompany': 'VSA - Finance Company',
+                'vsa_insuranceCompany': 'VSA - Insurance Company',
+                'vsa_insuranceFee': 'VSA - Insurance Fee'
             };
 
             let html = '<div style="font-size: 13px;">';
@@ -4150,7 +4197,11 @@
                     'vsa_remarks2': customer.vsaDetails?.remarks2 || '',
                     'vsa_loanAmount': customer.vsaDetails?.loanAmount || '',
                     'vsa_interest': customer.vsaDetails?.interest || '',
-                    'vsa_tenure': customer.vsaDetails?.tenure || ''
+                    'vsa_tenure': customer.vsaDetails?.tenure || '',
+                    'vsa_monthlyPayment': customer.vsaDetails?.monthlyPayment || '',
+                    'vsa_financeCompany': customer.vsaDetails?.financeCompany || '',
+                    'vsa_insuranceCompany': customer.vsaDetails?.insuranceCompany || '',
+                    'vsa_insuranceFee': customer.vsaDetails?.insuranceFee || ''
                 };
 
                 // Apply mappings - xlsx-populate preserves ALL formatting perfectly
@@ -5138,7 +5189,11 @@
                     remarks2: '',
                     loanAmount: '',
                     interest: '',
-                    tenure: ''
+                    tenure: '',
+                    monthlyPayment: '',
+                    financeCompany: '',
+                    insuranceCompany: '',
+                    insuranceFee: ''
                 };
             }
 
@@ -5163,6 +5218,10 @@
             document.getElementById('vsa_loanAmount').value = customer.vsaDetails.loanAmount || '';
             document.getElementById('vsa_interest').value = customer.vsaDetails.interest || '';
             document.getElementById('vsa_tenure').value = customer.vsaDetails.tenure || '';
+            document.getElementById('vsa_monthlyPayment').value = customer.vsaDetails.monthlyPayment || '';
+            document.getElementById('vsa_financeCompany').value = customer.vsaDetails.financeCompany || '';
+            document.getElementById('vsa_insuranceCompany').value = customer.vsaDetails.insuranceCompany || '';
+            document.getElementById('vsa_insuranceFee').value = customer.vsaDetails.insuranceFee || '';
 
             // Store customer ID for saving later
             window.currentVsaCustomerId = customerId;
@@ -5207,6 +5266,10 @@
             customer.vsaDetails.loanAmount = document.getElementById('vsa_loanAmount').value;
             customer.vsaDetails.interest = document.getElementById('vsa_interest').value;
             customer.vsaDetails.tenure = document.getElementById('vsa_tenure').value;
+            customer.vsaDetails.monthlyPayment = document.getElementById('vsa_monthlyPayment').value;
+            customer.vsaDetails.financeCompany = document.getElementById('vsa_financeCompany').value;
+            customer.vsaDetails.insuranceCompany = document.getElementById('vsa_insuranceCompany').value;
+            customer.vsaDetails.insuranceFee = document.getElementById('vsa_insuranceFee').value;
 
             // Save to storage
             saveData();
