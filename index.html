@@ -1474,8 +1474,8 @@
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <!-- Google API for Drive operations -->
     <script src="https://apis.google.com/js/api.js"></script>
-    <!-- ExcelJS for Excel file handling with full formatting support -->
-    <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+    <!-- xlsx-populate for Excel file handling with PERFECT formatting preservation -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-populate@1.21.0/browser/xlsx-populate.min.js"></script>
 
     <script>
         // Configuration
@@ -3794,12 +3794,11 @@
                 // Read the freshly uploaded Excel file
                 const arrayBuffer = await file.arrayBuffer();
 
-                // Load the workbook with ExcelJS - automatically preserves ALL formatting
-                const workbook = new ExcelJS.Workbook();
-                await workbook.xlsx.load(arrayBuffer);
+                // Load with xlsx-populate - PERFECT formatting preservation
+                const workbook = await XlsxPopulate.fromDataAsync(arrayBuffer);
 
                 // Get first sheet (or we could let user select)
-                const worksheet = workbook.worksheets[0];
+                const sheet = workbook.sheet(0);
 
                 // Populate fields
                 const dataMapping = {
@@ -3814,22 +3813,19 @@
                     'date': new Date().toLocaleDateString()
                 };
 
-                // Apply mappings - ExcelJS automatically preserves all cell formatting
+                // Apply mappings - xlsx-populate preserves ALL formatting perfectly
                 for (const mapping of Object.values(template.fieldMappings)) {
                     const value = dataMapping[mapping.fieldType];
                     if (value) {
-                        // Get the cell (this preserves all existing formatting)
-                        const cell = worksheet.getCell(mapping.cellRef);
-                        // Update only the value - all formatting (colors, fonts, borders, etc.) is preserved
-                        cell.value = value;
+                        // Set cell value - all formatting is automatically preserved
+                        sheet.cell(mapping.cellRef).value(value);
                     }
                 }
 
-                // Generate Excel file - ExcelJS automatically preserves all formatting
-                const buffer = await workbook.xlsx.writeBuffer();
+                // Generate Excel file as blob - PERFECT preservation of all formatting
+                const blob = await workbook.outputAsync();
 
-                // Create blob and download
-                const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                // Create download link
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
