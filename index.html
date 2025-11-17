@@ -1342,6 +1342,8 @@
                                 <option value="vsa_remarks1">Remarks 1</option>
                                 <option value="vsa_remarks2">Remarks 2</option>
                                 <option value="vsa_loanAmount">Loan Amount</option>
+                                <option value="vsa_interest">Interest</option>
+                                <option value="vsa_tenure">Tenure</option>
                             </optgroup>
                         </select>
                     </div>
@@ -1705,9 +1707,20 @@
                         <textarea id="vsa_remarks2" rows="2" placeholder="e.g., BALANCE DEPOSIT TO BE PAID UPON LOAN APPROVAL BEFORE COE BIDDING." style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-family: inherit; resize: vertical;"></textarea>
                     </div>
 
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Loan Amount</label>
+                            <input type="text" id="vsa_loanAmount" placeholder="e.g., $200,000">
+                        </div>
+                        <div class="form-group">
+                            <label>Interest</label>
+                            <input type="text" id="vsa_interest" placeholder="e.g., 2.88%">
+                        </div>
+                    </div>
+
                     <div class="form-group">
-                        <label>Loan Amount</label>
-                        <input type="text" id="vsa_loanAmount" placeholder="e.g., LOAN AMOUNT $200,000 x 2.88% x 84 MONTHS">
+                        <label>Tenure</label>
+                        <input type="text" id="vsa_tenure" placeholder="e.g., 84 months">
                     </div>
                 </div>
 
@@ -3905,7 +3918,9 @@
                 'vsa_tradeInCarModel': 'VSA - Trade in Car Model',
                 'vsa_remarks1': 'VSA - Remarks 1',
                 'vsa_remarks2': 'VSA - Remarks 2',
-                'vsa_loanAmount': 'VSA - Loan Amount'
+                'vsa_loanAmount': 'VSA - Loan Amount',
+                'vsa_interest': 'VSA - Interest',
+                'vsa_tenure': 'VSA - Tenure'
             };
 
             let html = '<div style="display: flex; flex-direction: column; gap: 8px;">';
@@ -4037,7 +4052,9 @@
                 'vsa_tradeInCarModel': 'VSA - Trade in Car Model',
                 'vsa_remarks1': 'VSA - Remarks 1',
                 'vsa_remarks2': 'VSA - Remarks 2',
-                'vsa_loanAmount': 'VSA - Loan Amount'
+                'vsa_loanAmount': 'VSA - Loan Amount',
+                'vsa_interest': 'VSA - Interest',
+                'vsa_tenure': 'VSA - Tenure'
             };
 
             let html = '<div style="font-size: 13px;">';
@@ -4129,7 +4146,9 @@
                     'vsa_tradeInCarModel': customer.vsaDetails?.tradeInCarModel || '',
                     'vsa_remarks1': customer.vsaDetails?.remarks1 || '',
                     'vsa_remarks2': customer.vsaDetails?.remarks2 || '',
-                    'vsa_loanAmount': customer.vsaDetails?.loanAmount || ''
+                    'vsa_loanAmount': customer.vsaDetails?.loanAmount || '',
+                    'vsa_interest': customer.vsaDetails?.interest || '',
+                    'vsa_tenure': customer.vsaDetails?.tenure || ''
                 };
 
                 // Apply mappings - xlsx-populate preserves ALL formatting perfectly
@@ -5113,7 +5132,9 @@
                     tradeInCarModel: '',
                     remarks1: '',
                     remarks2: '',
-                    loanAmount: ''
+                    loanAmount: '',
+                    interest: '',
+                    tenure: ''
                 };
             }
 
@@ -5136,6 +5157,8 @@
             document.getElementById('vsa_remarks1').value = customer.vsaDetails.remarks1 || '';
             document.getElementById('vsa_remarks2').value = customer.vsaDetails.remarks2 || '';
             document.getElementById('vsa_loanAmount').value = customer.vsaDetails.loanAmount || '';
+            document.getElementById('vsa_interest').value = customer.vsaDetails.interest || '';
+            document.getElementById('vsa_tenure').value = customer.vsaDetails.tenure || '';
 
             // Store customer ID for saving later
             window.currentVsaCustomerId = customerId;
@@ -5178,6 +5201,8 @@
             customer.vsaDetails.remarks1 = document.getElementById('vsa_remarks1').value;
             customer.vsaDetails.remarks2 = document.getElementById('vsa_remarks2').value;
             customer.vsaDetails.loanAmount = document.getElementById('vsa_loanAmount').value;
+            customer.vsaDetails.interest = document.getElementById('vsa_interest').value;
+            customer.vsaDetails.tenure = document.getElementById('vsa_tenure').value;
 
             // Save to storage
             saveData();
