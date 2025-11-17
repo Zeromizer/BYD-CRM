@@ -1342,24 +1342,20 @@
                     <div style="margin-bottom: 20px; padding: 15px; background: linear-gradient(135deg, rgba(76, 175, 80, 0.1) 0%, rgba(56, 142, 60, 0.1) 100%); border-radius: 10px; border: 2px solid rgba(76, 175, 80, 0.3);">
                         <h3 style="color: #4caf50; margin-bottom: 10px;">About Excel Templates</h3>
                         <p style="color: #2c3e50; font-size: 14px; margin-bottom: 8px;">
-                            Upload your Excel templates (.xlsx files). You can map customer fields to specific cells, then populate and download completed Excel files with customer data.
+                            Create field mapping templates for your Excel forms. The CRM stores ONLY the field mappings (which cells contain which customer data), not your Excel files.
                         </p>
                         <p style="color: #7f8c8d; font-size: 13px;">
-                            Excel templates are stored locally and will be accessible across all sessions.
+                            This ensures your original Excel formatting is <strong>100% preserved</strong> - you'll upload your original file fresh each time you populate it.
                         </p>
                     </div>
 
                     <div style="margin-bottom: 20px;">
-                        <h3 style="color: #1a1a2e; margin-bottom: 15px;">Upload New Excel Template</h3>
+                        <h3 style="color: #1a1a2e; margin-bottom: 15px;">Create New Field Mapping Template</h3>
                         <div style="margin-bottom: 15px;">
                             <label style="display: block; margin-bottom: 8px; color: #2c3e50; font-weight: 500;">Template Name:</label>
-                            <input type="text" id="excelTemplateName" placeholder="e.g., Contract Template, Invoice Template" style="width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 14px;">
+                            <input type="text" id="excelTemplateName" placeholder="e.g., VSA Form, Sales Contract, Delivery Order" style="width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 14px;">
                         </div>
-                        <div style="margin-bottom: 15px;">
-                            <label style="display: block; margin-bottom: 8px; color: #2c3e50; font-weight: 500;">Select Excel File (.xlsx):</label>
-                            <input type="file" id="excelFileInput" accept=".xlsx" style="width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 14px;">
-                        </div>
-                        <button class="btn btn-success" onclick="uploadExcelTemplate()">Upload Excel Template</button>
+                        <button class="btn btn-success" onclick="createExcelTemplate()">Create Template</button>
                     </div>
 
                     <div style="border-top: 2px solid #ecf0f1; padding-top: 20px;">
@@ -1443,16 +1439,27 @@
                 <span class="close-modal" onclick="closeExcelPopulateModal()">&times;</span>
             </div>
             <div class="modal-body">
+                <div style="margin-bottom: 20px; padding: 15px; background: rgba(76, 175, 80, 0.1); border: 2px solid rgba(76, 175, 80, 0.3); border-radius: 8px;">
+                    <p style="color: #2c3e50; font-size: 14px; margin: 0;">
+                        <strong>💡 How it works:</strong> Upload your <strong>original</strong> Excel file from your computer, select which field mapping template to use, and download the populated file. Your original formatting is 100% preserved!
+                    </p>
+                </div>
                 <div style="margin-bottom: 20px;">
-                    <label style="display: block; margin-bottom: 8px; color: #2c3e50; font-weight: 500;">Select Excel Template:</label>
-                    <select id="excelTemplateSelect" style="width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 14px;">
-                        <option value="">-- Select a template --</option>
+                    <label style="display: block; margin-bottom: 8px; color: #2c3e50; font-weight: 500;">1. Upload Your Original Excel File:</label>
+                    <input type="file" id="excelOriginalFile" accept=".xlsx" onchange="updateExcelPreview()" style="width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 14px;">
+                    <p style="color: #7f8c8d; font-size: 12px; margin-top: 5px;">Select your original Excel form file from your computer</p>
+                </div>
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; color: #2c3e50; font-weight: 500;">2. Select Field Mapping Template:</label>
+                    <select id="excelTemplateSelect" onchange="updateExcelPreview()" style="width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 14px;">
+                        <option value="">-- Select a mapping template --</option>
                     </select>
+                    <p style="color: #7f8c8d; font-size: 12px; margin-top: 5px;">Choose which field mappings to apply to your file</p>
                 </div>
                 <div style="background: rgba(33, 150, 243, 0.1); border: 2px solid rgba(33, 150, 243, 0.3); border-radius: 8px; padding: 15px; margin-bottom: 20px;">
                     <h4 style="color: #2196f3; margin-bottom: 10px;">Customer Information</h4>
                     <div id="excelCustomerPreview" style="color: #2c3e50; font-size: 14px;">
-                        <p>Select a template to continue...</p>
+                        <p>Select a template to preview...</p>
                     </div>
                 </div>
             </div>
@@ -3435,71 +3442,38 @@
         // Close Excel modal
         function closeExcelModal() {
             document.getElementById('excelModal').classList.remove('active');
-            document.getElementById('excelFileInput').value = '';
             document.getElementById('excelTemplateName').value = '';
         }
 
-        // Upload Excel template
-        async function uploadExcelTemplate() {
+        // Create Excel template (mappings only, no file storage)
+        function createExcelTemplate() {
             const nameInput = document.getElementById('excelTemplateName');
-            const fileInput = document.getElementById('excelFileInput');
-
             const name = nameInput.value.trim();
-            const file = fileInput.files[0];
 
             if (!name) {
                 alert('Please enter a template name');
                 return;
             }
 
-            if (!file) {
-                alert('Please select an Excel file');
-                return;
-            }
+            // Store only the template metadata - NO Excel file
+            const templateId = 'excel_' + Date.now();
+            excelTemplates[templateId] = {
+                id: templateId,
+                name: name,
+                createdDate: new Date().toISOString(),
+                fieldMappings: {} // Will be populated by user
+            };
 
-            if (!file.name.endsWith('.xlsx')) {
-                alert('Please select a valid .xlsx file');
-                return;
-            }
+            // Save to localStorage
+            saveExcelTemplates();
 
-            try {
-                // Read the Excel file as ArrayBuffer
-                const arrayBuffer = await file.arrayBuffer();
+            // Update display
+            displayExcelList();
 
-                // Parse with ExcelJS - automatically preserves ALL formatting, styles, colors, fonts, borders, etc.
-                const workbook = new ExcelJS.Workbook();
-                await workbook.xlsx.load(arrayBuffer);
+            // Clear input
+            nameInput.value = '';
 
-                // Get sheet names
-                const sheetNames = workbook.worksheets.map(sheet => sheet.name);
-
-                // Store template data
-                const templateId = 'excel_' + Date.now();
-                excelTemplates[templateId] = {
-                    id: templateId,
-                    name: name,
-                    fileName: file.name,
-                    uploadDate: new Date().toISOString(),
-                    arrayBuffer: Array.from(new Uint8Array(arrayBuffer)), // Convert to array for JSON storage
-                    sheetNames: sheetNames,
-                    fieldMappings: {} // Will be populated by user
-                };
-
-                // Save to localStorage
-                saveExcelTemplates();
-
-                // Update display
-                displayExcelList();
-
-                // Clear inputs
-                nameInput.value = '';
-                fileInput.value = '';
-
-                alert('Excel template uploaded successfully!');
-            } catch (error) {
-                console.error('Error uploading Excel template:', error);
-                alert('Failed to upload Excel template: ' + error.message);
-            }
+            alert('Template created successfully! Now you can map fields to Excel cells.');
         }
 
         // Display Excel templates list
@@ -3515,13 +3489,13 @@
 
             for (const [templateId, template] of Object.entries(excelTemplates)) {
                 const mappingCount = Object.keys(template.fieldMappings || {}).length;
+                const dateToShow = template.createdDate || template.uploadDate; // Support both old and new templates
                 html += `
                     <div style="background: white; border: 2px solid #e0e0e0; border-radius: 8px; padding: 15px;">
                         <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
                             <div>
                                 <h4 style="color: #1a1a2e; margin-bottom: 5px;">${template.name}</h4>
-                                <p style="color: #7f8c8d; font-size: 13px; margin-bottom: 3px;">${template.fileName}</p>
-                                <p style="color: #7f8c8d; font-size: 12px;">Uploaded: ${new Date(template.uploadDate).toLocaleDateString()}</p>
+                                <p style="color: #7f8c8d; font-size: 12px;">Created: ${new Date(dateToShow).toLocaleDateString()}</p>
                                 <p style="color: #4caf50; font-size: 13px; font-weight: 600; margin-top: 5px;">${mappingCount} field${mappingCount !== 1 ? 's' : ''} mapped</p>
                             </div>
                             <button class="btn btn-danger" onclick="deleteExcelTemplate('${templateId}')" style="padding: 8px 12px; font-size: 13px;">Delete</button>
@@ -3702,38 +3676,39 @@
             const modal = document.getElementById('excelPopulateModal');
             modal.style.display = 'flex';
 
+            // Clear file input
+            document.getElementById('excelOriginalFile').value = '';
+
             // Populate template select
             const select = document.getElementById('excelTemplateSelect');
-            select.innerHTML = '<option value="">-- Select a template --</option>';
+            select.innerHTML = '<option value="">-- Select a mapping template --</option>';
 
             for (const [templateId, template] of Object.entries(excelTemplates)) {
                 const mappingCount = Object.keys(template.fieldMappings || {}).length;
                 select.innerHTML += `<option value="${templateId}">${template.name} (${mappingCount} fields mapped)</option>`;
             }
 
-            // Add change event listener
-            select.onchange = function() {
-                updateExcelCustomerPreview();
-            };
-
-            updateExcelCustomerPreview();
+            // Reset preview
+            updateExcelPreview();
         }
 
         // Close Excel populate modal
         function closeExcelPopulateModal() {
             document.getElementById('excelPopulateModal').style.display = 'none';
+            document.getElementById('excelOriginalFile').value = '';
             currentPopulateCustomerId = null;
         }
 
-        // Update customer preview in Excel populate modal
-        function updateExcelCustomerPreview() {
+        // Update Excel preview (called when template or file selection changes)
+        function updateExcelPreview() {
             const select = document.getElementById('excelTemplateSelect');
             const templateId = select.value;
             const downloadBtn = document.getElementById('downloadExcelBtn');
             const previewContainer = document.getElementById('excelCustomerPreview');
+            const fileInput = document.getElementById('excelOriginalFile');
 
             if (!templateId) {
-                previewContainer.innerHTML = '<p>Select a template to continue...</p>';
+                previewContainer.innerHTML = '<p>Select a mapping template to preview...</p>';
                 downloadBtn.disabled = true;
                 return;
             }
@@ -3755,7 +3730,6 @@
                 return;
             }
 
-            // Show customer data preview
             const fieldNames = {
                 'name': 'Customer Name',
                 'phone': 'Phone Number',
@@ -3786,16 +3760,25 @@
 
             html += '</div>';
             previewContainer.innerHTML = html;
-            downloadBtn.disabled = false;
+
+            // Enable download button only if both file and template are selected
+            downloadBtn.disabled = !(fileInput.files.length > 0);
         }
 
         // Download populated Excel
         async function downloadPopulatedExcel() {
             const select = document.getElementById('excelTemplateSelect');
             const templateId = select.value;
+            const fileInput = document.getElementById('excelOriginalFile');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                alert('Please upload your original Excel file');
+                return;
+            }
 
             if (!templateId) {
-                alert('Please select a template');
+                alert('Please select a field mapping template');
                 return;
             }
 
@@ -3808,9 +3791,8 @@
             }
 
             try {
-                // Convert stored array back to ArrayBuffer properly
-                const uint8Array = new Uint8Array(template.arrayBuffer);
-                const arrayBuffer = uint8Array.buffer.slice(uint8Array.byteOffset, uint8Array.byteOffset + uint8Array.byteLength);
+                // Read the freshly uploaded Excel file
+                const arrayBuffer = await file.arrayBuffer();
 
                 // Load the workbook with ExcelJS - automatically preserves ALL formatting
                 const workbook = new ExcelJS.Workbook();
