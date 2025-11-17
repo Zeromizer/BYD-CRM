@@ -1480,6 +1480,8 @@
                                     <option value="vsa_remarks1">Remarks 1</option>
                                     <option value="vsa_remarks2">Remarks 2</option>
                                     <option value="vsa_loanAmount">Loan Amount</option>
+                                    <option value="vsa_interest">Interest</option>
+                                    <option value="vsa_tenure">Tenure</option>
                                 </optgroup>
                             </select>
                         </div>
@@ -4475,7 +4477,9 @@
                         'vsa_tradeInCarModel': customer.vsaDetails?.tradeInCarModel || '',
                         'vsa_remarks1': customer.vsaDetails?.remarks1 || '',
                         'vsa_remarks2': customer.vsaDetails?.remarks2 || '',
-                        'vsa_loanAmount': customer.vsaDetails?.loanAmount || ''
+                        'vsa_loanAmount': customer.vsaDetails?.loanAmount || '',
+                        'vsa_interest': customer.vsaDetails?.interest || '',
+                        'vsa_tenure': customer.vsaDetails?.tenure || ''
                     };
 
                     // Draw each field
