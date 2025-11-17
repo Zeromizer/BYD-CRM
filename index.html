@@ -1487,12 +1487,80 @@
 
                 <div id="vsa-tab-newCarDetails" class="tab-content active">
                     <h3 style="color: #2c3e50; margin-bottom: 15px;">BYD New Car Details</h3>
-                    <p style="color: #7f8c8d;">Content will be added here...</p>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Make & Model</label>
+                            <input type="text" id="vsa_makeModel" placeholder="e.g., BYD Seal">
+                        </div>
+                        <div class="form-group">
+                            <label>YOM (Year of Manufacture)</label>
+                            <input type="text" id="vsa_yom" placeholder="e.g., 2024">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Body Colour</label>
+                            <input type="text" id="vsa_bodyColour" placeholder="e.g., Atlantic Grey">
+                        </div>
+                        <div class="form-group">
+                            <label>Upholstery</label>
+                            <input type="text" id="vsa_upholstery" placeholder="e.g., Black Leather">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>P/R/Z Type</label>
+                        <input type="text" id="vsa_przType" placeholder="e.g., P Type">
+                    </div>
                 </div>
 
                 <div id="vsa-tab-newCarPackage" class="tab-content" style="display: none;">
                     <h3 style="color: #2c3e50; margin-bottom: 15px;">BYD New Car Package</h3>
-                    <p style="color: #7f8c8d;">Content will be added here...</p>
+
+                    <div class="form-group">
+                        <label>Package</label>
+                        <input type="text" id="vsa_package" placeholder="e.g., Premium Package">
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Selling with COE</label>
+                            <input type="text" id="vsa_sellingWithCOE" placeholder="e.g., $250,000">
+                        </div>
+                        <div class="form-group">
+                            <label>Selling Price on Price List</label>
+                            <input type="text" id="vsa_sellingPriceList" placeholder="e.g., $245,000">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>COE Rebate Level</label>
+                            <input type="text" id="vsa_coeRebateLevel" placeholder="e.g., Level 1">
+                        </div>
+                        <div class="form-group">
+                            <label>Deposit</label>
+                            <input type="text" id="vsa_deposit" placeholder="e.g., $25,000">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Less: Others</label>
+                            <input type="text" id="vsa_lessOthers" placeholder="e.g., $5,000">
+                        </div>
+                        <div class="form-group">
+                            <label>Add: Others</label>
+                            <input type="text" id="vsa_addOthers" placeholder="e.g., $2,000">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Approximate Delivery Date</label>
+                        <input type="date" id="vsa_deliveryDate">
+                    </div>
                 </div>
 
                 <div id="vsa-tab-tradeInCar" class="tab-content" style="display: none;">
@@ -1506,6 +1574,9 @@
                 </div>
 
                 <div class="action-buttons" style="margin-top: 30px;">
+                    <button class="btn btn-success" onclick="saveVsaDetails()" style="background: #27ae60; margin-right: 10px;">
+                        Save VSA Details
+                    </button>
                     <button class="btn btn-secondary" onclick="closeVsaDetailsModal()">Close</button>
                 </div>
             </div>
@@ -4774,6 +4845,46 @@
 
         // Open VSA Details modal
         function openVsaDetailsModal(customerId) {
+            const customer = customers.find(c => c.id === customerId);
+            if (!customer) return;
+
+            // Initialize vsaDetails if it doesn't exist
+            if (!customer.vsaDetails) {
+                customer.vsaDetails = {
+                    makeModel: '',
+                    yom: '',
+                    bodyColour: '',
+                    upholstery: '',
+                    przType: '',
+                    package: '',
+                    sellingWithCOE: '',
+                    sellingPriceList: '',
+                    coeRebateLevel: '',
+                    lessOthers: '',
+                    deposit: '',
+                    addOthers: '',
+                    deliveryDate: ''
+                };
+            }
+
+            // Populate form fields with existing data
+            document.getElementById('vsa_makeModel').value = customer.vsaDetails.makeModel || '';
+            document.getElementById('vsa_yom').value = customer.vsaDetails.yom || '';
+            document.getElementById('vsa_bodyColour').value = customer.vsaDetails.bodyColour || '';
+            document.getElementById('vsa_upholstery').value = customer.vsaDetails.upholstery || '';
+            document.getElementById('vsa_przType').value = customer.vsaDetails.przType || '';
+            document.getElementById('vsa_package').value = customer.vsaDetails.package || '';
+            document.getElementById('vsa_sellingWithCOE').value = customer.vsaDetails.sellingWithCOE || '';
+            document.getElementById('vsa_sellingPriceList').value = customer.vsaDetails.sellingPriceList || '';
+            document.getElementById('vsa_coeRebateLevel').value = customer.vsaDetails.coeRebateLevel || '';
+            document.getElementById('vsa_lessOthers').value = customer.vsaDetails.lessOthers || '';
+            document.getElementById('vsa_deposit').value = customer.vsaDetails.deposit || '';
+            document.getElementById('vsa_addOthers').value = customer.vsaDetails.addOthers || '';
+            document.getElementById('vsa_deliveryDate').value = customer.vsaDetails.deliveryDate || '';
+
+            // Store customer ID for saving later
+            window.currentVsaCustomerId = customerId;
+
             const modal = document.getElementById('vsaDetailsModal');
             modal.classList.add('active');
 
@@ -4781,9 +4892,44 @@
             switchVsaTab('newCarDetails');
         }
 
+        // Save VSA Details
+        function saveVsaDetails() {
+            if (!window.currentVsaCustomerId) return;
+
+            const customer = customers.find(c => c.id === window.currentVsaCustomerId);
+            if (!customer) return;
+
+            // Initialize vsaDetails if it doesn't exist
+            if (!customer.vsaDetails) {
+                customer.vsaDetails = {};
+            }
+
+            // Save all VSA form fields
+            customer.vsaDetails.makeModel = document.getElementById('vsa_makeModel').value;
+            customer.vsaDetails.yom = document.getElementById('vsa_yom').value;
+            customer.vsaDetails.bodyColour = document.getElementById('vsa_bodyColour').value;
+            customer.vsaDetails.upholstery = document.getElementById('vsa_upholstery').value;
+            customer.vsaDetails.przType = document.getElementById('vsa_przType').value;
+            customer.vsaDetails.package = document.getElementById('vsa_package').value;
+            customer.vsaDetails.sellingWithCOE = document.getElementById('vsa_sellingWithCOE').value;
+            customer.vsaDetails.sellingPriceList = document.getElementById('vsa_sellingPriceList').value;
+            customer.vsaDetails.coeRebateLevel = document.getElementById('vsa_coeRebateLevel').value;
+            customer.vsaDetails.lessOthers = document.getElementById('vsa_lessOthers').value;
+            customer.vsaDetails.deposit = document.getElementById('vsa_deposit').value;
+            customer.vsaDetails.addOthers = document.getElementById('vsa_addOthers').value;
+            customer.vsaDetails.deliveryDate = document.getElementById('vsa_deliveryDate').value;
+
+            // Save to storage
+            saveData();
+
+            // Close modal
+            closeVsaDetailsModal();
+        }
+
         // Close VSA Details modal
         function closeVsaDetailsModal() {
             document.getElementById('vsaDetailsModal').classList.remove('active');
+            window.currentVsaCustomerId = null;
         }
 
         // Switch VSA Details tabs
