@@ -3444,7 +3444,7 @@
                     form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
                     form.append('file', file);
 
-                    const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name', {
+                    const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink,webContentLink', {
                         method: 'POST',
                         headers: {
                             'Authorization': 'Bearer ' + gapi.client.getToken().access_token
@@ -3461,7 +3461,9 @@
                     // Store form template info with Drive reference only (no base64)
                     formTemplates[formType] = {
                         fileId: result.id,
-                        fileName: file.name,
+                        fileName: result.name,
+                        webViewLink: result.webViewLink,
+                        webContentLink: result.webContentLink,
                         fileType: 'image',
                         uploadDate: new Date().toISOString()
                     };
@@ -3594,12 +3596,41 @@
         }
 
         // View form
-        function viewForm(formType) {
+        async function viewForm(formType) {
             const formData = formTemplates[formType];
-            if (formData && formData.webViewLink) {
-                window.open(formData.webViewLink, '_blank');
-            } else {
+            if (!formData) {
                 alert('Form not found');
+                return;
+            }
+
+            if (formData.webViewLink) {
+                // Open in Google Drive viewer
+                window.open(formData.webViewLink, '_blank');
+            } else if (formData.fileType === 'image' && formData.fileId) {
+                // For images without webViewLink (legacy), fetch and display
+                try {
+                    const base64Data = await getFormImageFromDrive(formType);
+                    const win = window.open('', '_blank');
+                    win.document.write(`
+                        <!DOCTYPE html>
+                        <html>
+                        <head>
+                            <title>${formData.fileName}</title>
+                            <style>
+                                body { margin: 0; padding: 20px; background: #2c3e50; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+                                img { max-width: 100%; height: auto; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+                            </style>
+                        </head>
+                        <body>
+                            <img src="${base64Data}" alt="${formData.fileName}">
+                        </body>
+                        </html>
+                    `);
+                } catch (error) {
+                    alert('Failed to load form: ' + error.message);
+                }
+            } else {
+                alert('Form link not available. Please re-upload this form.');
             }
         }
 
