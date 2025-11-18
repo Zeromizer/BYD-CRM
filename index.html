@@ -1273,7 +1273,10 @@
                         </div>
 
                         <div style="border-top: 2px solid #ecf0f1; padding-top: 20px;">
-                            <h3 style="color: #1a1a2e; margin-bottom: 15px;">Uploaded Forms</h3>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                                <h3 style="color: #1a1a2e; margin: 0;">Uploaded Forms</h3>
+                                <button class="btn btn-primary" onclick="openCombinePrintModal()" style="padding: 8px 16px; font-size: 14px;">📑 Combine & Print</button>
+                            </div>
                             <div id="formsListContainer">
                                 <div class="loading-forms" style="text-align: center; padding: 20px; color: #7f8c8d;">
                                     Loading forms...
@@ -1384,6 +1387,51 @@
             <div style="padding: 15px; border-top: 2px solid #ecf0f1; background: #f8f9fa; display: flex; gap: 10px; justify-content: flex-end;">
                 <button class="btn btn-secondary" onclick="closeFieldMappingModal()">Cancel</button>
                 <button class="btn btn-success" onclick="saveFieldMappings()">Save Configuration</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Combine & Print Forms Modal -->
+    <div class="modal" id="combinePrintModal" style="display: none;">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2>📑 Combine Forms for Double-Sided Printing</h2>
+                <span class="close-modal" onclick="closeCombinePrintModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div style="margin-bottom: 20px; padding: 15px; background: rgba(0, 188, 212, 0.1); border: 2px solid rgba(0, 188, 212, 0.3); border-radius: 8px;">
+                    <h4 style="color: #00bcd4; margin-bottom: 10px;">💡 How it works</h4>
+                    <p style="color: #2c3e50; font-size: 14px; margin-bottom: 8px;">
+                        Select 2 forms to combine them into a single document perfect for double-sided printing. For example: PDPA on front, COE Bidding on back.
+                    </p>
+                    <p style="color: #7f8c8d; font-size: 13px;">
+                        Each form will be on a separate page with proper page breaks for duplex printing.
+                    </p>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; color: #2c3e50; font-weight: 600;">Side 1 (Front):</label>
+                    <select id="combineSide1" style="width: 100%; padding: 10px; border: 2px solid #00bcd4; border-radius: 6px; font-size: 14px;">
+                        <option value="">Select a form...</option>
+                    </select>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; color: #2c3e50; font-weight: 600;">Side 2 (Back):</label>
+                    <select id="combineSide2" style="width: 100%; padding: 10px; border: 2px solid #00bcd4; border-radius: 6px; font-size: 14px;">
+                        <option value="">Select a form...</option>
+                    </select>
+                </div>
+
+                <div style="padding: 12px; background: rgba(255, 152, 0, 0.1); border: 2px solid rgba(255, 152, 0, 0.3); border-radius: 6px; margin-bottom: 20px;">
+                    <p style="color: #f57c00; font-size: 13px; margin: 0;">
+                        <strong>Note:</strong> Currently supports image forms only. PDF forms will be supported in a future update.
+                    </p>
+                </div>
+            </div>
+            <div style="padding: 15px; border-top: 2px solid #ecf0f1; background: #f8f9fa; display: flex; gap: 10px; justify-content: flex-end;">
+                <button class="btn btn-secondary" onclick="closeCombinePrintModal()">Cancel</button>
+                <button class="btn btn-success" onclick="combinePrintForms()">🖨️ Preview & Print</button>
             </div>
         </div>
     </div>
@@ -3662,6 +3710,218 @@
             } catch (error) {
                 console.error('Error deleting form:', error);
                 alert('Failed to delete form: ' + error.message);
+            }
+        }
+
+        // ========== COMBINE & PRINT FORMS ==========
+
+        // Open combine print modal and populate form options
+        function openCombinePrintModal() {
+            const modal = document.getElementById('combinePrintModal');
+            const side1Select = document.getElementById('combineSide1');
+            const side2Select = document.getElementById('combineSide2');
+
+            // Clear existing options except the default
+            side1Select.innerHTML = '<option value="">Select a form...</option>';
+            side2Select.innerHTML = '<option value="">Select a form...</option>';
+
+            // Form type names for display
+            const formTypeNames = {
+                'test_drive': 'Test Drive Agreement',
+                'vsa': 'Vehicle Sales Agreement',
+                'pdpa': 'PDPA Consent Form',
+                'coe_bidding_1': 'COE Bidding 1',
+                'coe_bidding_2': 'COE Bidding 2',
+                'pdpa_consent_1': 'PDPA Consent 1',
+                'pdpa_consent_2': 'PDPA Consent 2',
+                'other': 'Other Form'
+            };
+
+            // Populate dropdowns with available image forms
+            for (const [formType, formData] of Object.entries(formTemplates)) {
+                if (formData.fileType === 'image') {
+                    const formName = formTypeNames[formType] || formType;
+                    const option1 = document.createElement('option');
+                    option1.value = formType;
+                    option1.textContent = formName;
+
+                    const option2 = document.createElement('option');
+                    option2.value = formType;
+                    option2.textContent = formName;
+
+                    side1Select.appendChild(option1);
+                    side2Select.appendChild(option2);
+                }
+            }
+
+            // Show modal
+            modal.style.display = 'flex';
+        }
+
+        // Close combine print modal
+        function closeCombinePrintModal() {
+            document.getElementById('combinePrintModal').style.display = 'none';
+        }
+
+        // Combine and print selected forms
+        async function combinePrintForms() {
+            const side1 = document.getElementById('combineSide1').value;
+            const side2 = document.getElementById('combineSide2').value;
+
+            if (!side1 || !side2) {
+                alert('Please select forms for both sides');
+                return;
+            }
+
+            if (side1 === side2) {
+                alert('Please select different forms for each side');
+                return;
+            }
+
+            try {
+                // Close modal
+                closeCombinePrintModal();
+
+                // Show loading
+                const loadingDiv = document.createElement('div');
+                loadingDiv.id = 'combineLoadingOverlay';
+                loadingDiv.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: flex; justify-content: center; align-items: center; z-index: 10000;';
+                loadingDiv.innerHTML = '<div style="background: white; padding: 30px; border-radius: 10px; text-align: center;"><div class="loading" style="margin-bottom: 15px;"></div><p style="color: #2c3e50; font-size: 16px;">Loading forms for printing...</p></div>';
+                document.body.appendChild(loadingDiv);
+
+                // Fetch both forms from Drive
+                const form1Data = await getFormImageFromDrive(side1);
+                const form2Data = await getFormImageFromDrive(side2);
+
+                // Get form names
+                const formTypeNames = {
+                    'test_drive': 'Test Drive Agreement',
+                    'vsa': 'Vehicle Sales Agreement',
+                    'pdpa': 'PDPA Consent Form',
+                    'coe_bidding_1': 'COE Bidding 1',
+                    'coe_bidding_2': 'COE Bidding 2',
+                    'pdpa_consent_1': 'PDPA Consent 1',
+                    'pdpa_consent_2': 'PDPA Consent 2',
+                    'other': 'Other Form'
+                };
+
+                const form1Name = formTypeNames[side1] || side1;
+                const form2Name = formTypeNames[side2] || side2;
+
+                // Remove loading
+                document.body.removeChild(loadingDiv);
+
+                // Create print window with both forms
+                const printWin = window.open('', '_blank');
+                printWin.document.write(`
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <meta charset="UTF-8">
+                        <title>Combined Forms - ${form1Name} & ${form2Name}</title>
+                        <style>
+                            @page {
+                                size: A4;
+                                margin: 0;
+                            }
+                            * {
+                                margin: 0;
+                                padding: 0;
+                                box-sizing: border-box;
+                            }
+                            body {
+                                font-family: Arial, sans-serif;
+                            }
+                            .page {
+                                width: 210mm;
+                                height: 297mm;
+                                page-break-after: always;
+                                background: white;
+                                position: relative;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                            }
+                            .page:last-child {
+                                page-break-after: auto;
+                            }
+                            .page img {
+                                max-width: 100%;
+                                max-height: 100%;
+                                object-fit: contain;
+                            }
+                            .print-btn {
+                                position: fixed;
+                                top: 20px;
+                                right: 20px;
+                                padding: 14px 28px;
+                                background: #27ae60;
+                                color: white;
+                                border: none;
+                                border-radius: 6px;
+                                cursor: pointer;
+                                font-size: 15px;
+                                font-weight: 700;
+                                box-shadow: 0 6px 16px rgba(0,0,0,0.3);
+                                z-index: 1000;
+                                transition: all 0.3s;
+                            }
+                            .print-btn:hover {
+                                background: #229954;
+                                transform: translateY(-2px);
+                                box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+                            }
+                            .info-banner {
+                                position: fixed;
+                                top: 20px;
+                                left: 20px;
+                                background: rgba(0, 188, 212, 0.95);
+                                color: white;
+                                padding: 12px 20px;
+                                border-radius: 6px;
+                                font-size: 14px;
+                                box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+                                z-index: 1000;
+                            }
+                            @media print {
+                                .no-print {
+                                    display: none !important;
+                                }
+                                body {
+                                    print-color-adjust: exact;
+                                    -webkit-print-color-adjust: exact;
+                                }
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        <button class="print-btn no-print" onclick="window.print()">🖨️ Print Double-Sided</button>
+                        <div class="info-banner no-print">
+                            📑 Page 1: ${form1Name} | Page 2: ${form2Name}
+                        </div>
+
+                        <!-- Page 1 (Front) -->
+                        <div class="page">
+                            <img src="${form1Data}" alt="${form1Name}">
+                        </div>
+
+                        <!-- Page 2 (Back) -->
+                        <div class="page">
+                            <img src="${form2Data}" alt="${form2Name}">
+                        </div>
+                    </body>
+                    </html>
+                `);
+                printWin.document.close();
+
+            } catch (error) {
+                // Remove loading if exists
+                const loadingOverlay = document.getElementById('combineLoadingOverlay');
+                if (loadingOverlay) {
+                    document.body.removeChild(loadingOverlay);
+                }
+                console.error('Error combining forms:', error);
+                alert('Failed to combine forms: ' + error.message);
             }
         }
 
