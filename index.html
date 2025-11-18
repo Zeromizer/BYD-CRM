@@ -3414,58 +3414,65 @@
                 reader.onload = function(e) {
                     const img = new Image();
                     img.onload = function() {
-                        // Calculate new dimensions (max 2000px on longest side)
-                        const maxDimension = 2000;
-                        let width = img.width;
-                        let height = img.height;
+                        try {
+                            // Calculate new dimensions (max 2000px on longest side)
+                            const maxDimension = 2000;
+                            let width = img.width;
+                            let height = img.height;
 
-                        if (width > maxDimension || height > maxDimension) {
-                            if (width > height) {
-                                height = (height / width) * maxDimension;
-                                width = maxDimension;
-                            } else {
-                                width = (width / height) * maxDimension;
-                                height = maxDimension;
+                            if (width > maxDimension || height > maxDimension) {
+                                if (width > height) {
+                                    height = (height / width) * maxDimension;
+                                    width = maxDimension;
+                                } else {
+                                    width = (width / height) * maxDimension;
+                                    height = maxDimension;
+                                }
                             }
-                        }
 
-                        // Create canvas and compress
-                        const canvas = document.createElement('canvas');
-                        canvas.width = width;
-                        canvas.height = height;
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0, width, height);
+                            // Create canvas and draw image
+                            const canvas = document.createElement('canvas');
+                            canvas.width = width;
+                            canvas.height = height;
+                            const ctx = canvas.getContext('2d');
 
-                        // Try different quality levels until we get under the size limit
-                        let quality = 0.8;
-                        const tryCompress = () => {
-                            canvas.toBlob((blob) => {
-                                if (!blob) {
-                                    reject(new Error('Failed to compress image'));
+                            // Fill with white background (for JPEG conversion)
+                            ctx.fillStyle = '#FFFFFF';
+                            ctx.fillRect(0, 0, width, height);
+
+                            // Draw image
+                            ctx.drawImage(img, 0, 0, width, height);
+
+                            // Try different quality levels until we get under the size limit
+                            let quality = 0.9;
+                            let attempts = 0;
+                            const maxAttempts = 8;
+
+                            while (attempts < maxAttempts) {
+                                const dataUrl = canvas.toDataURL('image/jpeg', quality);
+                                // Estimate size: base64 is roughly 33% larger than binary
+                                const estimatedSize = (dataUrl.length * 0.75);
+
+                                if (estimatedSize <= maxSizeBytes || quality <= 0.3) {
+                                    resolve(dataUrl);
                                     return;
                                 }
 
-                                // Check if compressed enough
-                                if (blob.size <= maxSizeBytes || quality <= 0.3) {
-                                    // Convert blob to base64
-                                    const reader = new FileReader();
-                                    reader.onload = (e) => resolve(e.target.result);
-                                    reader.onerror = reject;
-                                    reader.readAsDataURL(blob);
-                                } else {
-                                    // Try lower quality
-                                    quality -= 0.1;
-                                    tryCompress();
-                                }
-                            }, 'image/jpeg', quality);
-                        };
+                                quality -= 0.1;
+                                attempts++;
+                            }
 
-                        tryCompress();
+                            // If still too large, just return the last attempt
+                            resolve(canvas.toDataURL('image/jpeg', 0.3));
+
+                        } catch (error) {
+                            reject(new Error('Failed to compress image: ' + error.message));
+                        }
                     };
-                    img.onerror = reject;
+                    img.onerror = () => reject(new Error('Failed to load image'));
                     img.src = e.target.result;
                 };
-                reader.onerror = reject;
+                reader.onerror = () => reject(new Error('Failed to read file'));
                 reader.readAsDataURL(file);
             });
         }
