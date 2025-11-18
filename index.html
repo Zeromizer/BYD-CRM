@@ -1273,10 +1273,7 @@
                         </div>
 
                         <div style="border-top: 2px solid #ecf0f1; padding-top: 20px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                                <h3 style="color: #1a1a2e; margin: 0;">Uploaded Forms</h3>
-                                <button class="btn btn-primary" onclick="openCombinePrintModal()" style="padding: 8px 16px; font-size: 14px;">📑 Combine & Print</button>
-                            </div>
+                            <h3 style="color: #1a1a2e; margin-bottom: 15px;">Uploaded Forms</h3>
                             <div id="formsListContainer">
                                 <div class="loading-forms" style="text-align: center; padding: 20px; color: #7f8c8d;">
                                     Loading forms...
@@ -1404,8 +1401,11 @@
                     <p style="color: #2c3e50; font-size: 14px; margin-bottom: 8px;">
                         Select 2 forms to combine them into a single document perfect for double-sided printing. For example: PDPA on front, COE Bidding on back.
                     </p>
-                    <p style="color: #7f8c8d; font-size: 13px;">
+                    <p style="color: #7f8c8d; font-size: 13px; margin-bottom: 8px;">
                         Each form will be on a separate page with proper page breaks for duplex printing.
+                    </p>
+                    <p style="color: #27ae60; font-size: 13px; font-weight: 600;">
+                        ✓ Customer data will be automatically filled in based on your field mappings!
                     </p>
                 </div>
 
@@ -3715,8 +3715,12 @@
 
         // ========== COMBINE & PRINT FORMS ==========
 
+        let currentCombineCustomerId = null;
+
         // Open combine print modal and populate form options
-        function openCombinePrintModal() {
+        function openCombinePrintModal(customerId) {
+            currentCombineCustomerId = customerId;
+
             const modal = document.getElementById('combinePrintModal');
             const side1Select = document.getElementById('combineSide1');
             const side2Select = document.getElementById('combineSide2');
@@ -3761,9 +3765,10 @@
         // Close combine print modal
         function closeCombinePrintModal() {
             document.getElementById('combinePrintModal').style.display = 'none';
+            currentCombineCustomerId = null;
         }
 
-        // Combine and print selected forms
+        // Combine and print selected forms with customer data
         async function combinePrintForms() {
             const side1 = document.getElementById('combineSide1').value;
             const side2 = document.getElementById('combineSide2').value;
@@ -3778,20 +3783,32 @@
                 return;
             }
 
+            if (!currentCombineCustomerId) {
+                alert('Customer not found');
+                return;
+            }
+
             try {
                 // Close modal
                 closeCombinePrintModal();
+
+                // Get customer data
+                const customer = customers.find(c => c.id === currentCombineCustomerId);
+                if (!customer) {
+                    alert('Customer not found');
+                    return;
+                }
 
                 // Show loading
                 const loadingDiv = document.createElement('div');
                 loadingDiv.id = 'combineLoadingOverlay';
                 loadingDiv.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: flex; justify-content: center; align-items: center; z-index: 10000;';
-                loadingDiv.innerHTML = '<div style="background: white; padding: 30px; border-radius: 10px; text-align: center;"><div class="loading" style="margin-bottom: 15px;"></div><p style="color: #2c3e50; font-size: 16px;">Loading forms for printing...</p></div>';
+                loadingDiv.innerHTML = '<div style="background: white; padding: 30px; border-radius: 10px; text-align: center;"><div class="loading" style="margin-bottom: 15px;"></div><p style="color: #2c3e50; font-size: 16px;">Preparing forms with customer data...</p></div>';
                 document.body.appendChild(loadingDiv);
 
-                // Fetch both forms from Drive
-                const form1Data = await getFormImageFromDrive(side1);
-                const form2Data = await getFormImageFromDrive(side2);
+                // Render forms with customer data (uses field mapping if configured)
+                const form1Data = await renderFormWithData(side1, customer);
+                const form2Data = await renderFormWithData(side2, customer);
 
                 // Get form names
                 const formTypeNames = {
@@ -3818,7 +3835,7 @@
                     <html>
                     <head>
                         <meta charset="UTF-8">
-                        <title>Combined Forms - ${form1Name} & ${form2Name}</title>
+                        <title>${customer.name} - ${form1Name} & ${form2Name}</title>
                         <style>
                             @page {
                                 size: A4;
@@ -3897,6 +3914,7 @@
                     <body>
                         <button class="print-btn no-print" onclick="window.print()">🖨️ Print Double-Sided</button>
                         <div class="info-banner no-print">
+                            <strong>${customer.name}</strong><br>
                             📑 Page 1: ${form1Name} | Page 2: ${form2Name}
                         </div>
 
@@ -5485,10 +5503,21 @@
                                         'pdpa_consent_2': 'PDPA Consent 2',
                                         'other': 'Other Form'
                                     };
-                                    return Object.entries(formTemplates).map(([formType, formData]) => {
+                                    let html = '';
+
+                                    // Add Combine & Print button at the top if there are multiple image forms
+                                    const imageForms = Object.entries(formTemplates).filter(([_, formData]) => formData.fileType === 'image');
+                                    if (imageForms.length >= 2) {
+                                        html += '<button class="btn btn-primary" onclick="openCombinePrintModal(' + customer.id + ')" style="background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%); display: flex; align-items: center; gap: 8px; justify-content: center; width: 100%; font-weight: 600;"><span>📑</span><span>Combine & Print (Double-Sided)</span></button>';
+                                    }
+
+                                    // Individual form print buttons
+                                    html += Object.entries(formTemplates).map(([formType, formData]) => {
                                         const formName = formTypeNames[formType] || formType;
                                         return '<button class="btn btn-primary" onclick="printFormForCustomer(\'' + formType + '\', ' + customer.id + ')" style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); display: flex; align-items: center; gap: 8px; justify-content: center; width: 100%;"><span>📄</span><span>Print ' + formName + '</span></button>';
                                     }).join('');
+
+                                    return html;
                                 })()}
                             </div>
                         </div>
