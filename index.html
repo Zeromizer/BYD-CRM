@@ -1870,6 +1870,12 @@
         let gapiInited = false;
         let gisInited = false;
         let tokenRefreshTimer = null;
+        let periodicRefreshTimer = null; // Timer for periodic token refresh
+        let tokenHealthCheckTimer = null; // Timer for periodic token validation
+        let refreshRetryCount = 0; // Track retry attempts
+        const MAX_REFRESH_RETRIES = 3;
+        const PERIODIC_REFRESH_INTERVAL = 45 * 60 * 1000; // 45 minutes
+        const HEALTH_CHECK_INTERVAL = 10 * 60 * 1000; // 10 minutes
         let dataFileId = null; // Google Drive file ID for synced data
         let isSyncing = false; // Prevent concurrent syncs
         let lastSyncTime = null; // Track last successful sync
@@ -1930,24 +1936,110 @@
             }
         }
 
-        function refreshTokenSilently() {
+        function refreshTokenSilently(isRetry = false) {
             if (!tokenClient) {
                 console.error('Token client not initialized');
                 return;
             }
 
             try {
+                console.log(`Attempting token refresh (retry count: ${refreshRetryCount})...`);
                 // Try to refresh silently (no user prompt)
                 tokenClient.requestAccessToken({ prompt: '' });
+                // Reset retry count on successful attempt
+                refreshRetryCount = 0;
             } catch (error) {
                 console.error('Silent token refresh failed:', error);
-                // If silent refresh fails, user will need to re-authenticate manually
+
+                // Retry logic
+                if (!isRetry && refreshRetryCount < MAX_REFRESH_RETRIES) {
+                    refreshRetryCount++;
+                    console.log(`Retrying token refresh (attempt ${refreshRetryCount}/${MAX_REFRESH_RETRIES})...`);
+                    setTimeout(() => refreshTokenSilently(true), 5000); // Retry after 5 seconds
+                    return;
+                }
+
+                // If all retries failed, user will need to re-authenticate manually
+                console.error('All token refresh attempts failed');
                 clearTokenFromStorage();
                 accessToken = null;
                 isSignedIn = false;
                 updateSigninStatus(false);
                 alert('Your Google Drive session has expired. Please reconnect.');
+
+                // Clear all timers
+                stopAllRefreshTimers();
             }
+        }
+
+        function startPeriodicRefresh() {
+            // Clear any existing timer
+            if (periodicRefreshTimer) {
+                clearInterval(periodicRefreshTimer);
+            }
+
+            console.log(`Starting periodic token refresh every ${PERIODIC_REFRESH_INTERVAL / 60000} minutes`);
+            periodicRefreshTimer = setInterval(() => {
+                console.log('Periodic token refresh triggered...');
+                refreshTokenSilently();
+            }, PERIODIC_REFRESH_INTERVAL);
+        }
+
+        function startTokenHealthCheck() {
+            // Clear any existing timer
+            if (tokenHealthCheckTimer) {
+                clearInterval(tokenHealthCheckTimer);
+            }
+
+            console.log(`Starting token health check every ${HEALTH_CHECK_INTERVAL / 60000} minutes`);
+            tokenHealthCheckTimer = setInterval(() => {
+                checkTokenHealth();
+            }, HEALTH_CHECK_INTERVAL);
+        }
+
+        async function checkTokenHealth() {
+            if (!isSignedIn || !accessToken) {
+                console.log('Not signed in, skipping health check');
+                return;
+            }
+
+            try {
+                console.log('Checking token health...');
+                // Make a lightweight API call to verify token is still valid
+                const response = await gapi.client.drive.about.get({
+                    fields: 'user'
+                });
+
+                if (response && response.result) {
+                    console.log('Token health check passed');
+                } else {
+                    console.warn('Token health check returned unexpected result');
+                }
+            } catch (error) {
+                console.error('Token health check failed:', error);
+
+                // If we get a 401, the token is invalid
+                if (error.status === 401) {
+                    console.log('Token is invalid, attempting refresh...');
+                    refreshTokenSilently();
+                }
+            }
+        }
+
+        function stopAllRefreshTimers() {
+            if (tokenRefreshTimer) {
+                clearTimeout(tokenRefreshTimer);
+                tokenRefreshTimer = null;
+            }
+            if (periodicRefreshTimer) {
+                clearInterval(periodicRefreshTimer);
+                periodicRefreshTimer = null;
+            }
+            if (tokenHealthCheckTimer) {
+                clearInterval(tokenHealthCheckTimer);
+                tokenHealthCheckTimer = null;
+            }
+            console.log('All refresh timers stopped');
         }
 
         function setAccessToken(token, expiresIn) {
@@ -1955,6 +2047,12 @@
             gapi.client.setToken({ access_token: token });
             saveTokenToStorage(token, expiresIn);
             scheduleTokenRefresh(expiresIn);
+
+            // Start periodic refresh and health check timers
+            startPeriodicRefresh();
+            startTokenHealthCheck();
+
+            console.log('Token set with periodic refresh and health monitoring enabled');
         }
 
         function restoreTokenFromStorage() {
@@ -1969,8 +2067,12 @@
                 const remainingTime = Math.floor((tokenData.expiryTime - Date.now()) / 1000);
                 scheduleTokenRefresh(remainingTime);
 
+                // Start periodic refresh and health check timers
+                startPeriodicRefresh();
+                startTokenHealthCheck();
+
                 updateSigninStatus(true);
-                console.log('Session restored from storage');
+                console.log('Session restored from storage with periodic refresh and health monitoring');
                 return true;
             }
 
@@ -2620,11 +2722,8 @@
         // Handle signout click
         function handleSignoutClick() {
             if (confirm('Disconnect from Google Drive? Your files will remain in Drive.')) {
-                // Clear token refresh timer
-                if (tokenRefreshTimer) {
-                    clearTimeout(tokenRefreshTimer);
-                    tokenRefreshTimer = null;
-                }
+                // Stop all refresh timers
+                stopAllRefreshTimers();
 
                 if (accessToken) {
                     // Revoke the token
@@ -2635,6 +2734,7 @@
 
                 accessToken = null;
                 isSignedIn = false;
+                refreshRetryCount = 0;
                 clearTokenFromStorage();
                 updateSigninStatus(false);
             }
