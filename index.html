@@ -1333,6 +1333,7 @@
                                 <option value="vsa_package">Package</option>
                                 <option value="vsa_sellingWithCOE">Selling with COE</option>
                                 <option value="vsa_sellingPriceList">Selling Price on Price List</option>
+                                <option value="vsa_purchasePriceWithCOE">Purchase Price with COE</option>
                                 <option value="vsa_coeRebateLevel">COE Rebate Level</option>
                                 <option value="vsa_deposit">Deposit</option>
                                 <option value="vsa_lessOthers">Less: Others</option>
@@ -1530,6 +1531,7 @@
                                     <option value="vsa_package">Package</option>
                                     <option value="vsa_sellingWithCOE">Selling with COE</option>
                                     <option value="vsa_sellingPriceList">Selling Price on Price List</option>
+                                    <option value="vsa_purchasePriceWithCOE">Purchase Price with COE</option>
                                     <option value="vsa_coeRebateLevel">COE Rebate Level</option>
                                     <option value="vsa_deposit">Deposit</option>
                                     <option value="vsa_lessOthers">Less: Others</option>
@@ -1728,20 +1730,27 @@
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label>COE Rebate Level</label>
-                            <input type="text" id="vsa_coeRebateLevel" placeholder="e.g., Level 1">
+                            <label>Purchase Price with COE</label>
+                            <input type="text" id="vsa_purchasePriceWithCOE" placeholder="e.g., $250,000">
                         </div>
                         <div class="form-group">
-                            <label>Deposit</label>
-                            <input type="text" id="vsa_deposit" placeholder="e.g., $25,000">
+                            <label>COE Rebate Level</label>
+                            <input type="text" id="vsa_coeRebateLevel" placeholder="e.g., Level 1">
                         </div>
                     </div>
 
                     <div class="form-row">
                         <div class="form-group">
+                            <label>Deposit</label>
+                            <input type="text" id="vsa_deposit" placeholder="e.g., $25,000">
+                        </div>
+                        <div class="form-group">
                             <label>Less: Others</label>
                             <input type="text" id="vsa_lessOthers" placeholder="e.g., $5,000">
                         </div>
+                    </div>
+
+                    <div class="form-row">
                         <div class="form-group">
                             <label>Add: Others</label>
                             <input type="text" id="vsa_addOthers" placeholder="e.g., $2,000">
@@ -4478,6 +4487,7 @@
                 'vsa_package': 'VSA - Package',
                 'vsa_sellingWithCOE': 'VSA - Selling with COE',
                 'vsa_sellingPriceList': 'VSA - Selling Price on Price List',
+                'vsa_purchasePriceWithCOE': 'VSA - Purchase Price with COE',
                 'vsa_coeRebateLevel': 'VSA - COE Rebate Level',
                 'vsa_deposit': 'VSA - Deposit',
                 'vsa_lessOthers': 'VSA - Less: Others',
@@ -4617,6 +4627,7 @@
                 'vsa_package': 'VSA - Package',
                 'vsa_sellingWithCOE': 'VSA - Selling with COE',
                 'vsa_sellingPriceList': 'VSA - Selling Price on Price List',
+                'vsa_purchasePriceWithCOE': 'VSA - Purchase Price with COE',
                 'vsa_coeRebateLevel': 'VSA - COE Rebate Level',
                 'vsa_deposit': 'VSA - Deposit',
                 'vsa_lessOthers': 'VSA - Less: Others',
@@ -5905,6 +5916,7 @@
                     package: '',
                     sellingWithCOE: '',
                     sellingPriceList: '',
+                    purchasePriceWithCOE: '',
                     coeRebateLevel: '',
                     lessOthers: '',
                     deposit: '',
@@ -5934,6 +5946,7 @@
             document.getElementById('vsa_package').value = customer.vsaDetails.package || 'Excite';
             document.getElementById('vsa_sellingWithCOE').value = customer.vsaDetails.sellingWithCOE || 'WITH';
             document.getElementById('vsa_sellingPriceList').value = customer.vsaDetails.sellingPriceList || '';
+            document.getElementById('vsa_purchasePriceWithCOE').value = customer.vsaDetails.purchasePriceWithCOE || '';
             document.getElementById('vsa_coeRebateLevel').value = customer.vsaDetails.coeRebateLevel || '';
             document.getElementById('vsa_lessOthers').value = customer.vsaDetails.lessOthers || '';
             document.getElementById('vsa_deposit').value = customer.vsaDetails.deposit || '';
@@ -5983,6 +5996,7 @@
             customer.vsaDetails.package = document.getElementById('vsa_package').value;
             customer.vsaDetails.sellingWithCOE = document.getElementById('vsa_sellingWithCOE').value;
             customer.vsaDetails.sellingPriceList = document.getElementById('vsa_sellingPriceList').value;
+            customer.vsaDetails.purchasePriceWithCOE = document.getElementById('vsa_purchasePriceWithCOE').value;
             customer.vsaDetails.coeRebateLevel = document.getElementById('vsa_coeRebateLevel').value;
             customer.vsaDetails.lessOthers = document.getElementById('vsa_lessOthers').value;
             customer.vsaDetails.deposit = document.getElementById('vsa_deposit').value;
