@@ -1308,7 +1308,8 @@
                 <div style="display: flex; gap: 20px; margin-bottom: 20px; flex-wrap: wrap;">
                     <div>
                         <label style="font-weight: 600; color: #2c3e50; margin-bottom: 5px; display: block;">Field to Place:</label>
-                        <select id="fieldTypeSelect" style="padding: 8px; border: 2px solid #00bcd4; border-radius: 6px; font-size: 14px;">
+                        <select id="fieldTypeSelect" onchange="toggleCustomValueInput()" style="padding: 8px; border: 2px solid #00bcd4; border-radius: 6px; font-size: 14px;">
+                            <option value="custom">Custom Value (Enter below)</option>
                             <option value="name">Customer Name</option>
                             <option value="phone">Phone Number</option>
                             <option value="email">Email</option>
@@ -1357,6 +1358,10 @@
                                 <option value="vsa_insuranceFee">Insurance Fee</option>
                             </optgroup>
                         </select>
+                    </div>
+                    <div id="customValueInputContainer" style="display: block;">
+                        <label style="font-weight: 600; color: #2c3e50; margin-bottom: 5px; display: block;">Custom Value:</label>
+                        <input type="text" id="customValueInput" placeholder="Enter text or number" style="padding: 8px; border: 2px solid #00bcd4; border-radius: 6px; font-size: 14px; width: 200px;">
                     </div>
                     <div>
                         <label style="font-weight: 600; color: #2c3e50; margin-bottom: 5px; display: block;">Font Size (px):</label>
@@ -4025,7 +4030,8 @@
                 // Draw field label
                 ctx.fillStyle = '#00bcd4';
                 ctx.font = 'bold 12px Arial';
-                ctx.fillText(field.type, x + 20, y + 5);
+                const labelText = field.customValue ? field.customValue : field.type;
+                ctx.fillText(labelText, x + 20, y + 5);
             }
 
             // Update mapped fields list
@@ -4046,10 +4052,19 @@
                     'phone': 'Phone Number',
                     'email': 'Email',
                     'model': 'Car Model',
-                    'date': 'Today\'s Date'
+                    'date': 'Today\'s Date',
+                    'custom': 'Custom Value'
                 };
+
+                let displayText;
+                if (field.customValue) {
+                    displayText = '<strong>Custom: "' + field.customValue + '"</strong>';
+                } else {
+                    displayText = '<strong>' + (fieldNames[field.type] || field.type) + '</strong>';
+                }
+
                 html += '<li style="padding: 8px; margin-bottom: 5px; background: white; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;">';
-                html += '<span><strong>' + (fieldNames[field.type] || field.type) + '</strong> - Size: ' + field.fontSize + 'px</span>';
+                html += '<span>' + displayText + ' - Size: ' + field.fontSize + 'px</span>';
                 html += '<button class="btn btn-small btn-danger" onclick="removeFieldMapping(\'' + fieldId + '\')">Remove</button>';
                 html += '</li>';
             }
@@ -4066,6 +4081,18 @@
             if (!confirm('Remove all field mappings?')) return;
             tempFieldMappings = {};
             redrawMappingCanvas();
+        }
+
+        // Toggle custom value input visibility
+        function toggleCustomValueInput() {
+            const fieldTypeSelect = document.getElementById('fieldTypeSelect');
+            const customValueContainer = document.getElementById('customValueInputContainer');
+
+            if (fieldTypeSelect.value === 'custom') {
+                customValueContainer.style.display = 'block';
+            } else {
+                customValueContainer.style.display = 'none';
+            }
         }
 
         // Canvas click handler
@@ -4089,6 +4116,16 @@
                     const fontSize = parseInt(document.getElementById('fieldFontSize').value);
                     const textColor = document.getElementById('fieldTextColor').value;
 
+                    // Check if custom value
+                    let customValue = null;
+                    if (fieldType === 'custom') {
+                        customValue = document.getElementById('customValueInput').value.trim();
+                        if (!customValue) {
+                            alert('Please enter a custom value');
+                            return;
+                        }
+                    }
+
                     // Add field mapping
                     const fieldId = 'field_' + Date.now();
                     tempFieldMappings[fieldId] = {
@@ -4098,6 +4135,11 @@
                         fontSize: fontSize,
                         color: textColor
                     };
+
+                    // Store custom value if provided
+                    if (customValue) {
+                        tempFieldMappings[fieldId].customValue = customValue;
+                    }
 
                     redrawMappingCanvas();
                 });
@@ -5068,7 +5110,14 @@
 
                     // Draw each field
                     for (const [fieldId, field] of Object.entries(formData.fieldMappings)) {
-                        const text = dataMapping[field.type] || '';
+                        // Use custom value if provided, otherwise look up from customer data
+                        let text;
+                        if (field.customValue) {
+                            text = field.customValue;
+                        } else {
+                            text = dataMapping[field.type] || '';
+                        }
+
                         if (!text) continue;
 
                         ctx.fillStyle = field.color || '#000000';
