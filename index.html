@@ -5218,6 +5218,44 @@
             }
         }
 
+        // Handle form selection - show/hide test drive upload section
+        function handleFormSelection(customerId) {
+            const selectElement = document.getElementById(`formSelect_${customerId}`);
+            const uploadSection = document.getElementById(`testDriveUpload_${customerId}`);
+            const printButton = document.getElementById(`printFormBtn_${customerId}`);
+
+            const selectedForm = selectElement.value;
+
+            // Show upload section only for test_drive form
+            if (selectedForm === 'test_drive') {
+                uploadSection.style.display = 'block';
+            } else {
+                uploadSection.style.display = 'none';
+            }
+
+            // Enable print button if a form is selected
+            if (selectedForm) {
+                printButton.disabled = false;
+                printButton.style.opacity = '1';
+            } else {
+                printButton.disabled = true;
+                printButton.style.opacity = '0.5';
+            }
+        }
+
+        // Print the selected form
+        function printSelectedForm(customerId) {
+            const selectElement = document.getElementById(`formSelect_${customerId}`);
+            const selectedForm = selectElement.value;
+
+            if (!selectedForm) {
+                alert('Please select a form to print');
+                return;
+            }
+
+            printFormForCustomer(selectedForm, customerId);
+        }
+
         // Add customer
         // Prevent duplicate customer creation
         let isAddingCustomer = false;
@@ -5445,6 +5483,12 @@
                                 <option value="M6" ${customer.model === 'M6' ? 'selected' : ''}>M6</option>
                             </select>
                         </div>
+                        <div class="form-group">
+                            <label style="visibility: hidden;">VSA</label>
+                            <button class="btn btn-primary" onclick="openVsaDetailsModal(${customer.id})" style="background: linear-gradient(135deg, #8e44ad 0%, #9b59b6 100%); width: 100%; height: 42px;">
+                                📋 VSA Details
+                            </button>
+                        </div>
                     </div>
 
                     <div class="form-group">
@@ -5452,74 +5496,73 @@
                         <textarea rows="3" id="customer_notes">${customer.notes || ''}</textarea>
                     </div>
 
-                    <div style="margin-top: 20px; margin-bottom: 20px;">
-                        <button class="btn btn-primary" onclick="openVsaDetailsModal(${customer.id})" style="background: linear-gradient(135deg, #8e44ad 0%, #9b59b6 100%); width: 100%;">
-                            📋 VSA Details
-                        </button>
-                    </div>
-
                     ${Object.keys(formTemplates).length > 0 ? `
                         <div class="checklist-section" style="background: linear-gradient(135deg, rgba(231, 76, 60, 0.1) 0%, rgba(192, 57, 43, 0.1) 100%); border: 2px solid rgba(231, 76, 60, 0.3);">
                             <h3 style="color: #e74c3c;">📄 Forms</h3>
                             <p style="margin-bottom: 15px; color: #7f8c8d; font-size: 13px;">
-                                Available forms for ${customer.name}
+                                Select a form to print for ${customer.name}
                             </p>
 
-                            ${formTemplates.test_drive ? `
-                                <div style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 2px solid rgba(0, 188, 212, 0.2);">
-                                    <h4 style="color: #00bcd4; margin-bottom: 10px; font-size: 14px;">📸 Test Drive Required Documents</h4>
-                                    <p style="font-size: 12px; color: #7f8c8d; margin-bottom: 10px;">Upload up to 4 ID images to print with the form (they will appear in order on page 2)</p>
+                            <div style="margin-bottom: 15px;">
+                                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #2c3e50;">Select Form</label>
+                                <select id="formSelect_${customer.id}" onchange="handleFormSelection(${customer.id})" style="width: 100%; padding: 10px; font-size: 14px; border: 2px solid #e74c3c; border-radius: 6px; background: white;">
+                                    <option value="">Choose a form...</option>
+                                    ${(() => {
+                                        const formTypeNames = {
+                                            'test_drive': 'Test Drive Agreement',
+                                            'vsa': 'Vehicle Sales Agreement',
+                                            'pdpa': 'PDPA Consent Form',
+                                            'coe_bidding_1': 'COE Bidding 1',
+                                            'coe_bidding_2': 'COE Bidding 2',
+                                            'pdpa_consent_1': 'PDPA Consent 1',
+                                            'pdpa_consent_2': 'PDPA Consent 2',
+                                            'other': 'Other Form'
+                                        };
+                                        return Object.keys(formTemplates).map(formType => {
+                                            const formName = formTypeNames[formType] || formType;
+                                            return '<option value="' + formType + '">' + formName + '</option>';
+                                        }).join('');
+                                    })()}
+                                </select>
+                            </div>
 
-                                    <div style="margin-bottom: 10px;">
-                                        <input type="file" accept="image/*" multiple id="docImages_${customer.id}" onchange="uploadMultipleDocImages(${customer.id}, this.files)" style="font-size: 12px; padding: 8px; width: 100%; border: 2px dashed #00bcd4; border-radius: 6px; background: rgba(0, 188, 212, 0.05);">
-                                        <p style="font-size: 11px; color: #7f8c8d; margin-top: 5px;">Select up to 4 images at once</p>
-                                    </div>
+                            <div id="testDriveUpload_${customer.id}" style="display: none; background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 2px solid rgba(0, 188, 212, 0.2);">
+                                <h4 style="color: #00bcd4; margin-bottom: 10px; font-size: 14px;">📸 Test Drive Required Documents</h4>
+                                <p style="font-size: 12px; color: #7f8c8d; margin-bottom: 10px;">Upload up to 4 ID images to print with the form (they will appear in order on page 2)</p>
 
-                                    <div id="uploadProgress_${customer.id}" style="display: none; margin-bottom: 10px;">
-                                        <div style="background: #ecf0f1; border-radius: 10px; height: 24px; overflow: hidden; position: relative;">
-                                            <div id="uploadBar_${customer.id}" style="background: linear-gradient(90deg, #00bcd4 0%, #00acc1 100%); height: 100%; width: 0%; transition: width 0.3s; display: flex; align-items: center; justify-content: center;">
-                                                <span id="uploadText_${customer.id}" style="color: white; font-size: 12px; font-weight: 600; position: absolute; left: 50%; transform: translateX(-50%);"></span>
-                                            </div>
+                                <div style="margin-bottom: 10px;">
+                                    <input type="file" accept="image/*" multiple id="docImages_${customer.id}" onchange="uploadMultipleDocImages(${customer.id}, this.files)" style="font-size: 12px; padding: 8px; width: 100%; border: 2px dashed #00bcd4; border-radius: 6px; background: rgba(0, 188, 212, 0.05);">
+                                    <p style="font-size: 11px; color: #7f8c8d; margin-top: 5px;">Select up to 4 images at once</p>
+                                </div>
+
+                                <div id="uploadProgress_${customer.id}" style="display: none; margin-bottom: 10px;">
+                                    <div style="background: #ecf0f1; border-radius: 10px; height: 24px; overflow: hidden; position: relative;">
+                                        <div id="uploadBar_${customer.id}" style="background: linear-gradient(90deg, #00bcd4 0%, #00acc1 100%); height: 100%; width: 0%; transition: width 0.3s; display: flex; align-items: center; justify-content: center;">
+                                            <span id="uploadText_${customer.id}" style="color: white; font-size: 12px; font-weight: 600; position: absolute; left: 50%; transform: translateX(-50%);"></span>
                                         </div>
                                     </div>
-
-                                    ${(() => {
-                                        const docs = customer.testDriveDocs || {};
-                                        const uploadedCount = Object.keys(docs).length;
-                                        if (uploadedCount > 0) {
-                                            return '<p style="font-size: 12px; color: #27ae60; font-weight: 600;">✓ ' + uploadedCount + ' image(s) uploaded</p>';
-                                        }
-                                        return '';
-                                    })()}
                                 </div>
-                            ` : ''}
+
+                                ${(() => {
+                                    const docs = customer.testDriveDocs || {};
+                                    const uploadedCount = Object.keys(docs).length;
+                                    if (uploadedCount > 0) {
+                                        return '<p style="font-size: 12px; color: #27ae60; font-weight: 600;">✓ ' + uploadedCount + ' image(s) uploaded</p>';
+                                    }
+                                    return '';
+                                })()}
+                            </div>
 
                             <div style="display: flex; flex-direction: column; gap: 10px;">
                                 ${(() => {
-                                    const formTypeNames = {
-                                        'test_drive': 'Test Drive Agreement',
-                                        'vsa': 'Vehicle Sales Agreement',
-                                        'pdpa': 'PDPA Consent Form',
-                                        'coe_bidding_1': 'COE Bidding 1',
-                                        'coe_bidding_2': 'COE Bidding 2',
-                                        'pdpa_consent_1': 'PDPA Consent 1',
-                                        'pdpa_consent_2': 'PDPA Consent 2',
-                                        'other': 'Other Form'
-                                    };
                                     let html = '';
-
                                     // Add Combine & Print button at the top if there are multiple image forms
                                     const imageForms = Object.entries(formTemplates).filter(([_, formData]) => formData.fileType === 'image');
                                     if (imageForms.length >= 2) {
                                         html += '<button class="btn btn-primary" onclick="openCombinePrintModal(' + customer.id + ')" style="background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%); display: flex; align-items: center; gap: 8px; justify-content: center; width: 100%; font-weight: 600;"><span>📑</span><span>Combine & Print (Double-Sided)</span></button>';
                                     }
-
-                                    // Individual form print buttons
-                                    html += Object.entries(formTemplates).map(([formType, formData]) => {
-                                        const formName = formTypeNames[formType] || formType;
-                                        return '<button class="btn btn-primary" onclick="printFormForCustomer(\'' + formType + '\', ' + customer.id + ')" style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); display: flex; align-items: center; gap: 8px; justify-content: center; width: 100%;"><span>📄</span><span>Print ' + formName + '</span></button>';
-                                    }).join('');
-
+                                    // Add single Print button
+                                    html += '<button class="btn btn-primary" id="printFormBtn_' + customer.id + '" onclick="printSelectedForm(' + customer.id + ')" disabled style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); display: flex; align-items: center; gap: 8px; justify-content: center; width: 100%; opacity: 0.5;"><span>📄</span><span>Print Form</span></button>';
                                     return html;
                                 })()}
                             </div>
@@ -5534,28 +5577,6 @@
                             </div>
                         </div>
                     ` : ''}
-
-                    <div class="checklist-section">
-                        <h3>📋 Document Checklist</h3>
-                        <p style="margin-bottom: 15px; color: #7f8c8d; font-size: 13px;">
-                            Progress: ${completedItems}/${totalItems} documents
-                        </p>
-                        <div class="progress-bar">
-                            <div class="progress-fill" style="width: ${progress}%"></div>
-                        </div>
-                        <div style="margin-top: 15px;">
-                            ${checklist.map(item => `
-                                <div class="checklist-item ${customer.checklist[item.id] ? 'completed' : ''}">
-                                    <input type="checkbox" id="check_${item.id}" 
-                                        ${customer.checklist[item.id] ? 'checked' : ''}
-                                        onchange="toggleChecklistItem(${customer.id}, '${item.id}')">
-                                    <label for="check_${item.id}">
-                                        ${item.name} ${item.required ? '<span style="color: #e74c3c;">*</span>' : ''}
-                                    </label>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
 
                     <div class="action-buttons">
                         ${!customer.dealClosed ? `
