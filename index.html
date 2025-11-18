@@ -4725,6 +4725,7 @@
                     'vsa_upholstery': customer.vsaDetails?.upholstery || '',
                     'vsa_przType': customer.vsaDetails?.przType || '',
                     'vsa_package': customer.vsaDetails?.package || '',
+                    'vsa_purchasePriceWithCOE': customer.vsaDetails?.purchasePriceWithCOE || '',
                     'vsa_sellingWithCOE': customer.vsaDetails?.sellingWithCOE || '',
                     'vsa_sellingPriceList': customer.vsaDetails?.sellingPriceList || '',
                     'vsa_coeRebateLevel': customer.vsaDetails?.coeRebateLevel || '',
@@ -5192,7 +5193,10 @@
                         'phone': customer.phone || '',
                         'email': customer.email || '',
                         'nric': customer.nric || '',
+                        'occupation': customer.occupation || '',
+                        'dob': customer.dob || '',
                         'address': customer.address || '',
+                        'addressContinue': customer.addressContinue || '',
                         'salesConsultant': customer.salesConsultant || '',
                         'vsaNo': customer.vsaNo || '',
                         'model': customer.model || '',
@@ -5203,6 +5207,7 @@
                         'vsa_upholstery': customer.vsaDetails?.upholstery || '',
                         'vsa_przType': customer.vsaDetails?.przType || '',
                         'vsa_package': customer.vsaDetails?.package || '',
+                        'vsa_purchasePriceWithCOE': customer.vsaDetails?.purchasePriceWithCOE || '',
                         'vsa_sellingWithCOE': customer.vsaDetails?.sellingWithCOE || '',
                         'vsa_sellingPriceList': customer.vsaDetails?.sellingPriceList || '',
                         'vsa_coeRebateLevel': customer.vsaDetails?.coeRebateLevel || '',
@@ -5212,11 +5217,16 @@
                         'vsa_deliveryDate': customer.vsaDetails?.deliveryDate || '',
                         'vsa_tradeInCarNo': customer.vsaDetails?.tradeInCarNo || '',
                         'vsa_tradeInCarModel': customer.vsaDetails?.tradeInCarModel || '',
+                        'vsa_tradeInAmount': customer.vsaDetails?.tradeInAmount || '',
                         'vsa_remarks1': customer.vsaDetails?.remarks1 || '',
                         'vsa_remarks2': customer.vsaDetails?.remarks2 || '',
                         'vsa_loanAmount': customer.vsaDetails?.loanAmount || '',
                         'vsa_interest': customer.vsaDetails?.interest || '',
-                        'vsa_tenure': customer.vsaDetails?.tenure || ''
+                        'vsa_tenure': customer.vsaDetails?.tenure || '',
+                        'vsa_monthlyPayment': customer.vsaDetails?.monthlyPayment || '',
+                        'vsa_financeCompany': customer.vsaDetails?.financeCompany || '',
+                        'vsa_insuranceCompany': customer.vsaDetails?.insuranceCompany || '',
+                        'vsa_insuranceFee': customer.vsaDetails?.insuranceFee || ''
                     };
 
                     // Draw each field
