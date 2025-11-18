@@ -3788,12 +3788,15 @@
                 return;
             }
 
+            // Save customer ID before closing modal (which clears the variable)
+            const customerId = currentCombineCustomerId;
+
             try {
                 // Close modal
                 closeCombinePrintModal();
 
                 // Get customer data
-                const customer = customers.find(c => c.id === currentCombineCustomerId);
+                const customer = customers.find(c => c.id === customerId);
                 if (!customer) {
                     alert('Customer not found');
                     return;
