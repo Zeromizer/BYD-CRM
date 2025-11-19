@@ -105,7 +105,7 @@ async function createExcelTemplate() {
 
     // Save template
     excelTemplates[templateId] = template;
-    await saveExcelTemplates();
+    saveExcelTemplates();
 
     // Update display
     displayExcelList();
@@ -184,7 +184,7 @@ async function deleteExcelTemplate(templateId) {
     }
 
     delete excelTemplates[templateId];
-    await saveExcelTemplates();
+    saveExcelTemplates();
     displayExcelList();
 }
 
@@ -468,7 +468,7 @@ function updateExcelMappingsList() {
 }
 
 // Save Excel mappings
-async function saveExcelMappings() {
+function saveExcelMappings() {
     if (!currentExcelTemplateId) {
         return;
     }
@@ -480,7 +480,7 @@ async function saveExcelMappings() {
     }
 
     template.fieldMappings = tempExcelMappings;
-    await saveExcelTemplates();
+    saveExcelTemplates();
 
     alert('Field mappings saved successfully!');
     closeExcelMappingModal();
@@ -1004,7 +1004,7 @@ async function uploadMasterFile() {
             // Update template with new file info
             template.driveFileId = result.id;
             template.driveFileName = file.name;
-            await saveExcelTemplates();
+            saveExcelTemplates();
 
             console.log('Excel master file uploaded to Drive:', result.id);
             alert('Master file uploaded successfully!\n\n✓ ' + file.name + '\n\nYou can now use this template without uploading files each time.');
