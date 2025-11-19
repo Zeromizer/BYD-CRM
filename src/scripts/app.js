@@ -100,6 +100,9 @@ function init() {
     // Set initial sync status
     updateSyncStatus('offline');
 
+    // Initialize sync status popup
+    initSyncStatusPopup();
+
     // Load form templates from localStorage
     loadFormTemplates();
 

@@ -235,9 +235,32 @@ async function loadData() {
 }
 
 // Save data (saves to both Drive and localStorage)
+// Now uses optimistic updates - saves locally first, then queues cloud sync
 async function saveData() {
-    // Save to Drive (which also saves to localStorage)
-    await saveDataToDrive();
+    // Local update function - saves immediately to localStorage
+    const localUpdate = async () => {
+        try {
+            localStorage.setItem('bydCRM', JSON.stringify(customers));
+            console.log('Local save successful');
+        } catch (error) {
+            console.error('Local save failed:', error);
+            throw error;
+        }
+    };
+
+    // Cloud sync function - syncs to Google Drive
+    const cloudSync = async () => {
+        return await saveDataToDrive();
+    };
+
+    // Use optimistic save pattern
+    try {
+        return await optimisticSave(localUpdate, cloudSync, {});
+    } catch (error) {
+        console.error('Optimistic save failed:', error);
+        // Fallback to old behavior if optimistic save not available
+        await saveDataToDrive();
+    }
 }
 
 // Update the data file content in Drive

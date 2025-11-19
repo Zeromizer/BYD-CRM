@@ -1053,5 +1053,207 @@ body {
 
 @keyframes spin {
     0% { transform: rotate(0deg); }
-    100% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* ============ Sync Status Popup (Bottom Right) ============ */
+#syncStatusPopup {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 320px;
+    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    padding: 16px;
+    z-index: 10000;
+    transform: translateY(0);
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+}
+
+#syncStatusPopup.hidden {
+    transform: translateY(120%);
+    opacity: 0;
+    pointer-events: none;
+}
+
+#syncStatusPopup.minimized {
+    width: 60px;
+    height: 60px;
+    padding: 0;
+    border-radius: 50%;
+    overflow: hidden;
+}
+
+#syncStatusPopup.minimized .sync-popup-header h4,
+#syncStatusPopup.minimized .sync-popup-body,
+#syncStatusPopup.minimized .minimize-btn {
+    display: none;
+}
+
+.sync-popup-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.sync-popup-header h4 {
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 600;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.sync-icon {
+    font-size: 18px;
+    animation: rotate 2s linear infinite;
+}
+
+.sync-icon.idle {
+    animation: none;
+}
+
+.sync-icon.error {
+    animation: shake 0.5s ease-in-out;
+}
+
+@keyframes rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
+
+.minimize-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: #ffffff;
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    font-size: 14px;
+    padding: 0;
+}
+
+.minimize-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.sync-popup-body {
+    color: #ecf0f1;
+}
+
+.sync-status-text {
+    font-size: 13px;
+    color: #bdc3c7;
+    margin-bottom: 10px;
+}
+
+.sync-progress-container {
+    margin-bottom: 10px;
+}
+
+.sync-progress-bar {
+    width: 100%;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+    overflow: hidden;
+    position: relative;
+}
+
+.sync-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #00bcd4 0%, #0097a7 100%);
+    border-radius: 3px;
+    transition: width 0.3s ease;
+    box-shadow: 0 0 10px rgba(0, 188, 212, 0.5);
+}
+
+.sync-progress-fill.error {
+    background: linear-gradient(90deg, #e74c3c 0%, #c0392b 100%);
+    box-shadow: 0 0 10px rgba(231, 76, 60, 0.5);
+}
+
+.sync-progress-fill.success {
+    background: linear-gradient(90deg, #27ae60 0%, #229954 100%);
+    box-shadow: 0 0 10px rgba(39, 174, 96, 0.5);
+}
+
+.sync-queue-info {
+    font-size: 11px;
+    color: #95a5a6;
+    display: flex;
+    justify-content: space-between;
+    margin-top: 8px;
+}
+
+.sync-operation-details {
+    font-size: 12px;
+    color: #ecf0f1;
+    margin-top: 8px;
+    padding: 8px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 6px;
+    border-left: 3px solid #00bcd4;
+}
+
+.sync-operation-details.error {
+    border-left-color: #e74c3c;
+}
+
+.sync-retry-btn {
+    margin-top: 8px;
+    width: 100%;
+    padding: 8px;
+    background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+    border: none;
+    border-radius: 6px;
+    color: white;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.sync-retry-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(231, 76, 60, 0.4);
+}
+
+/* Offline indicator */
+.offline-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    background: #95a5a6;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    color: white;
+}
+
+/* Success checkmark animation */
+@keyframes checkmark {
+    0% { transform: scale(0); }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+}
+
+.sync-success {
+    animation: checkmark 0.3s ease-in-out;
 }

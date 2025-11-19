@@ -1242,3 +1242,259 @@ async function updateStats(forceRefresh = false) {
         document.getElementById('totalFiles').textContent = '0';
     }
 }
+
+// ============ Sync Status Popup ============
+
+/**
+ * Initialize the sync status popup
+ */
+function initSyncStatusPopup() {
+    // Create popup element if it doesn't exist
+    if (document.getElementById('syncStatusPopup')) {
+        return; // Already initialized
+    }
+
+    const popup = document.createElement('div');
+    popup.id = 'syncStatusPopup';
+    popup.className = 'hidden';
+    popup.innerHTML = `
+        <div class="sync-popup-header">
+            <h4>
+                <span class="sync-icon idle">⚙️</span>
+                <span id="syncPopupTitle">Sync Status</span>
+            </h4>
+            <button class="minimize-btn" onclick="toggleSyncPopup()" title="Minimize">−</button>
+        </div>
+        <div class="sync-popup-body">
+            <div class="sync-status-text" id="syncStatusText">All changes synced</div>
+            <div class="sync-progress-container">
+                <div class="sync-progress-bar">
+                    <div class="sync-progress-fill" id="syncProgressFill" style="width: 0%"></div>
+                </div>
+            </div>
+            <div class="sync-queue-info">
+                <span id="syncQueueCount">Queue: 0</span>
+                <span id="syncNetworkStatus">Online</span>
+            </div>
+            <div class="sync-operation-details" id="syncOperationDetails" style="display: none;"></div>
+            <button class="sync-retry-btn" id="syncRetryBtn" onclick="retryFailedSyncs()" style="display: none;">
+                Retry Failed Operations
+            </button>
+        </div>
+    `;
+
+    document.body.appendChild(popup);
+
+    // Set up queue listener
+    addQueueListener(handleQueueEvent);
+
+    // Set up online/offline listeners
+    updateNetworkStatus();
+}
+
+/**
+ * Handle queue events and update UI
+ */
+function handleQueueEvent(event, data) {
+    const popup = document.getElementById('syncStatusPopup');
+    if (!popup) return;
+
+    const icon = popup.querySelector('.sync-icon');
+    const title = document.getElementById('syncPopupTitle');
+    const statusText = document.getElementById('syncStatusText');
+    const progressFill = document.getElementById('syncProgressFill');
+    const queueCount = document.getElementById('syncQueueCount');
+    const operationDetails = document.getElementById('syncOperationDetails');
+    const retryBtn = document.getElementById('syncRetryBtn');
+
+    switch (event) {
+        case 'queued':
+            showSyncPopup();
+            icon.className = 'sync-icon';
+            icon.textContent = '🔄';
+            statusText.textContent = 'Queuing sync operation...';
+            updateQueueDisplay();
+            break;
+
+        case 'processing_started':
+            showSyncPopup();
+            icon.className = 'sync-icon';
+            icon.textContent = '🔄';
+            title.textContent = 'Syncing...';
+            statusText.textContent = 'Syncing to cloud...';
+            progressFill.style.width = '10%';
+            progressFill.className = 'sync-progress-fill';
+            updateQueueDisplay();
+            break;
+
+        case 'item_processing':
+            const typeMap = {
+                'cloudSync': 'Syncing data to cloud',
+                'createFolder': 'Creating folder',
+                'uploadFile': 'Uploading file'
+            };
+            statusText.textContent = typeMap[data.type] || 'Processing...';
+            progressFill.style.width = '50%';
+            operationDetails.style.display = 'none';
+            break;
+
+        case 'item_completed':
+            const status = getQueueStatus();
+            if (status.queueLength === 0) {
+                // All done!
+                icon.className = 'sync-icon idle sync-success';
+                icon.textContent = '✅';
+                title.textContent = 'Sync Complete';
+                statusText.textContent = 'All changes synced to cloud';
+                progressFill.style.width = '100%';
+                progressFill.className = 'sync-progress-fill success';
+                operationDetails.style.display = 'none';
+                retryBtn.style.display = 'none';
+
+                // Hide popup after 3 seconds
+                setTimeout(() => {
+                    if (getQueueStatus().queueLength === 0) {
+                        hideSyncPopup();
+                    }
+                }, 3000);
+
+                // Update the main sync status indicator
+                updateSyncStatus('synced');
+                lastSyncTime = new Date();
+            } else {
+                progressFill.style.width = '30%';
+            }
+            updateQueueDisplay();
+            break;
+
+        case 'item_retrying':
+            icon.className = 'sync-icon';
+            icon.textContent = '🔄';
+            statusText.textContent = `Retrying... (${data.retriesLeft} attempts left)`;
+            operationDetails.style.display = 'block';
+            operationDetails.className = 'sync-operation-details';
+            operationDetails.textContent = `Error: ${data.error.message || 'Unknown error'}. Retrying in ${Math.round(data.retryDelay / 1000)}s...`;
+            progressFill.style.width = '20%';
+            updateQueueDisplay();
+            break;
+
+        case 'item_failed':
+            icon.className = 'sync-icon error';
+            icon.textContent = '⚠️';
+            title.textContent = 'Sync Error';
+            statusText.textContent = 'Sync failed after retries';
+            progressFill.style.width = '100%';
+            progressFill.className = 'sync-progress-fill error';
+            operationDetails.style.display = 'block';
+            operationDetails.className = 'sync-operation-details error';
+            operationDetails.textContent = `Failed: ${data.error.message || 'Unknown error'}`;
+            retryBtn.style.display = 'block';
+            updateSyncStatus('error');
+            updateQueueDisplay();
+            break;
+
+        case 'processing_completed':
+            // All operations completed
+            break;
+
+        case 'network_online':
+            updateNetworkStatus();
+            statusText.textContent = 'Back online - resuming sync...';
+            showSyncPopup();
+            break;
+
+        case 'network_offline':
+            updateNetworkStatus();
+            icon.className = 'sync-icon idle';
+            icon.textContent = '📴';
+            title.textContent = 'Offline';
+            statusText.textContent = 'No internet - changes queued';
+            showSyncPopup();
+            updateSyncStatus('offline');
+            break;
+    }
+}
+
+/**
+ * Update queue display in popup
+ */
+function updateQueueDisplay() {
+    const status = getQueueStatus();
+    const queueCount = document.getElementById('syncQueueCount');
+
+    if (queueCount) {
+        if (status.queueLength > 0) {
+            queueCount.textContent = `Queue: ${status.queueLength} pending`;
+        } else {
+            queueCount.textContent = 'Queue: empty';
+        }
+    }
+}
+
+/**
+ * Update network status display
+ */
+function updateNetworkStatus() {
+    const networkStatus = document.getElementById('syncNetworkStatus');
+    if (networkStatus) {
+        if (isOnline()) {
+            networkStatus.textContent = 'Online';
+            networkStatus.style.color = '#27ae60';
+        } else {
+            networkStatus.innerHTML = '<span class="offline-badge">Offline</span>';
+        }
+    }
+}
+
+/**
+ * Show sync popup
+ */
+function showSyncPopup() {
+    const popup = document.getElementById('syncStatusPopup');
+    if (popup) {
+        popup.classList.remove('hidden');
+        popup.classList.remove('minimized');
+    }
+}
+
+/**
+ * Hide sync popup
+ */
+function hideSyncPopup() {
+    const popup = document.getElementById('syncStatusPopup');
+    if (popup) {
+        popup.classList.add('hidden');
+        // Reset state
+        const icon = popup.querySelector('.sync-icon');
+        icon.className = 'sync-icon idle';
+        icon.textContent = '⚙️';
+        document.getElementById('syncPopupTitle').textContent = 'Sync Status';
+        document.getElementById('syncProgressFill').style.width = '0%';
+    }
+}
+
+/**
+ * Toggle sync popup minimize state
+ */
+function toggleSyncPopup() {
+    const popup = document.getElementById('syncStatusPopup');
+    if (popup) {
+        if (popup.classList.contains('minimized')) {
+            popup.classList.remove('minimized');
+        } else {
+            popup.classList.add('minimized');
+        }
+    }
+}
+
+/**
+ * Retry failed sync operations
+ */
+function retryFailedSyncs() {
+    retryFailedItems();
+    const retryBtn = document.getElementById('syncRetryBtn');
+    if (retryBtn) {
+        retryBtn.style.display = 'none';
+    }
+    document.getElementById('syncOperationDetails').style.display = 'none';
+}
