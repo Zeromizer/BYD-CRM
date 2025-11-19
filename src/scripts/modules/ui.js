@@ -1256,7 +1256,7 @@ async function displayCustomerDetails(customerId) {
                     ${Object.keys(excelTemplates).length > 0 ? `
                         <div class="checklist-section" style="background: linear-gradient(135deg, rgba(76, 175, 80, 0.1) 0%, rgba(56, 142, 60, 0.1) 100%); border: 2px solid rgba(76, 175, 80, 0.3); margin-bottom: 0;">
                             <h3 style="color: #4caf50; margin-bottom: 15px;">📊 Excel Templates</h3>
-                            <div style="display: flex; flex-direction: column; gap: 10px;">
+                            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px;">
                                 <button class="btn btn-success" onclick="openExcelPopulateModal(${customer.id})" style="background: linear-gradient(135deg, #4caf50 0%, #388e3c 100%); display: flex; align-items: center; gap: 8px; justify-content: center; width: 100%;"><span>📊</span><span>Populate Excel Template</span></button>
                             </div>
                         </div>
