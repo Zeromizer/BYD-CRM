@@ -717,7 +717,7 @@ async function downloadPopulatedExcel() {
                 const encodedUrl = encodeURIComponent(fileWebContentLink);
                 const office365Url = `https://view.officeapps.live.com/op/edit.aspx?src=${encodedUrl}`;
 
-                window.open(office365Url, '_blank');
+                window.open(office365Url, '_blank', 'noopener,noreferrer');
                 alert('Excel file generated successfully!\n\n✅ Saved to customer folder in Google Drive\n✅ Opening file in Microsoft 365 Excel Online...\n\nYou can view it in the Documents tab.');
             } else {
                 alert('Excel file generated successfully!\n\n✅ Saved to customer folder in Google Drive\n\nYou can view it in the Documents tab.');
