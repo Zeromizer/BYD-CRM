@@ -400,15 +400,14 @@ async function uploadFormTemplateNew() {
 function loadExcelTemplates2() {
     const container = document.getElementById('excelListContainer2');
 
-    // excelTemplates is a global object, not an array
-    if (!excelTemplates || Object.keys(excelTemplates).length === 0) {
+    const templates = getExcelTemplates();
+    if (!templates || templates.length === 0) {
         container.innerHTML = '<div style="text-align: center; padding: 15px; color: #7f8c8d; font-size: 13px;">No templates created yet</div>';
         return;
     }
 
     let html = '';
-    // Iterate over the object entries
-    for (const [templateId, template] of Object.entries(excelTemplates)) {
+    templates.forEach(template => {
         html += `
             <div class="file-item" style="margin-bottom: 10px; padding: 10px; background: white; border: 1px solid #ecf0f1; border-radius: 6px;">
                 <div class="file-info">
@@ -419,13 +418,13 @@ function loadExcelTemplates2() {
                     </div>
                 </div>
                 <div class="file-actions">
-                    <button class="btn btn-small" style="font-size: 11px; padding: 4px 8px;" onclick="openExcelMappingModal('${templateId}')">⚙️ Edit</button>
-                    <button class="btn btn-success btn-small" style="font-size: 11px; padding: 4px 8px;" onclick="openExcelPopulateModal('${templateId}')">Fill</button>
-                    <button class="btn btn-danger btn-small" style="font-size: 11px; padding: 4px 8px;" onclick="deleteExcelTemplate('${templateId}')">Delete</button>
+                    <button class="btn btn-small" style="font-size: 11px; padding: 4px 8px;" onclick="openExcelMappingModal('${template.id}')">⚙️ Edit</button>
+                    <button class="btn btn-success btn-small" style="font-size: 11px; padding: 4px 8px;" onclick="openExcelPopulateModal('${template.id}')">Fill</button>
+                    <button class="btn btn-danger btn-small" style="font-size: 11px; padding: 4px 8px;" onclick="deleteExcelTemplate('${template.id}')">Delete</button>
                 </div>
             </div>
         `;
-    }
+    });
 
     container.innerHTML = html;
 }
@@ -454,6 +453,20 @@ async function createExcelTemplateNew() {
     loadExcelTemplates2();
     nameInput.value = '';
     fileInput.value = '';
+}
+
+// Helper function to get excel templates
+function getExcelTemplates() {
+    const stored = localStorage.getItem('excelTemplates');
+    if (stored) {
+        try {
+            return JSON.parse(stored);
+        } catch (e) {
+            console.error('Error parsing Excel templates:', e);
+            return [];
+        }
+    }
+    return [];
 }
 
 // Display forms list
