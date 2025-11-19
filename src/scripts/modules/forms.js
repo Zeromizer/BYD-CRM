@@ -912,6 +912,7 @@ async function renderFormWithData(formType, customer) {
                 'vsa_sellingWithCOE': customer.vsaDetails?.sellingWithCOE || '',
                 'vsa_sellingPriceList': customer.vsaDetails?.sellingPriceList || '',
                 'vsa_coeRebateLevel': customer.vsaDetails?.coeRebateLevel || '',
+                'vsa_coeRebate': customer.vsaDetails?.coeRebate || '',
                 'vsa_deposit': customer.vsaDetails?.deposit || '',
                 'vsa_lessOthers': customer.vsaDetails?.lessOthers || '',
                 'vsa_addOthers': customer.vsaDetails?.addOthers || '',

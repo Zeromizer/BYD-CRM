@@ -279,6 +279,7 @@
                                 <option value="vsa_sellingPriceList">Selling Price on Price List</option>
                                 <option value="vsa_purchasePriceWithCOE">Purchase Price with COE</option>
                                 <option value="vsa_coeRebateLevel">COE Rebate Level</option>
+                                <option value="vsa_coeRebate">COE Rebate</option>
                                 <option value="vsa_deposit">Deposit</option>
                                 <option value="vsa_lessOthers">Less: Others</option>
                                 <option value="vsa_addOthers">Add: Others</option>
@@ -491,6 +492,7 @@
                                     <option value="vsa_sellingPriceList">Selling Price on Price List</option>
                                     <option value="vsa_purchasePriceWithCOE">Purchase Price with COE</option>
                                     <option value="vsa_coeRebateLevel">COE Rebate Level</option>
+                                    <option value="vsa_coeRebate">COE Rebate</option>
                                     <option value="vsa_deposit">Deposit</option>
                                     <option value="vsa_lessOthers">Less: Others</option>
                                     <option value="vsa_addOthers">Add: Others</option>
@@ -740,16 +742,20 @@
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label>Deposit</label>
-                            <input type="text" id="vsa_deposit" placeholder="e.g., $25,000">
+                            <label>COE Rebate</label>
+                            <input type="text" id="vsa_coeRebate" placeholder="e.g., $10,000">
                         </div>
                         <div class="form-group">
-                            <label>Less: Others</label>
-                            <input type="text" id="vsa_lessOthers" placeholder="e.g., $5,000">
+                            <label>Deposit</label>
+                            <input type="text" id="vsa_deposit" placeholder="e.g., $25,000">
                         </div>
                     </div>
 
                     <div class="form-row">
+                        <div class="form-group">
+                            <label>Less: Others</label>
+                            <input type="text" id="vsa_lessOthers" placeholder="e.g., $5,000">
+                        </div>
                         <div class="form-group">
                             <label>Add: Others</label>
                             <input type="text" id="vsa_addOthers" placeholder="e.g., $2,000">
