@@ -10,18 +10,10 @@
 // ========== EXCEL TEMPLATES MANAGEMENT ==========
 
 // Open Excel modal
-async function openExcelModal() {
+function openExcelModal() {
     const modal = document.getElementById('excelModal');
     modal.classList.add('active');
-
-    // Load from Google Drive if signed in
-    if (isSignedIn) {
-        await loadExcelTemplates();
-    } else {
-        // Load from localStorage only
-        loadExcelTemplatesLocal();
-    }
-
+    loadExcelTemplates();
     displayExcelList();
 }
 
@@ -188,144 +180,24 @@ async function deleteExcelTemplate(templateId) {
     displayExcelList();
 }
 
-// Save Excel templates to localStorage and Google Drive
-async function saveExcelTemplates() {
-    // Always save to localStorage for quick access
+// Save Excel templates to localStorage
+function saveExcelTemplates() {
     try {
         localStorage.setItem('excelTemplates', JSON.stringify(excelTemplates));
     } catch (error) {
-        console.error('Error saving Excel templates to localStorage:', error);
-    }
-
-    // Also save to Google Drive if signed in
-    if (isSignedIn && formsFolderId) {
-        try {
-            await saveExcelTemplatesToDrive();
-            console.log('Excel templates saved to Google Drive');
-        } catch (error) {
-            console.error('Error saving Excel templates to Drive:', error);
-        }
+        console.error('Error saving Excel templates:', error);
     }
 }
 
-// Load Excel templates from localStorage only
-function loadExcelTemplatesLocal() {
+// Load Excel templates from localStorage
+function loadExcelTemplates() {
     try {
         const stored = localStorage.getItem('excelTemplates');
         if (stored) {
             excelTemplates = JSON.parse(stored);
-            console.log('Loaded Excel templates from localStorage');
         }
     } catch (error) {
-        console.error('Error loading Excel templates from localStorage:', error);
-    }
-}
-
-// Load Excel templates from Google Drive (with localStorage fallback)
-async function loadExcelTemplates() {
-    // Try to load from Google Drive first
-    if (isSignedIn && formsFolderId) {
-        try {
-            const driveData = await loadExcelTemplatesFromDrive();
-            if (driveData && Object.keys(driveData).length > 0) {
-                excelTemplates = driveData;
-                // Cache in localStorage
-                localStorage.setItem('excelTemplates', JSON.stringify(excelTemplates));
-                console.log('Loaded Excel templates from Google Drive:', Object.keys(excelTemplates).length);
-                return;
-            }
-        } catch (error) {
-            console.error('Error loading Excel templates from Drive:', error);
-        }
-    }
-
-    // Fallback to localStorage
-    loadExcelTemplatesLocal();
-}
-
-// Save Excel templates data to Google Drive
-async function saveExcelTemplatesToDrive() {
-    try {
-        // Check if excel-templates-data.json file exists
-        const fileName = 'excel-templates-data.json';
-        const query = `name='${fileName}' and '${formsFolderId}' in parents and trashed=false`;
-
-        const response = await gapi.client.drive.files.list({
-            q: query,
-            spaces: 'drive',
-            fields: 'files(id, name)'
-        });
-
-        const files = response.result.files;
-        let fileId = files && files.length > 0 ? files[0].id : null;
-
-        // Prepare the data
-        const dataBlob = new Blob([JSON.stringify(excelTemplates, null, 2)], { type: 'application/json' });
-
-        if (fileId) {
-            // Update existing file
-            const updateResponse = await gapi.client.request({
-                path: `/upload/drive/v3/files/${fileId}`,
-                method: 'PATCH',
-                params: { uploadType: 'media' },
-                body: dataBlob
-            });
-            console.log('Updated Excel templates in Drive');
-        } else {
-            // Create new file
-            const metadata = {
-                name: fileName,
-                mimeType: 'application/json',
-                parents: [formsFolderId]
-            };
-
-            const form = new FormData();
-            form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-            form.append('file', dataBlob);
-
-            const createResponse = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
-                method: 'POST',
-                headers: new Headers({ 'Authorization': 'Bearer ' + gapi.auth.getToken().access_token }),
-                body: form
-            });
-
-            const result = await createResponse.json();
-            console.log('Created Excel templates file in Drive:', result.id);
-        }
-    } catch (error) {
-        console.error('Error saving Excel templates to Drive:', error);
-        throw error;
-    }
-}
-
-// Load Excel templates data from Google Drive
-async function loadExcelTemplatesFromDrive() {
-    try {
-        const fileName = 'excel-templates-data.json';
-        const query = `name='${fileName}' and '${formsFolderId}' in parents and trashed=false`;
-
-        const response = await gapi.client.drive.files.list({
-            q: query,
-            spaces: 'drive',
-            fields: 'files(id, name)'
-        });
-
-        const files = response.result.files;
-        if (!files || files.length === 0) {
-            console.log('No Excel templates data file found in Drive');
-            return null;
-        }
-
-        const fileId = files[0].id;
-        const dataResponse = await gapi.client.drive.files.get({
-            fileId: fileId,
-            alt: 'media'
-        });
-
-        return dataResponse.result || null;
-    } catch (error) {
-        console.error('Error loading Excel templates from Drive:', error);
-        return null;
+        console.error('Error loading Excel templates:', error);
     }
 }
 
