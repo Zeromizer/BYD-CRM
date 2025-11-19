@@ -1026,6 +1026,18 @@ body {
         padding: 14px;
     }
 
+    /* Customer templates grid - stack on mobile */
+    .customer-templates-grid {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+
+    /* Ensure both Forms and Excel sections are visible and properly sized */
+    .customer-templates-grid > .checklist-section {
+        width: 100%;
+        display: block;
+    }
+
     /* Make sure text doesn't overflow */
     * {
         word-wrap: break-word;
