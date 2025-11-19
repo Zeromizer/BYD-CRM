@@ -313,7 +313,8 @@ function updateExcelMappingsList() {
         'vsa_adminFee': 'VSA - Admin Fee',
         'vsa_insuranceSubsidy': 'VSA - Insurance Subsidy',
         'vsa_insuranceCompany': 'VSA - Insurance Company',
-        'vsa_insuranceFee': 'VSA - Insurance Fee'
+        'vsa_insuranceFee': 'VSA - Insurance Fee',
+        'vsa_insuranceNet': 'VSA - Insurance Net (Fee - Subsidy)'
     };
 
     let html = '<div style="display: flex; flex-direction: column; gap: 8px;">';
@@ -456,7 +457,8 @@ function updateExcelPreview() {
         'vsa_adminFee': 'VSA - Admin Fee',
         'vsa_insuranceSubsidy': 'VSA - Insurance Subsidy',
         'vsa_insuranceCompany': 'VSA - Insurance Company',
-        'vsa_insuranceFee': 'VSA - Insurance Fee'
+        'vsa_insuranceFee': 'VSA - Insurance Fee',
+        'vsa_insuranceNet': 'VSA - Insurance Net (Fee - Subsidy)'
     };
 
     let html = '<div style="font-size: 13px;">';
@@ -595,9 +597,17 @@ async function downloadPopulatedExcel() {
             'vsa_tenure': customer.vsaDetails?.tenure || '',
             'vsa_monthlyPayment': customer.vsaDetails?.monthlyPayment || '',
             'vsa_financeCompany': customer.vsaDetails?.financeCompany || '',
+            'vsa_adminFee': customer.vsaDetails?.adminFee || '',
+            'vsa_insuranceSubsidy': customer.vsaDetails?.insuranceSubsidy || '',
             'vsa_insuranceCompany': customer.vsaDetails?.insuranceCompany || '',
             'vsa_insuranceFee': customer.vsaDetails?.insuranceFee || ''
         };
+
+        // Calculate Insurance Net (Insurance Fee - Insurance Subsidy)
+        const insuranceFee = parseFloat(customer.vsaDetails?.insuranceFee?.replace(/[^0-9.-]/g, '') || '0');
+        const insuranceSubsidy = parseFloat(customer.vsaDetails?.insuranceSubsidy?.replace(/[^0-9.-]/g, '') || '0');
+        const insuranceNet = insuranceFee - insuranceSubsidy;
+        dataMapping['vsa_insuranceNet'] = insuranceNet !== 0 ? insuranceNet : '';
 
         // Apply mappings - xlsx-populate preserves ALL formatting perfectly
         for (const mapping of Object.values(template.fieldMappings)) {

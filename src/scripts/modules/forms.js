@@ -926,9 +926,17 @@ async function renderFormWithData(formType, customer) {
                 'vsa_tenure': customer.vsaDetails?.tenure || '',
                 'vsa_monthlyPayment': customer.vsaDetails?.monthlyPayment || '',
                 'vsa_financeCompany': customer.vsaDetails?.financeCompany || '',
+                'vsa_adminFee': customer.vsaDetails?.adminFee || '',
+                'vsa_insuranceSubsidy': customer.vsaDetails?.insuranceSubsidy || '',
                 'vsa_insuranceCompany': customer.vsaDetails?.insuranceCompany || '',
                 'vsa_insuranceFee': customer.vsaDetails?.insuranceFee || ''
             };
+
+            // Calculate Insurance Net (Insurance Fee - Insurance Subsidy)
+            const insuranceFee = parseFloat(customer.vsaDetails?.insuranceFee?.replace(/[^0-9.-]/g, '') || '0');
+            const insuranceSubsidy = parseFloat(customer.vsaDetails?.insuranceSubsidy?.replace(/[^0-9.-]/g, '') || '0');
+            const insuranceNet = insuranceFee - insuranceSubsidy;
+            dataMapping['vsa_insuranceNet'] = insuranceNet !== 0 ? insuranceNet.toString() : '';
 
             // Draw each field
             for (const [fieldId, field] of Object.entries(formData.fieldMappings)) {
