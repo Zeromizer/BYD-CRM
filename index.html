@@ -619,6 +619,7 @@
                     <button class="tab active" onclick="switchVsaTab('newCarDetails')">BYD New Car Details</button>
                     <button class="tab" onclick="switchVsaTab('newCarPackage')">BYD New Car Package</button>
                     <button class="tab" onclick="switchVsaTab('tradeInCar')">Trade in Car Details</button>
+                    <button class="tab" onclick="switchVsaTab('deliveryDetails')">Delivery Details</button>
                     <button class="tab" onclick="switchVsaTab('insurance')">Insurance</button>
                     <button class="tab" onclick="switchVsaTab('remarks')">Remarks</button>
                 </div>
@@ -766,6 +767,32 @@
                     <div class="form-group">
                         <label>Trade In Amount</label>
                         <input type="text" id="vsa_tradeInAmount" placeholder="e.g., $50,000">
+                    </div>
+                </div>
+
+                <div id="vsa-tab-deliveryDetails" class="tab-content" style="display: none;">
+                    <h3 style="color: #2c3e50; margin-bottom: 15px;">Delivery Details</h3>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Date of Registration</label>
+                            <input type="date" id="vsa_dateOfRegistration">
+                        </div>
+                        <div class="form-group">
+                            <label>Registration No</label>
+                            <input type="text" id="vsa_registrationNo" placeholder="e.g., ABC1234X">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Chassis No</label>
+                            <input type="text" id="vsa_chassisNo" placeholder="e.g., LGXXX12345678">
+                        </div>
+                        <div class="form-group">
+                            <label>Engine No</label>
+                            <input type="text" id="vsa_engineNo" placeholder="e.g., ENG123456">
+                        </div>
                     </div>
                 </div>
 

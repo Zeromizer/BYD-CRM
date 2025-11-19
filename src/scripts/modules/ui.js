@@ -96,6 +96,10 @@ function openVsaDetailsModal(customerId) {
             tradeInCarNo: '',
             tradeInCarModel: '',
             tradeInAmount: '',
+            dateOfRegistration: '',
+            registrationNo: '',
+            chassisNo: '',
+            engineNo: '',
             remarks1: '',
             remarks2: '',
             loanAmount: '',
@@ -128,6 +132,10 @@ function openVsaDetailsModal(customerId) {
     document.getElementById('vsa_tradeInCarNo').value = customer.vsaDetails.tradeInCarNo || '';
     document.getElementById('vsa_tradeInCarModel').value = customer.vsaDetails.tradeInCarModel || '';
     document.getElementById('vsa_tradeInAmount').value = customer.vsaDetails.tradeInAmount || '';
+    document.getElementById('vsa_dateOfRegistration').value = customer.vsaDetails.dateOfRegistration || '';
+    document.getElementById('vsa_registrationNo').value = customer.vsaDetails.registrationNo || '';
+    document.getElementById('vsa_chassisNo').value = customer.vsaDetails.chassisNo || '';
+    document.getElementById('vsa_engineNo').value = customer.vsaDetails.engineNo || '';
     document.getElementById('vsa_remarks1').value = customer.vsaDetails.remarks1 || '';
     document.getElementById('vsa_remarks2').value = customer.vsaDetails.remarks2 || '';
     document.getElementById('vsa_loanAmount').value = customer.vsaDetails.loanAmount || '';
@@ -180,6 +188,10 @@ function saveVsaDetails() {
     customer.vsaDetails.tradeInCarNo = document.getElementById('vsa_tradeInCarNo').value;
     customer.vsaDetails.tradeInCarModel = document.getElementById('vsa_tradeInCarModel').value;
     customer.vsaDetails.tradeInAmount = document.getElementById('vsa_tradeInAmount').value;
+    customer.vsaDetails.dateOfRegistration = document.getElementById('vsa_dateOfRegistration').value;
+    customer.vsaDetails.registrationNo = document.getElementById('vsa_registrationNo').value;
+    customer.vsaDetails.chassisNo = document.getElementById('vsa_chassisNo').value;
+    customer.vsaDetails.engineNo = document.getElementById('vsa_engineNo').value;
     customer.vsaDetails.remarks1 = document.getElementById('vsa_remarks1').value;
     customer.vsaDetails.remarks2 = document.getElementById('vsa_remarks2').value;
     customer.vsaDetails.loanAmount = document.getElementById('vsa_loanAmount').value;
