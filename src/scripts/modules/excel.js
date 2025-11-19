@@ -142,6 +142,7 @@ function displayExcelList() {
                 </div>
                 <div style="display: flex; gap: 10px; margin-top: 10px;">
                     <button class="btn btn-primary" onclick="openExcelMappingModal('${templateId}')" style="flex: 1; background: #2196f3;">Map Fields</button>
+                    <button class="btn ${hasMasterFile ? 'btn-secondary' : 'btn-success'}" onclick="openUploadMasterFileModal('${templateId}')" style="flex: 1;">${hasMasterFile ? 'Update Master File' : 'Upload Master File'}</button>
                 </div>
             </div>
         `;
@@ -711,6 +712,151 @@ async function downloadPopulatedExcel() {
     } catch (error) {
         console.error('Error generating Excel file:', error);
         alert('Failed to generate Excel file: ' + error.message);
+    }
+}
+
+// Open upload master file modal
+function openUploadMasterFileModal(templateId) {
+    currentExcelTemplateId = templateId;
+    const template = excelTemplates[templateId];
+
+    if (!template) {
+        alert('Template not found');
+        return;
+    }
+
+    // Show current master file info if exists
+    const infoContainer = document.getElementById('currentMasterFileInfo');
+    if (template.driveFileId && template.driveFileName) {
+        infoContainer.innerHTML = `
+            <div style="padding: 15px; background: rgba(76, 175, 80, 0.1); border: 2px solid rgba(76, 175, 80, 0.3); border-radius: 8px;">
+                <h4 style="color: #27ae60; margin-bottom: 10px;">Current Master File</h4>
+                <p style="color: #2c3e50; font-size: 14px; margin: 0;"><strong>📄 ${template.driveFileName}</strong></p>
+                <p style="color: #7f8c8d; font-size: 12px; margin-top: 5px;">Uploading a new file will replace this one.</p>
+            </div>
+        `;
+    } else {
+        infoContainer.innerHTML = `
+            <div style="padding: 15px; background: rgba(255, 152, 0, 0.1); border: 2px solid rgba(255, 152, 0, 0.3); border-radius: 8px;">
+                <p style="color: #f57c00; font-size: 14px; margin: 0;"><strong>⚠️ No master file uploaded yet</strong></p>
+                <p style="color: #7f8c8d; font-size: 12px; margin-top: 5px;">Upload a master file to skip the upload step when populating data.</p>
+            </div>
+        `;
+    }
+
+    // Clear file input
+    document.getElementById('uploadMasterFileInput').value = '';
+
+    // Show modal
+    document.getElementById('uploadMasterFileModal').style.display = 'flex';
+}
+
+// Close upload master file modal
+function closeUploadMasterFileModal() {
+    document.getElementById('uploadMasterFileModal').style.display = 'none';
+    document.getElementById('uploadMasterFileInput').value = '';
+    currentExcelTemplateId = null;
+}
+
+// Upload master file to Google Drive
+async function uploadMasterFile() {
+    if (!currentExcelTemplateId) {
+        alert('No template selected');
+        return;
+    }
+
+    const template = excelTemplates[currentExcelTemplateId];
+    if (!template) {
+        alert('Template not found');
+        return;
+    }
+
+    const fileInput = document.getElementById('uploadMasterFileInput');
+    const file = fileInput.files[0];
+
+    if (!file) {
+        alert('Please select an Excel file to upload');
+        return;
+    }
+
+    // Check if signed in
+    if (!isSignedIn) {
+        alert('Please sign in to Google Drive first');
+        return;
+    }
+
+    try {
+        // Disable upload button
+        const uploadBtn = document.getElementById('uploadMasterFileBtn');
+        uploadBtn.disabled = true;
+        uploadBtn.textContent = 'Uploading...';
+
+        // Ensure Excel Templates folder exists
+        await getOrCreateExcelTemplatesFolder();
+
+        if (!excelTemplatesFolderId) {
+            alert('Could not create Excel Templates folder in Google Drive');
+            uploadBtn.disabled = false;
+            uploadBtn.textContent = 'Upload to Google Drive';
+            return;
+        }
+
+        // If template already has a file, delete the old one first
+        if (template.driveFileId) {
+            try {
+                await gapi.client.drive.files.delete({
+                    fileId: template.driveFileId
+                });
+                console.log('Deleted old master file:', template.driveFileId);
+            } catch (error) {
+                console.error('Error deleting old file:', error);
+                // Continue with upload even if delete fails
+            }
+        }
+
+        // Upload new file to Google Drive
+        const metadata = {
+            name: file.name,
+            parents: [excelTemplatesFolderId]
+        };
+
+        const form = new FormData();
+        form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+        form.append('file', file);
+
+        const response = await fetch(
+            'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name',
+            {
+                method: 'POST',
+                headers: new Headers({ 'Authorization': 'Bearer ' + accessToken }),
+                body: form
+            }
+        );
+
+        const result = await response.json();
+        if (result && result.id) {
+            // Update template with new file info
+            template.driveFileId = result.id;
+            template.driveFileName = file.name;
+            saveExcelTemplates();
+
+            console.log('Excel master file uploaded to Drive:', result.id);
+            alert('Master file uploaded successfully!\n\n✓ ' + file.name + '\n\nYou can now use this template without uploading files each time.');
+
+            // Close modal and refresh list
+            closeUploadMasterFileModal();
+            displayExcelList();
+        } else {
+            alert('Failed to upload Excel file to Google Drive');
+            uploadBtn.disabled = false;
+            uploadBtn.textContent = 'Upload to Google Drive';
+        }
+    } catch (error) {
+        console.error('Error uploading master file:', error);
+        alert('Error uploading file to Google Drive: ' + error.message);
+        const uploadBtn = document.getElementById('uploadMasterFileBtn');
+        uploadBtn.disabled = false;
+        uploadBtn.textContent = 'Upload to Google Drive';
     }
 }
 
