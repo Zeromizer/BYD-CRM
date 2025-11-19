@@ -1273,7 +1273,8 @@ body {
     font-weight: bold;
     cursor: help;
     position: relative;
-    vertical-align: middle;
+    vertical-align: text-bottom;
+    transform: translateY(-1px);
 }
 
 .info-icon:hover {
