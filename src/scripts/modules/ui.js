@@ -304,7 +304,8 @@ async function openTemplatesModal() {
         await loadFormTemplates();
         displayFormsList2();
 
-        // Load Excel templates
+        // Load Excel templates from localStorage then display
+        loadExcelTemplates();
         loadExcelTemplates2();
     }
 }
