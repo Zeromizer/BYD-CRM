@@ -192,27 +192,21 @@ async function deleteExcelTemplate(templateId) {
 
 // Save Excel templates to localStorage and Google Drive
 async function saveExcelTemplates() {
-    console.log('[Excel] Saving templates. Count:', Object.keys(excelTemplates).length);
-
     // Always save to localStorage for quick access
     try {
         localStorage.setItem('excelTemplates', JSON.stringify(excelTemplates));
-        console.log('[Excel] ✓ Saved to localStorage');
     } catch (error) {
-        console.error('[Excel] Error saving to localStorage:', error);
+        console.error('Error saving Excel templates to localStorage:', error);
     }
 
     // Also save to Google Drive if signed in
     if (isSignedIn && formsFolderId) {
-        console.log('[Excel] Attempting to save to Google Drive...');
         try {
             await saveExcelTemplatesToDrive();
-            console.log('[Excel] ✓ Excel templates saved to Google Drive');
+            console.log('Excel templates saved to Google Drive');
         } catch (error) {
-            console.error('[Excel] Error saving Excel templates to Drive:', error);
+            console.error('Error saving Excel templates to Drive:', error);
         }
-    } else {
-        console.log('[Excel] Not saving to Drive - isSignedIn:', isSignedIn, 'formsFolderId:', formsFolderId);
     }
 }
 
@@ -231,33 +225,20 @@ function loadExcelTemplatesLocal() {
 
 // Load Excel templates from Google Drive (with localStorage fallback)
 async function loadExcelTemplates() {
-    console.log('[Excel] Starting loadExcelTemplates...');
-    console.log('[Excel] isSignedIn:', isSignedIn, 'formsFolderId:', formsFolderId);
-
     // Try to load from Google Drive first
     if (isSignedIn && formsFolderId) {
         try {
-            console.log('[Excel] Attempting to load from Google Drive...');
             const driveData = await loadExcelTemplatesFromDrive();
-            console.log('[Excel] Drive data received:', driveData);
-            console.log('[Excel] Drive data type:', typeof driveData);
-            console.log('[Excel] Drive data keys:', driveData ? Object.keys(driveData) : 'null');
-
-            if (driveData !== null) {
-                // Use Drive data even if empty - this is the source of truth
+            if (driveData && Object.keys(driveData).length > 0) {
                 excelTemplates = driveData;
-                // Update localStorage cache
+                // Cache in localStorage
                 localStorage.setItem('excelTemplates', JSON.stringify(excelTemplates));
-                console.log('[Excel] ✓ Loaded from Google Drive. Templates:', Object.keys(excelTemplates).length);
+                console.log('Loaded Excel templates from Google Drive:', Object.keys(excelTemplates).length);
                 return;
-            } else {
-                console.log('[Excel] No Drive file found, will check localStorage');
             }
         } catch (error) {
-            console.error('[Excel] Error loading from Drive:', error);
+            console.error('Error loading Excel templates from Drive:', error);
         }
-    } else {
-        console.log('[Excel] Not signed in or no folder ID, using localStorage only');
     }
 
     // Fallback to localStorage
@@ -325,8 +306,6 @@ async function loadExcelTemplatesFromDrive() {
         const fileName = 'excel-templates-data.json';
         const query = `name='${fileName}' and '${formsFolderId}' in parents and trashed=false`;
 
-        console.log('[Excel] Searching for file:', fileName, 'in folder:', formsFolderId);
-
         const response = await gapi.client.drive.files.list({
             q: query,
             spaces: 'drive',
@@ -334,27 +313,20 @@ async function loadExcelTemplatesFromDrive() {
         });
 
         const files = response.result.files;
-        console.log('[Excel] Files found:', files ? files.length : 0);
-
         if (!files || files.length === 0) {
-            console.log('[Excel] No Excel templates data file found in Drive');
+            console.log('No Excel templates data file found in Drive');
             return null;
         }
 
         const fileId = files[0].id;
-        console.log('[Excel] Loading file ID:', fileId);
-
         const dataResponse = await gapi.client.drive.files.get({
             fileId: fileId,
             alt: 'media'
         });
 
-        console.log('[Excel] File loaded. Result type:', typeof dataResponse.result);
-        console.log('[Excel] File content:', dataResponse.result);
-
         return dataResponse.result || null;
     } catch (error) {
-        console.error('[Excel] Error loading Excel templates from Drive:', error);
+        console.error('Error loading Excel templates from Drive:', error);
         return null;
     }
 }
