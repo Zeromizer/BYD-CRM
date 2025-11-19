@@ -296,6 +296,7 @@ function updateExcelMappingsList() {
         'vsa_sellingPriceList': 'VSA - Selling Price on Price List',
         'vsa_purchasePriceWithCOE': 'VSA - Purchase Price with COE',
         'vsa_coeRebateLevel': 'VSA - COE Rebate Level',
+        'vsa_coeRebate': 'VSA - COE Rebate',
         'vsa_deposit': 'VSA - Deposit',
         'vsa_lessOthers': 'VSA - Less: Others',
         'vsa_addOthers': 'VSA - Add: Others',
@@ -444,6 +445,7 @@ function updateExcelPreview() {
         'vsa_sellingPriceList': 'VSA - Selling Price on Price List',
         'vsa_purchasePriceWithCOE': 'VSA - Purchase Price with COE',
         'vsa_coeRebateLevel': 'VSA - COE Rebate Level',
+        'vsa_coeRebate': 'VSA - COE Rebate',
         'vsa_deposit': 'VSA - Deposit',
         'vsa_lessOthers': 'VSA - Less: Others',
         'vsa_addOthers': 'VSA - Add: Others',
@@ -591,6 +593,7 @@ async function downloadPopulatedExcel() {
             'vsa_sellingWithCOE': customer.vsaDetails?.sellingWithCOE || '',
             'vsa_sellingPriceList': customer.vsaDetails?.sellingPriceList || '',
             'vsa_coeRebateLevel': customer.vsaDetails?.coeRebateLevel || '',
+            'vsa_coeRebate': customer.vsaDetails?.coeRebate || '',
             'vsa_deposit': customer.vsaDetails?.deposit || '',
             'vsa_lessOthers': customer.vsaDetails?.lessOthers || '',
             'vsa_addOthers': customer.vsaDetails?.addOthers || '',
@@ -619,7 +622,8 @@ async function downloadPopulatedExcel() {
         const numericFields = [
             'vsa_deposit', 'vsa_lessOthers', 'vsa_addOthers', 'vsa_tradeInAmount',
             'vsa_loanAmount', 'vsa_monthlyPayment', 'vsa_adminFee', 'vsa_insuranceSubsidy',
-            'vsa_insuranceFee', 'vsa_purchasePriceWithCOE', 'vsa_sellingPriceList', 'vsa_coeRebateLevel'
+            'vsa_insuranceFee', 'vsa_purchasePriceWithCOE', 'vsa_sellingPriceList', 'vsa_coeRebateLevel',
+            'vsa_coeRebate'
         ];
 
         numericFields.forEach(field => {

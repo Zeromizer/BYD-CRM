@@ -89,6 +89,7 @@ function openVsaDetailsModal(customerId) {
             sellingPriceList: '',
             purchasePriceWithCOE: '',
             coeRebateLevel: '',
+            coeRebate: '',
             lessOthers: '',
             deposit: '',
             addOthers: '',
@@ -125,6 +126,7 @@ function openVsaDetailsModal(customerId) {
     document.getElementById('vsa_sellingPriceList').value = customer.vsaDetails.sellingPriceList || '';
     document.getElementById('vsa_purchasePriceWithCOE').value = customer.vsaDetails.purchasePriceWithCOE || '';
     document.getElementById('vsa_coeRebateLevel').value = customer.vsaDetails.coeRebateLevel || '';
+    document.getElementById('vsa_coeRebate').value = customer.vsaDetails.coeRebate || '';
     document.getElementById('vsa_lessOthers').value = customer.vsaDetails.lessOthers || '';
     document.getElementById('vsa_deposit').value = customer.vsaDetails.deposit || '';
     document.getElementById('vsa_addOthers').value = customer.vsaDetails.addOthers || '';
@@ -181,6 +183,7 @@ function saveVsaDetails() {
     customer.vsaDetails.sellingPriceList = document.getElementById('vsa_sellingPriceList').value;
     customer.vsaDetails.purchasePriceWithCOE = document.getElementById('vsa_purchasePriceWithCOE').value;
     customer.vsaDetails.coeRebateLevel = document.getElementById('vsa_coeRebateLevel').value;
+    customer.vsaDetails.coeRebate = document.getElementById('vsa_coeRebate').value;
     customer.vsaDetails.lessOthers = document.getElementById('vsa_lessOthers').value;
     customer.vsaDetails.deposit = document.getElementById('vsa_deposit').value;
     customer.vsaDetails.addOthers = document.getElementById('vsa_addOthers').value;
