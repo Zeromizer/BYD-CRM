@@ -733,9 +733,11 @@ body {
     font-size: 13px;
 }
 
+/* Tablet and larger mobile devices */
 @media (max-width: 768px) {
     .main-content {
         grid-template-columns: 1fr;
+        gap: 16px;
     }
 
     .form-row {
@@ -745,11 +747,14 @@ body {
     .header {
         text-align: center;
         padding-top: 50px;
+        padding-bottom: 12px;
+        margin-bottom: 15px;
     }
 
     .header h1 {
         font-size: 18px;
         line-height: 1.4;
+        letter-spacing: 3px;
     }
 
     .header h1 #syncStatus {
@@ -785,20 +790,20 @@ body {
     }
 
     .stat-card {
-        padding: 12px;
+        padding: 15px;
     }
 
     .stat-card h3 {
         font-size: 11px;
     }
 
-    .stat-card .stat-number {
-        font-size: 24px;
+    .stat-card p {
+        font-size: 28px;
     }
 
-    /* Customer list optimizations */
+    /* Customer list optimizations - reduce scrolling */
     .customer-list {
-        max-height: 400px;
+        max-height: none;
     }
 
     .customer-item {
@@ -833,10 +838,11 @@ body {
     }
 
     .tab {
-        font-size: 12px;
-        padding: 10px 15px;
+        font-size: 11px;
+        padding: 10px 12px;
         white-space: nowrap;
         flex-shrink: 0;
+        letter-spacing: 0.3px;
     }
 
     /* Upload area mobile */
@@ -899,6 +905,10 @@ body {
     }
 
     /* Form mobile optimization */
+    .form-group {
+        margin-bottom: 15px;
+    }
+
     .form-group label {
         font-size: 13px;
     }
@@ -931,12 +941,17 @@ body {
         width: 95%;
         max-width: 95%;
         margin: 20px auto;
+        padding: 24px;
         max-height: 90vh;
         overflow-y: auto;
     }
 
+    .modal-header {
+        margin-bottom: 20px;
+    }
+
     .modal-header h2 {
-        font-size: 1.3em;
+        font-size: 1.2em;
     }
 
     /* Checklist mobile */
@@ -1003,6 +1018,14 @@ body {
         font-size: 12px;
     }
 
+    /* Sync status popup - reduce width */
+    #syncStatusPopup {
+        width: 280px;
+        bottom: 15px;
+        right: 15px;
+        padding: 14px;
+    }
+
     /* Make sure text doesn't overflow */
     * {
         word-wrap: break-word;
@@ -1038,6 +1061,365 @@ body {
         font-size: 14px;
         padding: 12px 16px;
         min-height: 44px;
+    }
+}
+
+/* Small mobile devices (phones in portrait) */
+@media (max-width: 480px) {
+    body {
+        padding: 8px;
+    }
+
+    .container {
+        padding-bottom: 15px;
+    }
+
+    /* Header optimizations for small screens */
+    .header {
+        padding: 8px 10px 10px 10px;
+        margin-bottom: 12px;
+    }
+
+    .header h1 {
+        font-size: 16px;
+        letter-spacing: 2px;
+        margin-bottom: 8px;
+    }
+
+    .google-drive-btn {
+        top: 8px;
+        right: 8px;
+        font-size: 10px;
+        padding: 5px 10px;
+        gap: 6px;
+    }
+
+    .google-drive-btn .status-dot {
+        width: 6px;
+        height: 6px;
+    }
+
+    /* Header actions - better stacking */
+    .header-actions {
+        gap: 6px;
+    }
+
+    .header-actions .btn {
+        font-size: 11px;
+        padding: 10px 14px;
+        min-width: 100px;
+        letter-spacing: 0.5px;
+    }
+
+    /* Stats grid - single column on very small screens */
+    .stats-grid {
+        grid-template-columns: 1fr;
+        gap: 8px;
+        margin-bottom: 15px;
+    }
+
+    .stat-card {
+        padding: 12px 15px;
+    }
+
+    .stat-card h3 {
+        font-size: 10px;
+        letter-spacing: 0.5px;
+    }
+
+    .stat-card p {
+        font-size: 24px;
+    }
+
+    /* Main content - reduce gap */
+    .main-content {
+        gap: 12px;
+    }
+
+    /* Cards */
+    .card {
+        padding: 12px;
+        border-radius: 12px;
+        margin-bottom: 12px;
+    }
+
+    .card h2 {
+        font-size: 1.1em;
+        margin-bottom: 12px;
+    }
+
+    /* Customer list */
+    .customer-item {
+        padding: 10px;
+        margin-bottom: 8px;
+        border-radius: 8px;
+    }
+
+    .customer-item h3 {
+        font-size: 13px;
+        margin-bottom: 4px;
+    }
+
+    .customer-item p {
+        font-size: 11px;
+    }
+
+    .customer-item .stage-badge {
+        font-size: 10px;
+        padding: 3px 10px;
+        margin-top: 6px;
+    }
+
+    /* Tabs - even more compact */
+    .tab {
+        font-size: 10px;
+        padding: 10px 10px;
+        letter-spacing: 0.2px;
+    }
+
+    /* Forms */
+    .form-group {
+        margin-bottom: 12px;
+    }
+
+    .form-group label {
+        font-size: 12px;
+        margin-bottom: 5px;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        padding: 10px;
+    }
+
+    /* Buttons */
+    .btn {
+        padding: 10px 14px;
+        font-size: 12px;
+        letter-spacing: 0.5px;
+    }
+
+    .btn-small {
+        padding: 5px 10px;
+        font-size: 11px;
+    }
+
+    .action-buttons {
+        gap: 8px;
+    }
+
+    /* Modals - full screen on small devices */
+    .modal-content {
+        width: 100%;
+        max-width: 100%;
+        height: 100vh;
+        max-height: 100vh;
+        margin: 0;
+        padding: 20px 16px;
+        border-radius: 0;
+    }
+
+    .modal-header {
+        margin-bottom: 16px;
+    }
+
+    .modal-header h2 {
+        font-size: 1.1em;
+    }
+
+    .close-modal {
+        font-size: 22px;
+    }
+
+    /* File upload */
+    .upload-area {
+        padding: 20px 12px;
+        border-width: 2px;
+    }
+
+    .upload-area p {
+        font-size: 13px;
+        margin-bottom: 8px;
+    }
+
+    .upload-area small {
+        font-size: 10px;
+    }
+
+    /* File items */
+    .file-item {
+        padding: 10px;
+        gap: 10px;
+    }
+
+    .file-icon {
+        font-size: 20px;
+        width: 36px;
+        height: 36px;
+    }
+
+    .file-details h4 {
+        font-size: 12px;
+    }
+
+    .file-details p {
+        font-size: 10px;
+    }
+
+    .file-actions .btn {
+        font-size: 10px;
+        padding: 5px 8px;
+    }
+
+    /* Checklists */
+    .checklist-section {
+        padding: 15px;
+        margin-top: 15px;
+    }
+
+    .checklist-section h3 {
+        font-size: 16px;
+        margin-bottom: 12px;
+    }
+
+    .checklist-item {
+        padding: 8px;
+        margin-bottom: 8px;
+    }
+
+    .checklist-item input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        margin-right: 10px;
+    }
+
+    .checklist-item label {
+        font-size: 12px;
+    }
+
+    /* File upload sections */
+    .file-upload-section {
+        padding: 15px;
+        margin-top: 15px;
+    }
+
+    .file-upload-section h3 {
+        font-size: 16px;
+        margin-bottom: 12px;
+    }
+
+    /* Sync status popup - smaller on phones */
+    #syncStatusPopup {
+        width: 240px;
+        bottom: 10px;
+        right: 10px;
+        padding: 12px;
+    }
+
+    #syncStatusPopup.minimized {
+        width: 50px;
+        height: 50px;
+    }
+
+    .sync-popup-header h4 {
+        font-size: 13px;
+    }
+
+    .sync-status-text {
+        font-size: 12px;
+    }
+
+    .sync-queue-info {
+        font-size: 10px;
+    }
+
+    .sync-operation-details {
+        font-size: 11px;
+        padding: 6px;
+    }
+
+    /* Progress bars */
+    .progress-bar {
+        height: 6px;
+        margin-top: 8px;
+    }
+
+    /* Drive folder info */
+    .drive-folder-info {
+        padding: 14px;
+        margin-top: 12px;
+    }
+
+    .drive-folder-info h4 {
+        font-size: 14px;
+        margin-bottom: 8px;
+    }
+
+    .drive-folder-info p {
+        font-size: 13px;
+        margin: 6px 0;
+    }
+
+    /* File naming sections */
+    .file-naming {
+        padding: 10px;
+        margin-top: 12px;
+    }
+
+    .file-naming h4 {
+        font-size: 13px;
+        margin-bottom: 8px;
+    }
+
+    .file-naming code {
+        padding: 8px 10px;
+        font-size: 11px;
+        margin: 6px 0;
+    }
+
+    /* Setup instructions */
+    .setup-instructions {
+        padding: 15px;
+        margin: 15px 0;
+    }
+
+    .setup-instructions h3 {
+        font-size: 15px;
+        margin-bottom: 12px;
+    }
+
+    .setup-instructions li {
+        margin: 8px 0;
+        font-size: 13px;
+    }
+
+    .setup-instructions code {
+        font-size: 11px;
+    }
+
+    /* Empty state */
+    .empty-state {
+        padding: 25px 12px;
+        font-size: 13px;
+    }
+
+    /* Search box */
+    .search-box {
+        margin-bottom: 15px;
+    }
+
+    .search-box input {
+        padding: 10px 35px 10px 12px;
+        font-size: 14px;
+    }
+
+    /* Tooltips - adjust positioning for small screens */
+    .info-icon .tooltip-text {
+        width: 220px;
+        margin-left: -110px;
+        font-size: 12px;
+        padding: 8px;
     }
 }
 
