@@ -700,6 +700,21 @@ function closeFieldMappingModal() {
     tempFieldMappings = {};
 }
 
+// Delete file with confirmation
+async function deleteFileConfirm(fileId, customerId, fileName) {
+    if (confirm(`Delete "${fileName}" from Google Drive?`)) {
+        const success = await deleteFileFromDrive(fileId);
+        if (success) {
+            alert('File deleted successfully');
+            invalidateStatsCache(); // Invalidate cache after deletion
+            displayCustomerDetails(customerId);
+            updateStats();
+        } else {
+            alert('Error deleting file');
+        }
+    }
+}
+
 // Show move file dialog
 function showMoveFileDialog(fileId, fileName, customerId) {
     const customer = customers.find(c => c.id === customerId);
