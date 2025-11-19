@@ -631,7 +631,6 @@ async function downloadPopulatedExcel() {
 
         // Upload to Google Drive subfolder only
         let uploadSuccess = false;
-        let fileWebViewLink = null;
         if (isSignedIn) {
             try {
                 // Ensure customer folder and subfolders exist first
@@ -668,7 +667,7 @@ async function downloadPopulatedExcel() {
                     form.append('file', excelFile);
 
                     const response = await fetch(
-                        'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,mimeType,size,webViewLink,createdTime',
+                        'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,mimeType,size,createdTime',
                         {
                             method: 'POST',
                             headers: new Headers({ 'Authorization': 'Bearer ' + accessToken }),
@@ -679,8 +678,7 @@ async function downloadPopulatedExcel() {
                     const result = await response.json();
                     if (result && result.id) {
                         uploadSuccess = true;
-                        fileWebViewLink = result.webViewLink;
-                        console.log('File uploaded to Drive, webViewLink:', fileWebViewLink);
+                        console.log('File uploaded to Drive:', result.id);
                     }
                 }
             } catch (uploadError) {
@@ -688,19 +686,13 @@ async function downloadPopulatedExcel() {
             }
         }
 
-        // Show success message and open file
+        // Show success message
         if (uploadSuccess) {
             // Refresh the customer details to show the new file
             invalidateStatsCache();
             displayCustomerDetails(currentPopulateCustomerId);
 
-            // Open file in Google Drive web viewer (user can then open in Excel Online if connected)
-            if (fileWebViewLink) {
-                window.open(fileWebViewLink, '_blank', 'noopener,noreferrer');
-                alert('Excel file generated successfully!\n\n✅ Saved to customer folder in Google Drive\n✅ Opening file in web viewer...\n\nClick "Open with" → "Microsoft Excel" to edit in Excel Online.\n\nYou can also view it in the Documents tab.');
-            } else {
-                alert('Excel file generated successfully!\n\n✅ Saved to customer folder in Google Drive\n\nYou can view it in the Documents tab.');
-            }
+            alert('Excel file generated successfully!\n\n✅ Saved to customer folder in Google Drive\n\nYou can view it in the Documents tab.');
         } else if (!isSignedIn) {
             alert('Please sign in to Google Drive to save the populated Excel file.');
         } else {
