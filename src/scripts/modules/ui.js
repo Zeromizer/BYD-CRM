@@ -311,8 +311,6 @@ function displayFormsList() {
 
 // ========== COMBINE & PRINT FORMS ==========
 
-let currentCombineCustomerId = null;
-
 // Open combine print modal and populate form options
 function openCombinePrintModal(customerId) {
     currentCombineCustomerId = customerId;
@@ -543,11 +541,6 @@ async function combinePrintForms() {
 }
 
 // Field Mapping Functions
-let currentMappingFormType = null;
-let currentMappingCanvas = null;
-let currentMappingImage = null;
-let tempFieldMappings = {};
-
 async function openFieldMappingModal(formType) {
     const formData = formTemplates[formType];
     if (!formData || formData.fileType !== 'image') {
