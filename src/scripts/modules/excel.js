@@ -517,15 +517,7 @@ async function downloadPopulatedExcel() {
             }
 
             try {
-                const response = await gapi.client.drive.files.get({
-                    fileId: template.driveFileId,
-                    alt: 'media'
-                });
-
-                // Convert response to blob then to array buffer
-                const blob = new Blob([JSON.stringify(response.body)]);
-
-                // Fetch the actual file content using fetch API
+                // Fetch the Excel file as binary data from Google Drive
                 const fileResponse = await fetch(
                     `https://www.googleapis.com/drive/v3/files/${template.driveFileId}?alt=media`,
                     {
@@ -533,8 +525,13 @@ async function downloadPopulatedExcel() {
                     }
                 );
 
+                if (!fileResponse.ok) {
+                    throw new Error(`Failed to fetch file: ${fileResponse.statusText}`);
+                }
+
+                // Get the file as an array buffer (binary data)
                 arrayBuffer = await fileResponse.arrayBuffer();
-                console.log('Fetched Excel template from Google Drive');
+                console.log('Fetched Excel template from Google Drive, size:', arrayBuffer.byteLength, 'bytes');
             } catch (error) {
                 console.error('Error fetching template from Drive:', error);
                 alert('Failed to fetch template from Google Drive: ' + error.message + '\n\nPlease upload your Excel file manually or try again.');
@@ -569,7 +566,7 @@ async function downloadPopulatedExcel() {
             'salesConsultant': customer.salesConsultant || '',
             'vsaNo': customer.vsaNo || '',
             'model': customer.model || '',
-            'date': new Date().toLocaleDateString(),
+            'date': new Date(), // Pass Date object to preserve Excel date formatting
             'vsa_makeModel': customer.vsaDetails?.makeModel || '',
             'vsa_yom': customer.vsaDetails?.yom || '',
             'vsa_bodyColour': customer.vsaDetails?.bodyColour || '',
