@@ -1179,9 +1179,9 @@ async function displayCustomerDetails(customerId) {
             </div>
 
             ${Object.keys(formTemplates).length > 0 || Object.keys(excelTemplates).length > 0 ? `
-                <div class="customer-templates-grid">
+                <div class="customer-templates-grid" style="display: grid !important;">
                     ${Object.keys(formTemplates).length > 0 ? `
-                        <div class="checklist-section" style="background: linear-gradient(135deg, rgba(231, 76, 60, 0.1) 0%, rgba(192, 57, 43, 0.1) 100%); border: 2px solid rgba(231, 76, 60, 0.3); margin-bottom: 0;">
+                        <div class="checklist-section" style="background: linear-gradient(135deg, rgba(231, 76, 60, 0.1) 0%, rgba(192, 57, 43, 0.1) 100%); border: 2px solid rgba(231, 76, 60, 0.3); margin-bottom: 0; display: block !important;">
                             <h3 style="color: #e74c3c;">📄 Forms</h3>
                             <p style="margin-bottom: 15px; color: #7f8c8d; font-size: 13px;">
                                 Select a form to print for ${customer.name}
@@ -1254,10 +1254,10 @@ async function displayCustomerDetails(customerId) {
                     ` : ''}
 
                     ${Object.keys(excelTemplates).length > 0 ? `
-                        <div class="checklist-section" style="background: linear-gradient(135deg, rgba(76, 175, 80, 0.1) 0%, rgba(56, 142, 60, 0.1) 100%); border: 2px solid rgba(76, 175, 80, 0.3); margin-bottom: 0;">
+                        <div class="checklist-section" style="background: linear-gradient(135deg, rgba(76, 175, 80, 0.1) 0%, rgba(56, 142, 60, 0.1) 100%); border: 2px solid rgba(76, 175, 80, 0.3); margin-bottom: 0; display: block !important; visibility: visible !important;">
                             <h3 style="color: #4caf50; margin-bottom: 15px;">📊 Excel Templates</h3>
-                            <div style="display: flex; flex-direction: column; gap: 10px;">
-                                <button class="btn btn-success" onclick="openExcelPopulateModal(${customer.id})" style="background: linear-gradient(135deg, #4caf50 0%, #388e3c 100%); display: flex; align-items: center; gap: 8px; justify-content: center; width: 100%;"><span>📊</span><span>Populate Excel Template</span></button>
+                            <div style="display: flex !important; flex-direction: column; gap: 10px;">
+                                <button class="btn btn-success" onclick="openExcelPopulateModal(${customer.id})" style="background: linear-gradient(135deg, #4caf50 0%, #388e3c 100%); display: flex !important; align-items: center; gap: 8px; justify-content: center; width: 100% !important; visibility: visible !important;"><span>📊</span><span>Populate Excel Template</span></button>
                             </div>
                         </div>
                     ` : ''}
