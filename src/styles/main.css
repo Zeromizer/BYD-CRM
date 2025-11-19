@@ -1281,7 +1281,7 @@ body {
 }
 
 .info-icon .tooltip-text {
-    visibility: hidden;
+    display: none;
     width: 280px;
     background-color: #2c3e50;
     color: #fff;
@@ -1293,12 +1293,12 @@ body {
     bottom: 125%;
     left: 50%;
     margin-left: -140px;
-    opacity: 0;
-    transition: opacity 0.3s;
     font-size: 13px;
     font-weight: normal;
     line-height: 1.4;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    white-space: nowrap;
+    pointer-events: none;
 }
 
 .info-icon .tooltip-text::after {
@@ -1313,7 +1313,18 @@ body {
 }
 
 .info-icon:hover .tooltip-text {
-    visibility: visible;
-    opacity: 1;
+    display: block;
+    animation: tooltipFadeIn 0.3s ease-in-out;
+}
+
+@keyframes tooltipFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
