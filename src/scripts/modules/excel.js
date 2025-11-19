@@ -631,7 +631,6 @@ async function downloadPopulatedExcel() {
 
         // Upload to Google Drive subfolder only
         let uploadSuccess = false;
-        let fileWebContentLink = null;
         if (isSignedIn) {
             try {
                 // Ensure customer folder and subfolders exist first
@@ -668,7 +667,7 @@ async function downloadPopulatedExcel() {
                     form.append('file', excelFile);
 
                     const response = await fetch(
-                        'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,mimeType,size,webViewLink,webContentLink,createdTime',
+                        'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,mimeType,size,createdTime',
                         {
                             method: 'POST',
                             headers: new Headers({ 'Authorization': 'Bearer ' + accessToken }),
@@ -679,25 +678,7 @@ async function downloadPopulatedExcel() {
                     const result = await response.json();
                     if (result && result.id) {
                         uploadSuccess = true;
-
-                        // Make file publicly readable so Office Online can access it
-                        try {
-                            await gapi.client.drive.permissions.create({
-                                fileId: result.id,
-                                resource: {
-                                    role: 'reader',
-                                    type: 'anyone'
-                                }
-                            });
-                            console.log('File made publicly readable for Office Online access');
-
-                            // Get the webContentLink (direct download link)
-                            fileWebContentLink = result.webContentLink;
-                        } catch (permError) {
-                            console.error('Error setting file permissions:', permError);
-                            // Fall back to Google Drive viewer if permission setting fails
-                            fileWebContentLink = null;
-                        }
+                        console.log('File uploaded to Drive:', result.id);
                     }
                 }
             } catch (uploadError) {
@@ -705,23 +686,13 @@ async function downloadPopulatedExcel() {
             }
         }
 
-        // Show success message and open file
+        // Show success message
         if (uploadSuccess) {
             // Refresh the customer details to show the new file
             invalidateStatsCache();
             displayCustomerDetails(currentPopulateCustomerId);
 
-            // Open file in Microsoft 365 Excel Online
-            if (fileWebContentLink) {
-                // Construct Microsoft 365 Excel Online URL
-                const encodedUrl = encodeURIComponent(fileWebContentLink);
-                const office365Url = `https://view.officeapps.live.com/op/edit.aspx?src=${encodedUrl}`;
-
-                window.open(office365Url, '_blank', 'noopener,noreferrer');
-                alert('Excel file generated successfully!\n\n✅ Saved to customer folder in Google Drive\n✅ Opening file in Microsoft 365 Excel Online...\n\nYou can view it in the Documents tab.');
-            } else {
-                alert('Excel file generated successfully!\n\n✅ Saved to customer folder in Google Drive\n\nYou can view it in the Documents tab.');
-            }
+            alert('Excel file generated successfully!\n\n✅ Saved to customer folder in Google Drive\n\nYou can view it in the Documents tab.');
         } else if (!isSignedIn) {
             alert('Please sign in to Google Drive to save the populated Excel file.');
         } else {
