@@ -9,6 +9,51 @@
 
 // ========== EXCEL TEMPLATES MANAGEMENT ==========
 
+// Force sync localStorage templates to Google Drive
+async function forceSyncExcelTemplates() {
+    console.log('[Excel] Force sync requested');
+
+    if (!isSignedIn) {
+        alert('Please sign in to Google Drive first.');
+        return;
+    }
+
+    try {
+        // Load from localStorage first
+        loadExcelTemplatesLocal();
+        const localCount = Object.keys(excelTemplates).length;
+        console.log('[Excel] Loaded from localStorage:', localCount, 'templates');
+
+        if (localCount === 0) {
+            alert('No templates found in local storage to sync.');
+            return;
+        }
+
+        // Ensure Forms folder exists
+        if (!formsFolderId) {
+            console.log('[Excel] Creating Forms folder...');
+            await getOrCreateFormsFolder();
+            if (!formsFolderId) {
+                alert('Failed to create Forms folder in Google Drive.');
+                return;
+            }
+        }
+
+        // Force save to Drive
+        console.log('[Excel] Force saving to Drive...');
+        await saveExcelTemplatesToDrive();
+
+        alert(`✅ Successfully synced ${localCount} template(s) to Google Drive!\n\nYour templates should now persist after page reload.`);
+
+        // Reload templates to confirm
+        await loadExcelTemplates();
+        displayExcelList();
+    } catch (error) {
+        console.error('[Excel] Error during force sync:', error);
+        alert('Error syncing templates to Google Drive: ' + error.message);
+    }
+}
+
 // Open Excel modal
 async function openExcelModal() {
     const modal = document.getElementById('excelModal');
@@ -51,6 +96,10 @@ async function createExcelTemplate() {
     if (isSignedIn && !formsFolderId) {
         console.log('[Excel] Forms folder not ready, creating...');
         await getOrCreateFormsFolder();
+        console.log('[Excel] Forms folder after creation attempt:', formsFolderId);
+        if (!formsFolderId) {
+            console.error('[Excel] Failed to create/get Forms folder!');
+        }
     }
 
     // Create template structure
@@ -115,6 +164,9 @@ async function createExcelTemplate() {
 
     // Save template
     excelTemplates[templateId] = template;
+    console.log('[Excel] Template added to excelTemplates. Total templates:', Object.keys(excelTemplates).length);
+    console.log('[Excel] About to save. isSignedIn:', isSignedIn, 'formsFolderId:', formsFolderId);
+
     await saveExcelTemplates();
 
     // Update display
@@ -213,14 +265,19 @@ async function saveExcelTemplates() {
     // Also save to Google Drive if signed in
     if (isSignedIn && formsFolderId) {
         console.log('[Excel] Attempting to save to Google Drive...');
+        console.log('[Excel] Current templates to sync:', JSON.stringify(Object.keys(excelTemplates)));
         try {
             await saveExcelTemplatesToDrive();
-            console.log('[Excel] ✓ Excel templates saved to Google Drive');
+            console.log('[Excel] ✓ Excel templates saved to Google Drive successfully');
         } catch (error) {
-            console.error('[Excel] Error saving Excel templates to Drive:', error);
+            console.error('[Excel] ✗ Error saving Excel templates to Drive:', error);
+            alert('Warning: Failed to sync templates to Google Drive. Your template is saved locally but may not appear after refresh.\n\nError: ' + error.message);
         }
     } else {
-        console.log('[Excel] Not saving to Drive - isSignedIn:', isSignedIn, 'formsFolderId:', formsFolderId);
+        console.log('[Excel] ⚠ Not saving to Drive - isSignedIn:', isSignedIn, 'formsFolderId:', formsFolderId);
+        if (isSignedIn && !formsFolderId) {
+            alert('Warning: Google Drive folder not ready. Your template is saved locally but may not appear after refresh.\n\nPlease try reopening the Excel Templates window.');
+        }
     }
 }
 

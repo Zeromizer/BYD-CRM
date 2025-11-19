@@ -430,7 +430,10 @@
                     </div>
 
                     <div style="border-top: 2px solid #ecf0f1; padding-top: 20px;">
-                        <h3 style="color: #1a1a2e; margin-bottom: 15px;">Uploaded Excel Templates</h3>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                            <h3 style="color: #1a1a2e; margin: 0;">Uploaded Excel Templates</h3>
+                            <button class="btn btn-secondary" onclick="forceSyncExcelTemplates()" style="padding: 8px 16px; font-size: 13px;">🔄 Sync to Drive</button>
+                        </div>
                         <div id="excelListContainer">
                             <div class="loading-excel" style="text-align: center; padding: 20px; color: #7f8c8d;">
                                 No templates uploaded yet
