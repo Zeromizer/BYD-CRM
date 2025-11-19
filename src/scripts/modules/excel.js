@@ -121,10 +121,6 @@ function loadExcelTemplates() {
     }
 }
 
-// Variables for Excel mapping
-let currentExcelTemplateId = null;
-let tempExcelMappings = {};
-
 // Open Excel mapping modal
 function openExcelMappingModal(templateId) {
     currentExcelTemplateId = templateId;
@@ -276,8 +272,6 @@ function saveExcelMappings() {
 }
 
 // Open Excel populate modal
-let currentPopulateCustomerId = null;
-
 function openExcelPopulateModal(customerId) {
     currentPopulateCustomerId = customerId;
     const modal = document.getElementById('excelPopulateModal');
