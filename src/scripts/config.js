@@ -19,6 +19,7 @@ let customerBackup = null; // Backup of customer data for cancel functionality
 let isSignedIn = false;
 let rootFolderId = null;
 let formsFolderId = null; // Google Drive folder ID for form templates
+let excelTemplatesFolderId = null; // Google Drive folder ID for Excel template files
 let dataFileId = null; // Google Drive file ID for synced data
 let formsDataFileId = null; // Google Drive file ID for forms metadata
 let excelDataFileId = null; // Google Drive file ID for Excel templates metadata
