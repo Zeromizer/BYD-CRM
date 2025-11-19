@@ -1178,89 +1178,85 @@ async function displayCustomerDetails(customerId) {
                 <textarea rows="3" id="customer_notes">${customer.notes || ''}</textarea>
             </div>
 
-            ${Object.keys(formTemplates).length > 0 || Object.keys(excelTemplates).length > 0 ? `
-                <div class="customer-templates-grid">
-                    ${Object.keys(formTemplates).length > 0 ? `
-                        <div class="checklist-section" style="background: linear-gradient(135deg, rgba(231, 76, 60, 0.1) 0%, rgba(192, 57, 43, 0.1) 100%); border: 2px solid rgba(231, 76, 60, 0.3); margin-bottom: 0;">
-                            <h3 style="color: #e74c3c;">📄 Forms</h3>
-                            <p style="margin-bottom: 15px; color: #7f8c8d; font-size: 13px;">
-                                Select a form to print for ${customer.name}
-                            </p>
+            ${Object.keys(formTemplates).length > 0 ? `
+                <div class="checklist-section" style="background: linear-gradient(135deg, rgba(231, 76, 60, 0.1) 0%, rgba(192, 57, 43, 0.1) 100%); border: 2px solid rgba(231, 76, 60, 0.3);">
+                    <h3 style="color: #e74c3c;">📄 Forms</h3>
+                    <p style="margin-bottom: 15px; color: #7f8c8d; font-size: 13px;">
+                        Select a form to print for ${customer.name}
+                    </p>
 
-                            <div style="margin-bottom: 15px;">
-                                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #2c3e50;">Select Form</label>
-                                <select id="formSelect_${customer.id}" onchange="handleFormSelection(${customer.id})" style="width: 100%; padding: 10px; font-size: 14px; border: 2px solid #e74c3c; border-radius: 6px; background: white;">
-                                    <option value="">Choose a form...</option>
-                                    ${(() => {
-                                        const formTypeNames = {
-                                            'test_drive': 'Test Drive Agreement',
-                                            'vsa': 'Vehicle Sales Agreement',
-                                            'pdpa': 'PDPA Consent Form',
-                                            'coe_bidding_1': 'COE Bidding 1',
-                                            'coe_bidding_2': 'COE Bidding 2',
-                                            'pdpa_consent_1': 'PDPA Consent 1',
-                                            'pdpa_consent_2': 'PDPA Consent 2',
-                                            'other': 'Other Form'
-                                        };
-                                        return Object.keys(formTemplates).map(formType => {
-                                            const formName = formTypeNames[formType] || formType;
-                                            return '<option value="' + formType + '">' + formName + '</option>';
-                                        }).join('');
-                                    })()}
-                                </select>
-                            </div>
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #2c3e50;">Select Form</label>
+                        <select id="formSelect_${customer.id}" onchange="handleFormSelection(${customer.id})" style="width: 100%; padding: 10px; font-size: 14px; border: 2px solid #e74c3c; border-radius: 6px; background: white;">
+                            <option value="">Choose a form...</option>
+                            ${(() => {
+                                const formTypeNames = {
+                                    'test_drive': 'Test Drive Agreement',
+                                    'vsa': 'Vehicle Sales Agreement',
+                                    'pdpa': 'PDPA Consent Form',
+                                    'coe_bidding_1': 'COE Bidding 1',
+                                    'coe_bidding_2': 'COE Bidding 2',
+                                    'pdpa_consent_1': 'PDPA Consent 1',
+                                    'pdpa_consent_2': 'PDPA Consent 2',
+                                    'other': 'Other Form'
+                                };
+                                return Object.keys(formTemplates).map(formType => {
+                                    const formName = formTypeNames[formType] || formType;
+                                    return '<option value="' + formType + '">' + formName + '</option>';
+                                }).join('');
+                            })()}
+                        </select>
+                    </div>
 
-                            <div id="testDriveUpload_${customer.id}" style="display: none; background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 2px solid rgba(0, 188, 212, 0.2);">
-                                <h4 style="color: #00bcd4; margin-bottom: 10px; font-size: 14px;">📸 Test Drive Required Documents</h4>
-                                <p style="font-size: 12px; color: #7f8c8d; margin-bottom: 10px;">Upload up to 4 ID images to print with the form (they will appear in order on page 2)</p>
+                    <div id="testDriveUpload_${customer.id}" style="display: none; background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 2px solid rgba(0, 188, 212, 0.2);">
+                        <h4 style="color: #00bcd4; margin-bottom: 10px; font-size: 14px;">📸 Test Drive Required Documents</h4>
+                        <p style="font-size: 12px; color: #7f8c8d; margin-bottom: 10px;">Upload up to 4 ID images to print with the form (they will appear in order on page 2)</p>
 
-                                <div style="margin-bottom: 10px;">
-                                    <input type="file" accept="image/*" multiple id="docImages_${customer.id}" onchange="uploadMultipleDocImages(${customer.id}, this.files)" style="font-size: 12px; padding: 8px; width: 100%; border: 2px dashed #00bcd4; border-radius: 6px; background: rgba(0, 188, 212, 0.05);">
-                                    <p style="font-size: 11px; color: #7f8c8d; margin-top: 5px;">Select up to 4 images at once</p>
+                        <div style="margin-bottom: 10px;">
+                            <input type="file" accept="image/*" multiple id="docImages_${customer.id}" onchange="uploadMultipleDocImages(${customer.id}, this.files)" style="font-size: 12px; padding: 8px; width: 100%; border: 2px dashed #00bcd4; border-radius: 6px; background: rgba(0, 188, 212, 0.05);">
+                            <p style="font-size: 11px; color: #7f8c8d; margin-top: 5px;">Select up to 4 images at once</p>
+                        </div>
+
+                        <div id="uploadProgress_${customer.id}" style="display: none; margin-bottom: 10px;">
+                            <div style="background: #ecf0f1; border-radius: 10px; height: 24px; overflow: hidden; position: relative;">
+                                <div id="uploadBar_${customer.id}" style="background: linear-gradient(90deg, #00bcd4 0%, #00acc1 100%); height: 100%; width: 0%; transition: width 0.3s; display: flex; align-items: center; justify-content: center;">
+                                    <span id="uploadText_${customer.id}" style="color: white; font-size: 12px; font-weight: 600; position: absolute; left: 50%; transform: translateX(-50%);"></span>
                                 </div>
-
-                                <div id="uploadProgress_${customer.id}" style="display: none; margin-bottom: 10px;">
-                                    <div style="background: #ecf0f1; border-radius: 10px; height: 24px; overflow: hidden; position: relative;">
-                                        <div id="uploadBar_${customer.id}" style="background: linear-gradient(90deg, #00bcd4 0%, #00acc1 100%); height: 100%; width: 0%; transition: width 0.3s; display: flex; align-items: center; justify-content: center;">
-                                            <span id="uploadText_${customer.id}" style="color: white; font-size: 12px; font-weight: 600; position: absolute; left: 50%; transform: translateX(-50%);"></span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                ${(() => {
-                                    const docs = customer.testDriveDocs || {};
-                                    const uploadedCount = Object.keys(docs).length;
-                                    if (uploadedCount > 0) {
-                                        return '<p style="font-size: 12px; color: #27ae60; font-weight: 600;">✓ ' + uploadedCount + ' image(s) uploaded</p>';
-                                    }
-                                    return '';
-                                })()}
-                            </div>
-
-                            <div style="display: flex; flex-direction: column; gap: 10px;">
-                                ${(() => {
-                                    let html = '';
-                                    // Add Combine & Print button at the top if there are multiple image forms
-                                    const imageForms = Object.entries(formTemplates).filter(([_, formData]) => formData.fileType === 'image');
-                                    if (imageForms.length >= 2) {
-                                        html += '<button class="btn btn-primary" onclick="openCombinePrintModal(' + customer.id + ')" style="background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%); display: flex; align-items: center; gap: 8px; justify-content: center; width: 100%; font-weight: 600;"><span>📑</span><span>Combine & Print (Double-Sided)</span></button>';
-                                    }
-                                    // Add single Print button
-                                    html += '<button class="btn btn-primary" id="printFormBtn_' + customer.id + '" onclick="printSelectedForm(' + customer.id + ')" disabled style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); display: flex; align-items: center; gap: 8px; justify-content: center; width: 100%; opacity: 0.5;"><span>📄</span><span>Print Form</span></button>';
-                                    return html;
-                                })()}
                             </div>
                         </div>
-                    ` : ''}
 
-                    ${Object.keys(excelTemplates).length > 0 ? `
-                        <div class="checklist-section" style="background: linear-gradient(135deg, rgba(76, 175, 80, 0.1) 0%, rgba(56, 142, 60, 0.1) 100%); border: 2px solid rgba(76, 175, 80, 0.3); margin-bottom: 0;">
-                            <h3 style="color: #4caf50; margin-bottom: 15px;">📊 Excel Templates</h3>
-                            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px;">
-                                <button class="btn btn-success" onclick="openExcelPopulateModal(${customer.id})" style="background: linear-gradient(135deg, #4caf50 0%, #388e3c 100%); display: flex; align-items: center; gap: 8px; justify-content: center; width: 100%;"><span>📊</span><span>Populate Excel Template</span></button>
-                            </div>
-                        </div>
-                    ` : ''}
+                        ${(() => {
+                            const docs = customer.testDriveDocs || {};
+                            const uploadedCount = Object.keys(docs).length;
+                            if (uploadedCount > 0) {
+                                return '<p style="font-size: 12px; color: #27ae60; font-weight: 600;">✓ ' + uploadedCount + ' image(s) uploaded</p>';
+                            }
+                            return '';
+                        })()}
+                    </div>
+
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                        ${(() => {
+                            let html = '';
+                            // Add Combine & Print button at the top if there are multiple image forms
+                            const imageForms = Object.entries(formTemplates).filter(([_, formData]) => formData.fileType === 'image');
+                            if (imageForms.length >= 2) {
+                                html += '<button class="btn btn-primary" onclick="openCombinePrintModal(' + customer.id + ')" style="background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%); display: flex; align-items: center; gap: 8px; justify-content: center; width: 100%; font-weight: 600;"><span>📑</span><span>Combine & Print (Double-Sided)</span></button>';
+                            }
+                            // Add single Print button
+                            html += '<button class="btn btn-primary" id="printFormBtn_' + customer.id + '" onclick="printSelectedForm(' + customer.id + ')" disabled style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); display: flex; align-items: center; gap: 8px; justify-content: center; width: 100%; opacity: 0.5;"><span>📄</span><span>Print Form</span></button>';
+                            return html;
+                        })()}
+                    </div>
+                </div>
+            ` : ''}
+
+            ${Object.keys(excelTemplates).length > 0 ? `
+                <div style="margin-bottom: 25px; padding: 20px; background: linear-gradient(135deg, rgba(76, 175, 80, 0.1) 0%, rgba(56, 142, 60, 0.1) 100%); border-radius: 10px; border: 2px solid rgba(76, 175, 80, 0.3);">
+                    <h3 style="color: #4caf50; margin-bottom: 15px;">📊 Excel Templates</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px;">
+                        <button class="btn btn-success" onclick="openExcelPopulateModal(${customer.id})" style="background: linear-gradient(135deg, #4caf50 0%, #388e3c 100%); display: flex; align-items: center; gap: 8px; justify-content: center; width: 100%;"><span>📊</span><span>Populate Excel Template</span></button>
+                    </div>
                 </div>
             ` : ''}
 
