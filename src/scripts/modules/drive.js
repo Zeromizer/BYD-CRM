@@ -770,6 +770,47 @@ async function getOrCreateFormsFolder() {
     }
 }
 
+// Get or create Excel Templates folder in Google Drive
+async function getOrCreateExcelTemplatesFolder() {
+    if (!isSignedIn || !rootFolderId) {
+        console.log('Cannot create Excel Templates folder: not signed in or no root folder');
+        return null;
+    }
+
+    try {
+        // Check if Excel Templates folder exists
+        const searchResponse = await gapi.client.drive.files.list({
+            q: `name='Excel_Templates' and '${rootFolderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
+            spaces: 'drive',
+            fields: 'files(id, name)'
+        });
+
+        if (searchResponse.result.files.length > 0) {
+            excelTemplatesFolderId = searchResponse.result.files[0].id;
+            console.log('Excel Templates folder found:', excelTemplatesFolderId);
+        } else {
+            // Create Excel Templates folder
+            console.log('Creating Excel Templates folder...');
+            const createResponse = await gapi.client.drive.files.create({
+                resource: {
+                    name: 'Excel_Templates',
+                    mimeType: 'application/vnd.google-apps.folder',
+                    parents: [rootFolderId]
+                },
+                fields: 'id'
+            });
+            excelTemplatesFolderId = createResponse.result.id;
+            console.log('Excel Templates folder created:', excelTemplatesFolderId);
+        }
+
+        return excelTemplatesFolderId;
+    } catch (error) {
+        console.error('Error creating Excel Templates folder:', error);
+        alert('Failed to create Excel Templates folder: ' + error.message);
+        return null;
+    }
+}
+
 // Get or create the forms data file in Google Drive
 async function getOrCreateFormsDataFile() {
     if (!isSignedIn || !formsFolderId) {

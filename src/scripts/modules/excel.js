@@ -21,11 +21,13 @@ function openExcelModal() {
 function closeExcelModal() {
     document.getElementById('excelModal').classList.remove('active');
     document.getElementById('excelTemplateName').value = '';
+    document.getElementById('excelTemplateFile').value = '';
 }
 
 // Create Excel template (mappings only, no file storage)
-function createExcelTemplate() {
+async function createExcelTemplate() {
     const nameInput = document.getElementById('excelTemplateName');
+    const fileInput = document.getElementById('excelTemplateFile');
     const name = nameInput.value.trim();
 
     if (!name) {
@@ -33,25 +35,82 @@ function createExcelTemplate() {
         return;
     }
 
-    // Store only the template metadata - NO Excel file
+    // Create template structure
     const templateId = 'excel_' + Date.now();
-    excelTemplates[templateId] = {
+    const template = {
         id: templateId,
         name: name,
         createdDate: new Date().toISOString(),
-        fieldMappings: {} // Will be populated by user
+        fieldMappings: {}, // Will be populated by user
+        driveFileId: null, // Google Drive file ID for master template
+        driveFileName: null // Original filename
     };
 
-    // Save to localStorage
+    // Check if user uploaded a file
+    const file = fileInput.files[0];
+    if (file) {
+        // Upload to Google Drive if signed in
+        if (!isSignedIn) {
+            alert('Please sign in to Google Drive to upload the master Excel file.\n\nTemplate will be created without a master file.');
+        } else {
+            try {
+                // Ensure Excel Templates folder exists
+                await getOrCreateExcelTemplatesFolder();
+
+                if (!excelTemplatesFolderId) {
+                    alert('Could not create Excel Templates folder in Google Drive.\n\nTemplate will be created without a master file.');
+                } else {
+                    // Upload file to Google Drive
+                    const metadata = {
+                        name: file.name,
+                        parents: [excelTemplatesFolderId]
+                    };
+
+                    const form = new FormData();
+                    form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+                    form.append('file', file);
+
+                    const response = await fetch(
+                        'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name',
+                        {
+                            method: 'POST',
+                            headers: new Headers({ 'Authorization': 'Bearer ' + accessToken }),
+                            body: form
+                        }
+                    );
+
+                    const result = await response.json();
+                    if (result && result.id) {
+                        template.driveFileId = result.id;
+                        template.driveFileName = file.name;
+                        console.log('Excel template file uploaded to Drive:', result.id);
+                    } else {
+                        alert('Failed to upload Excel file to Google Drive.\n\nTemplate will be created without a master file.');
+                    }
+                }
+            } catch (error) {
+                console.error('Error uploading Excel template file:', error);
+                alert('Error uploading Excel file to Google Drive: ' + error.message + '\n\nTemplate will be created without a master file.');
+            }
+        }
+    }
+
+    // Save template
+    excelTemplates[templateId] = template;
     saveExcelTemplates();
 
     // Update display
     displayExcelList();
 
-    // Clear input
+    // Clear inputs
     nameInput.value = '';
+    fileInput.value = '';
 
-    alert('Template created successfully! Now you can map fields to Excel cells.');
+    if (template.driveFileId) {
+        alert('Template created successfully with master Excel file!\n\nNow you can map fields to Excel cells.');
+    } else {
+        alert('Template created successfully!\n\nNow you can map fields to Excel cells.');
+    }
 }
 
 // Display Excel templates list
@@ -68,6 +127,8 @@ function displayExcelList() {
     for (const [templateId, template] of Object.entries(excelTemplates)) {
         const mappingCount = Object.keys(template.fieldMappings || {}).length;
         const dateToShow = template.createdDate || template.uploadDate; // Support both old and new templates
+        const hasMasterFile = template.driveFileId && template.driveFileName;
+
         html += `
             <div style="background: white; border: 2px solid #e0e0e0; border-radius: 8px; padding: 15px;">
                 <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
@@ -75,6 +136,7 @@ function displayExcelList() {
                         <h4 style="color: #1a1a2e; margin-bottom: 5px;">${template.name}</h4>
                         <p style="color: #7f8c8d; font-size: 12px;">Created: ${new Date(dateToShow).toLocaleDateString()}</p>
                         <p style="color: #4caf50; font-size: 13px; font-weight: 600; margin-top: 5px;">${mappingCount} field${mappingCount !== 1 ? 's' : ''} mapped</p>
+                        ${hasMasterFile ? `<p style="color: #27ae60; font-size: 12px; margin-top: 5px;">✓ Master file: ${template.driveFileName}</p>` : '<p style="color: #95a5a6; font-size: 12px; margin-top: 5px;">⚠ No master file uploaded</p>'}
                     </div>
                     <button class="btn btn-danger" onclick="deleteExcelTemplate('${templateId}')" style="padding: 8px 12px; font-size: 13px;">Delete</button>
                 </div>
@@ -90,9 +152,26 @@ function displayExcelList() {
 }
 
 // Delete Excel template
-function deleteExcelTemplate(templateId) {
+async function deleteExcelTemplate(templateId) {
     if (!confirm('Are you sure you want to delete this Excel template?')) {
         return;
+    }
+
+    const template = excelTemplates[templateId];
+
+    // Delete file from Google Drive if it exists
+    if (template && template.driveFileId) {
+        if (isSignedIn) {
+            try {
+                await gapi.client.drive.files.delete({
+                    fileId: template.driveFileId
+                });
+                console.log('Deleted Excel template file from Drive:', template.driveFileId);
+            } catch (error) {
+                console.error('Error deleting file from Drive:', error);
+                // Continue with template deletion even if Drive deletion fails
+            }
+        }
     }
 
     delete excelTemplates[templateId];
@@ -331,6 +410,9 @@ function updateExcelPreview() {
         return;
     }
 
+    // Check if template has a master file in Drive
+    const hasMasterFile = template.driveFileId && template.driveFileName;
+
     const fieldNames = {
         'name': 'Customer Name',
         'phone': 'Phone Number',
@@ -373,6 +455,12 @@ function updateExcelPreview() {
     };
 
     let html = '<div style="font-size: 13px;">';
+
+    // Show master file status
+    if (hasMasterFile) {
+        html += '<p style="margin-bottom: 10px; padding: 10px; background: rgba(76, 175, 80, 0.1); border: 2px solid rgba(76, 175, 80, 0.3); border-radius: 6px; color: #27ae60;"><strong>✓ Using master template from Google Drive:</strong> ' + template.driveFileName + '</p>';
+    }
+
     html += '<p style="margin-bottom: 10px;"><strong>The following data will be populated:</strong></p>';
 
     for (const mapping of Object.values(template.fieldMappings)) {
@@ -391,8 +479,10 @@ function updateExcelPreview() {
     html += '</div>';
     previewContainer.innerHTML = html;
 
-    // Enable download button only if both file and template are selected
-    downloadBtn.disabled = !(fileInput.files.length > 0);
+    // Enable download button if:
+    // 1. Template has a master file in Drive, OR
+    // 2. User has uploaded a file manually
+    downloadBtn.disabled = !(hasMasterFile || fileInput.files.length > 0);
 }
 
 // Download populated Excel
@@ -400,12 +490,6 @@ async function downloadPopulatedExcel() {
     const select = document.getElementById('excelTemplateSelect');
     const templateId = select.value;
     const fileInput = document.getElementById('excelOriginalFile');
-    const file = fileInput.files[0];
-
-    if (!file) {
-        alert('Please upload your original Excel file');
-        return;
-    }
 
     if (!templateId) {
         alert('Please select a field mapping template');
@@ -421,8 +505,49 @@ async function downloadPopulatedExcel() {
     }
 
     try {
-        // Read the freshly uploaded Excel file
-        const arrayBuffer = await file.arrayBuffer();
+        let arrayBuffer;
+
+        // Check if template has a master file in Drive
+        if (template.driveFileId && template.driveFileName) {
+            // Fetch from Google Drive
+            if (!isSignedIn) {
+                alert('Please sign in to Google Drive to use the master template file.\n\nAlternatively, upload your Excel file manually.');
+                return;
+            }
+
+            try {
+                const response = await gapi.client.drive.files.get({
+                    fileId: template.driveFileId,
+                    alt: 'media'
+                });
+
+                // Convert response to blob then to array buffer
+                const blob = new Blob([JSON.stringify(response.body)]);
+
+                // Fetch the actual file content using fetch API
+                const fileResponse = await fetch(
+                    `https://www.googleapis.com/drive/v3/files/${template.driveFileId}?alt=media`,
+                    {
+                        headers: new Headers({ 'Authorization': 'Bearer ' + accessToken })
+                    }
+                );
+
+                arrayBuffer = await fileResponse.arrayBuffer();
+                console.log('Fetched Excel template from Google Drive');
+            } catch (error) {
+                console.error('Error fetching template from Drive:', error);
+                alert('Failed to fetch template from Google Drive: ' + error.message + '\n\nPlease upload your Excel file manually or try again.');
+                return;
+            }
+        } else {
+            // Use uploaded file
+            const file = fileInput.files[0];
+            if (!file) {
+                alert('Please upload your original Excel file');
+                return;
+            }
+            arrayBuffer = await file.arrayBuffer();
+        }
 
         // Load with xlsx-populate - PERFECT formatting preservation
         const workbook = await XlsxPopulate.fromDataAsync(arrayBuffer);
