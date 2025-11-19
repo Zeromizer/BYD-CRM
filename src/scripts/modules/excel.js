@@ -310,6 +310,8 @@ function updateExcelMappingsList() {
         'vsa_tenure': 'VSA - Tenure',
         'vsa_monthlyPayment': 'VSA - Monthly Payment',
         'vsa_financeCompany': 'VSA - Finance Company',
+        'vsa_adminFee': 'VSA - Admin Fee',
+        'vsa_insuranceSubsidy': 'VSA - Insurance Subsidy',
         'vsa_insuranceCompany': 'VSA - Insurance Company',
         'vsa_insuranceFee': 'VSA - Insurance Fee'
     };
@@ -451,6 +453,8 @@ function updateExcelPreview() {
         'vsa_tenure': 'VSA - Tenure',
         'vsa_monthlyPayment': 'VSA - Monthly Payment',
         'vsa_financeCompany': 'VSA - Finance Company',
+        'vsa_adminFee': 'VSA - Admin Fee',
+        'vsa_insuranceSubsidy': 'VSA - Insurance Subsidy',
         'vsa_insuranceCompany': 'VSA - Insurance Company',
         'vsa_insuranceFee': 'VSA - Insurance Fee'
     };

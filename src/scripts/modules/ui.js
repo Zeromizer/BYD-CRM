@@ -104,7 +104,9 @@ function openVsaDetailsModal(customerId) {
             monthlyPayment: '',
             financeCompany: '',
             insuranceCompany: '',
-            insuranceFee: ''
+            insuranceFee: '',
+            adminFee: '',
+            insuranceSubsidy: ''
         };
     }
 
@@ -135,6 +137,8 @@ function openVsaDetailsModal(customerId) {
     document.getElementById('vsa_financeCompany').value = customer.vsaDetails.financeCompany || '';
     document.getElementById('vsa_insuranceCompany').value = customer.vsaDetails.insuranceCompany || '';
     document.getElementById('vsa_insuranceFee').value = customer.vsaDetails.insuranceFee || '';
+    document.getElementById('vsa_adminFee').value = customer.vsaDetails.adminFee || '';
+    document.getElementById('vsa_insuranceSubsidy').value = customer.vsaDetails.insuranceSubsidy || '';
 
     // Store customer ID for saving later
     window.currentVsaCustomerId = customerId;
@@ -185,6 +189,8 @@ function saveVsaDetails() {
     customer.vsaDetails.financeCompany = document.getElementById('vsa_financeCompany').value;
     customer.vsaDetails.insuranceCompany = document.getElementById('vsa_insuranceCompany').value;
     customer.vsaDetails.insuranceFee = document.getElementById('vsa_insuranceFee').value;
+    customer.vsaDetails.adminFee = document.getElementById('vsa_adminFee').value;
+    customer.vsaDetails.insuranceSubsidy = document.getElementById('vsa_insuranceSubsidy').value;
 
     // Save to storage
     saveData();
