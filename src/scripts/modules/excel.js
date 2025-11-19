@@ -603,9 +603,26 @@ async function downloadPopulatedExcel() {
             'vsa_insuranceFee': customer.vsaDetails?.insuranceFee || ''
         };
 
+        // Convert numeric/currency fields to numbers for Excel formulas
+        const numericFields = [
+            'vsa_deposit', 'vsa_lessOthers', 'vsa_addOthers', 'vsa_tradeInAmount',
+            'vsa_loanAmount', 'vsa_monthlyPayment', 'vsa_adminFee', 'vsa_insuranceSubsidy',
+            'vsa_insuranceFee', 'vsa_purchasePriceWithCOE', 'vsa_sellingPriceList', 'vsa_coeRebateLevel'
+        ];
+
+        numericFields.forEach(field => {
+            if (dataMapping[field]) {
+                // Strip currency symbols and convert to number
+                const numericValue = parseFloat(dataMapping[field].replace(/[^0-9.-]/g, ''));
+                if (!isNaN(numericValue)) {
+                    dataMapping[field] = numericValue;
+                }
+            }
+        });
+
         // Calculate Insurance Net (Insurance Fee - Insurance Subsidy)
-        const insuranceFee = parseFloat(customer.vsaDetails?.insuranceFee?.replace(/[^0-9.-]/g, '') || '0');
-        const insuranceSubsidy = parseFloat(customer.vsaDetails?.insuranceSubsidy?.replace(/[^0-9.-]/g, '') || '0');
+        const insuranceFee = dataMapping['vsa_insuranceFee'] || 0;
+        const insuranceSubsidy = dataMapping['vsa_insuranceSubsidy'] || 0;
         const insuranceNet = insuranceFee - insuranceSubsidy;
         dataMapping['vsa_insuranceNet'] = insuranceNet !== 0 ? insuranceNet : '';
 
