@@ -214,6 +214,32 @@ async function saveDataToDrive() {
     }
 }
 
+// Load data (tries Drive first, falls back to localStorage)
+async function loadData() {
+    if (isSignedIn && rootFolderId) {
+        // Try to load from Drive
+        const success = await loadDataFromDrive();
+        if (success) {
+            return;
+        }
+    }
+
+    // Fall back to localStorage
+    const savedData = localStorage.getItem('bydCRM');
+    if (savedData) {
+        customers = JSON.parse(savedData);
+        renderCustomerList();
+        updateStats();
+        updateSyncStatus('offline');
+    }
+}
+
+// Save data (saves to both Drive and localStorage)
+async function saveData() {
+    // Save to Drive (which also saves to localStorage)
+    await saveDataToDrive();
+}
+
 // Update the data file content in Drive
 async function updateDataFile(data) {
     const boundary = '-------314159265358979323846';
