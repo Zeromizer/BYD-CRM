@@ -351,6 +351,10 @@ async function getRootFolder() {
         await getOrCreateFormsFolder();
         await loadFormTemplates();
 
+        // Load Excel templates after root folder is ready
+        await getOrCreateExcelTemplatesFolder();
+        await loadExcelTemplates();
+
         // Refresh customer view if one is selected
         if (selectedCustomerId) {
             displayCustomerDetails(selectedCustomerId);
@@ -803,6 +807,9 @@ async function getOrCreateExcelTemplatesFolder() {
             console.log('Excel Templates folder created:', excelTemplatesFolderId);
         }
 
+        // Get or create the Excel data file for syncing templates
+        await getOrCreateExcelDataFile();
+
         return excelTemplatesFolderId;
     } catch (error) {
         console.error('Error creating Excel Templates folder:', error);
@@ -900,4 +907,123 @@ async function updateFormsDataFile(data) {
     }
 
     return true;
+}
+
+// Get or create the Excel templates data file in Drive
+async function getOrCreateExcelDataFile() {
+    if (!isSignedIn || !excelTemplatesFolderId) {
+        console.log('Cannot sync Excel templates: not signed in or no templates folder');
+        return null;
+    }
+
+    try {
+        const EXCEL_DATA_FILE_NAME = 'Excel_Templates_Data.json';
+
+        // Search for existing Excel data file
+        const searchResponse = await gapi.client.drive.files.list({
+            q: `name='${EXCEL_DATA_FILE_NAME}' and '${excelTemplatesFolderId}' in parents and trashed=false`,
+            spaces: 'drive',
+            fields: 'files(id, name, modifiedTime)'
+        });
+
+        if (searchResponse.result.files.length > 0) {
+            excelDataFileId = searchResponse.result.files[0].id;
+            console.log('Found existing Excel data file:', excelDataFileId);
+            return excelDataFileId;
+        }
+
+        // Create new Excel data file
+        console.log('Creating new Excel data file...');
+        const createResponse = await gapi.client.drive.files.create({
+            resource: {
+                name: EXCEL_DATA_FILE_NAME,
+                mimeType: 'application/json',
+                parents: [excelTemplatesFolderId]
+            },
+            fields: 'id'
+        });
+
+        excelDataFileId = createResponse.result.id;
+        console.log('Created Excel data file:', excelDataFileId);
+
+        // Initialize with empty object
+        await updateExcelDataFile({});
+
+        return excelDataFileId;
+    } catch (error) {
+        console.error('Error with Excel data file:', error);
+        return null;
+    }
+}
+
+// Update the Excel templates data file content in Drive
+async function updateExcelDataFile(data) {
+    if (!excelDataFileId) {
+        console.error('No Excel data file ID');
+        return false;
+    }
+
+    const boundary = '-------314159265358979323846';
+    const delimiter = "\r\n--" + boundary + "\r\n";
+    const close_delim = "\r\n--" + boundary + "--";
+
+    const contentType = 'application/json';
+    const metadata = {
+        mimeType: contentType
+    };
+
+    const multipartRequestBody =
+        delimiter +
+        'Content-Type: application/json\r\n\r\n' +
+        JSON.stringify(metadata) +
+        delimiter +
+        'Content-Type: ' + contentType + '\r\n\r\n' +
+        JSON.stringify(data, null, 2) +
+        close_delim;
+
+    const response = await fetch(
+        `https://www.googleapis.com/upload/drive/v3/files/${excelDataFileId}?uploadType=multipart`,
+        {
+            method: 'PATCH',
+            headers: {
+                'Authorization': 'Bearer ' + gapi.client.getToken().access_token,
+                'Content-Type': 'multipart/related; boundary="' + boundary + '"'
+            },
+            body: multipartRequestBody
+        }
+    );
+
+    if (!response.ok) {
+        throw new Error('Failed to update Excel data file');
+    }
+
+    return true;
+}
+
+// Load Excel templates from Drive
+async function loadExcelTemplatesFromDrive() {
+    if (!isSignedIn || !excelDataFileId) {
+        console.log('Cannot load Excel templates: not signed in or no data file');
+        return null;
+    }
+
+    try {
+        const response = await fetch(
+            `https://www.googleapis.com/drive/v3/files/${excelDataFileId}?alt=media`,
+            {
+                headers: new Headers({ 'Authorization': 'Bearer ' + gapi.client.getToken().access_token })
+            }
+        );
+
+        if (!response.ok) {
+            throw new Error('Failed to load Excel templates from Drive');
+        }
+
+        const templatesData = await response.json();
+        console.log('Loaded Excel templates from Drive:', templatesData);
+        return templatesData;
+    } catch (error) {
+        console.error('Error loading Excel templates from Drive:', error);
+        return null;
+    }
 }
