@@ -10,10 +10,10 @@
 // ========== EXCEL TEMPLATES MANAGEMENT ==========
 
 // Open Excel modal
-function openExcelModal() {
+async function openExcelModal() {
     const modal = document.getElementById('excelModal');
     modal.classList.add('active');
-    loadExcelTemplates();
+    await loadExcelTemplates();
     displayExcelList();
 }
 
@@ -97,7 +97,7 @@ async function createExcelTemplate() {
 
     // Save template
     excelTemplates[templateId] = template;
-    saveExcelTemplates();
+    await saveExcelTemplates();
 
     // Update display
     displayExcelList();
@@ -176,26 +176,80 @@ async function deleteExcelTemplate(templateId) {
     }
 
     delete excelTemplates[templateId];
-    saveExcelTemplates();
+    await saveExcelTemplates();
     displayExcelList();
 }
 
 // Save Excel templates to localStorage
-function saveExcelTemplates() {
+async function saveExcelTemplates() {
     try {
+        // Save to localStorage first (optimistic save)
         localStorage.setItem('excelTemplates', JSON.stringify(excelTemplates));
+
+        // Sync to Google Drive if signed in
+        if (isSignedIn && excelTemplatesFolderId) {
+            try {
+                // Ensure data file exists
+                if (!excelDataFileId) {
+                    await getOrCreateExcelDataFile();
+                }
+
+                // Upload templates to Drive
+                if (excelDataFileId) {
+                    await updateExcelDataFile(excelTemplates);
+                    console.log('Excel templates synced to Google Drive');
+                }
+            } catch (syncError) {
+                console.error('Error syncing Excel templates to Drive:', syncError);
+                // Continue even if sync fails - data is already in localStorage
+            }
+        }
     } catch (error) {
         console.error('Error saving Excel templates:', error);
     }
 }
 
-// Load Excel templates from localStorage
-function loadExcelTemplates() {
+// Load Excel templates from Google Drive and merge with localStorage
+async function loadExcelTemplates() {
     try {
+        // Load from localStorage first
         const stored = localStorage.getItem('excelTemplates');
+        let localTemplates = {};
         if (stored) {
-            excelTemplates = JSON.parse(stored);
+            localTemplates = JSON.parse(stored);
         }
+
+        // Try to load from Google Drive if signed in
+        if (isSignedIn && excelTemplatesFolderId) {
+            try {
+                // Ensure data file exists
+                if (!excelDataFileId) {
+                    await getOrCreateExcelDataFile();
+                }
+
+                // Load from Drive
+                if (excelDataFileId) {
+                    const driveTemplates = await loadExcelTemplatesFromDrive();
+
+                    if (driveTemplates && Object.keys(driveTemplates).length > 0) {
+                        // Merge Drive templates with local templates
+                        // Drive templates take precedence, but keep local-only templates
+                        excelTemplates = { ...localTemplates, ...driveTemplates };
+
+                        // Save merged templates back to localStorage
+                        localStorage.setItem('excelTemplates', JSON.stringify(excelTemplates));
+                        console.log('Excel templates loaded and merged from Google Drive');
+                        return;
+                    }
+                }
+            } catch (syncError) {
+                console.error('Error loading Excel templates from Drive:', syncError);
+                // Fall back to localStorage
+            }
+        }
+
+        // Use localStorage templates if Drive sync failed or not signed in
+        excelTemplates = localTemplates;
     } catch (error) {
         console.error('Error loading Excel templates:', error);
     }
@@ -340,7 +394,7 @@ function updateExcelMappingsList() {
 }
 
 // Save Excel mappings
-function saveExcelMappings() {
+async function saveExcelMappings() {
     if (!currentExcelTemplateId) {
         return;
     }
@@ -352,7 +406,7 @@ function saveExcelMappings() {
     }
 
     template.fieldMappings = tempExcelMappings;
-    saveExcelTemplates();
+    await saveExcelTemplates();
 
     alert('Field mappings saved successfully!');
     closeExcelMappingModal();
@@ -876,7 +930,7 @@ async function uploadMasterFile() {
             // Update template with new file info
             template.driveFileId = result.id;
             template.driveFileName = file.name;
-            saveExcelTemplates();
+            await saveExcelTemplates();
 
             console.log('Excel master file uploaded to Drive:', result.id);
             alert('Master file uploaded successfully!\n\n✓ ' + file.name + '\n\nYou can now use this template without uploading files each time.');
