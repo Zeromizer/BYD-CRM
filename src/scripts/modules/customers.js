@@ -64,24 +64,28 @@ async function addCustomer(event) {
 
         customers.push(customer);
 
-        // Step 2: Save to cloud
-        progressText.textContent = 'Saving to cloud...';
+        // Step 2: Save to cloud (non-blocking - queued in background)
+        progressText.textContent = 'Queuing cloud sync...';
         progressBar.style.width = '50%';
-        await saveData();
+        saveData(); // Don't await - it will queue in background
 
-        // Step 3: Create Google Drive folder
+        // Step 3: Queue Google Drive folder creation in background
         if (isSignedIn) {
-            progressText.textContent = 'Creating Google Drive folder...';
+            progressText.textContent = 'Queuing folder creation...';
             progressBar.style.width = '75%';
-            await createCustomerFolder(customer.name, customer.id);
+
+            // Queue folder creation in background
+            queueOperation('createFolder', async () => {
+                return await createCustomerFolder(customer.name, customer.id);
+            }, { customerId: customer.id, customerName: customer.name });
         }
 
-        // Step 4: Complete
-        progressText.textContent = 'Done! ✓';
+        // Step 4: Complete (UI updates immediately!)
+        progressText.textContent = 'Done! Syncing in background...';
         progressBar.style.width = '100%';
 
-        // Wait a moment to show completion
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Wait a brief moment to show completion message
+        await new Promise(resolve => setTimeout(resolve, 300));
 
         renderCustomerList();
         closeAddCustomerModal();
