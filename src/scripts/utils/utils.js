@@ -1122,3 +1122,8 @@ function printSelectedForm(customerId) {
 
     printFormForCustomer(selectedForm, customerId);
 }
+
+// Helper function to invalidate stats cache when files change
+function invalidateStatsCache() {
+    statsCache.lastUpdate = 0;
+}

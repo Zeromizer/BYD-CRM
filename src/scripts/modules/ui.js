@@ -1187,3 +1187,58 @@ async function displayCustomerDetails(customerId) {
         </div>
     `;
 }
+
+// Update statistics display
+async function updateStats(forceRefresh = false) {
+    document.getElementById('totalCustomers').textContent = customers.length;
+
+    const activeDeals = customers.filter(c => !c.dealClosed).length;
+    document.getElementById('activeDeals').textContent = activeDeals;
+
+    // Count folders
+    const foldersCreated = customers.filter(c => c.driveFolderId).length;
+    document.getElementById('totalFolders').textContent = foldersCreated;
+
+    // Count files with caching and parallel execution
+    if (isSignedIn && rootFolderId) {
+        const now = Date.now();
+        const cacheValid = !forceRefresh && (now - statsCache.lastUpdate) < statsCache.cacheTimeout;
+
+        if (cacheValid) {
+            // Use cached value
+            document.getElementById('totalFiles').textContent = statsCache.totalFiles;
+        } else {
+            try {
+                // Show loading indicator
+                document.getElementById('totalFiles').textContent = '...';
+
+                // Fetch file counts for all customers in parallel
+                const customersWithFolders = customers.filter(c => c.driveFolderId);
+                const filePromises = customersWithFolders.map(customer =>
+                    getCustomerFiles(customer.id)
+                );
+
+                const results = await Promise.allSettled(filePromises);
+
+                // Count total files from successful requests
+                let totalFiles = 0;
+                results.forEach(result => {
+                    if (result.status === 'fulfilled' && result.value) {
+                        totalFiles += result.value.length;
+                    }
+                });
+
+                // Update cache
+                statsCache.totalFiles = totalFiles;
+                statsCache.lastUpdate = now;
+
+                document.getElementById('totalFiles').textContent = totalFiles;
+            } catch (error) {
+                console.error('Error updating stats:', error);
+                document.getElementById('totalFiles').textContent = '?';
+            }
+        }
+    } else {
+        document.getElementById('totalFiles').textContent = '0';
+    }
+}
