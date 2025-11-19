@@ -1257,3 +1257,63 @@ body {
 .sync-success {
     animation: checkmark 0.3s ease-in-out;
 }
+
+/* Tooltip styles */
+.info-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    margin-left: 6px;
+    background: #3498db;
+    color: white;
+    border-radius: 50%;
+    font-size: 12px;
+    font-weight: bold;
+    cursor: help;
+    position: relative;
+    vertical-align: middle;
+}
+
+.info-icon:hover {
+    background: #2980b9;
+}
+
+.info-icon .tooltip-text {
+    visibility: hidden;
+    width: 280px;
+    background-color: #2c3e50;
+    color: #fff;
+    text-align: center;
+    border-radius: 6px;
+    padding: 10px;
+    position: absolute;
+    z-index: 1000;
+    bottom: 125%;
+    left: 50%;
+    margin-left: -140px;
+    opacity: 0;
+    transition: opacity 0.3s;
+    font-size: 13px;
+    font-weight: normal;
+    line-height: 1.4;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.info-icon .tooltip-text::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    margin-left: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: #2c3e50 transparent transparent transparent;
+}
+
+.info-icon:hover .tooltip-text {
+    visibility: visible;
+    opacity: 1;
+}
+
