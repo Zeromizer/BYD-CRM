@@ -634,6 +634,7 @@ async function downloadPopulatedExcel() {
 
         // Upload to Google Drive subfolder only
         let uploadSuccess = false;
+        let fileWebViewLink = null;
         if (isSignedIn) {
             try {
                 // Ensure customer folder and subfolders exist first
@@ -681,6 +682,7 @@ async function downloadPopulatedExcel() {
                     const result = await response.json();
                     if (result && result.id) {
                         uploadSuccess = true;
+                        fileWebViewLink = result.webViewLink;
                     }
                 }
             } catch (uploadError) {
@@ -688,24 +690,23 @@ async function downloadPopulatedExcel() {
             }
         }
 
-        // Create download link for local copy
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${template.name}_${customer.name}_${timestamp}.xlsx`;
-        a.click();
-        URL.revokeObjectURL(url);
-
-        // Show success message
+        // Show success message and open file
         if (uploadSuccess) {
-            alert('Excel file generated successfully!\n\n✅ Downloaded to your computer\n✅ Saved to customer folder in Google Drive\n\nYou can view it in the Documents tab.');
             // Refresh the customer details to show the new file
             invalidateStatsCache();
             displayCustomerDetails(currentPopulateCustomerId);
+
+            // Open file in Google Drive web viewer
+            if (fileWebViewLink) {
+                window.open(fileWebViewLink, '_blank');
+                alert('Excel file generated successfully!\n\n✅ Saved to customer folder in Google Drive\n✅ Opening file in web viewer...\n\nYou can view it in the Documents tab.');
+            } else {
+                alert('Excel file generated successfully!\n\n✅ Saved to customer folder in Google Drive\n\nYou can view it in the Documents tab.');
+            }
         } else if (!isSignedIn) {
-            alert('Excel file downloaded successfully!\n\n⚠️ Not connected to Google Drive - file not saved to customer folder.\n\nConnect to Google Drive to automatically save files.');
+            alert('Please sign in to Google Drive to save the populated Excel file.');
         } else {
-            alert('Excel file downloaded successfully!\n\n⚠️ Could not save to Google Drive. Please check your connection and try again.');
+            alert('Could not save to Google Drive. Please check your connection and try again.');
         }
 
         closeExcelPopulateModal();
