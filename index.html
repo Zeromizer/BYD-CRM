@@ -18,8 +18,7 @@
             <h1>BYD MotorEast CRM <span id="syncStatus" style="font-size: 14px; font-weight: normal; margin-left: 10px;"></span></h1>
             <div class="header-actions">
                 <button class="btn btn-primary" onclick="openAddCustomerModal()">Add Customer</button>
-                <button class="btn btn-secondary" onclick="openFormsModal()">📄 Manage Forms</button>
-                <button class="btn btn-secondary" onclick="openExcelModal()">📊 Manage Excel</button>
+                <button class="btn btn-secondary" onclick="openTemplatesModal()">📄 Manage Templates</button>
                 <button class="btn btn-secondary" onclick="forceSyncFromDrive()" title="Reload data from Google Drive">🔄 Force Sync</button>
                 <button class="btn btn-secondary" onclick="exportData()">Export Data</button>
                 <button class="btn btn-secondary" onclick="importData()">Import Data</button>
@@ -162,6 +161,125 @@
     <!-- Setup Instructions Modal -->
     <div class="modal" id="setupModal" style="display: none;">
         <!-- Modal hidden since Client ID is pre-configured -->
+    </div>
+
+    <!-- Combined Templates Management Modal -->
+    <div class="modal" id="templatesModal">
+        <div class="modal-content" style="max-width: 1200px;">
+            <div class="modal-header">
+                <h2>📄 Templates Management</h2>
+                <span class="close-modal" onclick="closeTemplatesModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="templates-grid">
+                    <!-- Forms Section -->
+                    <div class="template-section">
+                        <div class="template-section-header">
+                            <span class="template-section-icon">📄</span>
+                            <h3>Form Templates</h3>
+                        </div>
+                        <div id="formsTemplateContent">
+                            <div style="margin-bottom: 15px; padding: 12px; background: linear-gradient(135deg, rgba(0, 188, 212, 0.1) 0%, rgba(0, 151, 167, 0.1) 100%); border-radius: 8px; border: 2px solid rgba(0, 188, 212, 0.3);">
+                                <p style="color: #2c3e50; font-size: 13px; margin-bottom: 6px;">
+                                    Upload form templates (PDF or image). View and print them from customer profiles.
+                                </p>
+                                <p style="color: #7f8c8d; font-size: 12px; margin: 0;">
+                                    Stored in Google Drive for access across sessions.
+                                </p>
+                            </div>
+
+                            <div id="formsNotConnected2" style="display: none;">
+                                <div style="text-align: center; padding: 20px;">
+                                    <p style="color: #7f8c8d; margin-bottom: 15px;">⚠️ Not Connected to Google Drive</p>
+                                    <button class="btn btn-drive btn-small" onclick="handleAuthClick()">
+                                        📁 Connect Google Drive
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div id="formsConnected2" style="display: none;">
+                                <div style="margin-bottom: 15px;">
+                                    <label style="display: block; margin-bottom: 6px; color: #2c3e50; font-weight: 500; font-size: 13px;">Form Type:</label>
+                                    <select id="formTypeSelect2" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 13px;">
+                                        <option value="test_drive">Test Drive Agreement Form</option>
+                                        <option value="vsa">Vehicle Sales Agreement</option>
+                                        <option value="pdpa">PDPA Consent Form</option>
+                                        <option value="coe_bidding_1">COE Bidding 1</option>
+                                        <option value="coe_bidding_2">COE Bidding 2</option>
+                                        <option value="pdpa_consent_1">PDPA Consent 1</option>
+                                        <option value="pdpa_consent_2">PDPA Consent 2</option>
+                                        <option value="other">Other Form</option>
+                                    </select>
+                                </div>
+                                <div style="margin-bottom: 12px;">
+                                    <label style="display: block; margin-bottom: 6px; color: #2c3e50; font-weight: 500; font-size: 13px;">Select File:</label>
+                                    <input type="file" id="formFileInput2" accept=".pdf,image/*" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 13px;">
+                                </div>
+                                <button class="btn btn-success btn-small" onclick="uploadFormTemplateNew()" style="width: 100%; margin-bottom: 15px;">Upload Form</button>
+
+                                <div style="border-top: 2px solid #ecf0f1; padding-top: 15px; margin-top: 15px;">
+                                    <h4 style="color: #1a1a2e; margin-bottom: 12px; font-size: 15px;">Uploaded Forms</h4>
+                                    <div id="formsListContainer2" style="max-height: 300px; overflow-y: auto;">
+                                        <div class="loading-forms" style="text-align: center; padding: 15px; color: #7f8c8d; font-size: 13px;">
+                                            Loading forms...
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Excel Section -->
+                    <div class="template-section">
+                        <div class="template-section-header">
+                            <span class="template-section-icon">📊</span>
+                            <h3>Excel Templates</h3>
+                        </div>
+                        <div id="excelTemplateContent">
+                            <div style="margin-bottom: 15px; padding: 12px; background: linear-gradient(135deg, rgba(76, 175, 80, 0.1) 0%, rgba(56, 142, 60, 0.1) 100%); border-radius: 8px; border: 2px solid rgba(76, 175, 80, 0.3);">
+                                <p style="color: #2c3e50; font-size: 13px; margin-bottom: 6px;">
+                                    Create field mapping templates for Excel forms. Only mappings are stored, not files.
+                                </p>
+                                <p style="color: #7f8c8d; font-size: 12px; margin: 0;">
+                                    Original Excel formatting is <strong>100% preserved</strong>.
+                                </p>
+                            </div>
+
+                            <div id="excelNotConnected2" style="display: none;">
+                                <div style="text-align: center; padding: 20px;">
+                                    <p style="color: #7f8c8d; margin-bottom: 15px;">⚠️ Not Connected to Google Drive</p>
+                                    <button class="btn btn-drive btn-small" onclick="handleAuthClick()">
+                                        📁 Connect Google Drive
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div id="excelConnected2" style="display: none;">
+                                <div style="margin-bottom: 15px;">
+                                    <label style="display: block; margin-bottom: 6px; color: #2c3e50; font-weight: 500; font-size: 13px;">Template Name:</label>
+                                    <input type="text" id="excelTemplateName2" placeholder="e.g., VSA Form" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 13px;">
+                                </div>
+                                <div style="margin-bottom: 12px;">
+                                    <label style="display: block; margin-bottom: 6px; color: #2c3e50; font-weight: 500; font-size: 13px;">Master Excel File (Optional):</label>
+                                    <input type="file" id="excelTemplateFile2" accept=".xlsx" style="width: 100%; padding: 8px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 13px;">
+                                    <p style="color: #7f8c8d; font-size: 11px; margin-top: 4px;">Upload to save in Google Drive for reuse.</p>
+                                </div>
+                                <button class="btn btn-success btn-small" onclick="createExcelTemplateNew()" style="width: 100%; margin-bottom: 15px;">Create Template</button>
+
+                                <div style="border-top: 2px solid #ecf0f1; padding-top: 15px; margin-top: 15px;">
+                                    <h4 style="color: #1a1a2e; margin-bottom: 12px; font-size: 15px;">Excel Templates</h4>
+                                    <div id="excelListContainer2" style="max-height: 300px; overflow-y: auto;">
+                                        <div class="loading-excel" style="text-align: center; padding: 15px; color: #7f8c8d; font-size: 13px;">
+                                            No templates uploaded yet
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Forms Management Modal -->
