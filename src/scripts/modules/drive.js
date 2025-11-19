@@ -351,9 +351,6 @@ async function getRootFolder() {
         await getOrCreateFormsFolder();
         await loadFormTemplates();
 
-        // Load Excel templates after Forms folder is ready
-        await loadExcelTemplates();
-
         // Refresh customer view if one is selected
         if (selectedCustomerId) {
             displayCustomerDetails(selectedCustomerId);

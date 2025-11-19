@@ -45,14 +45,6 @@ async function createExcelTemplate() {
         return;
     }
 
-    console.log('[Excel] Creating new template:', name);
-
-    // Ensure Forms folder exists for saving template metadata
-    if (isSignedIn && !formsFolderId) {
-        console.log('[Excel] Forms folder not ready, creating...');
-        await getOrCreateFormsFolder();
-    }
-
     // Create template structure
     const templateId = 'excel_' + Date.now();
     const template = {
@@ -275,10 +267,6 @@ async function loadExcelTemplates() {
 // Save Excel templates data to Google Drive
 async function saveExcelTemplatesToDrive() {
     try {
-        console.log('[Excel] saveExcelTemplatesToDrive - Starting...');
-        console.log('[Excel] formsFolderId:', formsFolderId);
-        console.log('[Excel] Templates to save:', Object.keys(excelTemplates).length);
-
         // Check if excel-templates-data.json file exists
         const fileName = 'excel-templates-data.json';
         const query = `name='${fileName}' and '${formsFolderId}' in parents and trashed=false`;
@@ -291,7 +279,6 @@ async function saveExcelTemplatesToDrive() {
 
         const files = response.result.files;
         let fileId = files && files.length > 0 ? files[0].id : null;
-        console.log('[Excel] Existing file ID:', fileId);
 
         // Prepare the data
         const dataBlob = new Blob([JSON.stringify(excelTemplates, null, 2)], { type: 'application/json' });
@@ -304,7 +291,7 @@ async function saveExcelTemplatesToDrive() {
                 params: { uploadType: 'media' },
                 body: dataBlob
             });
-            console.log('[Excel] ✓ Updated Excel templates in Drive, file ID:', fileId);
+            console.log('Updated Excel templates in Drive');
         } else {
             // Create new file
             const metadata = {
@@ -324,10 +311,10 @@ async function saveExcelTemplatesToDrive() {
             });
 
             const result = await createResponse.json();
-            console.log('[Excel] ✓ Created Excel templates file in Drive, file ID:', result.id);
+            console.log('Created Excel templates file in Drive:', result.id);
         }
     } catch (error) {
-        console.error('[Excel] ✗ Error saving Excel templates to Drive:', error);
+        console.error('Error saving Excel templates to Drive:', error);
         throw error;
     }
 }
