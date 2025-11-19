@@ -16,8 +16,6 @@ async function openExcelModal() {
 
     // Load from Google Drive if signed in
     if (isSignedIn) {
-        // IMPORTANT: Ensure Forms folder exists first to get formsFolderId
-        await getOrCreateFormsFolder();
         await loadExcelTemplates();
     } else {
         // Load from localStorage only
