@@ -12,9 +12,19 @@
     <!-- React Version Banner -->
     <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 20px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
         <span style="font-size: 16px; font-weight: 500;">🚀 Try our new React version!</span>
-        <a href="react/" style="color: white; text-decoration: underline; margin-left: 10px; font-weight: 600;">Click here to preview</a>
+        <a href="#" onclick="navigateToReact(); return false;" style="color: white; text-decoration: underline; margin-left: 10px; font-weight: 600; cursor: pointer;">Click here to preview</a>
         <span style="font-size: 13px; opacity: 0.9; margin-left: 15px;">(Your data is shared between both versions)</span>
     </div>
+    <script>
+        function navigateToReact() {
+            // Get the current page URL
+            const currentPath = window.location.pathname;
+            // Get the directory of the current page
+            const dir = currentPath.substring(0, currentPath.lastIndexOf('/') + 1);
+            // Navigate to react/ in the same directory
+            window.location.href = dir + 'react/';
+        }
+    </script>
 
     <div class="container">
         <div class="header">
