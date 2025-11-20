@@ -11,30 +11,8 @@
 <body>
     <div class="container">
         <div class="header">
-            <button class="google-drive-btn" id="authButton" onclick="handleAuthClick()" disabled title="Google Drive Connection">
-                <span class="status-dot"></span>
-                <span id="authButtonText">Google Drive</span>
-            </button>
-            <h1>BYD MotorEast CRM <span id="syncStatus" style="font-size: 14px; font-weight: normal; margin-left: 10px;"></span></h1>
-            <div class="header-actions">
-                <div class="dropdown">
-                    <button class="btn btn-secondary dropdown-toggle" onclick="toggleHeaderDropdown()" title="More Options">
-                        ⋮
-                    </button>
-                    <div class="dropdown-menu" id="headerDropdownMenu">
-                        <a class="dropdown-item" onclick="openFormsModal()">📄 Manage Forms</a>
-                        <a class="dropdown-item" onclick="openExcelModal()">📊 Manage Excel</a>
-                        <a class="dropdown-item" onclick="forceSyncFromDrive()">🔄 Force Sync</a>
-                        <a class="dropdown-item" onclick="exportData()">💾 Export Data</a>
-                        <a class="dropdown-item" onclick="importData()">📥 Import Data</a>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="stats-container">
             <button class="stats-button" title="View Statistics">
-                📊 Statistics
+                Statistics
                 <div class="stats-tooltip">
                     <div class="stats-tooltip-content">
                         <div class="stat-item">
@@ -56,6 +34,25 @@
                     </div>
                 </div>
             </button>
+            <h1>BYD MotorEast CRM <span id="syncStatus" style="font-size: 14px; font-weight: normal; margin-left: 10px;"></span></h1>
+            <div class="header-actions">
+                <button class="google-drive-btn" id="authButton" onclick="handleAuthClick()" disabled title="Google Drive Connection">
+                    <span class="status-dot"></span>
+                    <span id="authButtonText">Google Drive</span>
+                </button>
+                <div class="dropdown">
+                    <button class="btn btn-secondary dropdown-toggle" onclick="toggleHeaderDropdown()" title="More Options">
+                        ⋮
+                    </button>
+                    <div class="dropdown-menu" id="headerDropdownMenu">
+                        <a class="dropdown-item" onclick="openFormsModal()">📄 Manage Forms</a>
+                        <a class="dropdown-item" onclick="openExcelModal()">📊 Manage Excel</a>
+                        <a class="dropdown-item" onclick="forceSyncFromDrive()">🔄 Force Sync</a>
+                        <a class="dropdown-item" onclick="exportData()">💾 Export Data</a>
+                        <a class="dropdown-item" onclick="importData()">📥 Import Data</a>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <div class="main-content">
