@@ -333,16 +333,20 @@ function displayFormsList() {
 // ========== COMBINE & PRINT FORMS ==========
 
 // Open combine print modal and populate form options
-function openCombinePrintModal(customerId) {
+async function openCombinePrintModal(customerId) {
     currentCombineCustomerId = customerId;
 
     const modal = document.getElementById('combinePrintModal');
     const side1Select = document.getElementById('combineSide1');
     const side2Select = document.getElementById('combineSide2');
+    const newPresetSide1 = document.getElementById('newPresetSide1');
+    const newPresetSide2 = document.getElementById('newPresetSide2');
 
     // Clear existing options except the default
     side1Select.innerHTML = '<option value="">Select a form...</option>';
     side2Select.innerHTML = '<option value="">Select a form...</option>';
+    newPresetSide1.innerHTML = '<option value="">Select...</option>';
+    newPresetSide2.innerHTML = '<option value="">Select...</option>';
 
     // Form type names for display
     const formTypeNames = {
@@ -356,10 +360,11 @@ function openCombinePrintModal(customerId) {
         'other': 'Other Form'
     };
 
-    // Populate dropdowns with available image forms
+    // Populate all dropdowns with available image forms
     for (const [formType, formData] of Object.entries(formTemplates)) {
         if (formData.fileType === 'image') {
             const formName = formTypeNames[formType] || formType;
+
             const option1 = document.createElement('option');
             option1.value = formType;
             option1.textContent = formName;
@@ -368,19 +373,143 @@ function openCombinePrintModal(customerId) {
             option2.value = formType;
             option2.textContent = formName;
 
+            const option3 = document.createElement('option');
+            option3.value = formType;
+            option3.textContent = formName;
+
+            const option4 = document.createElement('option');
+            option4.value = formType;
+            option4.textContent = formName;
+
             side1Select.appendChild(option1);
             side2Select.appendChild(option2);
+            newPresetSide1.appendChild(option3);
+            newPresetSide2.appendChild(option4);
         }
     }
 
+    // Load and display presets
+    await loadCombinationPresets();
+    displayCombinationPresets();
+
     // Show modal
     modal.style.display = 'flex';
+}
+
+// Display combination presets as buttons
+function displayCombinationPresets() {
+    const presetsList = document.getElementById('presetsList');
+
+    if (!presetsList) {
+        return;
+    }
+
+    // Clear existing presets
+    presetsList.innerHTML = '';
+
+    // Form type names for display
+    const formTypeNames = {
+        'test_drive': 'Test Drive Agreement',
+        'vsa': 'Vehicle Sales Agreement',
+        'pdpa': 'PDPA Consent Form',
+        'coe_bidding_1': 'COE Bidding 1',
+        'coe_bidding_2': 'COE Bidding 2',
+        'pdpa_consent_1': 'PDPA Consent 1',
+        'pdpa_consent_2': 'PDPA Consent 2',
+        'other': 'Other Form'
+    };
+
+    // Check if there are any presets
+    const presetCount = Object.keys(formCombinationPresets).length;
+
+    if (presetCount === 0) {
+        presetsList.innerHTML = '<p style="color: #95a5a6; font-style: italic; margin: 10px 0;">No saved presets. Click "New Preset" to create one.</p>';
+        return;
+    }
+
+    // Create buttons for each preset
+    for (const [presetId, preset] of Object.entries(formCombinationPresets)) {
+        const side1Name = formTypeNames[preset.side1] || preset.side1;
+        const side2Name = formTypeNames[preset.side2] || preset.side2;
+
+        const presetButton = document.createElement('div');
+        presetButton.style.cssText = 'position: relative; display: inline-block;';
+        presetButton.innerHTML = `
+            <button
+                class="btn btn-small"
+                onclick="useCombinationPreset('${presetId}', currentCombineCustomerId)"
+                style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 10px 35px 10px 15px; font-weight: 600; white-space: nowrap;"
+                title="${side1Name} + ${side2Name}">
+                ${preset.name}
+            </button>
+            <button
+                onclick="deletePresetAndRefresh('${presetId}')"
+                style="position: absolute; top: 2px; right: 2px; background: rgba(231, 76, 60, 0.9); color: white; border: none; border-radius: 50%; width: 22px; height: 22px; cursor: pointer; font-size: 12px; line-height: 1; padding: 0; font-weight: bold; display: flex; align-items: center; justify-content: center;"
+                title="Delete preset">
+                ×
+            </button>
+        `;
+
+        presetsList.appendChild(presetButton);
+    }
+}
+
+// Toggle preset creation section
+function togglePresetCreation() {
+    const createSection = document.getElementById('createPresetSection');
+    const isVisible = createSection.style.display !== 'none';
+
+    if (isVisible) {
+        createSection.style.display = 'none';
+        // Clear inputs
+        document.getElementById('newPresetName').value = '';
+        document.getElementById('newPresetSide1').value = '';
+        document.getElementById('newPresetSide2').value = '';
+    } else {
+        createSection.style.display = 'block';
+    }
+}
+
+// Save new preset
+async function saveNewPreset() {
+    const name = document.getElementById('newPresetName').value.trim();
+    const side1 = document.getElementById('newPresetSide1').value;
+    const side2 = document.getElementById('newPresetSide2').value;
+
+    const success = await createCombinationPreset(name, side1, side2);
+
+    if (success) {
+        // Refresh preset display
+        displayCombinationPresets();
+        // Hide creation section
+        togglePresetCreation();
+        alert('Preset saved successfully!');
+    }
+}
+
+// Delete preset and refresh display
+async function deletePresetAndRefresh(presetId) {
+    const success = await deleteCombinationPreset(presetId);
+
+    if (success) {
+        displayCombinationPresets();
+    }
 }
 
 // Close combine print modal
 function closeCombinePrintModal() {
     document.getElementById('combinePrintModal').style.display = 'none';
     currentCombineCustomerId = null;
+
+    // Hide create preset section if it's open
+    const createSection = document.getElementById('createPresetSection');
+    if (createSection && createSection.style.display !== 'none') {
+        createSection.style.display = 'none';
+        // Clear inputs
+        document.getElementById('newPresetName').value = '';
+        document.getElementById('newPresetSide1').value = '';
+        document.getElementById('newPresetSide2').value = '';
+    }
 }
 
 // Combine and print selected forms with customer data
