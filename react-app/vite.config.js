@@ -5,7 +5,7 @@ import path from 'path'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
-  base: '/react/',
+  base: './',  // Use relative paths for GitHub Pages compatibility
   build: {
     outDir: path.resolve(__dirname, '../react'),
     emptyOutDir: true,
