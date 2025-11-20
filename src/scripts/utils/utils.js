@@ -332,28 +332,42 @@ async function uploadDocImage(customerId, docType, file) {
 
 // Upload files to Google Drive
 async function uploadFiles(files, customerId) {
+    console.log('[uploadFiles] Starting upload:', { filesCount: files.length, customerId });
+
     const customer = customers.find(c => c.id === customerId);
-    if (!customer) return;
+    if (!customer) {
+        console.error('[uploadFiles] Customer not found:', customerId);
+        return;
+    }
 
     if (!isSignedIn) {
+        console.error('[uploadFiles] Not signed in to Google Drive');
         alert('Please connect to Google Drive first');
         return;
     }
+
+    console.log('[uploadFiles] Customer found:', customer.name);
 
     // Check if auto-classify is enabled
     const autoClassifyToggle = document.getElementById(`autoClassifyToggle_${customerId}`);
     const isAutoClassify = autoClassifyToggle ? autoClassifyToggle.checked : true;
 
     const uploadArea = document.getElementById(`uploadArea_${customerId}`);
-    const originalContent = uploadArea.innerHTML;
+    const originalContent = uploadArea ? uploadArea.innerHTML : null;
 
     let successCount = 0;
     let errorCount = 0;
     const classificationResults = [];
 
+    console.log('[uploadFiles] Auto-classify mode:', isAutoClassify);
+
     if (isAutoClassify) {
         // Auto-classify mode with parallel uploads
-        uploadArea.innerHTML = '<div class="loading"></div><p style="color: #27ae60; margin-top: 10px;">🤖 Auto-classifying and uploading files...</p>';
+        if (uploadArea) {
+            uploadArea.innerHTML = '<div class="loading"></div><p style="color: #27ae60; margin-top: 10px;">🤖 Auto-classifying and uploading files...</p>';
+        }
+
+        console.log('[uploadFiles] Starting auto-classify upload for', files.length, 'files');
 
         // Prepare all upload tasks
         const uploadTasks = Array.from(files).map(file => {
@@ -373,10 +387,16 @@ async function uploadFiles(files, customerId) {
 
         // Upload with concurrency limit (3 files at a time to avoid overwhelming API)
         const concurrencyLimit = 3;
+        console.log('[uploadFiles] Uploading', uploadTasks.length, 'files in batches of', concurrencyLimit);
+
         for (let i = 0; i < uploadTasks.length; i += concurrencyLimit) {
             const batch = uploadTasks.slice(i, i + concurrencyLimit);
+            console.log('[uploadFiles] Processing batch', (i / concurrencyLimit) + 1, '- files:', batch.map(t => t.fileName));
+
             const batchPromises = batch.map(async (task) => {
+                console.log('[uploadFiles] Uploading file:', task.fileName, 'to folder:', task.documentType);
                 const result = await uploadFileToDrive(task.file, customerId, task.fileName, task.documentType);
+                console.log('[uploadFiles] Upload result for', task.fileName, ':', result);
                 return {
                     success: result,
                     task
@@ -384,6 +404,7 @@ async function uploadFiles(files, customerId) {
             });
 
             const batchResults = await Promise.allSettled(batchPromises);
+            console.log('[uploadFiles] Batch complete. Results:', batchResults.length);
 
             batchResults.forEach(result => {
                 if (result.status === 'fulfilled' && result.value.success) {
@@ -401,9 +422,12 @@ async function uploadFiles(files, customerId) {
                     }
                 } else {
                     errorCount++;
+                    console.error('[uploadFiles] Upload failed:', result);
                 }
             });
         }
+
+        console.log('[uploadFiles] All uploads complete. Success:', successCount, 'Errors:', errorCount);
 
         // Show detailed results
         let resultMessage = `✅ Successfully uploaded ${successCount} file(s)!\n\n📋 Auto-classified documents:\n`;
@@ -424,7 +448,9 @@ async function uploadFiles(files, customerId) {
         const documentType = documentTypeSelect ? documentTypeSelect.value : 'other';
         const folderName = documentFolders.find(f => f.id === documentType)?.name || 'Other_Documents';
 
-        uploadArea.innerHTML = '<div class="loading"></div><p style="color: #27ae60; margin-top: 10px;">Uploading files to ' + folderName.replace(/_/g, ' ') + '...</p>';
+        if (uploadArea) {
+            uploadArea.innerHTML = '<div class="loading"></div><p style="color: #27ae60; margin-top: 10px;">Uploading files to ' + folderName.replace(/_/g, ' ') + '...</p>';
+        }
 
         // Prepare all upload tasks
         const uploadTasks = Array.from(files).map(file => {
@@ -466,7 +492,9 @@ async function uploadFiles(files, customerId) {
         }
     }
 
-    uploadArea.innerHTML = originalContent;
+    if (uploadArea && originalContent) {
+        uploadArea.innerHTML = originalContent;
+    }
     invalidateStatsCache(); // Invalidate cache after upload
     displayCustomerDetails(customerId);
     updateStats();
