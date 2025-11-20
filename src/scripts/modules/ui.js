@@ -78,10 +78,10 @@ function updateSyncStatus(status) {
     if (!statusElement) return;
 
     const statusConfig = {
-        'syncing': { icon: '🔄', text: 'Syncing...', color: '#3498db' },
-        'synced': { icon: '✓', text: 'Synced', color: '#27ae60' },
-        'offline': { icon: '📴', text: 'Offline', color: '#95a5a6' },
-        'error': { icon: '⚠️', text: 'Sync Error', color: '#e74c3c' }
+        'syncing': { icon: '', text: 'Syncing...', color: '#3498db' },
+        'synced': { icon: '', text: 'Synced', color: '#27ae60' },
+        'offline': { icon: '', text: 'Offline', color: '#95a5a6' },
+        'error': { icon: '', text: 'Sync Error', color: '#e74c3c' }
     };
 
     const config = statusConfig[status] || statusConfig['offline'];
@@ -346,15 +346,15 @@ function displayFormsList() {
         html += `
             <div class="file-item">
                 <div class="file-info">
-                    <div class="file-icon">📄</div>
+                    <div class="file-icon">FILE</div>
                     <div class="file-details">
                         <h4>${formName}</h4>
                         <p>${formData.fileName} • Uploaded: ${uploadDate}</p>
-                        ${hasFieldMapping ? '<p style="font-size: 12px; color: #27ae60; margin-top: 3px;">✓ ' + fieldCount + ' field(s) mapped</p>' : ''}
+                        ${hasFieldMapping ? '<p style="font-size: 12px; color: #27ae60; margin-top: 3px;">' + fieldCount + ' field(s) mapped</p>' : ''}
                     </div>
                 </div>
                 <div class="file-actions" style="display: flex; gap: 5px; flex-wrap: wrap;">
-                    ${hasFieldMapping ? '<button class="btn btn-small" onclick="openFieldMappingModal(\'' + formType + '\')" style="background: #00bcd4; color: white;">⚙️ Configure Fields</button>' : ''}
+                    ${hasFieldMapping ? '<button class="btn btn-small" onclick="openFieldMappingModal(\'' + formType + '\')" style="background: #00bcd4; color: white;">Configure Fields</button>' : ''}
                     <button class="btn btn-small btn-primary" onclick="viewForm('${formType}')">View</button>
                     <button class="btn btn-small btn-danger" onclick="deleteForm('${formType}')">Delete</button>
                 </div>
@@ -458,7 +458,7 @@ async function combinePrintForms() {
         const loadingDiv = document.createElement('div');
         loadingDiv.id = 'combineLoadingOverlay';
         loadingDiv.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: flex; justify-content: center; align-items: center; z-index: 10000;';
-        loadingDiv.innerHTML = '<div style="background: white; padding: 30px; border-radius: 10px; text-align: center;"><div class="loading" style="margin-bottom: 15px;"></div><p style="color: #2c3e50; font-size: 16px;">Preparing forms with customer data...</p></div>';
+        loadingDiv.innerHTML = '<div style="background: white; padding: 30px; border-radius: 4px; text-align: center;"><div class="loading" style="margin-bottom: 15px;"></div><p style="color: #2c3e50; font-size: 16px;">Preparing forms with customer data...</p></div>';
         document.body.appendChild(loadingDiv);
 
         // Render forms with customer data (uses field mapping if configured)
@@ -530,7 +530,7 @@ async function combinePrintForms() {
                         background: #27ae60;
                         color: white;
                         border: none;
-                        border-radius: 6px;
+                        border-radius: 3px;
                         cursor: pointer;
                         font-size: 15px;
                         font-weight: 700;
@@ -550,7 +550,7 @@ async function combinePrintForms() {
                         background: rgba(0, 188, 212, 0.95);
                         color: white;
                         padding: 12px 20px;
-                        border-radius: 6px;
+                        border-radius: 3px;
                         font-size: 14px;
                         box-shadow: 0 4px 12px rgba(0,0,0,0.2);
                         z-index: 1000;
@@ -863,7 +863,7 @@ function showMoveFileDialog(fileId, fileName, customerId) {
                 Document name:
             </label>
             <input type="text" id="moveFileNameInput" value="${fileNameWithoutExt}"
-                   style="width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 14px; margin-bottom: 5px;">
+                   style="width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 3px; font-size: 14px; margin-bottom: 5px;">
             <p style="margin: 0 0 15px 0; color: #7f8c8d; font-size: 12px;">
                 File extension: <strong>${fileExtension || 'none'}</strong>
             </p>
@@ -871,7 +871,7 @@ function showMoveFileDialog(fileId, fileName, customerId) {
             <label style="display: block; margin-bottom: 8px; color: #2d3748; font-weight: 500;">
                 Move to folder:
             </label>
-            <select id="moveToFolderSelect" style="width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 14px; margin-bottom: 20px;">
+            <select id="moveToFolderSelect" style="width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 3px; font-size: 14px; margin-bottom: 20px;">
                 ${optionsHTML}
             </select>
 
@@ -896,7 +896,7 @@ function showMoveFileDialog(fileId, fileName, customerId) {
     dialog.id = 'moveFileDialog';
     dialog.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 10000;';
     dialog.innerHTML = `
-        <div style="background: white; border-radius: 12px; max-width: 500px; width: 90%; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
+        <div style="background: white; border-radius: 6px; max-width: 500px; width: 90%; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
             ${dialogHTML}
         </div>
     `;
@@ -957,11 +957,11 @@ async function executeMoveFile(fileId, customerId, oldFileName, fileExtension) {
 
     if (success) {
         const folderName = documentFolders.find(f => f.id === targetFolderId)?.name.replace(/_/g, ' ') || 'selected folder';
-        alert(`✅ "${newFileName}" moved to ${folderName} successfully!`);
+        alert(`"${newFileName}" moved to ${folderName} successfully!`);
         invalidateStatsCache(); // Invalidate cache to ensure fresh data
         displayCustomerDetails(customerId);
     } else {
-        alert('❌ Error moving file. Please try again.');
+        alert('Error moving file. Please try again.');
     }
 }
 
@@ -1050,7 +1050,7 @@ async function displayCustomerDetails(customerId) {
 
             <div class="form-group">
                 <button class="btn btn-primary" onclick="openVsaDetailsModal(${customer.id})" style="background: linear-gradient(135deg, #8e44ad 0%, #9b59b6 100%); width: 100%; max-width: 300px;">
-                    📋 VSA Details
+                    VSA Details
                 </button>
             </div>
 
@@ -1070,14 +1070,14 @@ async function displayCustomerDetails(customerId) {
 
             ${Object.keys(formTemplates).length > 0 ? `
                 <div class="checklist-section" style="background: linear-gradient(135deg, rgba(231, 76, 60, 0.1) 0%, rgba(192, 57, 43, 0.1) 100%); border: 2px solid rgba(231, 76, 60, 0.3);">
-                    <h3 style="color: #e74c3c;">📄 Forms</h3>
+                    <h3 style="color: #e74c3c;">Forms</h3>
                     <p style="margin-bottom: 15px; color: #7f8c8d; font-size: 13px;">
                         Select a form to print for ${customer.name}
                     </p>
 
                     <div style="margin-bottom: 15px;">
                         <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #2c3e50;">Select Form</label>
-                        <select id="formSelect_${customer.id}" onchange="handleFormSelection(${customer.id})" style="width: 100%; padding: 10px; font-size: 14px; border: 2px solid #e74c3c; border-radius: 6px; background: white;">
+                        <select id="formSelect_${customer.id}" onchange="handleFormSelection(${customer.id})" style="width: 100%; padding: 10px; font-size: 14px; border: 2px solid #e74c3c; border-radius: 3px; background: white;">
                             <option value="">Choose a form...</option>
                             ${(() => {
                                 const formTypeNames = {
@@ -1098,17 +1098,17 @@ async function displayCustomerDetails(customerId) {
                         </select>
                     </div>
 
-                    <div id="testDriveUpload_${customer.id}" style="display: none; background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 2px solid rgba(0, 188, 212, 0.2);">
-                        <h4 style="color: #00bcd4; margin-bottom: 10px; font-size: 14px;">📸 Test Drive Required Documents</h4>
+                    <div id="testDriveUpload_${customer.id}" style="display: none; background: white; padding: 15px; border-radius: 4px; margin-bottom: 15px; border: 2px solid rgba(0, 188, 212, 0.2);">
+                        <h4 style="color: #00bcd4; margin-bottom: 10px; font-size: 14px;">Test Drive Required Documents</h4>
                         <p style="font-size: 12px; color: #7f8c8d; margin-bottom: 10px;">Upload up to 4 ID images to print with the form (they will appear in order on page 2)</p>
 
                         <div style="margin-bottom: 10px;">
-                            <input type="file" accept="image/*" multiple id="docImages_${customer.id}" onchange="uploadMultipleDocImages(${customer.id}, this.files)" style="font-size: 12px; padding: 8px; width: 100%; border: 2px dashed #00bcd4; border-radius: 6px; background: rgba(0, 188, 212, 0.05);">
+                            <input type="file" accept="image/*" multiple id="docImages_${customer.id}" onchange="uploadMultipleDocImages(${customer.id}, this.files)" style="font-size: 12px; padding: 8px; width: 100%; border: 2px dashed #00bcd4; border-radius: 3px; background: rgba(0, 188, 212, 0.05);">
                             <p style="font-size: 11px; color: #7f8c8d; margin-top: 5px;">Select up to 4 images at once</p>
                         </div>
 
                         <div id="uploadProgress_${customer.id}" style="display: none; margin-bottom: 10px;">
-                            <div style="background: #ecf0f1; border-radius: 10px; height: 24px; overflow: hidden; position: relative;">
+                            <div style="background: #ecf0f1; border-radius: 4px; height: 24px; overflow: hidden; position: relative;">
                                 <div id="uploadBar_${customer.id}" style="background: linear-gradient(90deg, #00bcd4 0%, #00acc1 100%); height: 100%; width: 0%; transition: width 0.3s; display: flex; align-items: center; justify-content: center;">
                                     <span id="uploadText_${customer.id}" style="color: white; font-size: 12px; font-weight: 600; position: absolute; left: 50%; transform: translateX(-50%);"></span>
                                 </div>
@@ -1119,7 +1119,7 @@ async function displayCustomerDetails(customerId) {
                             const docs = customer.testDriveDocs || {};
                             const uploadedCount = Object.keys(docs).length;
                             if (uploadedCount > 0) {
-                                return '<p style="font-size: 12px; color: #27ae60; font-weight: 600;">✓ ' + uploadedCount + ' image(s) uploaded</p>';
+                                return '<p style="font-size: 12px; color: #27ae60; font-weight: 600;">' + uploadedCount + ' image(s) uploaded</p>';
                             }
                             return '';
                         })()}
@@ -1131,10 +1131,10 @@ async function displayCustomerDetails(customerId) {
                             // Add Combine & Print button at the top if there are multiple image forms
                             const imageForms = Object.entries(formTemplates).filter(([_, formData]) => formData.fileType === 'image');
                             if (imageForms.length >= 2) {
-                                html += '<button class="btn btn-primary" onclick="openCombinePrintModal(' + customer.id + ')" style="background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%); display: flex; align-items: center; gap: 8px; justify-content: center; width: 100%; font-weight: 600;"><span>📑</span><span>Combine & Print (Double-Sided)</span></button>';
+                                html += '<button class="btn btn-primary" onclick="openCombinePrintModal(' + customer.id + ')" style="background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%); display: flex; align-items: center; gap: 8px; justify-content: center; width: 100%; font-weight: 600;"><span>Combine & Print (Double-Sided)</span></button>';
                             }
                             // Add single Print button
-                            html += '<button class="btn btn-primary" id="printFormBtn_' + customer.id + '" onclick="printSelectedForm(' + customer.id + ')" disabled style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); display: flex; align-items: center; gap: 8px; justify-content: center; width: 100%; opacity: 0.5;"><span>📄</span><span>Print Form</span></button>';
+                            html += '<button class="btn btn-primary" id="printFormBtn_' + customer.id + '" onclick="printSelectedForm(' + customer.id + ')" disabled style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); display: flex; align-items: center; gap: 8px; justify-content: center; width: 100%; opacity: 0.5;"><span>Print Form</span></button>';
                             return html;
                         })()}
                     </div>
@@ -1142,10 +1142,10 @@ async function displayCustomerDetails(customerId) {
             ` : ''}
 
             ${Object.keys(excelTemplates).length > 0 ? `
-                <div style="margin-bottom: 25px; padding: 20px; background: linear-gradient(135deg, rgba(76, 175, 80, 0.1) 0%, rgba(56, 142, 60, 0.1) 100%); border-radius: 10px; border: 2px solid rgba(76, 175, 80, 0.3);">
-                    <h3 style="color: #4caf50; margin-bottom: 15px;">📊 Excel Templates</h3>
+                <div style="margin-bottom: 25px; padding: 20px; background: linear-gradient(135deg, rgba(76, 175, 80, 0.1) 0%, rgba(56, 142, 60, 0.1) 100%); border-radius: 4px; border: 2px solid rgba(76, 175, 80, 0.3);">
+                    <h3 style="color: #4caf50; margin-bottom: 15px;">Excel Templates</h3>
                     <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px;">
-                        <button class="btn btn-success" onclick="openExcelPopulateModal(${customer.id})" style="background: linear-gradient(135deg, #4caf50 0%, #388e3c 100%); display: flex; align-items: center; gap: 8px; justify-content: center; width: 100%;"><span>📊</span><span>Populate Excel Template</span></button>
+                        <button class="btn btn-success" onclick="openExcelPopulateModal(${customer.id})" style="background: linear-gradient(135deg, #4caf50 0%, #388e3c 100%); display: flex; align-items: center; gap: 8px; justify-content: center; width: 100%;"><span>Populate Excel Template</span></button>
                     </div>
                 </div>
             ` : ''}
@@ -1176,19 +1176,13 @@ async function displayCustomerDetails(customerId) {
                 <h2 style="margin: 0;">Document Management</h2>
                 ${customer.driveFolderId ? `
                     <div style="display: flex; gap: 8px;">
-                        <button onclick="window.open('${customer.driveFolderLink}', '_blank')"
-                                style="background: none; border: none; cursor: pointer; font-size: 24px; padding: 8px; border-radius: 8px; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center;"
-                                onmouseover="this.style.background='rgba(0, 188, 212, 0.1)'"
-                                onmouseout="this.style.background='none'"
+                        <button onclick="window.open('${customer.driveFolderLink}', '_blank')" class="btn btn-small"
                                 title="Open folder in Google Drive (Web)">
-                            🌐
+                            Open Drive
                         </button>
-                        <button onclick="openLocalFolder('${customer.name}')"
-                                style="background: none; border: none; cursor: pointer; font-size: 24px; padding: 8px; border-radius: 8px; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center;"
-                                onmouseover="this.style.background='rgba(52, 152, 219, 0.1)'"
-                                onmouseout="this.style.background='none'"
+                        <button onclick="openLocalFolder('${customer.name}')" class="btn btn-small"
                                 title="Open folder in File Explorer">
-                            📂
+                            Local Folder
                         </button>
                     </div>
                 ` : ''}
@@ -1196,15 +1190,15 @@ async function displayCustomerDetails(customerId) {
 
             ${!isSignedIn ? `
                 <div class="auth-section">
-                    <h3>⚠️ Not Connected to Google Drive</h3>
+                    <h3>Not Connected to Google Drive</h3>
                     <p>Connect to Google Drive to upload and manage files directly.</p>
                     <button class="btn btn-drive" onclick="handleAuthClick()">
-                        📁 Connect Google Drive
+                        Connect Google Drive
                     </button>
                 </div>
             ` : !customer.driveFolderId ? `
                 <div class="auth-section">
-                    <h3>📁 Create Customer Folder</h3>
+                    <h3>Create Customer Folder</h3>
                     <p>Create a folder in Google Drive for ${customer.name}'s documents.</p>
                     <button class="btn btn-drive" onclick="handleCreateFolderClick('${customer.name}', ${customer.id})">
                         Create Folder
@@ -1212,7 +1206,7 @@ async function displayCustomerDetails(customerId) {
                 </div>
             ` : `
                 <div class="file-naming">
-                    <h4>📁 File Naming Convention</h4>
+                    <h4>File Naming Convention</h4>
                     <p style="font-size: 13px; color: #856404; margin-bottom: 10px;">
                         Files will be automatically named as:
                     </p>
@@ -1259,7 +1253,7 @@ async function displayCustomerDetails(customerId) {
                          ondragover="handleDragOver(event)"
                          ondragleave="handleDragLeave(event)"
                          onclick="document.getElementById('fileInput_${customerId}').click()">
-                        <p>🗂️ Drag & Drop Files Here</p>
+                        <p>Drag & Drop Files Here</p>
                         <small>or click to browse/take photo • Files upload directly to Google Drive</small>
                         <input type="file" id="fileInput_${customerId}" multiple
                                accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,*"
@@ -1439,7 +1433,7 @@ function handleQueueEvent(event, data) {
         case 'queued':
             showSyncPopup();
             icon.className = 'sync-icon';
-            icon.textContent = '🔄';
+            icon.textContent = '↻';
             statusText.textContent = 'Queuing sync operation...';
             updateQueueDisplay();
             break;
@@ -1447,7 +1441,7 @@ function handleQueueEvent(event, data) {
         case 'processing_started':
             showSyncPopup();
             icon.className = 'sync-icon';
-            icon.textContent = '🔄';
+            icon.textContent = '↻';
             title.textContent = 'Syncing...';
             statusText.textContent = 'Syncing to cloud...';
             progressFill.style.width = '10%';
@@ -1508,7 +1502,7 @@ function handleQueueEvent(event, data) {
 
         case 'item_failed':
             icon.className = 'sync-icon error';
-            icon.textContent = '⚠️';
+            icon.textContent = '!';
             title.textContent = 'Sync Error';
             statusText.textContent = 'Sync failed after retries';
             progressFill.style.width = '100%';
@@ -1534,7 +1528,7 @@ function handleQueueEvent(event, data) {
         case 'network_offline':
             updateNetworkStatus();
             icon.className = 'sync-icon idle';
-            icon.textContent = '📴';
+            icon.textContent = 'X';
             title.textContent = 'Offline';
             statusText.textContent = 'No internet - changes queued';
             showSyncPopup();

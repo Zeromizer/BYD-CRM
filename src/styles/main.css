@@ -52,7 +52,7 @@ body {
     padding: 8px 16px;
     background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);
     border: 2px solid rgba(255, 255, 255, 0.1);
-    border-radius: 8px;
+    border-radius: 4px;
     color: white;
     font-size: 13px;
     font-weight: 600;
@@ -90,7 +90,7 @@ body {
 .btn {
     padding: 12px 24px;
     border: none;
-    border-radius: 10px;
+    border-radius: 4px;
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
@@ -175,7 +175,7 @@ body {
 
 .card {
     background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-    border-radius: 15px;
+    border-radius: 8px;
     padding: 20px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
     border: 1px solid rgba(0, 188, 212, 0.1);
@@ -198,7 +198,7 @@ body {
 
 .customer-item {
     padding: 15px;
-    border-radius: 10px;
+    border-radius: 4px;
     margin-bottom: 10px;
     cursor: pointer;
     transition: all 0.3s ease;
@@ -234,7 +234,7 @@ body {
 .customer-item .stage-badge {
     display: inline-block;
     padding: 4px 12px;
-    border-radius: 20px;
+    border-radius: 4px;
     font-size: 11px;
     margin-top: 8px;
     font-weight: 600;
@@ -258,7 +258,7 @@ body {
     width: 100%;
     padding: 10px 12px;
     border: 1px solid #cbd5e0;
-    border-radius: 6px;
+    border-radius: 3px;
     font-size: 14px;
     transition: border 0.2s ease;
     font-family: inherit;
@@ -290,7 +290,7 @@ body {
 .checklist-section {
     background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
     padding: 20px;
-    border-radius: 12px;
+    border-radius: 6px;
     margin-top: 20px;
     border: 2px solid rgba(0, 188, 212, 0.2);
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
@@ -310,7 +310,7 @@ body {
     align-items: center;
     padding: 14px;
     background: white;
-    border-radius: 8px;
+    border-radius: 4px;
     margin-bottom: 10px;
     transition: all 0.3s ease;
     border: 2px solid rgba(0, 188, 212, 0.1);
@@ -347,7 +347,7 @@ body {
 .file-upload-section {
     background: linear-gradient(135deg, rgba(39, 174, 96, 0.1) 0%, rgba(34, 153, 84, 0.1) 100%);
     padding: 20px;
-    border-radius: 15px;
+    border-radius: 8px;
     margin-top: 20px;
     border: 2px solid rgba(39, 174, 96, 0.3);
     box-shadow: 0 5px 15px rgba(39, 174, 96, 0.2);
@@ -368,7 +368,7 @@ body {
 .upload-area {
     background: white;
     border: 3px dashed rgba(0, 188, 212, 0.4);
-    border-radius: 12px;
+    border-radius: 6px;
     padding: 40px;
     text-align: center;
     cursor: pointer;
@@ -407,7 +407,7 @@ body {
 .file-item {
     background: white;
     padding: 15px;
-    border-radius: 8px;
+    border-radius: 4px;
     margin-bottom: 10px;
     display: flex;
     align-items: center;
@@ -436,7 +436,7 @@ body {
     align-items: center;
     justify-content: center;
     background: #f8f9fa;
-    border-radius: 8px;
+    border-radius: 4px;
 }
 
 .file-details {
@@ -479,7 +479,7 @@ body {
     right: 0;
     background: white;
     min-width: 200px;
-    border-radius: 8px;
+    border-radius: 4px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
     overflow: hidden;
     z-index: 1000;
@@ -531,7 +531,7 @@ body {
     color: white;
     border: none;
     padding: 8px 16px;
-    border-radius: 8px;
+    border-radius: 4px;
     font-size: 13px;
     font-weight: 600;
     cursor: pointer;
@@ -578,7 +578,7 @@ body {
 
 .stats-tooltip-content {
     background: white;
-    border-radius: 12px;
+    border-radius: 6px;
     padding: 20px;
     min-width: 280px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
@@ -639,7 +639,7 @@ body {
 .stat-card {
     background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
     padding: 20px;
-    border-radius: 15px;
+    border-radius: 8px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
     border: 1px solid rgba(0, 188, 212, 0.1);
     transition: all 0.3s ease;
@@ -691,7 +691,7 @@ body {
 .modal-content {
     background: white;
     padding: 32px;
-    border-radius: 8px;
+    border-radius: 4px;
     max-width: 600px;
     width: 90%;
     max-height: 90vh;
@@ -727,7 +727,7 @@ body {
     width: 100%;
     height: 8px;
     background: rgba(0, 0, 0, 0.1);
-    border-radius: 10px;
+    border-radius: 4px;
     overflow: hidden;
     margin-top: 10px;
     box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
@@ -756,22 +756,14 @@ body {
     width: 100%;
     padding: 12px 40px 12px 15px;
     border: 2px solid #ecf0f1;
-    border-radius: 8px;
+    border-radius: 4px;
     font-size: 14px;
-}
-
-.search-box::after {
-    content: '🔍';
-    position: absolute;
-    right: 15px;
-    top: 50%;
-    transform: translateY(-50%);
 }
 
 .file-naming {
     background: #fffbeb;
     padding: 16px;
-    border-radius: 8px;
+    border-radius: 4px;
     margin-top: 15px;
     border-left: 3px solid #f59e0b;
 }
@@ -787,7 +779,7 @@ body {
     display: block;
     background: white;
     padding: 10px 12px;
-    border-radius: 6px;
+    border-radius: 3px;
     font-family: 'Courier New', monospace;
     font-size: 13px;
     margin: 8px 0;
@@ -839,7 +831,7 @@ body {
 .drive-folder-info {
     background: linear-gradient(135deg, rgba(0, 188, 212, 0.1) 0%, rgba(0, 151, 167, 0.1) 100%);
     padding: 18px;
-    border-radius: 12px;
+    border-radius: 6px;
     margin-top: 15px;
     border: 2px solid rgba(0, 188, 212, 0.3);
     box-shadow: 0 5px 15px rgba(0, 188, 212, 0.2);
@@ -878,7 +870,7 @@ body {
 .setup-instructions {
     background: #fffbeb;
     padding: 20px;
-    border-radius: 8px;
+    border-radius: 4px;
     margin: 20px 0;
     border-left: 3px solid #f59e0b;
 }
@@ -1332,7 +1324,7 @@ body {
     /* Cards */
     .card {
         padding: 12px;
-        border-radius: 12px;
+        border-radius: 6px;
         margin-bottom: 12px;
     }
 
@@ -1359,7 +1351,7 @@ body {
     .customer-item {
         padding: 10px;
         margin-bottom: 8px;
-        border-radius: 8px;
+        border-radius: 4px;
     }
 
     .customer-item h3 {
@@ -1653,7 +1645,7 @@ body {
     width: 320px;
     background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
     border: 2px solid rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
+    border-radius: 6px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
     padding: 16px;
     z-index: 10000;
@@ -1729,7 +1721,7 @@ body {
     color: #ffffff;
     width: 24px;
     height: 24px;
-    border-radius: 4px;
+    border-radius: 2px;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -1798,7 +1790,7 @@ body {
     margin-top: 8px;
     padding: 8px;
     background: rgba(0, 0, 0, 0.2);
-    border-radius: 6px;
+    border-radius: 3px;
     border-left: 3px solid #00bcd4;
 }
 
@@ -1812,7 +1804,7 @@ body {
     padding: 8px;
     background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
     border: none;
-    border-radius: 6px;
+    border-radius: 3px;
     color: white;
     font-size: 12px;
     font-weight: 600;
@@ -1830,7 +1822,7 @@ body {
     display: inline-block;
     padding: 4px 8px;
     background: #95a5a6;
-    border-radius: 4px;
+    border-radius: 2px;
     font-size: 11px;
     font-weight: 600;
     color: white;
@@ -1876,7 +1868,7 @@ body {
     background-color: #2c3e50;
     color: #fff;
     text-align: center;
-    border-radius: 6px;
+    border-radius: 3px;
     padding: 10px;
     position: absolute;
     z-index: 1000;
