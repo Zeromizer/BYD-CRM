@@ -36,14 +36,14 @@ class DocumentScanner {
                     <div class="scanner-preview-container">
                         <video id="scannerVideo" autoplay playsinline></video>
                         <canvas id="scannerCanvas"></canvas>
-                        <button id="flashToggle" class="flash-toggle" onclick="documentScanner.toggleFlash()" style="display: none;">
+                        <button id="flashToggle" class="flash-toggle" onclick="documentScanner.toggleFlash()" style="display: none;" title="Toggle auto-flash">
                             <span id="flashIcon">💡</span>
                         </button>
                     </div>
                     <div class="scanner-controls">
                         <div id="scannerInstructions" class="scanner-instructions">
                             <p>Position document within frame</p>
-                            <small>Ensure good lighting and document is flat</small>
+                            <small>Click 💡 to enable auto-flash (fires when capturing)</small>
                         </div>
                         <div class="scanner-buttons">
                             <button id="captureBtn" class="btn btn-primary" onclick="documentScanner.captureDocument()">
@@ -133,7 +133,7 @@ class DocumentScanner {
     }
 
     /**
-     * Toggle flash/torch on or off
+     * Toggle auto-flash on or off
      */
     async toggleFlash() {
         try {
@@ -150,20 +150,19 @@ class DocumentScanner {
 
             this.flashEnabled = !this.flashEnabled;
 
-            await this.track.applyConstraints({
-                advanced: [{ torch: this.flashEnabled }]
-            });
-
-            // Update flash icon
+            // Update flash icon (but don't turn on torch yet - it fires on capture)
             const flashIcon = document.getElementById('flashIcon');
             const flashToggle = document.getElementById('flashToggle');
             if (flashIcon && flashToggle) {
-                flashIcon.textContent = this.flashEnabled ? '🔦' : '💡';
+                flashIcon.textContent = this.flashEnabled ? '⚡' : '💡';
                 flashToggle.style.background = this.flashEnabled ?
                     'rgba(255, 193, 7, 0.9)' : 'rgba(0, 0, 0, 0.5)';
+                flashToggle.title = this.flashEnabled ?
+                    'Auto-flash enabled - will flash when capturing' :
+                    'Auto-flash disabled';
             }
 
-            console.log('Flash toggled:', this.flashEnabled);
+            console.log('Auto-flash mode:', this.flashEnabled ? 'enabled' : 'disabled');
         } catch (error) {
             console.error('Error toggling flash:', error);
             alert('Unable to control flash: ' + error.message);
@@ -173,59 +172,84 @@ class DocumentScanner {
     /**
      * Capture photo from video stream
      */
-    captureDocument() {
-        // Draw video frame to canvas
-        this.canvas.width = this.video.videoWidth;
-        this.canvas.height = this.video.videoHeight;
-        this.ctx.drawImage(this.video, 0, 0, this.canvas.width, this.canvas.height);
+    async captureDocument() {
+        try {
+            // Fire flash if enabled
+            if (this.flashEnabled && this.track) {
+                const capabilities = this.track.getCapabilities();
+                if (capabilities.torch) {
+                    console.log('Firing flash...');
+                    // Turn on flash
+                    await this.track.applyConstraints({
+                        advanced: [{ torch: true }]
+                    });
+                    // Wait for flash to stabilize and illuminate the scene
+                    await new Promise(resolve => setTimeout(resolve, 150));
+                }
+            }
 
-        // Store captured image
-        this.capturedImage = this.canvas.toDataURL('image/jpeg', 0.92);
+            // Draw video frame to canvas
+            this.canvas.width = this.video.videoWidth;
+            this.canvas.height = this.video.videoHeight;
+            this.ctx.drawImage(this.video, 0, 0, this.canvas.width, this.canvas.height);
 
-        // Turn off flash if it was enabled
-        if (this.flashEnabled) {
-            this.toggleFlash();
+            // Store captured image
+            this.capturedImage = this.canvas.toDataURL('image/jpeg', 0.92);
+
+            // Turn off flash immediately after capture
+            if (this.flashEnabled && this.track) {
+                const capabilities = this.track.getCapabilities();
+                if (capabilities.torch) {
+                    await this.track.applyConstraints({
+                        advanced: [{ torch: false }]
+                    });
+                    console.log('Flash turned off');
+                }
+            }
+
+            // Stop video stream
+            if (this.stream) {
+                this.stream.getTracks().forEach(track => track.stop());
+            }
+            this.video.style.display = 'none';
+            this.canvas.style.display = 'block';
+
+            // Hide flash toggle
+            const flashToggle = document.getElementById('flashToggle');
+            if (flashToggle) {
+                flashToggle.style.display = 'none';
+            }
+
+            // Update canvas display size
+            const maxDisplayWidth = 800;
+            const maxDisplayHeight = 600;
+            let displayWidth = this.canvas.width;
+            let displayHeight = this.canvas.height;
+
+            if (displayWidth > maxDisplayWidth) {
+                displayHeight = (maxDisplayWidth / displayWidth) * displayHeight;
+                displayWidth = maxDisplayWidth;
+            }
+            if (displayHeight > maxDisplayHeight) {
+                displayWidth = (maxDisplayHeight / displayHeight) * displayWidth;
+                displayHeight = maxDisplayHeight;
+            }
+
+            this.canvas.style.width = displayWidth + 'px';
+            this.canvas.style.height = displayHeight + 'px';
+
+            // Update UI
+            document.getElementById('captureBtn').style.display = 'none';
+            document.getElementById('retakeBtn').style.display = 'inline-block';
+            document.getElementById('saveBtn').style.display = 'inline-block';
+            document.getElementById('scannerInstructions').innerHTML = `
+                <p>Photo captured</p>
+                <small>Click "Save" to upload or "Retake" for a new photo</small>
+            `;
+        } catch (error) {
+            console.error('Error capturing photo:', error);
+            alert('Error capturing photo: ' + error.message);
         }
-
-        // Stop video stream
-        if (this.stream) {
-            this.stream.getTracks().forEach(track => track.stop());
-        }
-        this.video.style.display = 'none';
-        this.canvas.style.display = 'block';
-
-        // Hide flash toggle
-        const flashToggle = document.getElementById('flashToggle');
-        if (flashToggle) {
-            flashToggle.style.display = 'none';
-        }
-
-        // Update canvas display size
-        const maxDisplayWidth = 800;
-        const maxDisplayHeight = 600;
-        let displayWidth = this.canvas.width;
-        let displayHeight = this.canvas.height;
-
-        if (displayWidth > maxDisplayWidth) {
-            displayHeight = (maxDisplayWidth / displayWidth) * displayHeight;
-            displayWidth = maxDisplayWidth;
-        }
-        if (displayHeight > maxDisplayHeight) {
-            displayWidth = (maxDisplayHeight / displayHeight) * displayWidth;
-            displayHeight = maxDisplayHeight;
-        }
-
-        this.canvas.style.width = displayWidth + 'px';
-        this.canvas.style.height = displayHeight + 'px';
-
-        // Update UI
-        document.getElementById('captureBtn').style.display = 'none';
-        document.getElementById('retakeBtn').style.display = 'inline-block';
-        document.getElementById('saveBtn').style.display = 'inline-block';
-        document.getElementById('scannerInstructions').innerHTML = `
-            <p>Photo captured</p>
-            <small>Click "Save" to upload or "Retake" for a new photo</small>
-        `;
     }
 
     /**
@@ -233,12 +257,25 @@ class DocumentScanner {
      */
     async retake() {
         this.capturedImage = null;
-        this.flashEnabled = false;
+        // Keep flashEnabled state - user's preference is preserved
         this.canvas.style.display = 'none';
         this.video.style.display = 'block';
 
         // Restart camera
         await this.initCamera();
+
+        // Restore flash toggle UI state
+        const flashToggle = document.getElementById('flashToggle');
+        const flashIcon = document.getElementById('flashIcon');
+        if (flashToggle && flashIcon && this.track) {
+            const capabilities = this.track.getCapabilities();
+            if (capabilities.torch) {
+                flashToggle.style.display = 'block';
+                flashIcon.textContent = this.flashEnabled ? '⚡' : '💡';
+                flashToggle.style.background = this.flashEnabled ?
+                    'rgba(255, 193, 7, 0.9)' : 'rgba(0, 0, 0, 0.5)';
+            }
+        }
 
         // Update UI
         document.getElementById('captureBtn').style.display = 'inline-block';
@@ -246,7 +283,7 @@ class DocumentScanner {
         document.getElementById('saveBtn').style.display = 'none';
         document.getElementById('scannerInstructions').innerHTML = `
             <p>Position document within frame</p>
-            <small>Ensure good lighting and document is flat</small>
+            <small>Click 💡 to enable auto-flash (fires when capturing)</small>
         `;
     }
 
