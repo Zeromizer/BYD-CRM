@@ -324,6 +324,37 @@ function removeExcelMapping(mappingId) {
     updateExcelMappingsList();
 }
 
+// Edit Excel mapping
+function editExcelMapping(mappingId) {
+    // Hide display mode and show edit mode
+    document.getElementById('excel-display-' + mappingId).style.display = 'none';
+    document.getElementById('excel-edit-' + mappingId).style.display = 'block';
+}
+
+// Save Excel mapping edit
+function saveExcelMappingEdit(mappingId) {
+    const cellRef = document.getElementById('edit-cellRef-' + mappingId).value.trim().toUpperCase();
+
+    // Validate cell reference format
+    if (!/^[A-Z]+[0-9]+$/.test(cellRef)) {
+        alert('Invalid cell reference. Please use format like A1, B5, C10, etc.');
+        return;
+    }
+
+    // Update the mapping
+    tempExcelMappings[mappingId].cellRef = cellRef;
+
+    // Refresh the list
+    updateExcelMappingsList();
+}
+
+// Cancel Excel mapping edit
+function cancelExcelMappingEdit(mappingId) {
+    // Hide edit mode and show display mode
+    document.getElementById('excel-edit-' + mappingId).style.display = 'none';
+    document.getElementById('excel-display-' + mappingId).style.display = 'flex';
+}
+
 // Update Excel mappings list display
 function updateExcelMappingsList() {
     const container = document.getElementById('excelMappingsList');
@@ -386,11 +417,26 @@ function updateExcelMappingsList() {
 
     for (const [mappingId, mapping] of Object.entries(tempExcelMappings)) {
         html += `
-            <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; background: white; border-radius: 6px; border: 1px solid #e0e0e0;">
-                <div>
-                    <strong>${fieldNames[mapping.fieldType]}</strong> → Cell <strong>${mapping.cellRef}</strong>
+            <div id="excel-mapping-item-${mappingId}" style="padding: 10px; background: white; border-radius: 6px; border: 1px solid #e0e0e0;">
+                <div id="excel-display-${mappingId}" style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <strong>${fieldNames[mapping.fieldType]}</strong> → Cell <strong>${mapping.cellRef}</strong>
+                    </div>
+                    <div>
+                        <button class="btn btn-small btn-primary" onclick="editExcelMapping('${mappingId}')" style="padding: 5px 10px; font-size: 12px; margin-right: 5px;">Edit</button>
+                        <button class="btn btn-small btn-danger" onclick="removeExcelMapping('${mappingId}')" style="padding: 5px 10px; font-size: 12px;">Remove</button>
+                    </div>
                 </div>
-                <button class="btn btn-small btn-danger" onclick="removeExcelMapping('${mappingId}')" style="padding: 5px 10px; font-size: 12px;">Remove</button>
+                <div id="excel-edit-${mappingId}" style="display: none; margin-top: 10px;">
+                    <div style="margin-bottom: 10px;">
+                        <label style="display: block; margin-bottom: 5px; font-size: 12px; color: #555;">Cell Reference:</label>
+                        <input type="text" id="edit-cellRef-${mappingId}" value="${mapping.cellRef}" placeholder="e.g., A1, B5, C10" style="width: 100%; padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px; font-size: 14px; text-transform: uppercase;">
+                    </div>
+                    <div style="display: flex; gap: 5px;">
+                        <button class="btn btn-small btn-success" onclick="saveExcelMappingEdit('${mappingId}')" style="padding: 5px 10px; font-size: 12px;">Save</button>
+                        <button class="btn btn-small btn-secondary" onclick="cancelExcelMappingEdit('${mappingId}')" style="padding: 5px 10px; font-size: 12px;">Cancel</button>
+                    </div>
+                </div>
             </div>
         `;
     }
