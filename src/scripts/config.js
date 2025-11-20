@@ -53,11 +53,6 @@ let currentMappingImage = null;
 let tempFieldMappings = {};
 let currentCombineCustomerId = null;
 
-// ============ Form Combination Presets ============
-let formCombinationPresets = {}; // Store saved combinations for quick printing
-// Structure: { presetId: { name: "PDPA + COE", side1: "pdpa", side2: "coe_bidding_1" } }
-let combinationPresetsFileId = null; // Google Drive file ID for combination presets
-
 // ============ Excel Templates ============
 let excelTemplates = {}; // Store Excel template data
 let currentExcelTemplateId = null;

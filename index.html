@@ -350,7 +350,7 @@
 
     <!-- Combine & Print Forms Modal -->
     <div class="modal" id="combinePrintModal" style="display: none;">
-        <div class="modal-content" style="max-width: 700px;">
+        <div class="modal-content" style="max-width: 600px;">
             <div class="modal-header">
                 <h2>📑 Combine Forms for Double-Sided Printing</h2>
                 <span class="close-modal" onclick="closeCombinePrintModal()">&times;</span>
@@ -369,64 +369,21 @@
                     </p>
                 </div>
 
-                <!-- Saved Presets Section -->
-                <div id="presetsSection" style="margin-bottom: 25px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                        <h4 style="color: #2c3e50; margin: 0;">⭐ Saved Presets</h4>
-                        <button class="btn btn-small" onclick="togglePresetCreation()" style="background: #9c27b0; color: white;">➕ New Preset</button>
-                    </div>
-                    <div id="presetsList" style="display: flex; flex-wrap: wrap; gap: 10px; min-height: 40px;">
-                        <!-- Preset buttons will be inserted here -->
-                    </div>
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; color: #2c3e50; font-weight: 600;">Side 1 (Front):</label>
+                    <select id="combineSide1" style="width: 100%; padding: 10px; border: 2px solid #00bcd4; border-radius: 6px; font-size: 14px;">
+                        <option value="">Select a form...</option>
+                    </select>
                 </div>
 
-                <!-- Create New Preset Section (Initially Hidden) -->
-                <div id="createPresetSection" style="display: none; margin-bottom: 25px; padding: 15px; background: rgba(156, 39, 176, 0.05); border: 2px solid rgba(156, 39, 176, 0.2); border-radius: 8px;">
-                    <h4 style="color: #9c27b0; margin-bottom: 12px;">Create New Preset</h4>
-                    <div style="margin-bottom: 12px;">
-                        <label style="display: block; margin-bottom: 5px; color: #2c3e50; font-weight: 600; font-size: 13px;">Preset Name:</label>
-                        <input type="text" id="newPresetName" placeholder="e.g., PDPA + COE Bidding" style="width: 100%; padding: 8px; border: 2px solid #9c27b0; border-radius: 4px; font-size: 14px;">
-                    </div>
-                    <div style="display: flex; gap: 10px; margin-bottom: 12px;">
-                        <div style="flex: 1;">
-                            <label style="display: block; margin-bottom: 5px; color: #2c3e50; font-weight: 600; font-size: 13px;">Side 1:</label>
-                            <select id="newPresetSide1" style="width: 100%; padding: 8px; border: 2px solid #9c27b0; border-radius: 4px; font-size: 14px;">
-                                <option value="">Select...</option>
-                            </select>
-                        </div>
-                        <div style="flex: 1;">
-                            <label style="display: block; margin-bottom: 5px; color: #2c3e50; font-weight: 600; font-size: 13px;">Side 2:</label>
-                            <select id="newPresetSide2" style="width: 100%; padding: 8px; border: 2px solid #9c27b0; border-radius: 4px; font-size: 14px;">
-                                <option value="">Select...</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div style="display: flex; gap: 8px; justify-content: flex-end;">
-                        <button class="btn btn-small btn-secondary" onclick="togglePresetCreation()">Cancel</button>
-                        <button class="btn btn-small" onclick="saveNewPreset()" style="background: #9c27b0; color: white;">Save Preset</button>
-                    </div>
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; color: #2c3e50; font-weight: 600;">Side 2 (Back):</label>
+                    <select id="combineSide2" style="width: 100%; padding: 10px; border: 2px solid #00bcd4; border-radius: 6px; font-size: 14px;">
+                        <option value="">Select a form...</option>
+                    </select>
                 </div>
 
-                <!-- Manual Selection Section -->
-                <div style="margin-bottom: 15px; padding: 10px; background: rgba(0, 0, 0, 0.02); border-radius: 8px;">
-                    <h4 style="color: #2c3e50; margin-bottom: 12px;">📋 Manual Selection</h4>
-
-                    <div style="margin-bottom: 15px;">
-                        <label style="display: block; margin-bottom: 8px; color: #2c3e50; font-weight: 600;">Side 1 (Front):</label>
-                        <select id="combineSide1" style="width: 100%; padding: 10px; border: 2px solid #00bcd4; border-radius: 6px; font-size: 14px;">
-                            <option value="">Select a form...</option>
-                        </select>
-                    </div>
-
-                    <div style="margin-bottom: 15px;">
-                        <label style="display: block; margin-bottom: 8px; color: #2c3e50; font-weight: 600;">Side 2 (Back):</label>
-                        <select id="combineSide2" style="width: 100%; padding: 10px; border: 2px solid #00bcd4; border-radius: 6px; font-size: 14px;">
-                            <option value="">Select a form...</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div style="padding: 12px; background: rgba(255, 152, 0, 0.1); border: 2px solid rgba(255, 152, 0, 0.3); border-radius: 6px;">
+                <div style="padding: 12px; background: rgba(255, 152, 0, 0.1); border: 2px solid rgba(255, 152, 0, 0.3); border-radius: 6px; margin-bottom: 20px;">
                     <p style="color: #f57c00; font-size: 13px; margin: 0;">
                         <strong>Note:</strong> Currently supports image forms only. PDF forms will be supported in a future update.
                     </p>
