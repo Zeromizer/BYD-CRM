@@ -232,13 +232,19 @@ async function loadExcelTemplates() {
                     const driveTemplates = await loadExcelTemplatesFromDrive();
 
                     if (driveTemplates && Object.keys(driveTemplates).length > 0) {
-                        // Merge Drive templates with local templates
-                        // Drive templates take precedence, but keep local-only templates
-                        excelTemplates = { ...localTemplates, ...driveTemplates };
+                        // Use Drive as the source of truth (this ensures deletions are synced)
+                        excelTemplates = driveTemplates;
 
-                        // Save merged templates back to localStorage
+                        // Save Drive templates to localStorage for offline access
                         localStorage.setItem('excelTemplates', JSON.stringify(excelTemplates));
-                        console.log('Excel templates loaded and merged from Google Drive');
+                        console.log('Excel templates loaded from Google Drive');
+                        return;
+                    } else if (Object.keys(localTemplates).length > 0) {
+                        // Drive is empty but we have local templates - this is a first-time sync
+                        // Upload local templates to Drive
+                        console.log('First-time sync: uploading local templates to Drive');
+                        excelTemplates = localTemplates;
+                        await updateExcelDataFile(excelTemplates);
                         return;
                     }
                 }
