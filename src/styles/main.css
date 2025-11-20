@@ -915,45 +915,50 @@ body {
     }
 
     .header {
-        flex-wrap: wrap;
-        padding: 12px 10px;
+        flex-direction: column;
+        padding: 10px;
         margin-bottom: 15px;
         gap: 10px;
+        align-items: stretch;
     }
 
     .header h1 {
-        font-size: 18px;
-        line-height: 1.4;
-        letter-spacing: 3px;
-        order: 2;
-        flex-basis: 100%;
+        font-size: 16px;
+        line-height: 1.3;
+        letter-spacing: 2px;
+        order: 1;
+        text-align: center;
+        margin-bottom: 8px;
     }
 
     .header h1 #syncStatus {
         display: block;
-        margin: 5px 0 0 0 !important;
-        font-size: 12px !important;
+        margin: 3px 0 0 0 !important;
+        font-size: 11px !important;
     }
 
     .stats-button {
-        font-size: 11px;
-        padding: 6px 12px;
-        order: 1;
+        font-size: 10px;
+        padding: 6px 10px;
+        order: 2;
+        align-self: flex-start;
     }
 
     .header-actions {
         gap: 8px;
         order: 3;
+        align-self: flex-end;
     }
 
     .google-drive-btn {
-        font-size: 11px;
-        padding: 6px 12px;
+        font-size: 10px;
+        padding: 6px 10px;
+        gap: 5px;
     }
 
     .dropdown-toggle {
-        font-size: 20px !important;
-        padding: 6px 12px !important;
+        font-size: 18px !important;
+        padding: 6px 10px !important;
     }
 
     .stats-grid {
@@ -976,6 +981,22 @@ body {
     /* Customer list optimizations - reduce scrolling */
     .customer-list {
         max-height: none;
+    }
+
+    .customer-list-header {
+        flex-wrap: nowrap;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .customer-list-header h2 {
+        font-size: 1.2em;
+    }
+
+    .customer-list-header .btn {
+        font-size: 11px;
+        padding: 8px 12px;
+        white-space: nowrap;
     }
 
     .customer-item {
@@ -1248,30 +1269,37 @@ body {
 
     /* Header optimizations for small screens */
     .header {
-        padding: 8px 10px;
-        margin-bottom: 12px;
+        padding: 8px;
+        margin-bottom: 10px;
         gap: 8px;
     }
 
     .header h1 {
-        font-size: 16px;
-        letter-spacing: 2px;
+        font-size: 14px;
+        letter-spacing: 1.5px;
+        margin-bottom: 6px;
+    }
+
+    .header h1 #syncStatus {
+        font-size: 10px !important;
+        margin-top: 2px !important;
     }
 
     .stats-button {
-        font-size: 10px;
-        padding: 5px 10px;
+        font-size: 9px;
+        padding: 5px 8px;
+        letter-spacing: 0.5px;
     }
 
     .google-drive-btn {
-        font-size: 10px;
-        padding: 5px 10px;
-        gap: 6px;
+        font-size: 9px;
+        padding: 5px 8px;
+        gap: 4px;
     }
 
     .google-drive-btn .status-dot {
-        width: 6px;
-        height: 6px;
+        width: 5px;
+        height: 5px;
     }
 
     /* Header actions - better stacking */
@@ -1280,8 +1308,8 @@ body {
     }
 
     .dropdown-toggle {
-        font-size: 18px !important;
-        padding: 5px 10px !important;
+        font-size: 16px !important;
+        padding: 5px 8px !important;
     }
 
     /* Stats grid - single column on very small screens */
@@ -1322,6 +1350,20 @@ body {
     }
 
     /* Customer list */
+    .customer-list-header {
+        flex-wrap: nowrap;
+        gap: 6px;
+    }
+
+    .customer-list-header h2 {
+        font-size: 1.1em;
+    }
+
+    .customer-list-header .btn {
+        font-size: 10px;
+        padding: 6px 10px;
+    }
+
     .customer-item {
         padding: 10px;
         margin-bottom: 8px;
