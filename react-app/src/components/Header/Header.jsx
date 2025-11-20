@@ -1,14 +1,26 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import useAuthStore from '../../stores/useAuthStore';
 import './Header.css';
 
 function Header() {
-  const { isSignedIn } = useAuthStore();
+  const { isSignedIn, initialize, signIn, signOut } = useAuthStore();
   const [showDropdown, setShowDropdown] = useState(false);
 
+  // Initialize authentication on mount
+  useEffect(() => {
+    initialize();
+  }, [initialize]);
+
   const handleAuth = () => {
-    // TODO: Implement authentication
-    console.log('Authentication clicked');
+    if (isSignedIn) {
+      // If signed in, sign out
+      if (window.confirm('Are you sure you want to disconnect from Google Drive?')) {
+        signOut();
+      }
+    } else {
+      // If not signed in, sign in
+      signIn();
+    }
   };
 
   return (
@@ -25,10 +37,10 @@ function Header() {
           <button
             className={`auth-button ${isSignedIn ? 'connected' : ''}`}
             onClick={handleAuth}
-            title="Google Drive Connection"
+            title={isSignedIn ? 'Connected to Google Drive - Click to disconnect' : 'Click to connect to Google Drive'}
           >
             <span className="status-dot"></span>
-            <span>{isSignedIn ? 'Google Drive' : 'Connect Drive'}</span>
+            <span>{isSignedIn ? 'Connected' : 'Connect Drive'}</span>
           </button>
 
           <div className="dropdown">
@@ -62,8 +74,7 @@ function Header() {
                 <div className="dropdown-divider"></div>
                 <a
                   className="dropdown-item"
-                  href="/"
-                  target="_blank"
+                  href="../"
                   rel="noopener noreferrer"
                 >
                   Switch to Classic Version
