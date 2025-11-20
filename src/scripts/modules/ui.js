@@ -894,16 +894,8 @@ async function displayCustomerDetails(customerId) {
         </div>
 
         <div id="tab-info" class="tab-content active">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <div style="margin-bottom: 20px;">
                 <h2 style="margin: 0;">Customer Details</h2>
-                <div id="editButtons">
-                    <button class="btn btn-success" onclick="saveCustomerEdit(${customer.id})" style="background: #27ae60; margin-right: 10px;">
-                        Save Changes
-                    </button>
-                    <button class="btn btn-secondary" onclick="cancelCustomerEdit(${customer.id})" style="background: #95a5a6;">
-                        Cancel
-                    </button>
-                </div>
             </div>
 
             <div class="form-row">
@@ -987,6 +979,15 @@ async function displayCustomerDetails(customerId) {
             <div class="form-group">
                 <label>Notes</label>
                 <textarea rows="3" id="customer_notes">${customer.notes || ''}</textarea>
+            </div>
+
+            <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; margin-bottom: 30px;">
+                <button class="btn btn-secondary" onclick="cancelCustomerEdit(${customer.id})" style="background: #95a5a6; min-width: 100px;">
+                    Cancel
+                </button>
+                <button class="btn btn-success" onclick="saveCustomerEdit(${customer.id})" style="background: #27ae60; min-width: 100px;">
+                    Save
+                </button>
             </div>
 
             ${Object.keys(formTemplates).length > 0 ? `
