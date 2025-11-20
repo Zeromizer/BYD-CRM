@@ -17,37 +17,53 @@
             </button>
             <h1>BYD MotorEast CRM <span id="syncStatus" style="font-size: 14px; font-weight: normal; margin-left: 10px;"></span></h1>
             <div class="header-actions">
-                <button class="btn btn-primary" onclick="openAddCustomerModal()">Add Customer</button>
-                <button class="btn btn-secondary" onclick="openFormsModal()">📄 Manage Forms</button>
-                <button class="btn btn-secondary" onclick="openExcelModal()">📊 Manage Excel</button>
-                <button class="btn btn-secondary" onclick="forceSyncFromDrive()" title="Reload data from Google Drive">🔄 Force Sync</button>
-                <button class="btn btn-secondary" onclick="exportData()">Export Data</button>
-                <button class="btn btn-secondary" onclick="importData()">Import Data</button>
+                <div class="dropdown">
+                    <button class="btn btn-secondary dropdown-toggle" onclick="toggleHeaderDropdown()" title="More Options">
+                        ⋮
+                    </button>
+                    <div class="dropdown-menu" id="headerDropdownMenu">
+                        <a class="dropdown-item" onclick="openFormsModal()">📄 Manage Forms</a>
+                        <a class="dropdown-item" onclick="openExcelModal()">📊 Manage Excel</a>
+                        <a class="dropdown-item" onclick="forceSyncFromDrive()">🔄 Force Sync</a>
+                        <a class="dropdown-item" onclick="exportData()">💾 Export Data</a>
+                        <a class="dropdown-item" onclick="importData()">📥 Import Data</a>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <div class="stats-grid">
-            <div class="stat-card">
-                <h3>Total Customers</h3>
-                <p id="totalCustomers">0</p>
-            </div>
-            <div class="stat-card">
-                <h3>Active Deals</h3>
-                <p id="activeDeals">0</p>
-            </div>
-            <div class="stat-card">
-                <h3>Files in Drive</h3>
-                <p id="totalFiles">0</p>
-            </div>
-            <div class="stat-card">
-                <h3>Folders Created</h3>
-                <p id="totalFolders">0</p>
-            </div>
+        <div class="stats-container">
+            <button class="stats-button" title="View Statistics">
+                📊 Statistics
+                <div class="stats-tooltip">
+                    <div class="stats-tooltip-content">
+                        <div class="stat-item">
+                            <span class="stat-label">Total Customers:</span>
+                            <span class="stat-value" id="totalCustomers">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Active Deals:</span>
+                            <span class="stat-value" id="activeDeals">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Files in Drive:</span>
+                            <span class="stat-value" id="totalFiles">0</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Folders Created:</span>
+                            <span class="stat-value" id="totalFolders">0</span>
+                        </div>
+                    </div>
+                </div>
+            </button>
         </div>
 
         <div class="main-content">
             <div class="card">
-                <h2>Customer List</h2>
+                <div class="customer-list-header">
+                    <h2>Customer List</h2>
+                    <button class="btn btn-primary" onclick="openAddCustomerModal()">+ Add Customer</button>
+                </div>
                 <div class="search-box">
                     <input type="text" id="searchInput" placeholder="Search customers..." onkeyup="searchCustomers()">
                 </div>
