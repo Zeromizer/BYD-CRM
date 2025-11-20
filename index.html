@@ -17,12 +17,21 @@
     </div>
     <script>
         function navigateToReact() {
-            // Get the current page URL
+            // Build the full URL to the React app
+            const baseUrl = window.location.origin;
             const currentPath = window.location.pathname;
-            // Get the directory of the current page
-            const dir = currentPath.substring(0, currentPath.lastIndexOf('/') + 1);
-            // Navigate to react/ in the same directory
-            window.location.href = dir + 'react/';
+
+            // Remove index.html if present, and ensure we have the directory
+            let dir = currentPath.endsWith('index.html')
+                ? currentPath.replace('index.html', '')
+                : currentPath.endsWith('/')
+                    ? currentPath
+                    : currentPath + '/';
+
+            // Navigate to react/ subdirectory
+            const reactUrl = baseUrl + dir + 'react/';
+            console.log('Navigating to:', reactUrl);
+            window.location.href = reactUrl;
         }
     </script>
 
