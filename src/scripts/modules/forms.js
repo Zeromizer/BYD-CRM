@@ -104,6 +104,8 @@ async function saveFormTemplates() {
 
 // Load form settings from Google Drive and localStorage
 async function loadFormSettings() {
+    console.log('loadFormSettings - Starting, formTemplates has', Object.keys(formTemplates).length, 'forms');
+
     // Try to load from Google Drive first
     if (isSignedIn && formsFolderId) {
         try {
@@ -119,8 +121,9 @@ async function loadFormSettings() {
                     formSettings = response.result;
                     // Cache in localStorage
                     localStorage.setItem('formSettings', JSON.stringify(formSettings));
-                    console.log('Loaded form settings from Drive');
-                    return;
+                    console.log('Loaded form settings from Drive:', formSettings);
+                } else {
+                    console.warn('No result from form settings file');
                 }
             }
         } catch (error) {
@@ -133,7 +136,7 @@ async function loadFormSettings() {
     if (stored) {
         try {
             formSettings = JSON.parse(stored);
-            console.log('Loaded form settings from localStorage');
+            console.log('Loaded form settings from localStorage:', formSettings);
         } catch (e) {
             console.error('Error parsing stored form settings:', e);
             formSettings = {
@@ -144,11 +147,17 @@ async function loadFormSettings() {
     }
 
     // Ensure all uploaded forms have visibility settings (default to true)
-    for (const formType of Object.keys(formTemplates)) {
+    const formKeys = Object.keys(formTemplates);
+    console.log('Initializing visibility for forms:', formKeys);
+
+    for (const formType of formKeys) {
         if (formSettings.visibility[formType] === undefined) {
             formSettings.visibility[formType] = true;
+            console.log('Set default visibility=true for', formType);
         }
     }
+
+    console.log('Final formSettings:', formSettings);
 }
 
 // Save form settings to Google Drive and localStorage
