@@ -22,12 +22,12 @@
                         ⋮
                     </button>
                     <div class="dropdown-menu" id="headerDropdownMenu">
-                        <a class="dropdown-item" onclick="openStatisticsModal()">📊 View Statistics</a>
-                        <a class="dropdown-item" onclick="openFormsModal()">📄 Manage Forms</a>
-                        <a class="dropdown-item" onclick="openExcelModal()">📋 Manage Excel</a>
-                        <a class="dropdown-item" onclick="forceSyncFromDrive()">🔄 Force Sync</a>
-                        <a class="dropdown-item" onclick="exportData()">💾 Export Data</a>
-                        <a class="dropdown-item" onclick="importData()">📥 Import Data</a>
+                        <a class="dropdown-item" onclick="openStatisticsModal()">View Statistics</a>
+                        <a class="dropdown-item" onclick="openFormsModal()">Manage Forms</a>
+                        <a class="dropdown-item" onclick="openExcelModal()">Manage Excel</a>
+                        <a class="dropdown-item" onclick="forceSyncFromDrive()">Force Sync</a>
+                        <a class="dropdown-item" onclick="exportData()">Export Data</a>
+                        <a class="dropdown-item" onclick="importData()">Import Data</a>
                     </div>
                 </div>
             </div>
@@ -140,7 +140,7 @@
     <div class="modal" id="statisticsModal">
         <div class="modal-content" style="max-width: 700px;">
             <div class="modal-header">
-                <h2>📊 Statistics</h2>
+                <h2>Statistics</h2>
                 <span class="close-modal" onclick="closeStatisticsModal()">&times;</span>
             </div>
             <div class="modal-body">
@@ -175,7 +175,7 @@
     <div class="modal" id="formsModal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>📄 Forms Management</h2>
+                <h2>Forms Management</h2>
                 <span class="close-modal" onclick="closeFormsModal()">&times;</span>
             </div>
             <div class="modal-body">
@@ -192,10 +192,10 @@
 
                     <div id="formsNotConnected" style="display: none;">
                         <div class="auth-section">
-                            <h3>⚠️ Not Connected to Google Drive</h3>
+                            <h3>Not Connected to Google Drive</h3>
                             <p>Connect to Google Drive to manage form templates.</p>
                             <button class="btn btn-drive" onclick="handleAuthClick()">
-                                📁 Connect Google Drive
+                                Connect Google Drive
                             </button>
                         </div>
                     </div>
@@ -243,12 +243,12 @@
     <div class="modal" id="fieldMappingModal" style="display: none;">
         <div class="modal-content" style="max-width: 95%; height: 95vh;">
             <div class="modal-header">
-                <h2>📝 Configure Form Fields</h2>
+                <h2>Configure Form Fields</h2>
                 <span class="close-modal" onclick="closeFieldMappingModal()">&times;</span>
             </div>
             <div class="modal-body" style="overflow: auto; height: calc(95vh - 120px);">
                 <div style="background: rgba(255, 193, 7, 0.1); border: 2px solid rgba(255, 193, 7, 0.5); border-radius: 8px; padding: 15px; margin-bottom: 20px;">
-                    <h4 style="color: #f39c12; margin-bottom: 10px;">📍 How to Map Fields</h4>
+                    <h4 style="color: #f39c12; margin-bottom: 10px;">How to Map Fields</h4>
                     <ol style="color: #2c3e50; font-size: 14px; margin-left: 20px;">
                         <li>Click on the form image where you want to place a field</li>
                         <li>Select which customer data to display at that position</li>
@@ -361,12 +361,12 @@
     <div class="modal" id="combinePrintModal" style="display: none;">
         <div class="modal-content" style="max-width: 600px;">
             <div class="modal-header">
-                <h2>📑 Combine Forms for Double-Sided Printing</h2>
+                <h2>Combine Forms for Double-Sided Printing</h2>
                 <span class="close-modal" onclick="closeCombinePrintModal()">&times;</span>
             </div>
             <div class="modal-body">
                 <div style="margin-bottom: 20px; padding: 15px; background: rgba(0, 188, 212, 0.1); border: 2px solid rgba(0, 188, 212, 0.3); border-radius: 8px;">
-                    <h4 style="color: #00bcd4; margin-bottom: 10px;">💡 How it works</h4>
+                    <h4 style="color: #00bcd4; margin-bottom: 10px;">How it works</h4>
                     <p style="color: #2c3e50; font-size: 14px; margin-bottom: 8px;">
                         Select 2 forms to combine them into a single document perfect for double-sided printing. For example: PDPA on front, COE Bidding on back.
                     </p>
@@ -374,7 +374,7 @@
                         Each form will be on a separate page with proper page breaks for duplex printing.
                     </p>
                     <p style="color: #27ae60; font-size: 13px; font-weight: 600;">
-                        ✓ Customer data will be automatically filled in based on your field mappings!
+                        Customer data will be automatically filled in based on your field mappings!
                     </p>
                 </div>
 
@@ -400,7 +400,7 @@
             </div>
             <div style="padding: 15px; border-top: 2px solid #ecf0f1; background: #f8f9fa; display: flex; gap: 10px; justify-content: flex-end;">
                 <button class="btn btn-secondary" onclick="closeCombinePrintModal()">Cancel</button>
-                <button class="btn btn-success" onclick="combinePrintForms()">🖨️ Preview & Print</button>
+                <button class="btn btn-success" onclick="combinePrintForms()">Preview & Print</button>
             </div>
         </div>
     </div>
@@ -409,7 +409,7 @@
     <div class="modal" id="excelModal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>📊 Excel Templates Management</h2>
+                <h2>Excel Templates Management</h2>
                 <span class="close-modal" onclick="closeExcelModal()">&times;</span>
             </div>
             <div class="modal-body">
@@ -455,12 +455,12 @@
     <div class="modal" id="excelMappingModal" style="display: none;">
         <div class="modal-content" style="max-width: 900px;">
             <div class="modal-header">
-                <h2>📝 Map Excel Fields</h2>
+                <h2>Map Excel Fields</h2>
                 <span class="close-modal" onclick="closeExcelMappingModal()">&times;</span>
             </div>
             <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
                 <div style="background: rgba(33, 150, 243, 0.1); border: 2px solid rgba(33, 150, 243, 0.5); border-radius: 8px; padding: 15px; margin-bottom: 20px;">
-                    <h4 style="color: #2196f3; margin-bottom: 10px;">📍 How to Map Excel Fields</h4>
+                    <h4 style="color: #2196f3; margin-bottom: 10px;">How to Map Excel Fields</h4>
                     <ol style="color: #2c3e50; font-size: 14px; margin-left: 20px;">
                         <li>Select which customer field you want to map</li>
                         <li>Enter the Excel cell reference (e.g., A1, B5, C10)</li>
@@ -564,13 +564,13 @@
     <div class="modal" id="excelPopulateModal" style="display: none;">
         <div class="modal-content" style="max-width: 600px;">
             <div class="modal-header">
-                <h2>📊 Populate Excel with Customer Data</h2>
+                <h2>Populate Excel with Customer Data</h2>
                 <span class="close-modal" onclick="closeExcelPopulateModal()">&times;</span>
             </div>
             <div class="modal-body">
                 <div style="margin-bottom: 20px; padding: 15px; background: rgba(76, 175, 80, 0.1); border: 2px solid rgba(76, 175, 80, 0.3); border-radius: 8px;">
                     <p style="color: #2c3e50; font-size: 14px; margin: 0;">
-                        <strong>💡 How it works:</strong> Select a field mapping template. If the template has a master file in Google Drive, it will be used automatically. Otherwise, upload your Excel file manually. Your original formatting is 100% preserved!
+                        <strong>How it works:</strong> Select a field mapping template. If the template has a master file in Google Drive, it will be used automatically. Otherwise, upload your Excel file manually. Your original formatting is 100% preserved!
                     </p>
                 </div>
                 <div style="margin-bottom: 20px;">
@@ -603,12 +603,12 @@
     <div class="modal" id="uploadMasterFileModal" style="display: none;">
         <div class="modal-content" style="max-width: 600px;">
             <div class="modal-header">
-                <h2>📤 Upload Master Excel File</h2>
+                <h2>Upload Master Excel File</h2>
                 <span class="close-modal" onclick="closeUploadMasterFileModal()">&times;</span>
             </div>
             <div class="modal-body">
                 <div style="margin-bottom: 20px; padding: 15px; background: rgba(33, 150, 243, 0.1); border: 2px solid rgba(33, 150, 243, 0.3); border-radius: 8px;">
-                    <h4 style="color: #2196f3; margin-bottom: 10px;">💡 About Master Files</h4>
+                    <h4 style="color: #2196f3; margin-bottom: 10px;">About Master Files</h4>
                     <p style="color: #2c3e50; font-size: 14px; margin-bottom: 8px;">
                         Upload your master Excel template to Google Drive. Once uploaded, you won't need to upload the file every time you populate customer data.
                     </p>
