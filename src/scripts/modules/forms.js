@@ -478,9 +478,38 @@ function updateMappedFieldsList() {
             displayText = '<strong>' + (fieldNames[field.type] || field.type) + '</strong>';
         }
 
-        html += '<li style="padding: 8px; margin-bottom: 5px; background: white; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;">';
-        html += '<span>' + displayText + ' - Size: ' + field.fontSize + 'px</span>';
+        html += '<li id="field-item-' + fieldId + '" style="padding: 8px; margin-bottom: 5px; background: white; border-radius: 4px;">';
+
+        // Display mode
+        html += '<div id="field-display-' + fieldId + '" style="display: flex; justify-content: space-between; align-items: center;">';
+        html += '<span>' + displayText + ' - Size: ' + field.fontSize + 'px, Color: <span style="display: inline-block; width: 16px; height: 16px; background: ' + field.color + '; border: 1px solid #ccc; vertical-align: middle; border-radius: 2px;"></span></span>';
+        html += '<div>';
+        html += '<button class="btn btn-small btn-primary" onclick="editFieldMapping(\'' + fieldId + '\')" style="margin-right: 5px;">Edit</button>';
         html += '<button class="btn btn-small btn-danger" onclick="removeFieldMapping(\'' + fieldId + '\')">Remove</button>';
+        html += '</div>';
+        html += '</div>';
+
+        // Edit mode (hidden by default)
+        html += '<div id="field-edit-' + fieldId + '" style="display: none;">';
+        html += '<div style="margin-bottom: 10px;">';
+        html += '<label style="display: block; margin-bottom: 5px; font-size: 12px; color: #555;">Font Size:</label>';
+        html += '<select id="edit-fontSize-' + fieldId + '" style="width: 100%; padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px; font-size: 14px;">';
+        for (let size = 8; size <= 48; size += 2) {
+            const selected = size === field.fontSize ? ' selected' : '';
+            html += '<option value="' + size + '"' + selected + '>' + size + 'px</option>';
+        }
+        html += '</select>';
+        html += '</div>';
+        html += '<div style="margin-bottom: 10px;">';
+        html += '<label style="display: block; margin-bottom: 5px; font-size: 12px; color: #555;">Text Color:</label>';
+        html += '<input type="color" id="edit-color-' + fieldId + '" value="' + field.color + '" style="width: 100%; height: 36px; border: 1px solid #cbd5e0; border-radius: 4px;">';
+        html += '</div>';
+        html += '<div style="display: flex; gap: 5px;">';
+        html += '<button class="btn btn-small btn-success" onclick="saveFieldEdit(\'' + fieldId + '\')">Save</button>';
+        html += '<button class="btn btn-small btn-secondary" onclick="cancelFieldEdit(\'' + fieldId + '\')">Cancel</button>';
+        html += '</div>';
+        html += '</div>';
+
         html += '</li>';
     }
     html += '</ul>';
@@ -496,6 +525,33 @@ function clearAllFieldMappings() {
     if (!confirm('Remove all field mappings?')) return;
     tempFieldMappings = {};
     redrawMappingCanvas();
+}
+
+// Edit field mapping
+function editFieldMapping(fieldId) {
+    // Hide display mode and show edit mode
+    document.getElementById('field-display-' + fieldId).style.display = 'none';
+    document.getElementById('field-edit-' + fieldId).style.display = 'block';
+}
+
+// Save field edit
+function saveFieldEdit(fieldId) {
+    const fontSize = parseInt(document.getElementById('edit-fontSize-' + fieldId).value);
+    const color = document.getElementById('edit-color-' + fieldId).value;
+
+    // Update the field mapping
+    tempFieldMappings[fieldId].fontSize = fontSize;
+    tempFieldMappings[fieldId].color = color;
+
+    // Redraw canvas to show updated font size/color
+    redrawMappingCanvas();
+}
+
+// Cancel field edit
+function cancelFieldEdit(fieldId) {
+    // Hide edit mode and show display mode
+    document.getElementById('field-edit-' + fieldId).style.display = 'none';
+    document.getElementById('field-display-' + fieldId).style.display = 'flex';
 }
 
 // Toggle custom value input visibility
