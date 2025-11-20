@@ -181,7 +181,7 @@ function loadFormVisibilitySettings() {
 // Save form visibility settings to localStorage
 function saveFormVisibilitySettings() {
     localStorage.setItem('formVisibilitySettings', JSON.stringify(formVisibilitySettings));
-    console.log('Saved form visibility settings to localStorage:', formVisibilitySettings);
+    console.log('Saved form visibility settings to localStorage');
 }
 
 // Check if a form should be visible in dropdowns
@@ -190,9 +190,7 @@ function isFormVisible(formType) {
     if (!formVisibilitySettings.hasOwnProperty(formType)) {
         return true;
     }
-    const isVisible = formVisibilitySettings[formType];
-    console.log(`Form ${formType} visibility: ${isVisible}`);
-    return isVisible;
+    return formVisibilitySettings[formType];
 }
 
 // Create a new combination preset
