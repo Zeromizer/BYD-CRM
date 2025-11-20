@@ -14,15 +14,27 @@ const useCustomerStore = create((set, get) => ({
   // Actions
   setCustomers: (customers) => set({ customers }),
 
-  addCustomer: (customer) => set((state) => ({
-    customers: [...state.customers, { ...customer, id: Date.now().toString() }]
-  })),
+  addCustomer: (customerData) => {
+    const newCustomer = {
+      ...customerData,
+      id: Date.now().toString(),
+      createdAt: new Date().toISOString()
+    };
 
-  updateCustomer: (id, updates) => set((state) => ({
-    customers: state.customers.map((c) =>
-      c.id === id ? { ...c, ...updates } : c
-    )
-  })),
+    set((state) => ({
+      customers: [...state.customers, newCustomer]
+    }));
+
+    return newCustomer;
+  },
+
+  updateCustomer: (id, updates) => {
+    set((state) => ({
+      customers: state.customers.map((c) =>
+        c.id === id ? { ...c, ...updates, updatedAt: new Date().toISOString() } : c
+      )
+    }));
+  },
 
   deleteCustomer: (id) => set((state) => ({
     customers: state.customers.filter((c) => c.id !== id),

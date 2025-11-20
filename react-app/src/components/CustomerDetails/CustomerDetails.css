@@ -94,3 +94,48 @@
   color: #999;
   font-size: 16px;
 }
+
+/* Delete Confirmation Modal */
+.delete-confirmation {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.delete-warning {
+  font-size: 16px;
+  color: #333;
+  margin: 0;
+}
+
+.delete-warning strong {
+  color: #e74c3c;
+}
+
+.delete-info {
+  font-size: 14px;
+  color: #666;
+  margin: 0;
+  padding: 12px;
+  background: #fff3cd;
+  border: 1px solid #ffc107;
+  border-radius: 6px;
+}
+
+.delete-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  padding-top: 10px;
+  border-top: 1px solid #f0f0f0;
+}
+
+@media (max-width: 768px) {
+  .delete-actions {
+    flex-direction: column-reverse;
+  }
+
+  .delete-actions button {
+    width: 100%;
+  }
+}
