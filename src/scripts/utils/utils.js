@@ -926,8 +926,30 @@ async function deleteForm(formType) {
         delete formTemplates[formType];
         await saveFormTemplates();
 
+        // Clean up form settings
+        delete formSettings.visibility[formType];
+
+        // Remove any presets that use this form
+        const presetsToRemove = formSettings.combinationPresets.filter(
+            preset => preset.side1 === formType || preset.side2 === formType
+        );
+
+        if (presetsToRemove.length > 0) {
+            formSettings.combinationPresets = formSettings.combinationPresets.filter(
+                preset => preset.side1 !== formType && preset.side2 !== formType
+            );
+            console.log(`Removed ${presetsToRemove.length} preset(s) that used this form`);
+        }
+
+        await saveFormSettings();
+
         // Refresh list
         displayFormsList();
+
+        // Refresh customer details if a customer is selected
+        if (selectedCustomerId !== null) {
+            displayCustomerDetails(customers.find(c => c.id === selectedCustomerId));
+        }
 
         alert('Form template deleted successfully');
     } catch (error) {
