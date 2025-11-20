@@ -188,6 +188,10 @@ async function toggleFormVisibility(formType) {
 // Display form visibility toggles
 function displayFormVisibilityToggles() {
     const container = document.getElementById('formVisibilityToggles');
+    if (!container) {
+        console.warn('formVisibilityToggles container not found');
+        return;
+    }
 
     const formTypeNames = {
         'test_drive': 'Test Drive Agreement',
@@ -200,7 +204,10 @@ function displayFormVisibilityToggles() {
         'other': 'Other Form'
     };
 
-    if (Object.keys(formTemplates).length === 0) {
+    const formKeys = Object.keys(formTemplates);
+    console.log('displayFormVisibilityToggles - formTemplates:', formKeys);
+
+    if (formKeys.length === 0) {
         container.innerHTML = '<p style="color: #95a5a6; font-size: 13px; font-style: italic;">Upload forms to manage visibility settings</p>';
         return;
     }
@@ -358,6 +365,11 @@ function updatePresetFormDropdowns() {
     const side1Select = document.getElementById('presetSide1');
     const side2Select = document.getElementById('presetSide2');
 
+    if (!side1Select || !side2Select) {
+        console.warn('Preset dropdown elements not found');
+        return;
+    }
+
     const formTypeNames = {
         'test_drive': 'Test Drive Agreement',
         'vsa': 'Vehicle Sales Agreement',
@@ -371,15 +383,20 @@ function updatePresetFormDropdowns() {
 
     // Populate both dropdowns with image forms only
     let options = '<option value="">Select form...</option>';
+    let imageFormCount = 0;
+
     for (const [formType, formData] of Object.entries(formTemplates)) {
         if (formData.fileType === 'image') {
             const formName = formTypeNames[formType] || formType;
             options += `<option value="${formType}">${formName}</option>`;
+            imageFormCount++;
         }
     }
 
-    if (side1Select) side1Select.innerHTML = options;
-    if (side2Select) side2Select.innerHTML = options;
+    console.log('updatePresetFormDropdowns - Found', imageFormCount, 'image forms');
+
+    side1Select.innerHTML = options;
+    side2Select.innerHTML = options;
 }
 
 // Upload form template
@@ -546,6 +563,10 @@ async function uploadFormTemplate() {
 // Display forms list
 function displayFormsList() {
     const container = document.getElementById('formsListContainer');
+    if (!container) {
+        console.warn('formsListContainer not found');
+        return;
+    }
 
     const formTypeNames = {
         'test_drive': 'Test Drive Agreement',
@@ -557,6 +578,8 @@ function displayFormsList() {
         'pdpa_consent_2': 'PDPA Consent 2',
         'other': 'Other Form'
     };
+
+    console.log('displayFormsList - formTemplates keys:', Object.keys(formTemplates));
 
     if (Object.keys(formTemplates).length === 0) {
         container.innerHTML = '<div style="text-align: center; padding: 20px; color: #7f8c8d;">No forms uploaded yet</div>';
