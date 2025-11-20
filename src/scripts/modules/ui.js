@@ -38,6 +38,22 @@ function closeAddCustomerModal() {
     }
 }
 
+// Toggle header dropdown menu
+function toggleHeaderDropdown() {
+    const dropdown = document.getElementById('headerDropdownMenu');
+    dropdown.classList.toggle('show');
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(event) {
+    const dropdown = document.querySelector('.dropdown');
+    const dropdownMenu = document.getElementById('headerDropdownMenu');
+
+    if (dropdown && dropdownMenu && !dropdown.contains(event.target)) {
+        dropdownMenu.classList.remove('show');
+    }
+});
+
 // Update sync status indicator in UI
 function updateSyncStatus(status) {
     const statusElement = document.getElementById('syncStatus');
