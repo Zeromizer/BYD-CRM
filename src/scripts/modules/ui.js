@@ -1012,11 +1012,7 @@ async function displayCustomerDetails(customerId) {
                                     'pdpa_consent_2': 'PDPA Consent 2',
                                     'other': 'Other Form'
                                 };
-                                // Filter forms based on visibility settings
-                                return Object.keys(formTemplates).filter(formType => {
-                                    // Show form if visibility is not explicitly set to false
-                                    return formSettings.visibility[formType] !== false;
-                                }).map(formType => {
+                                return Object.keys(formTemplates).map(formType => {
                                     const formName = formTypeNames[formType] || formType;
                                     return '<option value="' + formType + '">' + formName + '</option>';
                                 }).join('');
