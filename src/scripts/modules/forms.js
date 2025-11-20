@@ -109,28 +109,21 @@ async function uploadFormTemplate() {
         return;
     }
 
-    const files = Array.from(fileInput.files);
+    const file = fileInput.files[0];
     const formType = formTypeSelect.value;
 
-    // Check if all files are of the same type
-    const isPDF = files.every(f => f.type.includes('pdf'));
-    const isImage = files.every(f => f.type.includes('image'));
+    const isPDF = file.type.includes('pdf');
+    const isImage = file.type.includes('image');
 
     if (!isPDF && !isImage) {
-        alert('Please select either PDF or image files (JPEG, PNG, etc.). Do not mix file types.');
-        return;
-    }
-
-    // PDF files should be single file only
-    if (isPDF && files.length > 1) {
-        alert('For PDF files, please select only one file. For multi-page templates, use image files.');
+        alert('Please select a PDF or image file (JPEG, PNG, etc.)');
         return;
     }
 
     try {
         // Show uploading message
         const listContainer = document.getElementById('formsListContainer');
-        listContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: #27ae60;"><div class="loading"></div><p style="margin-top: 10px;">Processing ' + files.length + ' file(s)...</p></div>';
+        listContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: #27ae60;"><div class="loading"></div><p style="margin-top: 10px;">Processing form...</p></div>';
 
         if (isImage) {
             // Upload to Google Drive (required for images to avoid localStorage quota)
@@ -143,65 +136,40 @@ async function uploadFormTemplate() {
                 }
             }
 
-            // Upload all image files and create pages array
-            const pages = [];
-            for (let i = 0; i < files.length; i++) {
-                const file = files[i];
+            // Upload file to Google Drive
+            const metadata = {
+                name: file.name,
+                mimeType: file.type,
+                parents: [formsFolderId]
+            };
 
-                // Upload file to Google Drive
-                const metadata = {
-                    name: file.name,
-                    mimeType: file.type,
-                    parents: [formsFolderId]
-                };
+            const form = new FormData();
+            form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+            form.append('file', file);
 
-                const form = new FormData();
-                form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-                form.append('file', file);
+            const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink,webContentLink', {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer ' + gapi.client.getToken().access_token
+                },
+                body: form
+            });
 
-                const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink,webContentLink', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': 'Bearer ' + gapi.client.getToken().access_token
-                    },
-                    body: form
-                });
-
-                if (!response.ok) {
-                    throw new Error('Upload failed for ' + file.name + ': ' + response.statusText);
-                }
-
-                const result = await response.json();
-
-                // Add to pages array
-                pages.push({
-                    fileId: result.id,
-                    fileName: result.name,
-                    webViewLink: result.webViewLink,
-                    webContentLink: result.webContentLink
-                });
+            if (!response.ok) {
+                throw new Error('Upload failed: ' + response.statusText);
             }
 
-            // Store form template info with pages array
-            if (files.length === 1) {
-                // Single page template (backward compatible)
-                formTemplates[formType] = {
-                    fileId: pages[0].fileId,
-                    fileName: pages[0].fileName,
-                    webViewLink: pages[0].webViewLink,
-                    webContentLink: pages[0].webContentLink,
-                    fileType: 'image',
-                    uploadDate: new Date().toISOString()
-                };
-            } else {
-                // Multi-page template (new format)
-                formTemplates[formType] = {
-                    pages: pages,
-                    fileType: 'image',
-                    uploadDate: new Date().toISOString(),
-                    isMultiPage: true
-                };
-            }
+            const result = await response.json();
+
+            // Store form template info with Drive reference only (no base64)
+            formTemplates[formType] = {
+                fileId: result.id,
+                fileName: result.name,
+                webViewLink: result.webViewLink,
+                webContentLink: result.webContentLink,
+                fileType: 'image',
+                uploadDate: new Date().toISOString()
+            };
 
             await saveFormTemplates();
 
@@ -211,10 +179,9 @@ async function uploadFormTemplate() {
             // Refresh forms list
             displayFormsList();
 
-            alert('Form template (' + files.length + ' page' + (files.length > 1 ? 's' : '') + ') uploaded successfully!');
+            alert('Form template uploaded successfully!');
 
         } else if (isPDF) {
-            const file = files[0];
             // Handle PDF upload to Google Drive (existing behavior)
             if (!formsFolderId) {
                 await getOrCreateFormsFolder();
@@ -309,20 +276,14 @@ function displayFormsList() {
         const hasFieldMapping = formData.fileType === 'image';
         const fieldCount = formData.fieldMappings ? Object.keys(formData.fieldMappings).length : 0;
 
-        // Check if multi-page template
-        const isMultiPage = formData.isMultiPage && formData.pages;
-        const pageCount = isMultiPage ? formData.pages.length : 1;
-        const displayFileName = isMultiPage ? `${pageCount} pages` : formData.fileName;
-
         html += `
             <div class="file-item">
                 <div class="file-info">
-                    <div class="file-icon">${isMultiPage ? '📑' : '📄'}</div>
+                    <div class="file-icon">📄</div>
                     <div class="file-details">
                         <h4>${formName}</h4>
-                        <p>${displayFileName} • Uploaded: ${uploadDate}</p>
+                        <p>${formData.fileName} • Uploaded: ${uploadDate}</p>
                         ${hasFieldMapping ? '<p style="font-size: 12px; color: #27ae60; margin-top: 3px;">✓ ' + fieldCount + ' field(s) mapped</p>' : ''}
-                        ${isMultiPage ? '<p style="font-size: 12px; color: #00bcd4; margin-top: 3px;">📑 Multi-page template</p>' : ''}
                     </div>
                 </div>
                 <div class="file-actions" style="display: flex; gap: 5px; flex-wrap: wrap;">
@@ -389,19 +350,9 @@ async function deleteForm(formType) {
 
     try {
         // Delete from Google Drive
-        if (formData.isMultiPage && formData.pages) {
-            // Delete all pages for multi-page template
-            for (const page of formData.pages) {
-                await gapi.client.drive.files.delete({
-                    fileId: page.fileId
-                });
-            }
-        } else if (formData.fileId) {
-            // Delete single file
-            await gapi.client.drive.files.delete({
-                fileId: formData.fileId
-            });
-        }
+        await gapi.client.drive.files.delete({
+            fileId: formData.fileId
+        });
 
         // Remove from local storage
         delete formTemplates[formType];
@@ -427,112 +378,38 @@ async function openFieldMappingModal(formType) {
     }
 
     currentMappingFormType = formType;
-    currentMappingPageIndex = 0;
-    currentMappingPages = [];
     tempFieldMappings = JSON.parse(JSON.stringify(formData.fieldMappings || {}));
 
     // Show modal
     document.getElementById('fieldMappingModal').style.display = 'flex';
 
+    // Load form image onto canvas
     const canvas = document.getElementById('formMappingCanvas');
-    const isMultiPage = formData.isMultiPage && formData.pages;
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
 
     try {
-        if (isMultiPage) {
-            // Multi-page template - load all pages
-            const pageTabsContainer = document.getElementById('pageTabsContainer');
-            const pageTabs = document.getElementById('pageTabs');
+        // Fetch image from Drive
+        const base64Data = await getFormImageFromDrive(formType);
 
-            pageTabsContainer.style.display = 'block';
-            pageTabs.innerHTML = '';
+        img.onload = function() {
+            // Scale to fit screen while maintaining aspect ratio
+            const maxWidth = Math.min(window.innerWidth * 0.8, 1000);
+            const scale = maxWidth / img.width;
+            canvas.width = img.width * scale;
+            canvas.height = img.height * scale;
 
-            // Load all page images
-            for (let i = 0; i < formData.pages.length; i++) {
-                const pageData = formData.pages[i];
-                const base64Data = await getFormImageFromDriveByFileId(pageData.fileId);
+            currentMappingCanvas = canvas;
+            currentMappingImage = img;
 
-                const img = new Image();
-                await new Promise((resolve, reject) => {
-                    img.onload = () => resolve();
-                    img.onerror = () => reject(new Error('Failed to load page ' + (i + 1)));
-                    img.src = base64Data;
-                });
+            redrawMappingCanvas();
+        };
 
-                currentMappingPages.push(img);
-
-                // Create page tab
-                const tab = document.createElement('button');
-                tab.textContent = 'Page ' + (i + 1);
-                tab.className = 'btn btn-small' + (i === 0 ? ' btn-primary' : '');
-                tab.onclick = () => switchToPage(i);
-                tab.id = 'pageTab_' + i;
-                tab.style.cssText = 'margin-right: 5px;';
-                pageTabs.appendChild(tab);
-            }
-
-            // Display first page
-            switchToPage(0);
-        } else {
-            // Single page template - hide page tabs
-            document.getElementById('pageTabsContainer').style.display = 'none';
-
-            // Load single image
-            const base64Data = await getFormImageFromDrive(formType);
-            const img = new Image();
-
-            img.onload = function() {
-                // Scale to fit screen while maintaining aspect ratio
-                const maxWidth = Math.min(window.innerWidth * 0.8, 1000);
-                const scale = maxWidth / img.width;
-                canvas.width = img.width * scale;
-                canvas.height = img.height * scale;
-
-                currentMappingCanvas = canvas;
-                currentMappingImage = img;
-                currentMappingPages = [img];
-
-                redrawMappingCanvas();
-            };
-
-            img.src = base64Data;
-        }
+        img.src = base64Data;
     } catch (error) {
         alert('Failed to load form image: ' + error.message);
         document.getElementById('fieldMappingModal').style.display = 'none';
     }
-}
-
-// Switch to a specific page in multi-page template
-function switchToPage(pageIndex) {
-    if (pageIndex < 0 || pageIndex >= currentMappingPages.length) return;
-
-    currentMappingPageIndex = pageIndex;
-    const img = currentMappingPages[pageIndex];
-    const canvas = document.getElementById('formMappingCanvas');
-
-    // Scale to fit screen while maintaining aspect ratio
-    const maxWidth = Math.min(window.innerWidth * 0.8, 1000);
-    const scale = maxWidth / img.width;
-    canvas.width = img.width * scale;
-    canvas.height = img.height * scale;
-
-    currentMappingCanvas = canvas;
-    currentMappingImage = img;
-
-    // Update tab styling
-    const pageTabs = document.getElementById('pageTabs');
-    if (pageTabs) {
-        const tabs = pageTabs.getElementsByTagName('button');
-        for (let i = 0; i < tabs.length; i++) {
-            if (i === pageIndex) {
-                tabs[i].className = 'btn btn-small btn-primary';
-            } else {
-                tabs[i].className = 'btn btn-small';
-            }
-        }
-    }
-
-    redrawMappingCanvas();
 }
 
 function redrawMappingCanvas() {
@@ -545,13 +422,9 @@ function redrawMappingCanvas() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(currentMappingImage, 0, 0, canvas.width, canvas.height);
 
-    // Draw field markers (only for current page)
+    // Draw field markers
     const scale = canvas.width / currentMappingImage.width;
     for (const [fieldId, field] of Object.entries(tempFieldMappings)) {
-        // Skip fields not on current page (for multi-page templates)
-        const fieldPage = field.pageNumber !== undefined ? field.pageNumber : 0;
-        if (fieldPage !== currentMappingPageIndex) continue;
-
         const x = field.x * scale;
         const y = field.y * scale;
 
@@ -580,29 +453,22 @@ function redrawMappingCanvas() {
 
 function updateMappedFieldsList() {
     const listContainer = document.getElementById('mappedFieldsList');
-
-    // Filter fields for current page
-    const fieldsOnCurrentPage = Object.entries(tempFieldMappings).filter(([fieldId, field]) => {
-        const fieldPage = field.pageNumber !== undefined ? field.pageNumber : 0;
-        return fieldPage === currentMappingPageIndex;
-    });
-
-    if (fieldsOnCurrentPage.length === 0) {
-        listContainer.innerHTML = '<p style="color: #7f8c8d;">No fields mapped on this page yet. Click on the form to add fields.</p>';
+    if (Object.keys(tempFieldMappings).length === 0) {
+        listContainer.innerHTML = '<p style="color: #7f8c8d;">No fields mapped yet. Click on the form to add fields.</p>';
         return;
     }
 
-    const fieldNames = {
-        'name': 'Customer Name',
-        'phone': 'Phone Number',
-        'email': 'Email',
-        'model': 'Car Model',
-        'date': 'Today\'s Date',
-        'custom': 'Custom Value'
-    };
-
     let html = '<ul style="list-style: none; padding: 0;">';
-    for (const [fieldId, field] of fieldsOnCurrentPage) {
+    for (const [fieldId, field] of Object.entries(tempFieldMappings)) {
+        const fieldNames = {
+            'name': 'Customer Name',
+            'phone': 'Phone Number',
+            'email': 'Email',
+            'model': 'Car Model',
+            'date': 'Today\'s Date',
+            'custom': 'Custom Value'
+        };
+
         let displayText;
         if (field.customValue) {
             displayText = '<strong>Custom: "' + field.customValue + '"</strong>';
@@ -610,22 +476,12 @@ function updateMappedFieldsList() {
             displayText = '<strong>' + (fieldNames[field.type] || field.type) + '</strong>';
         }
 
-        // Show page number if multi-page
-        const pageInfo = currentMappingPages.length > 1 ? ' (Page ' + (field.pageNumber + 1) + ')' : '';
-
         html += '<li style="padding: 8px; margin-bottom: 5px; background: white; border-radius: 4px; display: flex; justify-content: space-between; align-items: center;">';
-        html += '<span>' + displayText + pageInfo + ' - Size: ' + field.fontSize + 'px</span>';
+        html += '<span>' + displayText + ' - Size: ' + field.fontSize + 'px</span>';
         html += '<button class="btn btn-small btn-danger" onclick="removeFieldMapping(\'' + fieldId + '\')">Remove</button>';
         html += '</li>';
     }
     html += '</ul>';
-
-    // Show total count across all pages if multi-page
-    if (currentMappingPages.length > 1) {
-        const totalFields = Object.keys(tempFieldMappings).length;
-        html += '<p style="color: #7f8c8d; font-size: 12px; margin-top: 10px;">Total fields across all pages: ' + totalFields + '</p>';
-    }
-
     listContainer.innerHTML = html;
 }
 
@@ -690,8 +546,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 x: originalX,
                 y: originalY,
                 fontSize: fontSize,
-                color: textColor,
-                pageNumber: currentMappingPageIndex // Add page number for multi-page templates
+                color: textColor
             };
 
             // Store custom value if provided
@@ -722,8 +577,6 @@ function closeFieldMappingModal() {
     currentMappingFormType = null;
     currentMappingCanvas = null;
     currentMappingImage = null;
-    currentMappingPageIndex = 0;
-    currentMappingPages = [];
     tempFieldMappings = {};
 }
 
@@ -825,10 +678,6 @@ async function combinePrintForms() {
         const form1Data = await renderFormWithData(side1, customer);
         const form2Data = await renderFormWithData(side2, customer);
 
-        // Check if either form is multi-page (returns array)
-        const form1IsMultiPage = Array.isArray(form1Data);
-        const form2IsMultiPage = Array.isArray(form2Data);
-
         // Get form names
         const formTypeNames = {
             'test_drive': 'Test Drive Agreement',
@@ -847,65 +696,108 @@ async function combinePrintForms() {
         // Remove loading
         document.body.removeChild(loadingDiv);
 
-        // Build HTML for combined print document
-        let html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>' + customer.name + ' - ' + form1Name + ' & ' + form2Name + '</title>';
-        html += '<style>';
-        html += '@page { size: A4; margin: 0; }';
-        html += '* { margin: 0; padding: 0; box-sizing: border-box; }';
-        html += 'body { font-family: Arial, sans-serif; }';
-        html += '.page { width: 210mm; height: 297mm; page-break-after: always; background: white; position: relative; display: flex; align-items: center; justify-content: center; }';
-        html += '.page:last-child { page-break-after: auto; }';
-        html += '.page img { max-width: 100%; max-height: 100%; object-fit: contain; }';
-        html += '.print-btn { position: fixed; top: 20px; right: 20px; padding: 14px 28px; background: #27ae60; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 15px; font-weight: 700; box-shadow: 0 6px 16px rgba(0,0,0,0.3); z-index: 1000; transition: all 0.3s; }';
-        html += '.print-btn:hover { background: #229954; transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.4); }';
-        html += '.info-banner { position: fixed; top: 20px; left: 20px; background: rgba(0, 188, 212, 0.95); color: white; padding: 12px 20px; border-radius: 6px; font-size: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 1000; }';
-        html += '@media print { .no-print { display: none !important; } body { print-color-adjust: exact; -webkit-print-color-adjust: exact; } }';
-        html += '</style></head><body>';
-
-        html += '<button class="print-btn no-print" onclick="window.print()">🖨️ Print Combined Forms</button>';
-
-        // Calculate total pages
-        const form1Pages = form1IsMultiPage ? form1Data.length : 1;
-        const form2Pages = form2IsMultiPage ? form2Data.length : 1;
-        const totalPages = form1Pages + form2Pages;
-
-        html += '<div class="info-banner no-print">';
-        html += '<strong>' + customer.name + '</strong><br>';
-        html += '📑 ' + form1Name + ' (' + form1Pages + ' page' + (form1Pages > 1 ? 's' : '') + ') + ' + form2Name + ' (' + form2Pages + ' page' + (form2Pages > 1 ? 's' : '') + ')';
-        html += '<br>Total: ' + totalPages + ' pages';
-        html += '</div>';
-
-        // Add pages from form 1
-        if (form1IsMultiPage) {
-            for (let i = 0; i < form1Data.length; i++) {
-                html += '<div class="page">';
-                html += '<img src="' + form1Data[i] + '" alt="' + form1Name + ' - Page ' + (i + 1) + '">';
-                html += '</div>';
-            }
-        } else {
-            html += '<div class="page">';
-            html += '<img src="' + form1Data + '" alt="' + form1Name + '">';
-            html += '</div>';
-        }
-
-        // Add pages from form 2
-        if (form2IsMultiPage) {
-            for (let i = 0; i < form2Data.length; i++) {
-                html += '<div class="page">';
-                html += '<img src="' + form2Data[i] + '" alt="' + form2Name + ' - Page ' + (i + 1) + '">';
-                html += '</div>';
-            }
-        } else {
-            html += '<div class="page">';
-            html += '<img src="' + form2Data + '" alt="' + form2Name + '">';
-            html += '</div>';
-        }
-
-        html += '</body></html>';
-
-        // Create print window with all forms
+        // Create print window with both forms
         const printWin = window.open('', '_blank');
-        printWin.document.write(html);
+        printWin.document.write(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <title>${customer.name} - ${form1Name} & ${form2Name}</title>
+                <style>
+                    @page {
+                        size: A4;
+                        margin: 0;
+                    }
+                    * {
+                        margin: 0;
+                        padding: 0;
+                        box-sizing: border-box;
+                    }
+                    body {
+                        font-family: Arial, sans-serif;
+                    }
+                    .page {
+                        width: 210mm;
+                        height: 297mm;
+                        page-break-after: always;
+                        background: white;
+                        position: relative;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                    }
+                    .page:last-child {
+                        page-break-after: auto;
+                    }
+                    .page img {
+                        max-width: 100%;
+                        max-height: 100%;
+                        object-fit: contain;
+                    }
+                    .print-btn {
+                        position: fixed;
+                        top: 20px;
+                        right: 20px;
+                        padding: 14px 28px;
+                        background: #27ae60;
+                        color: white;
+                        border: none;
+                        border-radius: 6px;
+                        cursor: pointer;
+                        font-size: 15px;
+                        font-weight: 700;
+                        box-shadow: 0 6px 16px rgba(0,0,0,0.3);
+                        z-index: 1000;
+                        transition: all 0.3s;
+                    }
+                    .print-btn:hover {
+                        background: #229954;
+                        transform: translateY(-2px);
+                        box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+                    }
+                    .info-banner {
+                        position: fixed;
+                        top: 20px;
+                        left: 20px;
+                        background: rgba(0, 188, 212, 0.95);
+                        color: white;
+                        padding: 12px 20px;
+                        border-radius: 6px;
+                        font-size: 14px;
+                        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+                        z-index: 1000;
+                    }
+                    @media print {
+                        .no-print {
+                            display: none !important;
+                        }
+                        body {
+                            print-color-adjust: exact;
+                            -webkit-print-color-adjust: exact;
+                        }
+                    }
+                </style>
+            </head>
+            <body>
+                <button class="print-btn no-print" onclick="window.print()">🖨️ Print Double-Sided</button>
+                <div class="info-banner no-print">
+                    <strong>${customer.name}</strong><br>
+                    📑 Page 1: ${form1Name} | Page 2: ${form2Name}
+                </div>
+
+                <!-- Page 1 (Front) -->
+                <div class="page">
+                    <img src="${form1Data}" alt="${form1Name}">
+                </div>
+
+                <!-- Page 2 (Back) -->
+                <div class="page">
+                    <img src="${form2Data}" alt="${form2Name}">
+                </div>
+            </body>
+            </html>
+        `);
         printWin.document.close();
 
     } catch (error) {
@@ -920,66 +812,6 @@ async function combinePrintForms() {
 }
 
 // ============ Form Rendering and Printing ============
-
-// Helper function to get customer data mapping
-function getCustomerDataMapping(customer) {
-    const today = new Date().toLocaleDateString();
-    const dataMapping = {
-        'name': customer.name || '',
-        'phone': customer.phone || '',
-        'email': customer.email || '',
-        'nric': customer.nric || '',
-        'occupation': customer.occupation || '',
-        'dob': customer.dob || '',
-        'address': customer.address || '',
-        'addressContinue': customer.addressContinue || '',
-        'salesConsultant': customer.salesConsultant || '',
-        'vsaNo': customer.vsaNo || '',
-        'model': customer.model || '',
-        'date': today,
-        'vsa_makeModel': customer.vsaDetails?.makeModel || '',
-        'vsa_yom': customer.vsaDetails?.yom || '',
-        'vsa_bodyColour': customer.vsaDetails?.bodyColour || '',
-        'vsa_upholstery': customer.vsaDetails?.upholstery || '',
-        'vsa_przType': customer.vsaDetails?.przType || '',
-        'vsa_package': customer.vsaDetails?.package || '',
-        'vsa_purchasePriceWithCOE': customer.vsaDetails?.purchasePriceWithCOE || '',
-        'vsa_sellingWithCOE': customer.vsaDetails?.sellingWithCOE || '',
-        'vsa_sellingPriceList': customer.vsaDetails?.sellingPriceList || '',
-        'vsa_coeRebateLevel': customer.vsaDetails?.coeRebateLevel || '',
-        'vsa_coeRebate': customer.vsaDetails?.coeRebate || '',
-        'vsa_deposit': customer.vsaDetails?.deposit || '',
-        'vsa_lessOthers': customer.vsaDetails?.lessOthers || '',
-        'vsa_addOthers': customer.vsaDetails?.addOthers || '',
-        'vsa_deliveryDate': customer.vsaDetails?.deliveryDate || '',
-        'vsa_tradeInCarNo': customer.vsaDetails?.tradeInCarNo || '',
-        'vsa_tradeInCarModel': customer.vsaDetails?.tradeInCarModel || '',
-        'vsa_tradeInAmount': customer.vsaDetails?.tradeInAmount || '',
-        'vsa_dateOfRegistration': customer.vsaDetails?.dateOfRegistration || '',
-        'vsa_registrationNo': customer.vsaDetails?.registrationNo || '',
-        'vsa_chassisNo': customer.vsaDetails?.chassisNo || '',
-        'vsa_engineNo': customer.vsaDetails?.engineNo || '',
-        'vsa_remarks1': customer.vsaDetails?.remarks1 || '',
-        'vsa_remarks2': customer.vsaDetails?.remarks2 || '',
-        'vsa_loanAmount': customer.vsaDetails?.loanAmount || '',
-        'vsa_interest': customer.vsaDetails?.interest || '',
-        'vsa_tenure': customer.vsaDetails?.tenure || '',
-        'vsa_monthlyPayment': customer.vsaDetails?.monthlyPayment || '',
-        'vsa_financeCompany': customer.vsaDetails?.financeCompany || '',
-        'vsa_adminFee': customer.vsaDetails?.adminFee || '',
-        'vsa_insuranceSubsidy': customer.vsaDetails?.insuranceSubsidy || '',
-        'vsa_insuranceCompany': customer.vsaDetails?.insuranceCompany || '',
-        'vsa_insuranceFee': customer.vsaDetails?.insuranceFee || ''
-    };
-
-    // Calculate Insurance Net (Insurance Fee - Insurance Subsidy)
-    const insuranceFee = parseFloat(customer.vsaDetails?.insuranceFee?.replace(/[^0-9.-]/g, '') || '0');
-    const insuranceSubsidy = parseFloat(customer.vsaDetails?.insuranceSubsidy?.replace(/[^0-9.-]/g, '') || '0');
-    const insuranceNet = insuranceFee - insuranceSubsidy;
-    dataMapping['vsa_insuranceNet'] = insuranceNet !== 0 ? insuranceNet.toString() : '';
-
-    return dataMapping;
-}
 
 // Fetch form image from Google Drive and cache it in memory
 async function getFormImageFromDrive(formType) {
@@ -1032,145 +864,86 @@ async function getFormImageFromDrive(formType) {
     }
 }
 
-// Fetch image from Drive by file ID (for multi-page templates)
-async function getFormImageFromDriveByFileId(fileId) {
-    // Check if already cached in memory
-    if (formImageCache[fileId]) {
-        return formImageCache[fileId];
-    }
-
-    try {
-        const response = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
-            headers: {
-                'Authorization': 'Bearer ' + gapi.client.getToken().access_token
-            }
-        });
-
-        if (!response.ok) {
-            throw new Error('Failed to fetch image from Drive');
-        }
-
-        const blob = await response.blob();
-
-        // Convert blob to base64
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const base64 = e.target.result;
-                // Cache it in memory
-                formImageCache[fileId] = base64;
-                resolve(base64);
-            };
-            reader.onerror = reject;
-            reader.readAsDataURL(blob);
-        });
-    } catch (error) {
-        console.error('Error fetching form image from Drive:', error);
-        throw error;
-    }
-}
-
 // Render form with customer data overlaid
 async function renderFormWithData(formType, customer) {
     const formData = formTemplates[formType];
 
     if (!formData.fieldMappings || Object.keys(formData.fieldMappings).length === 0) {
         // No field mappings, return original from Drive
-        if (formData.isMultiPage && formData.pages) {
-            // Return array of pages for multi-page template
-            const pageImages = [];
-            for (const page of formData.pages) {
-                const base64Data = await getFormImageFromDriveByFileId(page.fileId);
-                pageImages.push(base64Data);
-            }
-            return pageImages;
-        } else {
-            // Return single image
-            return await getFormImageFromDrive(formType);
-        }
+        return await getFormImageFromDrive(formType);
     }
 
-    // Check if multi-page template
-    const isMultiPage = formData.isMultiPage && formData.pages;
+    // Fetch form image from Drive
+    const base64Data = await getFormImageFromDrive(formType);
 
-    if (isMultiPage) {
-        // Render each page with its mapped fields
-        const renderedPages = [];
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = function() {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
 
-        for (let pageIndex = 0; pageIndex < formData.pages.length; pageIndex++) {
-            const pageData = formData.pages[pageIndex];
-            const base64Data = await getFormImageFromDriveByFileId(pageData.fileId);
+            // Draw form image
+            ctx.drawImage(img, 0, 0);
 
-            const renderedPage = await new Promise((resolve, reject) => {
-                const img = new Image();
-                img.onload = function() {
-                    const canvas = document.createElement('canvas');
-                    canvas.width = img.width;
-                    canvas.height = img.height;
-                    const ctx = canvas.getContext('2d');
+            // Get customer data
+            const today = new Date().toLocaleDateString();
+            const dataMapping = {
+                'name': customer.name || '',
+                'phone': customer.phone || '',
+                'email': customer.email || '',
+                'nric': customer.nric || '',
+                'occupation': customer.occupation || '',
+                'dob': customer.dob || '',
+                'address': customer.address || '',
+                'addressContinue': customer.addressContinue || '',
+                'salesConsultant': customer.salesConsultant || '',
+                'vsaNo': customer.vsaNo || '',
+                'model': customer.model || '',
+                'date': today,
+                'vsa_makeModel': customer.vsaDetails?.makeModel || '',
+                'vsa_yom': customer.vsaDetails?.yom || '',
+                'vsa_bodyColour': customer.vsaDetails?.bodyColour || '',
+                'vsa_upholstery': customer.vsaDetails?.upholstery || '',
+                'vsa_przType': customer.vsaDetails?.przType || '',
+                'vsa_package': customer.vsaDetails?.package || '',
+                'vsa_purchasePriceWithCOE': customer.vsaDetails?.purchasePriceWithCOE || '',
+                'vsa_sellingWithCOE': customer.vsaDetails?.sellingWithCOE || '',
+                'vsa_sellingPriceList': customer.vsaDetails?.sellingPriceList || '',
+                'vsa_coeRebateLevel': customer.vsaDetails?.coeRebateLevel || '',
+                'vsa_coeRebate': customer.vsaDetails?.coeRebate || '',
+                'vsa_deposit': customer.vsaDetails?.deposit || '',
+                'vsa_lessOthers': customer.vsaDetails?.lessOthers || '',
+                'vsa_addOthers': customer.vsaDetails?.addOthers || '',
+                'vsa_deliveryDate': customer.vsaDetails?.deliveryDate || '',
+                'vsa_tradeInCarNo': customer.vsaDetails?.tradeInCarNo || '',
+                'vsa_tradeInCarModel': customer.vsaDetails?.tradeInCarModel || '',
+                'vsa_tradeInAmount': customer.vsaDetails?.tradeInAmount || '',
+                'vsa_dateOfRegistration': customer.vsaDetails?.dateOfRegistration || '',
+                'vsa_registrationNo': customer.vsaDetails?.registrationNo || '',
+                'vsa_chassisNo': customer.vsaDetails?.chassisNo || '',
+                'vsa_engineNo': customer.vsaDetails?.engineNo || '',
+                'vsa_remarks1': customer.vsaDetails?.remarks1 || '',
+                'vsa_remarks2': customer.vsaDetails?.remarks2 || '',
+                'vsa_loanAmount': customer.vsaDetails?.loanAmount || '',
+                'vsa_interest': customer.vsaDetails?.interest || '',
+                'vsa_tenure': customer.vsaDetails?.tenure || '',
+                'vsa_monthlyPayment': customer.vsaDetails?.monthlyPayment || '',
+                'vsa_financeCompany': customer.vsaDetails?.financeCompany || '',
+                'vsa_adminFee': customer.vsaDetails?.adminFee || '',
+                'vsa_insuranceSubsidy': customer.vsaDetails?.insuranceSubsidy || '',
+                'vsa_insuranceCompany': customer.vsaDetails?.insuranceCompany || '',
+                'vsa_insuranceFee': customer.vsaDetails?.insuranceFee || ''
+            };
 
-                    // Draw form image
-                    ctx.drawImage(img, 0, 0);
+            // Calculate Insurance Net (Insurance Fee - Insurance Subsidy)
+            const insuranceFee = parseFloat(customer.vsaDetails?.insuranceFee?.replace(/[^0-9.-]/g, '') || '0');
+            const insuranceSubsidy = parseFloat(customer.vsaDetails?.insuranceSubsidy?.replace(/[^0-9.-]/g, '') || '0');
+            const insuranceNet = insuranceFee - insuranceSubsidy;
+            dataMapping['vsa_insuranceNet'] = insuranceNet !== 0 ? insuranceNet.toString() : '';
 
-                    // Get customer data mapping
-                    const dataMapping = getCustomerDataMapping(customer);
-
-                    // Draw fields for this page only
-                    for (const [fieldId, field] of Object.entries(formData.fieldMappings)) {
-                        const fieldPage = field.pageNumber !== undefined ? field.pageNumber : 0;
-                        if (fieldPage !== pageIndex) continue;
-
-                        // Use custom value if provided, otherwise look up from customer data
-                        let text;
-                        if (field.customValue) {
-                            text = field.customValue;
-                        } else {
-                            text = dataMapping[field.type] || '';
-                        }
-
-                        if (!text) continue;
-
-                        ctx.fillStyle = field.color || '#000000';
-                        ctx.font = field.fontSize + 'px Arial';
-                        ctx.fillText(text, field.x, field.y);
-                    }
-
-                    // Convert to base64
-                    const filledFormBase64 = canvas.toDataURL('image/jpeg', 0.95);
-                    resolve(filledFormBase64);
-                };
-
-                img.onerror = function() {
-                    reject(new Error('Failed to load page ' + (pageIndex + 1)));
-                };
-
-                img.src = base64Data;
-            });
-
-            renderedPages.push(renderedPage);
-        }
-
-        return renderedPages;
-    } else {
-        // Single page template (original behavior)
-        // Fetch form image from Drive
-        const base64Data = await getFormImageFromDrive(formType);
-
-        return new Promise((resolve, reject) => {
-            const img = new Image();
-            img.onload = function() {
-                const canvas = document.createElement('canvas');
-                canvas.width = img.width;
-                canvas.height = img.height;
-                const ctx = canvas.getContext('2d');
-
-                // Draw form image
-                ctx.drawImage(img, 0, 0);
-
-                // Get customer data
-                const dataMapping = getCustomerDataMapping(customer);
-
-                // Draw each field
+            // Draw each field
             for (const [fieldId, field] of Object.entries(formData.fieldMappings)) {
                 // Use custom value if provided, otherwise look up from customer data
                 let text;
@@ -1320,69 +1093,8 @@ async function printFormForCustomer(formType, customerId) {
         printWindow.document.write(html);
         printWindow.document.close();
     } else {
-        // For other forms (including multi-page image templates)
-        if (formData.fileType === 'image') {
-            try {
-                // Render form with customer data
-                const renderedData = await renderFormWithData(formType, customer);
-
-                // Check if multi-page (returns array) or single page (returns string)
-                const isMultiPage = Array.isArray(renderedData);
-                const formTypeNames = {
-                    'test_drive': 'Test Drive Agreement',
-                    'vsa': 'Vehicle Sales Agreement',
-                    'pdpa': 'PDPA Consent Form',
-                    'coe_bidding_1': 'COE Bidding 1',
-                    'coe_bidding_2': 'COE Bidding 2',
-                    'pdpa_consent_1': 'PDPA Consent 1',
-                    'pdpa_consent_2': 'PDPA Consent 2',
-                    'other': 'Other Form'
-                };
-                const formName = formTypeNames[formType] || formType;
-
-                // Build HTML for print document
-                let html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>' + formName + ' - ' + customer.name + '</title>';
-                html += '<style>';
-                html += '@page { size: A4; margin: 0; }';
-                html += '* { margin: 0; padding: 0; box-sizing: border-box; }';
-                html += 'body { font-family: Arial, sans-serif; }';
-                html += '.page { width: 210mm; height: 297mm; page-break-after: always; background: white; position: relative; display: flex; align-items: center; justify-content: center; }';
-                html += '.page:last-child { page-break-after: auto; }';
-                html += '.page img { max-width: 100%; max-height: 100%; object-fit: contain; }';
-                html += '.print-btn { position: fixed; top: 20px; right: 20px; padding: 14px 28px; background: #27ae60; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 15px; font-weight: 700; box-shadow: 0 6px 16px rgba(0,0,0,0.3); z-index: 1000; transition: all 0.3s; }';
-                html += '.print-btn:hover { background: #229954; transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.4); }';
-                html += '@media print { .no-print { display: none !important; } body { print-color-adjust: exact; -webkit-print-color-adjust: exact; } }';
-                html += '</style></head><body>';
-
-                // Print button
-                html += '<button class="print-btn no-print" onclick="window.print()">🖨️ Print</button>';
-
-                if (isMultiPage) {
-                    // Multi-page template - add each page
-                    for (let i = 0; i < renderedData.length; i++) {
-                        html += '<div class="page">';
-                        html += '<img src="' + renderedData[i] + '" alt="Page ' + (i + 1) + '">';
-                        html += '</div>';
-                    }
-                } else {
-                    // Single page template
-                    html += '<div class="page">';
-                    html += '<img src="' + renderedData + '" alt="' + formName + '">';
-                    html += '</div>';
-                }
-
-                html += '</body></html>';
-
-                // Open in new window
-                const printWindow = window.open('', '_blank');
-                printWindow.document.write(html);
-                printWindow.document.close();
-            } catch (error) {
-                console.error('Error rendering form:', error);
-                alert('Failed to render form: ' + error.message);
-            }
-        } else if (formData.webViewLink) {
-            // For PDF forms, open in viewer
+        // For other forms, just open the PDF
+        if (formData.webViewLink) {
             window.open(formData.webViewLink, '_blank');
         } else {
             alert('Form link not available');
