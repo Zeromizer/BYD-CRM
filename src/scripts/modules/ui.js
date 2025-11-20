@@ -1261,7 +1261,18 @@ async function displayCustomerDetails(customerId) {
                                style="display: none;"
                                onchange="handleFileSelect(event, ${customerId})">
                     </div>
-                    <p style="font-size: 12px; color: #7f8c8d; margin-top: 10px;">
+
+                    <div style="text-align: center; margin-top: 15px;">
+                        <button class="btn btn-primary" onclick="documentScanner.openScanner(${customerId})"
+                                style="padding: 12px 24px; font-size: 14px;">
+                            Scan Document / ID
+                        </button>
+                        <p style="font-size: 12px; color: #7f8c8d; margin-top: 8px;">
+                            Auto-crop and enhance documents with camera
+                        </p>
+                    </div>
+
+                    <p style="font-size: 12px; color: #7f8c8d; margin-top: 15px;">
                         ✓ Unlimited storage in Google Drive<br>
                         ✓ Access from any device<br>
                         ✓ Share with team members

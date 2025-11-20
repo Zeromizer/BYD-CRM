@@ -1910,3 +1910,122 @@ body {
     }
 }
 
+/* Document Scanner Styles */
+.scanner-modal-content {
+    max-width: 900px;
+    width: 95%;
+}
+
+.scanner-body {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.scanner-preview-container {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #000;
+    border-radius: 8px;
+    overflow: hidden;
+    min-height: 400px;
+}
+
+#scannerVideo,
+#scannerCanvas {
+    max-width: 100%;
+    height: auto;
+    display: block;
+}
+
+#scannerCanvas {
+    display: none;
+}
+
+#scannerOverlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+}
+
+#scannerOverlay.draggable {
+    pointer-events: all;
+    cursor: pointer;
+}
+
+.scanner-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.scanner-instructions {
+    text-align: center;
+    padding: 15px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 8px;
+    color: white;
+}
+
+.scanner-instructions p {
+    margin: 0 0 5px 0;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.scanner-instructions small {
+    font-size: 13px;
+    opacity: 0.9;
+}
+
+.scanner-buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.scanner-buttons .btn {
+    padding: 10px 20px;
+    font-size: 14px;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+    .scanner-modal-content {
+        width: 98%;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+
+    .scanner-preview-container {
+        min-height: 300px;
+    }
+
+    .scanner-buttons {
+        flex-direction: column;
+    }
+
+    .scanner-buttons .btn {
+        width: 100%;
+    }
+}
+
+/* Scanner loading animation */
+@keyframes scannerPulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+.scanner-loading {
+    animation: scannerPulse 1.5s ease-in-out infinite;
+}
+
