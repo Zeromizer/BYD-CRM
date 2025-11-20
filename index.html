@@ -371,14 +371,39 @@
 
                 <!-- Saved Presets Section -->
                 <div id="presetsSection" style="margin-bottom: 25px;">
-                    <div style="display: flex; gap: 10px; align-items: flex-end; margin-bottom: 15px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                        <h4 style="color: #2c3e50; margin: 0;">⭐ Saved Presets</h4>
+                        <button class="btn btn-small" onclick="togglePresetCreation()" style="background: #9c27b0; color: white;">➕ New Preset</button>
+                    </div>
+                    <div id="presetsList" style="display: flex; flex-wrap: wrap; gap: 10px; min-height: 40px;">
+                        <!-- Preset buttons will be inserted here -->
+                    </div>
+                </div>
+
+                <!-- Create New Preset Section (Initially Hidden) -->
+                <div id="createPresetSection" style="display: none; margin-bottom: 25px; padding: 15px; background: rgba(156, 39, 176, 0.05); border: 2px solid rgba(156, 39, 176, 0.2); border-radius: 8px;">
+                    <h4 style="color: #9c27b0; margin-bottom: 12px;">Create New Preset</h4>
+                    <div style="margin-bottom: 12px;">
+                        <label style="display: block; margin-bottom: 5px; color: #2c3e50; font-weight: 600; font-size: 13px;">Preset Name:</label>
+                        <input type="text" id="newPresetName" placeholder="e.g., PDPA + COE Bidding" style="width: 100%; padding: 8px; border: 2px solid #9c27b0; border-radius: 4px; font-size: 14px;">
+                    </div>
+                    <div style="display: flex; gap: 10px; margin-bottom: 12px;">
                         <div style="flex: 1;">
-                            <label style="display: block; margin-bottom: 8px; color: #2c3e50; font-weight: 600;">⭐ Quick Print from Preset:</label>
-                            <select id="presetDropdown" onchange="handlePresetSelection()" style="width: 100%; padding: 10px; border: 2px solid #9c27b0; border-radius: 6px; font-size: 14px; background: white;">
-                                <option value="">Choose a saved preset...</option>
+                            <label style="display: block; margin-bottom: 5px; color: #2c3e50; font-weight: 600; font-size: 13px;">Side 1:</label>
+                            <select id="newPresetSide1" style="width: 100%; padding: 8px; border: 2px solid #9c27b0; border-radius: 4px; font-size: 14px;">
+                                <option value="">Select...</option>
                             </select>
                         </div>
-                        <button class="btn btn-small" onclick="openPresetManagement()" style="background: #9c27b0; color: white; white-space: nowrap; padding: 10px 16px;">⚙️ Manage</button>
+                        <div style="flex: 1;">
+                            <label style="display: block; margin-bottom: 5px; color: #2c3e50; font-weight: 600; font-size: 13px;">Side 2:</label>
+                            <select id="newPresetSide2" style="width: 100%; padding: 8px; border: 2px solid #9c27b0; border-radius: 4px; font-size: 14px;">
+                                <option value="">Select...</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                        <button class="btn btn-small btn-secondary" onclick="togglePresetCreation()">Cancel</button>
+                        <button class="btn btn-small" onclick="saveNewPreset()" style="background: #9c27b0; color: white;">Save Preset</button>
                     </div>
                 </div>
 
@@ -410,68 +435,6 @@
             <div style="padding: 15px; border-top: 2px solid #ecf0f1; background: #f8f9fa; display: flex; gap: 10px; justify-content: flex-end;">
                 <button class="btn btn-secondary" onclick="closeCombinePrintModal()">Cancel</button>
                 <button class="btn btn-success" onclick="combinePrintForms()">🖨️ Preview & Print</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Preset Management Modal -->
-    <div class="modal" id="presetManagementModal" style="display: none;">
-        <div class="modal-content" style="max-width: 800px;">
-            <div class="modal-header">
-                <h2>⚙️ Preset & Form Settings</h2>
-                <span class="close-modal" onclick="closePresetManagement()">&times;</span>
-            </div>
-            <div class="modal-body">
-                <!-- Saved Presets Management -->
-                <div style="margin-bottom: 30px;">
-                    <h3 style="color: #9c27b0; margin-bottom: 15px;">📋 Saved Presets</h3>
-
-                    <!-- Create New Preset -->
-                    <div style="margin-bottom: 20px; padding: 15px; background: rgba(156, 39, 176, 0.05); border: 2px solid rgba(156, 39, 176, 0.2); border-radius: 8px;">
-                        <h4 style="color: #9c27b0; margin-bottom: 12px;">➕ Create New Preset</h4>
-                        <div style="margin-bottom: 12px;">
-                            <label style="display: block; margin-bottom: 5px; color: #2c3e50; font-weight: 600; font-size: 13px;">Preset Name:</label>
-                            <input type="text" id="newPresetName" placeholder="e.g., PDPA + COE Bidding" style="width: 100%; padding: 8px; border: 2px solid #9c27b0; border-radius: 4px; font-size: 14px;">
-                        </div>
-                        <div style="display: flex; gap: 10px; margin-bottom: 12px;">
-                            <div style="flex: 1;">
-                                <label style="display: block; margin-bottom: 5px; color: #2c3e50; font-weight: 600; font-size: 13px;">Side 1:</label>
-                                <select id="newPresetSide1" style="width: 100%; padding: 8px; border: 2px solid #9c27b0; border-radius: 4px; font-size: 14px;">
-                                    <option value="">Select...</option>
-                                </select>
-                            </div>
-                            <div style="flex: 1;">
-                                <label style="display: block; margin-bottom: 5px; color: #2c3e50; font-weight: 600; font-size: 13px;">Side 2:</label>
-                                <select id="newPresetSide2" style="width: 100%; padding: 8px; border: 2px solid #9c27b0; border-radius: 4px; font-size: 14px;">
-                                    <option value="">Select...</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div style="display: flex; gap: 8px; justify-content: flex-end;">
-                            <button class="btn btn-small" onclick="saveNewPreset()" style="background: #9c27b0; color: white;">Save Preset</button>
-                        </div>
-                    </div>
-
-                    <!-- Existing Presets List -->
-                    <div id="presetManagementList">
-                        <!-- Presets will be inserted here -->
-                    </div>
-                </div>
-
-                <!-- Form Visibility Settings -->
-                <div style="margin-bottom: 20px;">
-                    <h3 style="color: #00bcd4; margin-bottom: 15px;">👁️ Form Visibility in Dropdowns</h3>
-                    <p style="color: #7f8c8d; font-size: 13px; margin-bottom: 15px;">
-                        Control which forms appear in the combine & print dropdowns. Unchecked forms will be hidden from selection.
-                    </p>
-                    <div id="formVisibilitySettings" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px;">
-                        <!-- Form checkboxes will be inserted here -->
-                    </div>
-                </div>
-            </div>
-            <div style="padding: 15px; border-top: 2px solid #ecf0f1; background: #f8f9fa; display: flex; gap: 10px; justify-content: flex-end;">
-                <button class="btn btn-secondary" onclick="closePresetManagement()">Close</button>
-                <button class="btn btn-success" onclick="updateFormVisibilitySettings()">💾 Save Settings</button>
             </div>
         </div>
     </div>

@@ -162,37 +162,6 @@ async function saveCombinationPresets() {
     }
 }
 
-// ============ Form Visibility Settings ============
-
-// Load form visibility settings from localStorage
-function loadFormVisibilitySettings() {
-    const stored = localStorage.getItem('formVisibilitySettings');
-    if (stored) {
-        try {
-            formVisibilitySettings = JSON.parse(stored);
-            console.log('Loaded form visibility settings from localStorage');
-        } catch (e) {
-            console.error('Error parsing stored form visibility settings:', e);
-            formVisibilitySettings = {};
-        }
-    }
-}
-
-// Save form visibility settings to localStorage
-function saveFormVisibilitySettings() {
-    localStorage.setItem('formVisibilitySettings', JSON.stringify(formVisibilitySettings));
-    console.log('Saved form visibility settings to localStorage');
-}
-
-// Check if a form should be visible in dropdowns
-function isFormVisible(formType) {
-    // Default to visible if not explicitly set
-    if (!formVisibilitySettings.hasOwnProperty(formType)) {
-        return true;
-    }
-    return formVisibilitySettings[formType];
-}
-
 // Create a new combination preset
 async function createCombinationPreset(name, side1, side2) {
     if (!name || !side1 || !side2) {

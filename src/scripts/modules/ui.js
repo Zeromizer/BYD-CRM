@@ -339,105 +339,14 @@ async function openCombinePrintModal(customerId) {
     const modal = document.getElementById('combinePrintModal');
     const side1Select = document.getElementById('combineSide1');
     const side2Select = document.getElementById('combineSide2');
-    const presetDropdown = document.getElementById('presetDropdown');
-
-    // Clear existing options
-    side1Select.innerHTML = '<option value="">Select a form...</option>';
-    side2Select.innerHTML = '<option value="">Select a form...</option>';
-    presetDropdown.innerHTML = '<option value="">Choose a saved preset...</option>';
-
-    // Load form visibility settings
-    loadFormVisibilitySettings();
-
-    // Form type names for display
-    const formTypeNames = {
-        'test_drive': 'Test Drive Agreement',
-        'vsa': 'Vehicle Sales Agreement',
-        'pdpa': 'PDPA Consent Form',
-        'coe_bidding_1': 'COE Bidding 1',
-        'coe_bidding_2': 'COE Bidding 2',
-        'pdpa_consent_1': 'PDPA Consent 1',
-        'pdpa_consent_2': 'PDPA Consent 2',
-        'other': 'Other Form'
-    };
-
-    // Populate dropdowns with visible image forms only
-    for (const [formType, formData] of Object.entries(formTemplates)) {
-        if (formData.fileType === 'image' && isFormVisible(formType)) {
-            const formName = formTypeNames[formType] || formType;
-
-            const option1 = document.createElement('option');
-            option1.value = formType;
-            option1.textContent = formName;
-
-            const option2 = document.createElement('option');
-            option2.value = formType;
-            option2.textContent = formName;
-
-            side1Select.appendChild(option1);
-            side2Select.appendChild(option2);
-        }
-    }
-
-    // Load and display presets in dropdown
-    await loadCombinationPresets();
-    populatePresetDropdown();
-
-    // Show modal
-    modal.style.display = 'flex';
-}
-
-// Populate preset dropdown
-function populatePresetDropdown() {
-    const presetDropdown = document.getElementById('presetDropdown');
-
-    if (!presetDropdown) {
-        return;
-    }
-
-    // Clear existing options except default
-    presetDropdown.innerHTML = '<option value="">Choose a saved preset...</option>';
-
-    // Add each preset as an option
-    for (const [presetId, preset] of Object.entries(formCombinationPresets)) {
-        const option = document.createElement('option');
-        option.value = presetId;
-        option.textContent = preset.name;
-        presetDropdown.appendChild(option);
-    }
-}
-
-// Handle preset selection from dropdown
-function handlePresetSelection() {
-    const presetDropdown = document.getElementById('presetDropdown');
-    const presetId = presetDropdown.value;
-
-    if (!presetId) {
-        return; // No preset selected
-    }
-
-    // Use the preset to print
-    useCombinationPreset(presetId, currentCombineCustomerId);
-
-    // Reset dropdown after print initiated
-    setTimeout(() => {
-        presetDropdown.value = '';
-    }, 100);
-}
-
-// Open preset management modal
-async function openPresetManagement() {
-    const modal = document.getElementById('presetManagementModal');
     const newPresetSide1 = document.getElementById('newPresetSide1');
     const newPresetSide2 = document.getElementById('newPresetSide2');
 
-    // Clear preset creation inputs
-    document.getElementById('newPresetName').value = '';
+    // Clear existing options except the default
+    side1Select.innerHTML = '<option value="">Select a form...</option>';
+    side2Select.innerHTML = '<option value="">Select a form...</option>';
     newPresetSide1.innerHTML = '<option value="">Select...</option>';
     newPresetSide2.innerHTML = '<option value="">Select...</option>';
-
-    // Load form visibility settings
-    loadFormVisibilitySettings();
 
     // Form type names for display
     const formTypeNames = {
@@ -451,7 +360,7 @@ async function openPresetManagement() {
         'other': 'Other Form'
     };
 
-    // Populate form dropdowns with ALL image forms (not filtered by visibility)
+    // Populate all dropdowns with available image forms
     for (const [formType, formData] of Object.entries(formTemplates)) {
         if (formData.fileType === 'image') {
             const formName = formTypeNames[formType] || formType;
@@ -464,33 +373,39 @@ async function openPresetManagement() {
             option2.value = formType;
             option2.textContent = formName;
 
-            newPresetSide1.appendChild(option1);
-            newPresetSide2.appendChild(option2);
+            const option3 = document.createElement('option');
+            option3.value = formType;
+            option3.textContent = formName;
+
+            const option4 = document.createElement('option');
+            option4.value = formType;
+            option4.textContent = formName;
+
+            side1Select.appendChild(option1);
+            side2Select.appendChild(option2);
+            newPresetSide1.appendChild(option3);
+            newPresetSide2.appendChild(option4);
         }
     }
 
-    // Display existing presets
-    displayPresetManagementList();
-
-    // Display form visibility settings
-    displayFormVisibilitySettings();
+    // Load and display presets
+    await loadCombinationPresets();
+    displayCombinationPresets();
 
     // Show modal
     modal.style.display = 'flex';
 }
 
-// Close preset management modal
-function closePresetManagement() {
-    document.getElementById('presetManagementModal').style.display = 'none';
-}
+// Display combination presets as buttons
+function displayCombinationPresets() {
+    const presetsList = document.getElementById('presetsList');
 
-// Display presets in management modal
-function displayPresetManagementList() {
-    const presetManagementList = document.getElementById('presetManagementList');
-
-    if (!presetManagementList) {
+    if (!presetsList) {
         return;
     }
+
+    // Clear existing presets
+    presetsList.innerHTML = '';
 
     // Form type names for display
     const formTypeNames = {
@@ -504,35 +419,58 @@ function displayPresetManagementList() {
         'other': 'Other Form'
     };
 
+    // Check if there are any presets
     const presetCount = Object.keys(formCombinationPresets).length;
 
     if (presetCount === 0) {
-        presetManagementList.innerHTML = '<p style="color: #95a5a6; font-style: italic; padding: 15px; text-align: center;">No saved presets yet. Create one above!</p>';
+        presetsList.innerHTML = '<p style="color: #95a5a6; font-style: italic; margin: 10px 0;">No saved presets. Click "New Preset" to create one.</p>';
         return;
     }
 
-    let html = '<div style="display: flex; flex-direction: column; gap: 10px;">';
-
+    // Create buttons for each preset
     for (const [presetId, preset] of Object.entries(formCombinationPresets)) {
         const side1Name = formTypeNames[preset.side1] || preset.side1;
         const side2Name = formTypeNames[preset.side2] || preset.side2;
 
-        html += `
-            <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; background: white; border: 2px solid #e0e0e0; border-radius: 6px;">
-                <div>
-                    <strong style="color: #9c27b0; font-size: 15px;">${preset.name}</strong>
-                    <p style="color: #7f8c8d; font-size: 13px; margin-top: 4px;">Side 1: ${side1Name} | Side 2: ${side2Name}</p>
-                </div>
-                <button class="btn btn-small btn-danger" onclick="deletePresetFromManagement('${presetId}')" style="white-space: nowrap;">Delete</button>
-            </div>
+        const presetButton = document.createElement('div');
+        presetButton.style.cssText = 'position: relative; display: inline-block;';
+        presetButton.innerHTML = `
+            <button
+                class="btn btn-small"
+                onclick="useCombinationPreset('${presetId}', currentCombineCustomerId)"
+                style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 10px 35px 10px 15px; font-weight: 600; white-space: nowrap;"
+                title="${side1Name} + ${side2Name}">
+                ${preset.name}
+            </button>
+            <button
+                onclick="deletePresetAndRefresh('${presetId}')"
+                style="position: absolute; top: 2px; right: 2px; background: rgba(231, 76, 60, 0.9); color: white; border: none; border-radius: 50%; width: 22px; height: 22px; cursor: pointer; font-size: 12px; line-height: 1; padding: 0; font-weight: bold; display: flex; align-items: center; justify-content: center;"
+                title="Delete preset">
+                ×
+            </button>
         `;
-    }
 
-    html += '</div>';
-    presetManagementList.innerHTML = html;
+        presetsList.appendChild(presetButton);
+    }
 }
 
-// Save new preset from management modal
+// Toggle preset creation section
+function togglePresetCreation() {
+    const createSection = document.getElementById('createPresetSection');
+    const isVisible = createSection.style.display !== 'none';
+
+    if (isVisible) {
+        createSection.style.display = 'none';
+        // Clear inputs
+        document.getElementById('newPresetName').value = '';
+        document.getElementById('newPresetSide1').value = '';
+        document.getElementById('newPresetSide2').value = '';
+    } else {
+        createSection.style.display = 'block';
+    }
+}
+
+// Save new preset
 async function saveNewPreset() {
     const name = document.getElementById('newPresetName').value.trim();
     const side1 = document.getElementById('newPresetSide1').value;
@@ -542,80 +480,20 @@ async function saveNewPreset() {
 
     if (success) {
         // Refresh preset display
-        displayPresetManagementList();
-        // Clear inputs
-        document.getElementById('newPresetName').value = '';
-        document.getElementById('newPresetSide1').value = '';
-        document.getElementById('newPresetSide2').value = '';
+        displayCombinationPresets();
+        // Hide creation section
+        togglePresetCreation();
         alert('Preset saved successfully!');
     }
 }
 
-// Delete preset from management modal
-async function deletePresetFromManagement(presetId) {
+// Delete preset and refresh display
+async function deletePresetAndRefresh(presetId) {
     const success = await deleteCombinationPreset(presetId);
 
     if (success) {
-        displayPresetManagementList();
+        displayCombinationPresets();
     }
-}
-
-// Display form visibility settings
-function displayFormVisibilitySettings() {
-    const formVisibilityContainer = document.getElementById('formVisibilitySettings');
-
-    if (!formVisibilityContainer) {
-        return;
-    }
-
-    // Form type names for display
-    const formTypeNames = {
-        'test_drive': 'Test Drive Agreement',
-        'vsa': 'Vehicle Sales Agreement',
-        'pdpa': 'PDPA Consent Form',
-        'coe_bidding_1': 'COE Bidding 1',
-        'coe_bidding_2': 'COE Bidding 2',
-        'pdpa_consent_1': 'PDPA Consent 1',
-        'pdpa_consent_2': 'PDPA Consent 2',
-        'other': 'Other Form'
-    };
-
-    let html = '';
-
-    for (const [formType, formData] of Object.entries(formTemplates)) {
-        if (formData.fileType === 'image') {
-            const formName = formTypeNames[formType] || formType;
-            const isVisible = isFormVisible(formType);
-            const checked = isVisible ? 'checked' : '';
-
-            html += `
-                <div style="display: flex; align-items: center; padding: 10px; background: white; border: 2px solid #e0e0e0; border-radius: 6px;">
-                    <input type="checkbox" id="visibility_${formType}" ${checked} style="margin-right: 10px; width: 18px; height: 18px; cursor: pointer;">
-                    <label for="visibility_${formType}" style="cursor: pointer; font-size: 14px; color: #2c3e50;">${formName}</label>
-                </div>
-            `;
-        }
-    }
-
-    formVisibilityContainer.innerHTML = html;
-}
-
-// Update and save form visibility settings from management modal
-function updateFormVisibilitySettings() {
-    // Update formVisibilitySettings based on checkboxes
-    for (const [formType, formData] of Object.entries(formTemplates)) {
-        if (formData.fileType === 'image') {
-            const checkbox = document.getElementById(`visibility_${formType}`);
-            if (checkbox) {
-                formVisibilitySettings[formType] = checkbox.checked;
-            }
-        }
-    }
-
-    // Save to localStorage (calls function from forms.js)
-    saveFormVisibilitySettings();
-
-    alert('Form visibility settings saved!');
 }
 
 // Close combine print modal
@@ -623,10 +501,14 @@ function closeCombinePrintModal() {
     document.getElementById('combinePrintModal').style.display = 'none';
     currentCombineCustomerId = null;
 
-    // Reset preset dropdown
-    const presetDropdown = document.getElementById('presetDropdown');
-    if (presetDropdown) {
-        presetDropdown.value = '';
+    // Hide create preset section if it's open
+    const createSection = document.getElementById('createPresetSection');
+    if (createSection && createSection.style.display !== 'none') {
+        createSection.style.display = 'none';
+        // Clear inputs
+        document.getElementById('newPresetName').value = '';
+        document.getElementById('newPresetSide1').value = '';
+        document.getElementById('newPresetSide2').value = '';
     }
 }
 
