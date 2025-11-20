@@ -19,7 +19,9 @@ body {
 }
 
 .header {
-    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     color: white;
     padding: 10px 15px 15px 15px;
     margin-bottom: 20px;
@@ -32,20 +34,18 @@ body {
     letter-spacing: 6px;
     color: #ffffff;
     text-shadow: 0 0 15px rgba(0, 188, 212, 0.5);
-    margin-bottom: 10px;
+    margin-bottom: 0;
+    text-align: center;
+    flex: 1;
 }
 
 .header-actions {
     display: flex;
     gap: 12px;
-    flex-wrap: wrap;
-    justify-content: center;
+    align-items: center;
 }
 
 .google-drive-btn {
-    position: absolute;
-    top: 15px;
-    right: 15px;
     padding: 8px 16px;
     background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);
     border: 2px solid rgba(255, 255, 255, 0.1);
@@ -521,21 +521,15 @@ body {
     color: white;
 }
 
-/* Statistics Container and Button */
-.stats-container {
-    display: flex;
-    justify-content: center;
-    margin-bottom: 20px;
-}
-
+/* Statistics Button */
 .stats-button {
     position: relative;
     background: linear-gradient(135deg, #00bcd4 0%, #0097a7 100%);
     color: white;
     border: none;
-    padding: 12px 24px;
-    border-radius: 10px;
-    font-size: 14px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 13px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s ease;
@@ -921,16 +915,18 @@ body {
     }
 
     .header {
-        text-align: center;
-        padding-top: 50px;
-        padding-bottom: 12px;
+        flex-wrap: wrap;
+        padding: 12px 10px;
         margin-bottom: 15px;
+        gap: 10px;
     }
 
     .header h1 {
         font-size: 18px;
         line-height: 1.4;
         letter-spacing: 3px;
+        order: 2;
+        flex-basis: 100%;
     }
 
     .header h1 #syncStatus {
@@ -939,25 +935,25 @@ body {
         font-size: 12px !important;
     }
 
+    .stats-button {
+        font-size: 11px;
+        padding: 6px 12px;
+        order: 1;
+    }
+
+    .header-actions {
+        gap: 8px;
+        order: 3;
+    }
+
     .google-drive-btn {
-        top: 10px;
-        right: 10px;
         font-size: 11px;
         padding: 6px 12px;
     }
 
-    .header-actions {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        justify-content: center;
-    }
-
-    .header-actions .btn {
-        font-size: 12px;
-        padding: 8px 12px;
-        flex: 1 1 auto;
-        min-width: 120px;
+    .dropdown-toggle {
+        font-size: 20px !important;
+        padding: 6px 12px !important;
     }
 
     .stats-grid {
@@ -1252,19 +1248,22 @@ body {
 
     /* Header optimizations for small screens */
     .header {
-        padding: 8px 10px 10px 10px;
+        padding: 8px 10px;
         margin-bottom: 12px;
+        gap: 8px;
     }
 
     .header h1 {
         font-size: 16px;
         letter-spacing: 2px;
-        margin-bottom: 8px;
+    }
+
+    .stats-button {
+        font-size: 10px;
+        padding: 5px 10px;
     }
 
     .google-drive-btn {
-        top: 8px;
-        right: 8px;
         font-size: 10px;
         padding: 5px 10px;
         gap: 6px;
@@ -1280,11 +1279,9 @@ body {
         gap: 6px;
     }
 
-    .header-actions .btn {
-        font-size: 11px;
-        padding: 10px 14px;
-        min-width: 100px;
-        letter-spacing: 0.5px;
+    .dropdown-toggle {
+        font-size: 18px !important;
+        padding: 5px 10px !important;
     }
 
     /* Stats grid - single column on very small screens */
