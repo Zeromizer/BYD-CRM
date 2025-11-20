@@ -53,7 +53,6 @@ async function addCustomer(event) {
             vsaNo: document.getElementById('newCustomerVsaNo').value,
             address: document.getElementById('newCustomerAddress').value,
             addressContinue: document.getElementById('newCustomerAddressContinue').value,
-            model: document.getElementById('newCustomerModel').value,
             notes: document.getElementById('newCustomerNotes').value,
             dateAdded: new Date().toISOString(),
             checklist: {},
@@ -121,7 +120,7 @@ function renderCustomerList() {
     listContainer.innerHTML = customers.map(customer => `
         <div class="customer-item ${selectedCustomerId === customer.id ? 'active' : ''}" onclick="selectCustomer(${customer.id})">
             <h3>${customer.name} ${customer.driveFolderId ? '📁' : ''}</h3>
-            <p>📱 ${customer.phone} ${customer.model ? '| 🚗 ' + customer.model : ''}</p>
+            <p>📱 ${customer.phone}</p>
             ${customer.dealClosed ? '<span class="stage-badge" style="background: #27ae60; margin-left: 5px;">✓ Closed</span>' : ''}
         </div>
     `).join('');
@@ -160,7 +159,6 @@ function saveCustomerEdit(customerId) {
         customer.vsaNo = document.getElementById('customer_vsaNo').value;
         customer.address = document.getElementById('customer_address').value;
         customer.addressContinue = document.getElementById('customer_addressContinue').value;
-        customer.model = document.getElementById('customer_model').value;
         customer.notes = document.getElementById('customer_notes').value;
 
         // Save changes
@@ -251,7 +249,6 @@ function searchCustomers() {
     const filteredCustomers = customers.filter(c =>
         c.name.toLowerCase().includes(searchTerm) ||
         c.phone.includes(searchTerm) ||
-        (c.model && c.model.toLowerCase().includes(searchTerm)) ||
         (c.email && c.email.toLowerCase().includes(searchTerm))
     );
 
@@ -267,7 +264,7 @@ function searchCustomers() {
     listContainer.innerHTML = filteredCustomers.map(customer => `
         <div class="customer-item ${selectedCustomerId === customer.id ? 'active' : ''}" onclick="selectCustomer(${customer.id})">
             <h3>${customer.name} ${customer.driveFolderId ? '📁' : ''}</h3>
-            <p>📱 ${customer.phone} ${customer.model ? '| 🚗 ' + customer.model : ''}</p>
+            <p>📱 ${customer.phone}</p>
             ${customer.dealClosed ? '<span class="stage-badge" style="background: #27ae60; margin-left: 5px;">✓ Closed</span>' : ''}
         </div>
     `).join('');
