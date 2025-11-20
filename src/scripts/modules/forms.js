@@ -112,9 +112,6 @@ async function uploadFormTemplate() {
     const files = Array.from(fileInput.files);
     const formType = formTypeSelect.value;
 
-    console.log('Files selected:', files.length);
-    console.log('File names:', files.map(f => f.name));
-
     // Check if all files are of the same type
     const isPDF = files.every(f => f.type.includes('pdf'));
     const isImage = files.every(f => f.type.includes('image'));
@@ -150,7 +147,6 @@ async function uploadFormTemplate() {
             const pages = [];
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
-                console.log(`Uploading file ${i + 1}/${files.length}: ${file.name}`);
 
                 // Upload file to Google Drive
                 const metadata = {
@@ -176,7 +172,6 @@ async function uploadFormTemplate() {
                 }
 
                 const result = await response.json();
-                console.log(`File ${i + 1} uploaded successfully:`, result.name, 'ID:', result.id);
 
                 // Add to pages array
                 pages.push({
@@ -187,13 +182,9 @@ async function uploadFormTemplate() {
                 });
             }
 
-            console.log('Total pages uploaded:', pages.length);
-            console.log('Pages array:', pages);
-
             // Store form template info with pages array
             if (files.length === 1) {
                 // Single page template (backward compatible)
-                console.log('Saving as single-page template');
                 formTemplates[formType] = {
                     fileId: pages[0].fileId,
                     fileName: pages[0].fileName,
@@ -204,7 +195,6 @@ async function uploadFormTemplate() {
                 };
             } else {
                 // Multi-page template (new format)
-                console.log('Saving as multi-page template with', pages.length, 'pages');
                 formTemplates[formType] = {
                     pages: pages,
                     fileType: 'image',
@@ -213,9 +203,7 @@ async function uploadFormTemplate() {
                 };
             }
 
-            console.log('Form template to be saved:', formTemplates[formType]);
             await saveFormTemplates();
-            console.log('Form templates saved to storage');
 
             // Clear file input
             fileInput.value = '';
