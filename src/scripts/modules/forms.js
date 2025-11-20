@@ -1171,34 +1171,33 @@ async function renderFormWithData(formType, customer) {
                 const dataMapping = getCustomerDataMapping(customer);
 
                 // Draw each field
-                for (const [fieldId, field] of Object.entries(formData.fieldMappings)) {
-                    // Use custom value if provided, otherwise look up from customer data
-                    let text;
-                    if (field.customValue) {
-                        text = field.customValue;
-                    } else {
-                        text = dataMapping[field.type] || '';
-                    }
-
-                    if (!text) continue;
-
-                    ctx.fillStyle = field.color || '#000000';
-                    ctx.font = field.fontSize + 'px Arial';
-                    ctx.fillText(text, field.x, field.y);
+            for (const [fieldId, field] of Object.entries(formData.fieldMappings)) {
+                // Use custom value if provided, otherwise look up from customer data
+                let text;
+                if (field.customValue) {
+                    text = field.customValue;
+                } else {
+                    text = dataMapping[field.type] || '';
                 }
 
-                // Convert to base64
-                const filledFormBase64 = canvas.toDataURL('image/jpeg', 0.95);
-                resolve(filledFormBase64);
-            };
+                if (!text) continue;
 
-            img.onerror = function() {
-                reject(new Error('Failed to load form image'));
-            };
+                ctx.fillStyle = field.color || '#000000';
+                ctx.font = field.fontSize + 'px Arial';
+                ctx.fillText(text, field.x, field.y);
+            }
 
-            img.src = base64Data;
-        });
-    }
+            // Convert to base64
+            const filledFormBase64 = canvas.toDataURL('image/jpeg', 0.95);
+            resolve(filledFormBase64);
+        };
+
+        img.onerror = function() {
+            reject(new Error('Failed to load form image'));
+        };
+
+        img.src = base64Data;
+    });
 }
 
 // Print form for customer with attached documents
