@@ -50,6 +50,8 @@ let formImageCache = {}; // In-memory cache for form images from Drive
 let currentMappingFormType = null;
 let currentMappingCanvas = null;
 let currentMappingImage = null;
+let currentMappingPageIndex = 0; // Current page index for multi-page templates
+let currentMappingPages = []; // Array of page images for multi-page templates
 let tempFieldMappings = {};
 let currentCombineCustomerId = null;
 
