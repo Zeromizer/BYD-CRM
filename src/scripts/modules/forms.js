@@ -469,7 +469,6 @@ function updateMappedFieldsList() {
             'address': 'Address',
             'addressContinue': 'Address Continue',
             'fullAddress': 'Full Address (Combined)',
-            'model': 'Car Model',
             'date': 'Today\'s Date',
             'custom': 'Custom Value'
         };
@@ -964,7 +963,6 @@ async function renderFormWithData(formType, customer) {
                 'fullAddress': ((customer.address || '') + (customer.addressContinue ? ', ' + customer.addressContinue : '')).trim(),
                 'salesConsultant': customer.salesConsultant || '',
                 'vsaNo': customer.vsaNo || '',
-                'model': customer.model || '',
                 'date': today,
                 'vsa_makeModel': customer.vsaDetails?.makeModel || '',
                 'vsa_yom': customer.vsaDetails?.yom || '',

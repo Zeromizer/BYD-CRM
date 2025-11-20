@@ -24,7 +24,6 @@ function closeAddCustomerModal() {
     document.getElementById('newCustomerVsaNo').value = '';
     document.getElementById('newCustomerAddress').value = '';
     document.getElementById('newCustomerAddressContinue').value = '';
-    document.getElementById('newCustomerModel').value = '';
     document.getElementById('newCustomerNotes').value = '';
 
     // Reset progress UI
@@ -663,7 +662,6 @@ function updateMappedFieldsList() {
             'address': 'Address',
             'addressContinue': 'Address Continue',
             'fullAddress': 'Full Address (Combined)',
-            'model': 'Car Model',
             'date': 'Today\'s Date',
             'custom': 'Custom Value'
         };
@@ -1016,27 +1014,10 @@ async function displayCustomerDetails(customerId) {
                 </div>
             </div>
 
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Interested Model</label>
-                    <select id="customer_model">
-                        <option value="">Select Model</option>
-                        <option value="Seal" ${customer.model === 'Seal' ? 'selected' : ''}>Seal</option>
-                        <option value="Seal 6" ${customer.model === 'Seal 6' ? 'selected' : ''}>Seal 6</option>
-                        <option value="Sealion 6" ${customer.model === 'Sealion 6' ? 'selected' : ''}>Sealion 6</option>
-                        <option value="Sealion 7" ${customer.model === 'Sealion 7' ? 'selected' : ''}>Sealion 7</option>
-                        <option value="Dolphin" ${customer.model === 'Dolphin' ? 'selected' : ''}>Dolphin</option>
-                        <option value="Atto 2" ${customer.model === 'Atto 2' ? 'selected' : ''}>Atto 2</option>
-                        <option value="Atto 3" ${customer.model === 'Atto 3' ? 'selected' : ''}>Atto 3</option>
-                        <option value="M6" ${customer.model === 'M6' ? 'selected' : ''}>M6</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label style="visibility: hidden;">VSA</label>
-                    <button class="btn btn-primary" onclick="openVsaDetailsModal(${customer.id})" style="background: linear-gradient(135deg, #8e44ad 0%, #9b59b6 100%); width: 100%; height: 42px;">
-                        📋 VSA Details
-                    </button>
-                </div>
+            <div class="form-group">
+                <button class="btn btn-primary" onclick="openVsaDetailsModal(${customer.id})" style="background: linear-gradient(135deg, #8e44ad 0%, #9b59b6 100%); width: 100%; max-width: 300px;">
+                    📋 VSA Details
+                </button>
             </div>
 
             <div class="form-group">

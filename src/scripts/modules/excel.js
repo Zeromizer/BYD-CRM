@@ -376,7 +376,6 @@ function updateExcelMappingsList() {
         'fullAddress': 'Full Address (Combined)',
         'salesConsultant': 'Sales Consultant',
         'vsaNo': 'VSA No',
-        'model': 'Car Model',
         'date': 'Today\'s Date',
         'vsa_makeModel': 'VSA - Make & Model',
         'vsa_yom': 'VSA - YOM (Year of Manufacture)',
@@ -541,7 +540,6 @@ function updateExcelPreview() {
         'fullAddress': 'Full Address (Combined)',
         'salesConsultant': 'Sales Consultant',
         'vsaNo': 'VSA No',
-        'model': 'Car Model',
         'date': 'Today\'s Date',
         'vsa_makeModel': 'VSA - Make & Model',
         'vsa_yom': 'VSA - YOM (Year of Manufacture)',
@@ -690,7 +688,6 @@ async function downloadPopulatedExcel() {
             'fullAddress': ((customer.address || '') + (customer.addressContinue ? ', ' + customer.addressContinue : '')).trim(),
             'salesConsultant': customer.salesConsultant || '',
             'vsaNo': customer.vsaNo || '',
-            'model': customer.model || '',
             'date': new Date(), // Pass Date object to preserve Excel date formatting
             'vsa_makeModel': customer.vsaDetails?.makeModel || '',
             'vsa_yom': customer.vsaDetails?.yom || '',
