@@ -292,6 +292,8 @@ function displayFormsList() {
         'coe_bidding_2': 'COE Bidding 2',
         'pdpa_consent_1': 'PDPA Consent 1',
         'pdpa_consent_2': 'PDPA Consent 2',
+        'delivery_checklist_1': 'Delivery Checklist Form (1 of 2)',
+        'delivery_checklist_2': 'Delivery Checklist Form (2 of 2)',
         'other': 'Other Form'
     };
 
@@ -353,6 +355,8 @@ function openCombinePrintModal(customerId) {
         'coe_bidding_2': 'COE Bidding 2',
         'pdpa_consent_1': 'PDPA Consent 1',
         'pdpa_consent_2': 'PDPA Consent 2',
+        'delivery_checklist_1': 'Delivery Checklist Form (1 of 2)',
+        'delivery_checklist_2': 'Delivery Checklist Form (2 of 2)',
         'other': 'Other Form'
     };
 
