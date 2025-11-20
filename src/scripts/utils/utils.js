@@ -675,6 +675,7 @@ async function renderFormWithData(formType, customer) {
                 'dob': customer.dob || '',
                 'address': customer.address || '',
                 'addressContinue': customer.addressContinue || '',
+                'fullAddress': ((customer.address || '') + (customer.addressContinue ? ', ' + customer.addressContinue : '')).trim(),
                 'salesConsultant': customer.salesConsultant || '',
                 'vsaNo': customer.vsaNo || '',
                 'model': customer.model || '',
