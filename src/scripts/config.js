@@ -53,6 +53,13 @@ let currentMappingImage = null;
 let tempFieldMappings = {};
 let currentCombineCustomerId = null;
 
+// ============ Form Settings (Presets & Visibility) ============
+let formSettings = {
+    visibility: {}, // { formType: true/false } - controls if form appears in dropdown
+    combinationPresets: [] // Array of { id, name, side1, side2, createdDate }
+};
+let formSettingsDataFileId = null; // Google Drive file ID for form settings
+
 // ============ Excel Templates ============
 let excelTemplates = {}; // Store Excel template data
 let currentExcelTemplateId = null;

@@ -909,6 +909,97 @@ async function updateFormsDataFile(data) {
     return true;
 }
 
+// Get or create the form settings data file in Drive
+async function getOrCreateFormSettingsFile() {
+    if (!isSignedIn || !formsFolderId) {
+        console.log('Cannot sync form settings: not signed in or no forms folder');
+        return null;
+    }
+
+    try {
+        const FORM_SETTINGS_FILE_NAME = 'Form_Settings.json';
+
+        // Search for existing form settings file
+        const searchResponse = await gapi.client.drive.files.list({
+            q: `name='${FORM_SETTINGS_FILE_NAME}' and '${formsFolderId}' in parents and trashed=false`,
+            spaces: 'drive',
+            fields: 'files(id, name, modifiedTime)'
+        });
+
+        if (searchResponse.result.files.length > 0) {
+            formSettingsDataFileId = searchResponse.result.files[0].id;
+            console.log('Found existing form settings file:', formSettingsDataFileId);
+            return formSettingsDataFileId;
+        }
+
+        // Create new form settings file
+        console.log('Creating new form settings file...');
+        const createResponse = await gapi.client.drive.files.create({
+            resource: {
+                name: FORM_SETTINGS_FILE_NAME,
+                mimeType: 'application/json',
+                parents: [formsFolderId]
+            },
+            fields: 'id'
+        });
+
+        formSettingsDataFileId = createResponse.result.id;
+        console.log('Created form settings file:', formSettingsDataFileId);
+
+        // Initialize with default settings
+        await updateFormSettingsFile({ visibility: {}, combinationPresets: [] });
+
+        return formSettingsDataFileId;
+    } catch (error) {
+        console.error('Error with form settings file:', error);
+        return null;
+    }
+}
+
+// Update the form settings file in Drive
+async function updateFormSettingsFile(data) {
+    if (!formSettingsDataFileId) {
+        console.error('No form settings file ID');
+        return false;
+    }
+
+    const boundary = '-------314159265358979323846';
+    const delimiter = "\r\n--" + boundary + "\r\n";
+    const close_delim = "\r\n--" + boundary + "--";
+
+    const contentType = 'application/json';
+    const metadata = {
+        mimeType: contentType
+    };
+
+    const multipartRequestBody =
+        delimiter +
+        'Content-Type: application/json\r\n\r\n' +
+        JSON.stringify(metadata) +
+        delimiter +
+        'Content-Type: ' + contentType + '\r\n\r\n' +
+        JSON.stringify(data, null, 2) +
+        close_delim;
+
+    const response = await fetch(
+        `https://www.googleapis.com/upload/drive/v3/files/${formSettingsDataFileId}?uploadType=multipart`,
+        {
+            method: 'PATCH',
+            headers: {
+                'Authorization': 'Bearer ' + gapi.client.getToken().access_token,
+                'Content-Type': 'multipart/related; boundary="' + boundary + '"'
+            },
+            body: multipartRequestBody
+        }
+    );
+
+    if (!response.ok) {
+        throw new Error('Failed to update form settings file');
+    }
+
+    return true;
+}
+
 // Get or create the Excel templates data file in Drive
 async function getOrCreateExcelDataFile() {
     if (!isSignedIn || !excelTemplatesFolderId) {
