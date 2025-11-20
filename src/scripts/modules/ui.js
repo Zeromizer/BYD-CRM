@@ -615,66 +615,7 @@ function updateFormVisibilitySettings() {
     // Save to localStorage (calls function from forms.js)
     saveFormVisibilitySettings();
 
-    // Refresh the combine print modal dropdowns if it's open
-    refreshCombinePrintDropdowns();
-
     alert('Form visibility settings saved!');
-}
-
-// Refresh the form dropdowns in combine print modal
-function refreshCombinePrintDropdowns() {
-    const side1Select = document.getElementById('combineSide1');
-    const side2Select = document.getElementById('combineSide2');
-
-    if (!side1Select || !side2Select) {
-        return; // Modal not open or elements not found
-    }
-
-    // Save current selections
-    const currentSide1 = side1Select.value;
-    const currentSide2 = side2Select.value;
-
-    // Clear existing options
-    side1Select.innerHTML = '<option value="">Select a form...</option>';
-    side2Select.innerHTML = '<option value="">Select a form...</option>';
-
-    // Form type names for display
-    const formTypeNames = {
-        'test_drive': 'Test Drive Agreement',
-        'vsa': 'Vehicle Sales Agreement',
-        'pdpa': 'PDPA Consent Form',
-        'coe_bidding_1': 'COE Bidding 1',
-        'coe_bidding_2': 'COE Bidding 2',
-        'pdpa_consent_1': 'PDPA Consent 1',
-        'pdpa_consent_2': 'PDPA Consent 2',
-        'other': 'Other Form'
-    };
-
-    // Populate dropdowns with visible image forms only
-    for (const [formType, formData] of Object.entries(formTemplates)) {
-        if (formData.fileType === 'image' && isFormVisible(formType)) {
-            const formName = formTypeNames[formType] || formType;
-
-            const option1 = document.createElement('option');
-            option1.value = formType;
-            option1.textContent = formName;
-
-            const option2 = document.createElement('option');
-            option2.value = formType;
-            option2.textContent = formName;
-
-            side1Select.appendChild(option1);
-            side2Select.appendChild(option2);
-        }
-    }
-
-    // Restore selections if the forms are still visible
-    if (currentSide1 && isFormVisible(currentSide1)) {
-        side1Select.value = currentSide1;
-    }
-    if (currentSide2 && isFormVisible(currentSide2)) {
-        side2Select.value = currentSide2;
-    }
 }
 
 // Close combine print modal
