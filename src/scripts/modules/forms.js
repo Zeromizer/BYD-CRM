@@ -26,9 +26,8 @@ async function openFormsModal() {
         // Ensure forms folder exists
         await getOrCreateFormsFolder();
 
-        // Load form templates and settings
+        // Load form templates
         await loadFormTemplates();
-        await loadFormSettings();
         displayFormsList();
     }
 }
@@ -98,288 +97,6 @@ async function saveFormTemplates() {
             console.error('Error saving forms to Drive:', error);
         }
     }
-}
-
-// ============ Form Settings Management ============
-
-// Load form settings from Google Drive and localStorage
-async function loadFormSettings() {
-    // Try to load from Google Drive first
-    if (isSignedIn && formsFolderId) {
-        try {
-            await getOrCreateFormSettingsFile();
-
-            if (formSettingsDataFileId) {
-                const response = await gapi.client.drive.files.get({
-                    fileId: formSettingsDataFileId,
-                    alt: 'media'
-                });
-
-                if (response.result) {
-                    formSettings = response.result;
-                    // Cache in localStorage
-                    localStorage.setItem('formSettings', JSON.stringify(formSettings));
-                    console.log('Loaded form settings from Drive');
-                    return;
-                }
-            }
-        } catch (error) {
-            console.error('Error loading form settings from Drive:', error);
-        }
-    }
-
-    // Fallback to localStorage
-    const stored = localStorage.getItem('formSettings');
-    if (stored) {
-        try {
-            formSettings = JSON.parse(stored);
-            console.log('Loaded form settings from localStorage');
-        } catch (e) {
-            console.error('Error parsing stored form settings:', e);
-            formSettings = {
-                visibility: {},
-                combinationPresets: []
-            };
-        }
-    }
-
-    // Ensure all uploaded forms have visibility settings (default to true)
-    for (const formType of Object.keys(formTemplates)) {
-        if (formSettings.visibility[formType] === undefined) {
-            formSettings.visibility[formType] = true;
-        }
-    }
-}
-
-// Save form settings to Google Drive and localStorage
-async function saveFormSettings() {
-    // Save to localStorage for quick access
-    localStorage.setItem('formSettings', JSON.stringify(formSettings));
-
-    // Save to Google Drive for cross-device sync
-    if (isSignedIn && formsFolderId) {
-        try {
-            if (!formSettingsDataFileId) {
-                await getOrCreateFormSettingsFile();
-            }
-
-            if (formSettingsDataFileId) {
-                await updateFormSettingsFile(formSettings);
-                console.log('Saved form settings to Drive');
-            }
-        } catch (error) {
-            console.error('Error saving form settings to Drive:', error);
-        }
-    }
-}
-
-// Toggle form visibility
-async function toggleFormVisibility(formType) {
-    formSettings.visibility[formType] = !formSettings.visibility[formType];
-    await saveFormSettings();
-    displayFormVisibilityToggles();
-
-    // Refresh customer details if a customer is selected
-    if (selectedCustomerId !== null) {
-        displayCustomerDetails(customers.find(c => c.id === selectedCustomerId));
-    }
-}
-
-// Display form visibility toggles
-function displayFormVisibilityToggles() {
-    const container = document.getElementById('formVisibilityToggles');
-
-    const formTypeNames = {
-        'test_drive': 'Test Drive Agreement',
-        'vsa': 'Vehicle Sales Agreement',
-        'pdpa': 'PDPA Consent Form',
-        'coe_bidding_1': 'COE Bidding 1',
-        'coe_bidding_2': 'COE Bidding 2',
-        'pdpa_consent_1': 'PDPA Consent 1',
-        'pdpa_consent_2': 'PDPA Consent 2',
-        'other': 'Other Form'
-    };
-
-    if (Object.keys(formTemplates).length === 0) {
-        container.innerHTML = '<p style="color: #95a5a6; font-size: 13px; font-style: italic;">Upload forms to manage visibility settings</p>';
-        return;
-    }
-
-    let html = '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px;">';
-
-    for (const formType of Object.keys(formTemplates)) {
-        const formName = formTypeNames[formType] || formType;
-        const isVisible = formSettings.visibility[formType] !== false;
-
-        html += `
-            <div style="display: flex; align-items: center; padding: 10px; background: white; border: 1px solid #e0e0e0; border-radius: 6px;">
-                <label style="display: flex; align-items: center; cursor: pointer; flex: 1; gap: 10px;">
-                    <input type="checkbox"
-                           onchange="toggleFormVisibility('${formType}')"
-                           ${isVisible ? 'checked' : ''}
-                           style="width: 18px; height: 18px; cursor: pointer;">
-                    <span style="color: #2c3e50; font-size: 13px; font-weight: 500;">${formName}</span>
-                </label>
-                <span style="font-size: 11px; color: ${isVisible ? '#27ae60' : '#95a5a6'}; font-weight: 600;">
-                    ${isVisible ? 'VISIBLE' : 'HIDDEN'}
-                </span>
-            </div>
-        `;
-    }
-
-    html += '</div>';
-    container.innerHTML = html;
-}
-
-// Create combination preset
-async function createCombinationPreset() {
-    const nameInput = document.getElementById('newPresetName');
-    const side1Select = document.getElementById('presetSide1');
-    const side2Select = document.getElementById('presetSide2');
-
-    const name = nameInput.value.trim();
-    const side1 = side1Select.value;
-    const side2 = side2Select.value;
-
-    if (!name) {
-        alert('Please enter a preset name');
-        return;
-    }
-
-    if (!side1 || !side2) {
-        alert('Please select both forms for the combination');
-        return;
-    }
-
-    if (side1 === side2) {
-        alert('Please select two different forms');
-        return;
-    }
-
-    // Check if preset name already exists
-    if (formSettings.combinationPresets.some(p => p.name === name)) {
-        alert('A preset with this name already exists. Please choose a different name.');
-        return;
-    }
-
-    // Create preset
-    const preset = {
-        id: Date.now().toString(),
-        name: name,
-        side1: side1,
-        side2: side2,
-        createdDate: new Date().toISOString()
-    };
-
-    formSettings.combinationPresets.push(preset);
-    await saveFormSettings();
-
-    // Clear inputs
-    nameInput.value = '';
-    side1Select.value = '';
-    side2Select.value = '';
-
-    // Refresh display
-    displaySavedPresets();
-
-    alert('Preset created successfully!');
-}
-
-// Delete combination preset
-async function deleteCombinationPreset(presetId) {
-    if (!confirm('Are you sure you want to delete this preset?')) {
-        return;
-    }
-
-    formSettings.combinationPresets = formSettings.combinationPresets.filter(p => p.id !== presetId);
-    await saveFormSettings();
-    displaySavedPresets();
-}
-
-// Apply combination preset in combine modal
-function applyCombinationPreset(presetId, customerId) {
-    const preset = formSettings.combinationPresets.find(p => p.id === presetId);
-    if (!preset) return;
-
-    // Set the combine modal selections
-    document.getElementById('combineSide1').value = preset.side1;
-    document.getElementById('combineSide2').value = preset.side2;
-}
-
-// Display saved presets
-function displaySavedPresets() {
-    const container = document.getElementById('savedPresetsList');
-
-    const formTypeNames = {
-        'test_drive': 'Test Drive Agreement',
-        'vsa': 'Vehicle Sales Agreement',
-        'pdpa': 'PDPA Consent Form',
-        'coe_bidding_1': 'COE Bidding 1',
-        'coe_bidding_2': 'COE Bidding 2',
-        'pdpa_consent_1': 'PDPA Consent 1',
-        'pdpa_consent_2': 'PDPA Consent 2',
-        'other': 'Other Form'
-    };
-
-    if (formSettings.combinationPresets.length === 0) {
-        container.innerHTML = '<p style="color: #95a5a6; font-size: 13px; font-style: italic;">No presets created yet</p>';
-        return;
-    }
-
-    let html = '<div style="display: flex; flex-direction: column; gap: 8px;">';
-
-    for (const preset of formSettings.combinationPresets) {
-        const side1Name = formTypeNames[preset.side1] || preset.side1;
-        const side2Name = formTypeNames[preset.side2] || preset.side2;
-
-        html += `
-            <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px; background: white; border: 1px solid #e0e0e0; border-radius: 6px;">
-                <div style="flex: 1;">
-                    <div style="color: #2c3e50; font-weight: 600; margin-bottom: 4px; font-size: 14px;">
-                        ${preset.name}
-                    </div>
-                    <div style="color: #7f8c8d; font-size: 12px;">
-                        ${side1Name} + ${side2Name}
-                    </div>
-                </div>
-                <button class="btn btn-small btn-danger" onclick="deleteCombinationPreset('${preset.id}')" style="padding: 6px 12px; font-size: 12px;">
-                    🗑️ Delete
-                </button>
-            </div>
-        `;
-    }
-
-    html += '</div>';
-    container.innerHTML = html;
-}
-
-// Update preset dropdowns in the settings section
-function updatePresetFormDropdowns() {
-    const side1Select = document.getElementById('presetSide1');
-    const side2Select = document.getElementById('presetSide2');
-
-    const formTypeNames = {
-        'test_drive': 'Test Drive Agreement',
-        'vsa': 'Vehicle Sales Agreement',
-        'pdpa': 'PDPA Consent Form',
-        'coe_bidding_1': 'COE Bidding 1',
-        'coe_bidding_2': 'COE Bidding 2',
-        'pdpa_consent_1': 'PDPA Consent 1',
-        'pdpa_consent_2': 'PDPA Consent 2',
-        'other': 'Other Form'
-    };
-
-    // Populate both dropdowns with image forms only
-    let options = '<option value="">Select form...</option>';
-    for (const [formType, formData] of Object.entries(formTemplates)) {
-        if (formData.fileType === 'image') {
-            const formName = formTypeNames[formType] || formType;
-            options += `<option value="${formType}">${formName}</option>`;
-        }
-    }
-
-    if (side1Select) side1Select.innerHTML = options;
-    if (side2Select) side2Select.innerHTML = options;
 }
 
 // Upload form template
@@ -456,12 +173,6 @@ async function uploadFormTemplate() {
 
             await saveFormTemplates();
 
-            // Set default visibility to true for new forms
-            if (formSettings.visibility[formType] === undefined) {
-                formSettings.visibility[formType] = true;
-                await saveFormSettings();
-            }
-
             // Clear file input
             fileInput.value = '';
 
@@ -518,12 +229,6 @@ async function uploadFormTemplate() {
 
             await saveFormTemplates();
 
-            // Set default visibility to true for new forms
-            if (formSettings.visibility[formType] === undefined) {
-                formSettings.visibility[formType] = true;
-                await saveFormSettings();
-            }
-
             // Clear file input
             fileInput.value = '';
 
@@ -560,10 +265,6 @@ function displayFormsList() {
 
     if (Object.keys(formTemplates).length === 0) {
         container.innerHTML = '<div style="text-align: center; padding: 20px; color: #7f8c8d;">No forms uploaded yet</div>';
-        // Also update the settings UI
-        displayFormVisibilityToggles();
-        displaySavedPresets();
-        updatePresetFormDropdowns();
         return;
     }
 
@@ -595,11 +296,6 @@ function displayFormsList() {
     }
 
     container.innerHTML = html;
-
-    // Update the preset settings UI
-    displayFormVisibilityToggles();
-    displaySavedPresets();
-    updatePresetFormDropdowns();
 }
 
 // View form
@@ -927,59 +623,8 @@ function openCombinePrintModal(customerId) {
         }
     }
 
-    // Display preset buttons
-    displayCombinePresets();
-
     // Show modal
     modal.style.display = 'flex';
-}
-
-// Display preset quick-access buttons in combine modal
-function displayCombinePresets() {
-    const container = document.getElementById('combinePresetsContainer');
-
-    const formTypeNames = {
-        'test_drive': 'Test Drive Agreement',
-        'vsa': 'Vehicle Sales Agreement',
-        'pdpa': 'PDPA Consent Form',
-        'coe_bidding_1': 'COE Bidding 1',
-        'coe_bidding_2': 'COE Bidding 2',
-        'pdpa_consent_1': 'PDPA Consent 1',
-        'pdpa_consent_2': 'PDPA Consent 2',
-        'other': 'Other Form'
-    };
-
-    if (!formSettings.combinationPresets || formSettings.combinationPresets.length === 0) {
-        container.innerHTML = '';
-        return;
-    }
-
-    let html = `
-        <div style="padding: 12px; background: rgba(155, 89, 182, 0.1); border: 2px solid rgba(155, 89, 182, 0.3); border-radius: 8px;">
-            <h4 style="color: #9b59b6; margin-bottom: 10px; font-size: 14px;">⚡ Quick Apply Presets</h4>
-            <div style="display: flex; flex-wrap: wrap; gap: 8px;">
-    `;
-
-    for (const preset of formSettings.combinationPresets) {
-        const side1Name = formTypeNames[preset.side1] || preset.side1;
-        const side2Name = formTypeNames[preset.side2] || preset.side2;
-
-        html += `
-            <button onclick="applyCombinationPreset('${preset.id}')"
-                    class="btn btn-small"
-                    style="background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%); color: white; padding: 8px 12px; font-size: 12px; border: none; cursor: pointer; border-radius: 6px; box-shadow: 0 2px 4px rgba(155, 89, 182, 0.3);"
-                    title="${side1Name} + ${side2Name}">
-                ${preset.name}
-            </button>
-        `;
-    }
-
-    html += `
-            </div>
-        </div>
-    `;
-
-    container.innerHTML = html;
 }
 
 // Close combine print modal
