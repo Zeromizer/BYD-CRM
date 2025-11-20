@@ -578,6 +578,10 @@ class DocumentScanner {
                 return;
             }
 
+            // Save customerId to local variable BEFORE closing scanner
+            // (closeScanner clears this.currentCustomerId)
+            const customerId = this.currentCustomerId;
+
             // Convert base64 to blob
             console.log('Converting image to blob...');
             const blob = await fetch(this.capturedImage).then(r => r.blob());
@@ -599,14 +603,14 @@ class DocumentScanner {
             console.log('Calling uploadFiles with:', {
                 fileName: file.name,
                 fileSize: file.size,
-                customerId: this.currentCustomerId
+                customerId: customerId
             });
 
             // Close scanner
             this.closeScanner();
 
-            // Upload using existing upload flow
-            await uploadFiles([file], this.currentCustomerId);
+            // Upload using existing upload flow (use local variable, not this.currentCustomerId)
+            await uploadFiles([file], customerId);
             console.log('Upload initiated successfully');
 
         } catch (error) {
