@@ -660,6 +660,9 @@ function updateMappedFieldsList() {
             'name': 'Customer Name',
             'phone': 'Phone Number',
             'email': 'Email',
+            'address': 'Address',
+            'addressContinue': 'Address Continue',
+            'fullAddress': 'Full Address (Combined)',
             'model': 'Car Model',
             'date': 'Today\'s Date',
             'custom': 'Custom Value'
