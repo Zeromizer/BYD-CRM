@@ -36,6 +36,7 @@ async function openFormsModal() {
 function closeFormsModal() {
     document.getElementById('formsModal').classList.remove('active');
     document.getElementById('formFileInput').value = '';
+    document.getElementById('formNameInput').value = '';
 }
 
 // Load form templates from Google Drive and localStorage
@@ -103,9 +104,16 @@ async function saveFormTemplates() {
 async function uploadFormTemplate() {
     const fileInput = document.getElementById('formFileInput');
     const formTypeSelect = document.getElementById('formTypeSelect');
+    const formNameInput = document.getElementById('formNameInput');
 
     if (!fileInput.files || fileInput.files.length === 0) {
         alert('Please select a file to upload');
+        return;
+    }
+
+    const formName = formNameInput.value.trim();
+    if (!formName) {
+        alert('Please enter a name for this form');
         return;
     }
 
@@ -165,6 +173,7 @@ async function uploadFormTemplate() {
             formTemplates[formType] = {
                 fileId: result.id,
                 fileName: result.name,
+                formName: formName,
                 webViewLink: result.webViewLink,
                 webContentLink: result.webContentLink,
                 fileType: 'image',
@@ -175,6 +184,7 @@ async function uploadFormTemplate() {
 
             // Clear file input
             fileInput.value = '';
+            formNameInput.value = '';
 
             // Refresh forms list
             displayFormsList();
@@ -221,6 +231,7 @@ async function uploadFormTemplate() {
             formTemplates[formType] = {
                 fileId: result.id,
                 fileName: result.name,
+                formName: formName,
                 webViewLink: result.webViewLink,
                 webContentLink: result.webContentLink,
                 fileType: 'pdf',
@@ -231,6 +242,7 @@ async function uploadFormTemplate() {
 
             // Clear file input
             fileInput.value = '';
+            formNameInput.value = '';
 
             // Refresh forms list
             displayFormsList();
@@ -270,7 +282,7 @@ function displayFormsList() {
 
     let html = '';
     for (const [formType, formData] of Object.entries(formTemplates)) {
-        const formName = formTypeNames[formType] || formType;
+        const formName = formData.formName || formTypeNames[formType] || formType;
         const uploadDate = new Date(formData.uploadDate).toLocaleDateString();
 
         const hasFieldMapping = formData.fileType === 'image';
