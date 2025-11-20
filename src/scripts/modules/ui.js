@@ -54,6 +54,24 @@ document.addEventListener('click', function(event) {
     }
 });
 
+// Open statistics modal
+function openStatisticsModal() {
+    // Close dropdown menu
+    const dropdownMenu = document.getElementById('headerDropdownMenu');
+    if (dropdownMenu) {
+        dropdownMenu.classList.remove('show');
+    }
+
+    // Update stats and open modal
+    updateStats();
+    document.getElementById('statisticsModal').classList.add('active');
+}
+
+// Close statistics modal
+function closeStatisticsModal() {
+    document.getElementById('statisticsModal').classList.remove('active');
+}
+
 // Update sync status indicator in UI
 function updateSyncStatus(status) {
     const statusElement = document.getElementById('syncStatus');
@@ -1287,14 +1305,22 @@ async function displayCustomerDetails(customerId) {
 
 // Update statistics display
 async function updateStats(forceRefresh = false) {
-    document.getElementById('totalCustomers').textContent = customers.length;
-
+    const totalCustomers = customers.length;
     const activeDeals = customers.filter(c => !c.dealClosed).length;
-    document.getElementById('activeDeals').textContent = activeDeals;
-
-    // Count folders
     const foldersCreated = customers.filter(c => c.driveFolderId).length;
-    document.getElementById('totalFolders').textContent = foldersCreated;
+
+    // Update all stat elements (both old inline stats and modal stats)
+    const updateElement = (id, value) => {
+        const elem = document.getElementById(id);
+        if (elem) elem.textContent = value;
+    };
+
+    updateElement('totalCustomers', totalCustomers);
+    updateElement('modalTotalCustomers', totalCustomers);
+    updateElement('activeDeals', activeDeals);
+    updateElement('modalActiveDeals', activeDeals);
+    updateElement('totalFolders', foldersCreated);
+    updateElement('modalTotalFolders', foldersCreated);
 
     // Count files with caching and parallel execution
     if (isSignedIn && rootFolderId) {
@@ -1303,11 +1329,13 @@ async function updateStats(forceRefresh = false) {
 
         if (cacheValid) {
             // Use cached value
-            document.getElementById('totalFiles').textContent = statsCache.totalFiles;
+            updateElement('totalFiles', statsCache.totalFiles);
+            updateElement('modalTotalFiles', statsCache.totalFiles);
         } else {
             try {
                 // Show loading indicator
-                document.getElementById('totalFiles').textContent = '...';
+                updateElement('totalFiles', '...');
+                updateElement('modalTotalFiles', '...');
 
                 // Fetch file counts for all customers in parallel
                 const customersWithFolders = customers.filter(c => c.driveFolderId);
@@ -1329,14 +1357,17 @@ async function updateStats(forceRefresh = false) {
                 statsCache.totalFiles = totalFiles;
                 statsCache.lastUpdate = now;
 
-                document.getElementById('totalFiles').textContent = totalFiles;
+                updateElement('totalFiles', totalFiles);
+                updateElement('modalTotalFiles', totalFiles);
             } catch (error) {
                 console.error('Error updating stats:', error);
-                document.getElementById('totalFiles').textContent = '?';
+                updateElement('totalFiles', '?');
+                updateElement('modalTotalFiles', '?');
             }
         }
     } else {
-        document.getElementById('totalFiles').textContent = '0';
+        updateElement('totalFiles', '0');
+        updateElement('modalTotalFiles', '0');
     }
 }
 

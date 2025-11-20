@@ -11,29 +11,6 @@
 <body>
     <div class="container">
         <div class="header">
-            <button class="stats-button" title="View Statistics">
-                Statistics
-                <div class="stats-tooltip">
-                    <div class="stats-tooltip-content">
-                        <div class="stat-item">
-                            <span class="stat-label">Total Customers:</span>
-                            <span class="stat-value" id="totalCustomers">0</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-label">Active Deals:</span>
-                            <span class="stat-value" id="activeDeals">0</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-label">Files in Drive:</span>
-                            <span class="stat-value" id="totalFiles">0</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-label">Folders Created:</span>
-                            <span class="stat-value" id="totalFolders">0</span>
-                        </div>
-                    </div>
-                </div>
-            </button>
             <h1>BYD MotorEast CRM <span id="syncStatus" style="font-size: 14px; font-weight: normal; margin-left: 10px;"></span></h1>
             <div class="header-actions">
                 <button class="google-drive-btn" id="authButton" onclick="handleAuthClick()" disabled title="Google Drive Connection">
@@ -45,8 +22,9 @@
                         ⋮
                     </button>
                     <div class="dropdown-menu" id="headerDropdownMenu">
+                        <a class="dropdown-item" onclick="openStatisticsModal()">📊 View Statistics</a>
                         <a class="dropdown-item" onclick="openFormsModal()">📄 Manage Forms</a>
-                        <a class="dropdown-item" onclick="openExcelModal()">📊 Manage Excel</a>
+                        <a class="dropdown-item" onclick="openExcelModal()">📋 Manage Excel</a>
                         <a class="dropdown-item" onclick="forceSyncFromDrive()">🔄 Force Sync</a>
                         <a class="dropdown-item" onclick="exportData()">💾 Export Data</a>
                         <a class="dropdown-item" onclick="importData()">📥 Import Data</a>
@@ -155,6 +133,36 @@
                     <button type="button" class="btn btn-secondary" onclick="closeAddCustomerModal()">Cancel</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- Statistics Modal -->
+    <div class="modal" id="statisticsModal">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-header">
+                <h2>📊 Statistics</h2>
+                <span class="close-modal" onclick="closeStatisticsModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3>Total Customers</h3>
+                        <p id="modalTotalCustomers">0</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Active Deals</h3>
+                        <p id="modalActiveDeals">0</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Files in Drive</h3>
+                        <p id="modalTotalFiles">0</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Folders Created</h3>
+                        <p id="modalTotalFolders">0</p>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
