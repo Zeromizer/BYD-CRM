@@ -78,7 +78,7 @@ class DocumentScanner {
         try {
             this.video = document.getElementById('scannerVideo');
             this.canvas = document.getElementById('scannerCanvas');
-            this.ctx = this.canvas.getContext('2d');
+            this.ctx = this.canvas.getContext('2d', { willReadFrequently: true });
 
             // Request camera access with high resolution
             this.stream = await navigator.mediaDevices.getUserMedia({
@@ -366,7 +366,7 @@ class DocumentScanner {
         const overlay = document.getElementById('scannerOverlay');
         if (!overlay) return;
 
-        const overlayCtx = overlay.getContext('2d');
+        const overlayCtx = overlay.getContext('2d', { willReadFrequently: true });
         overlayCtx.clearRect(0, 0, overlay.width, overlay.height);
 
         if (!this.corners || this.isAdjusting) return;
@@ -397,7 +397,7 @@ class DocumentScanner {
     adjustCorners() {
         this.isAdjusting = true;
         const overlay = document.getElementById('scannerOverlay');
-        const overlayCtx = overlay.getContext('2d');
+        const overlayCtx = overlay.getContext('2d', { willReadFrequently: true });
 
         // Redraw with larger, draggable corners
         overlayCtx.clearRect(0, 0, overlay.width, overlay.height);
@@ -518,7 +518,7 @@ class DocumentScanner {
             overlay.removeEventListener('mousemove', handleMouseMove);
             overlay.removeEventListener('mouseup', handleMouseUp);
 
-            const overlayCtx = overlay.getContext('2d');
+            const overlayCtx = overlay.getContext('2d', { willReadFrequently: true });
             overlayCtx.clearRect(0, 0, overlay.width, overlay.height);
 
             document.getElementById('adjustBtn').textContent = 'Adjust Corners';
@@ -541,7 +541,7 @@ class DocumentScanner {
 
         // Clear overlay
         const overlay = document.getElementById('scannerOverlay');
-        const overlayCtx = overlay.getContext('2d');
+        const overlayCtx = overlay.getContext('2d', { willReadFrequently: true });
         overlayCtx.clearRect(0, 0, overlay.width, overlay.height);
 
         // Restart camera
@@ -562,28 +562,57 @@ class DocumentScanner {
      * Save scanned document
      */
     async saveDocument() {
-        if (!this.capturedImage) {
-            alert('No document captured');
-            return;
-        }
+        try {
+            console.log('saveDocument called', {
+                capturedImage: !!this.capturedImage,
+                customerId: this.currentCustomerId
+            });
 
-        // Convert base64 to blob
-        const blob = await fetch(this.capturedImage).then(r => r.blob());
+            if (!this.capturedImage) {
+                alert('No document captured');
+                return;
+            }
 
-        // Create file with timestamp
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
-        const fileName = `Scanned_Document_${timestamp}.jpg`;
-        const file = new File([blob], fileName, { type: 'image/jpeg' });
+            if (!this.currentCustomerId) {
+                alert('Customer ID not found');
+                return;
+            }
 
-        // Close scanner
-        this.closeScanner();
+            // Convert base64 to blob
+            console.log('Converting image to blob...');
+            const blob = await fetch(this.capturedImage).then(r => r.blob());
+            console.log('Blob created:', blob.size, 'bytes');
 
-        // Upload using existing upload flow
-        if (typeof uploadFiles === 'function') {
-            uploadFiles([file], this.currentCustomerId);
-        } else {
-            console.error('Upload function not found');
-            alert('Unable to upload document. Please try again.');
+            // Create file with timestamp
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+            const fileName = `Scanned_Document_${timestamp}.jpg`;
+            const file = new File([blob], fileName, { type: 'image/jpeg' });
+            console.log('File created:', fileName);
+
+            // Check if uploadFiles function exists
+            if (typeof uploadFiles !== 'function') {
+                console.error('uploadFiles function not found in global scope');
+                alert('Unable to upload document. Upload function not available.');
+                return;
+            }
+
+            console.log('Calling uploadFiles with:', {
+                fileName: file.name,
+                fileSize: file.size,
+                customerId: this.currentCustomerId
+            });
+
+            // Close scanner
+            this.closeScanner();
+
+            // Upload using existing upload flow
+            await uploadFiles([file], this.currentCustomerId);
+            console.log('Upload initiated successfully');
+
+        } catch (error) {
+            console.error('Error in saveDocument:', error);
+            alert('Error saving document: ' + error.message);
+            // Don't close scanner on error so user can retry
         }
     }
 
