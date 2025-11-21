@@ -554,13 +554,23 @@ function CustomerDetails() {
                           </span>
                         ))}
                       </div>
-                      <button
-                        className="breadcrumb-drive-link"
-                        onClick={() => window.open(`https://drive.google.com/drive/folders/${currentFolderId}`, '_blank')}
-                        title="Open in Google Drive"
-                      >
-                        📁
-                      </button>
+                      <div className="breadcrumb-actions">
+                        <button
+                          className="breadcrumb-refresh"
+                          onClick={() => loadCustomerDocuments(currentFolderId)}
+                          title="Refresh folder contents"
+                          disabled={loadingDocuments}
+                        >
+                          {loadingDocuments ? '⟳' : '🔄'}
+                        </button>
+                        <button
+                          className="breadcrumb-drive-link"
+                          onClick={() => window.open(`https://drive.google.com/drive/folders/${currentFolderId}`, '_blank')}
+                          title="Open in Google Drive"
+                        >
+                          📁
+                        </button>
+                      </div>
                     </div>
                   )}
 

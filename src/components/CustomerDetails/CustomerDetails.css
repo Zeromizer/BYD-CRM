@@ -355,6 +355,13 @@
   margin: 0 4px;
 }
 
+.breadcrumb-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.breadcrumb-refresh,
 .breadcrumb-drive-link {
   background: none;
   border: 2px solid var(--color-border-light);
@@ -371,10 +378,31 @@
   line-height: 1;
 }
 
+.breadcrumb-refresh:hover:not(:disabled),
 .breadcrumb-drive-link:hover {
   background: rgba(var(--color-primary-rgb, 65, 105, 225), 0.1);
   border-color: var(--color-primary);
   transform: translateY(-1px);
+}
+
+.breadcrumb-refresh:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.breadcrumb-refresh:disabled:hover {
+  transform: none;
+  background: none;
+  border-color: var(--color-border-light);
+}
+
+@keyframes spin-refresh {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Folders and Files Sections */
