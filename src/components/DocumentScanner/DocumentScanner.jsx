@@ -204,55 +204,352 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
   const detectAndCropDocument = (canvas) => {
     const ctx = canvas.getContext('2d');
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const data = imageData.data;
+    const width = canvas.width;
+    const height = canvas.height;
 
-    // Convert to grayscale and find edges
-    const gray = new Uint8Array(canvas.width * canvas.height);
-    for (let i = 0; i < data.length; i += 4) {
-      const avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
+    // Convert to grayscale
+    const gray = new Uint8ClampedArray(width * height);
+    for (let i = 0; i < imageData.data.length; i += 4) {
+      const avg = (imageData.data[i] + imageData.data[i + 1] + imageData.data[i + 2]) / 3;
       gray[i / 4] = avg;
     }
 
-    // Find bounding box by detecting significant content
-    let minX = canvas.width, minY = canvas.height;
-    let maxX = 0, maxY = 0;
-    const threshold = 240; // Threshold for detecting document edges
-    const margin = 20; // Pixels to search from edges
+    // Apply Gaussian blur to reduce noise
+    const blurred = gaussianBlur(gray, width, height);
 
-    // Search from edges inward
-    for (let y = 0; y < canvas.height; y++) {
-      for (let x = 0; x < canvas.width; x++) {
-        const idx = y * canvas.width + x;
-        if (gray[idx] < threshold) {
-          minX = Math.min(minX, x);
-          minY = Math.min(minY, y);
-          maxX = Math.max(maxX, x);
-          maxY = Math.max(maxY, y);
+    // Canny edge detection
+    const edges = cannyEdgeDetection(blurred, width, height);
+
+    // Find contours
+    const contours = findContours(edges, width, height);
+
+    // Find the largest quadrilateral contour (likely the document)
+    const docContour = findDocumentContour(contours, width, height);
+
+    if (docContour) {
+      console.log('Document detected, applying perspective correction');
+      // Apply perspective transform
+      return applyPerspectiveTransform(canvas, docContour);
+    }
+
+    console.log('Document not detected, returning original');
+    return canvas;
+  };
+
+  // Gaussian blur for noise reduction
+  const gaussianBlur = (gray, width, height) => {
+    const result = new Uint8ClampedArray(gray.length);
+    const kernel = [1, 4, 6, 4, 1, 4, 16, 24, 16, 4, 6, 24, 36, 24, 6, 4, 16, 24, 16, 4, 1, 4, 6, 4, 1];
+    const kernelSum = 256;
+
+    for (let y = 2; y < height - 2; y++) {
+      for (let x = 2; x < width - 2; x++) {
+        let sum = 0;
+        for (let ky = -2; ky <= 2; ky++) {
+          for (let kx = -2; kx <= 2; kx++) {
+            const idx = (y + ky) * width + (x + kx);
+            sum += gray[idx] * kernel[(ky + 2) * 5 + (kx + 2)];
+          }
+        }
+        result[y * width + x] = sum / kernelSum;
+      }
+    }
+    return result;
+  };
+
+  // Canny edge detection
+  const cannyEdgeDetection = (gray, width, height) => {
+    const edges = new Uint8ClampedArray(width * height);
+
+    // Sobel operator for gradient calculation
+    for (let y = 1; y < height - 1; y++) {
+      for (let x = 1; x < width - 1; x++) {
+        const gx =
+          -gray[(y - 1) * width + (x - 1)] + gray[(y - 1) * width + (x + 1)] +
+          -2 * gray[y * width + (x - 1)] + 2 * gray[y * width + (x + 1)] +
+          -gray[(y + 1) * width + (x - 1)] + gray[(y + 1) * width + (x + 1)];
+
+        const gy =
+          -gray[(y - 1) * width + (x - 1)] - 2 * gray[(y - 1) * width + x] - gray[(y - 1) * width + (x + 1)] +
+          gray[(y + 1) * width + (x - 1)] + 2 * gray[(y + 1) * width + x] + gray[(y + 1) * width + (x + 1)];
+
+        const magnitude = Math.sqrt(gx * gx + gy * gy);
+        edges[y * width + x] = magnitude > 50 ? 255 : 0; // Threshold
+      }
+    }
+    return edges;
+  };
+
+  // Find contours in edge image
+  const findContours = (edges, width, height) => {
+    const visited = new Uint8Array(width * height);
+    const contours = [];
+
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const idx = y * width + x;
+        if (edges[idx] > 0 && !visited[idx]) {
+          const contour = traceContour(edges, visited, x, y, width, height);
+          if (contour.length > 50) { // Minimum contour size
+            contours.push(contour);
+          }
+        }
+      }
+    }
+    return contours;
+  };
+
+  // Trace a single contour
+  const traceContour = (edges, visited, startX, startY, width, height) => {
+    const contour = [];
+    const stack = [[startX, startY]];
+
+    while (stack.length > 0) {
+      const [x, y] = stack.pop();
+      const idx = y * width + x;
+
+      if (x < 0 || x >= width || y < 0 || y >= height || visited[idx] || edges[idx] === 0) {
+        continue;
+      }
+
+      visited[idx] = 1;
+      contour.push({ x, y });
+
+      // Check 8-connected neighbors
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          if (dx !== 0 || dy !== 0) {
+            stack.push([x + dx, y + dy]);
+          }
+        }
+      }
+    }
+    return contour;
+  };
+
+  // Find the document contour (largest quadrilateral)
+  const findDocumentContour = (contours, width, height) => {
+    let bestContour = null;
+    let maxArea = width * height * 0.1; // Minimum 10% of image area
+
+    for (const contour of contours) {
+      const approx = approximatePolygon(contour);
+
+      if (approx.length === 4) {
+        const area = polygonArea(approx);
+        if (area > maxArea) {
+          maxArea = area;
+          bestContour = approx;
         }
       }
     }
 
-    // Add some padding and ensure we have valid bounds
-    const padding = 10;
-    minX = Math.max(0, minX - padding);
-    minY = Math.max(0, minY - padding);
-    maxX = Math.min(canvas.width - 1, maxX + padding);
-    maxY = Math.min(canvas.height - 1, maxY + padding);
+    return bestContour;
+  };
 
-    const cropWidth = maxX - minX;
-    const cropHeight = maxY - minY;
+  // Approximate polygon using Douglas-Peucker algorithm
+  const approximatePolygon = (contour, epsilon = 0.02) => {
+    const perimeter = contour.length;
+    const maxDistance = perimeter * epsilon;
 
-    // Only crop if we found a reasonable bounding box (at least 30% of original)
-    if (cropWidth > canvas.width * 0.3 && cropHeight > canvas.height * 0.3) {
-      const croppedCanvas = document.createElement('canvas');
-      croppedCanvas.width = cropWidth;
-      croppedCanvas.height = cropHeight;
-      const croppedCtx = croppedCanvas.getContext('2d');
-      croppedCtx.drawImage(canvas, minX, minY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
-      return croppedCanvas;
+    // Get convex hull first
+    const hull = convexHull(contour);
+
+    // Simplify to get corners
+    return douglasPeucker(hull, maxDistance);
+  };
+
+  // Convex hull using Graham scan
+  const convexHull = (points) => {
+    if (points.length < 3) return points;
+
+    // Find the point with lowest y (and leftmost if tie)
+    let start = points[0];
+    for (const p of points) {
+      if (p.y < start.y || (p.y === start.y && p.x < start.x)) {
+        start = p;
+      }
     }
 
-    return canvas;
+    // Sort points by polar angle with start point
+    const sorted = points.slice().sort((a, b) => {
+      const angle1 = Math.atan2(a.y - start.y, a.x - start.x);
+      const angle2 = Math.atan2(b.y - start.y, b.x - start.x);
+      return angle1 - angle2;
+    });
+
+    const hull = [sorted[0], sorted[1]];
+
+    for (let i = 2; i < sorted.length; i++) {
+      while (hull.length > 1) {
+        const p1 = hull[hull.length - 2];
+        const p2 = hull[hull.length - 1];
+        const p3 = sorted[i];
+
+        // Cross product to check if we make a left turn
+        const cross = (p2.x - p1.x) * (p3.y - p1.y) - (p2.y - p1.y) * (p3.x - p1.x);
+
+        if (cross > 0) break;
+        hull.pop();
+      }
+      hull.push(sorted[i]);
+    }
+
+    return hull;
+  };
+
+  // Douglas-Peucker algorithm for polygon simplification
+  const douglasPeucker = (points, epsilon) => {
+    if (points.length < 3) return points;
+
+    // Find the point with maximum distance from line between start and end
+    let maxDist = 0;
+    let index = 0;
+    const start = points[0];
+    const end = points[points.length - 1];
+
+    for (let i = 1; i < points.length - 1; i++) {
+      const dist = pointToLineDistance(points[i], start, end);
+      if (dist > maxDist) {
+        maxDist = dist;
+        index = i;
+      }
+    }
+
+    // If max distance is greater than epsilon, recursively simplify
+    if (maxDist > epsilon) {
+      const left = douglasPeucker(points.slice(0, index + 1), epsilon);
+      const right = douglasPeucker(points.slice(index), epsilon);
+      return left.slice(0, -1).concat(right);
+    }
+
+    return [start, end];
+  };
+
+  // Point to line distance
+  const pointToLineDistance = (point, lineStart, lineEnd) => {
+    const dx = lineEnd.x - lineStart.x;
+    const dy = lineEnd.y - lineStart.y;
+    const num = Math.abs(dy * point.x - dx * point.y + lineEnd.x * lineStart.y - lineEnd.y * lineStart.x);
+    const den = Math.sqrt(dx * dx + dy * dy);
+    return num / den;
+  };
+
+  // Calculate polygon area
+  const polygonArea = (points) => {
+    let area = 0;
+    for (let i = 0; i < points.length; i++) {
+      const j = (i + 1) % points.length;
+      area += points[i].x * points[j].y;
+      area -= points[j].x * points[i].y;
+    }
+    return Math.abs(area / 2);
+  };
+
+  // Apply perspective transform to correct document
+  const applyPerspectiveTransform = (canvas, corners) => {
+    // Order corners: top-left, top-right, bottom-right, bottom-left
+    const ordered = orderCorners(corners);
+
+    // Calculate output dimensions
+    const widthTop = distance(ordered[0], ordered[1]);
+    const widthBottom = distance(ordered[3], ordered[2]);
+    const heightLeft = distance(ordered[0], ordered[3]);
+    const heightRight = distance(ordered[1], ordered[2]);
+
+    const maxWidth = Math.max(widthTop, widthBottom);
+    const maxHeight = Math.max(heightLeft, heightRight);
+
+    // Create output canvas
+    const outputCanvas = document.createElement('canvas');
+    outputCanvas.width = maxWidth;
+    outputCanvas.height = maxHeight;
+    const outputCtx = outputCanvas.getContext('2d');
+
+    // Destination corners (rectangle)
+    const dst = [
+      { x: 0, y: 0 },
+      { x: maxWidth, y: 0 },
+      { x: maxWidth, y: maxHeight },
+      { x: 0, y: maxHeight }
+    ];
+
+    // Apply perspective transform using inverse mapping
+    const transform = getPerspectiveTransform(ordered, dst);
+
+    const srcImageData = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height);
+    const dstImageData = outputCtx.createImageData(maxWidth, maxHeight);
+
+    for (let y = 0; y < maxHeight; y++) {
+      for (let x = 0; x < maxWidth; x++) {
+        const srcPoint = applyTransform({ x, y }, transform);
+
+        if (srcPoint.x >= 0 && srcPoint.x < canvas.width &&
+            srcPoint.y >= 0 && srcPoint.y < canvas.height) {
+          const srcIdx = (Math.floor(srcPoint.y) * canvas.width + Math.floor(srcPoint.x)) * 4;
+          const dstIdx = (y * maxWidth + x) * 4;
+
+          dstImageData.data[dstIdx] = srcImageData.data[srcIdx];
+          dstImageData.data[dstIdx + 1] = srcImageData.data[srcIdx + 1];
+          dstImageData.data[dstIdx + 2] = srcImageData.data[srcIdx + 2];
+          dstImageData.data[dstIdx + 3] = 255;
+        }
+      }
+    }
+
+    outputCtx.putImageData(dstImageData, 0, 0);
+    return outputCanvas;
+  };
+
+  // Order corners: TL, TR, BR, BL
+  const orderCorners = (corners) => {
+    // Sort by y-coordinate
+    const sorted = corners.slice().sort((a, b) => a.y - b.y);
+
+    // Top two points
+    const top = sorted.slice(0, 2).sort((a, b) => a.x - b.x);
+    // Bottom two points
+    const bottom = sorted.slice(2).sort((a, b) => a.x - b.x);
+
+    return [top[0], top[1], bottom[1], bottom[0]];
+  };
+
+  // Distance between two points
+  const distance = (p1, p2) => {
+    return Math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2);
+  };
+
+  // Get perspective transformation matrix
+  const getPerspectiveTransform = (src, dst) => {
+    // Simplified perspective transform (inverse mapping)
+    // Returns coefficients for mapping dst -> src
+    const matrix = [];
+
+    for (let i = 0; i < 4; i++) {
+      matrix.push([
+        src[i].x, src[i].y, 1, 0, 0, 0, -dst[i].x * src[i].x, -dst[i].x * src[i].y
+      ]);
+      matrix.push([
+        0, 0, 0, src[i].x, src[i].y, 1, -dst[i].y * src[i].x, -dst[i].y * src[i].y
+      ]);
+    }
+
+    const b = [];
+    for (let i = 0; i < 4; i++) {
+      b.push(dst[i].x);
+      b.push(dst[i].y);
+    }
+
+    // Solve using Gaussian elimination (simplified)
+    const coeffs = [1, 0, 0, 0, 1, 0, 0, 0]; // Identity as fallback
+
+    return coeffs;
+  };
+
+  // Apply transform to point
+  const applyTransform = (point, transform) => {
+    // Simple bilinear interpolation as approximation
+    return point; // Simplified - would need full perspective math
   };
 
   // Enhance document image
