@@ -194,6 +194,126 @@
   border-top: 2px solid #e0e0e0;
 }
 
+/* Back Images Section */
+.back-images-section {
+  background: #f7fafc;
+  padding: 20px;
+  border-radius: 8px;
+  border: 2px solid #e0e0e0;
+}
+
+.back-images-section h4 {
+  color: #2c3e50;
+  margin: 0 0 8px 0;
+  font-size: 16px;
+}
+
+.back-images-hint {
+  color: #7f8c8d;
+  margin: 0 0 15px 0;
+  font-size: 14px;
+}
+
+.loading-state {
+  text-align: center;
+  padding: 20px;
+  color: #7f8c8d;
+}
+
+.empty-state-small {
+  text-align: center;
+  padding: 20px;
+  color: #7f8c8d;
+  font-size: 14px;
+}
+
+.back-images-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 15px;
+}
+
+.back-image-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.back-image-selector label {
+  font-weight: 600;
+  color: #2c3e50;
+  font-size: 13px;
+}
+
+.back-image-selector select {
+  padding: 8px;
+  border: 2px solid #cbd5e0;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.back-image-selector select:focus {
+  outline: none;
+  border-color: #3498db;
+}
+
+.image-preview-small {
+  margin-top: 8px;
+  border: 2px solid #e0e0e0;
+  border-radius: 6px;
+  overflow: hidden;
+  max-height: 120px;
+}
+
+.image-preview-small img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Four Quarter Grid for Back Page */
+.back-page {
+  margin-top: 20px;
+  page-break-before: always;
+}
+
+.four-quarter-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  width: 100%;
+  aspect-ratio: 1 / 1.414; /* A4 ratio */
+  background: white;
+}
+
+.quarter-image {
+  border: 1px solid #e0e0e0;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.quarter-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.empty-quarter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  background: #f7fafc;
+  color: #cbd5e0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
 /* Print Styles */
 @media print {
   /* Hide everything except the form */
@@ -218,6 +338,36 @@
   .filled-form-wrapper .form-image {
     width: 100%;
     height: auto;
+  }
+
+  /* Back page print styles */
+  .back-page {
+    page-break-before: always;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin-top: 0;
+  }
+
+  .four-quarter-grid {
+    width: 100%;
+    height: 100vh;
+    aspect-ratio: 1 / 1.414;
+  }
+
+  .quarter-image {
+    border: 1px solid #ccc;
+  }
+
+  .quarter-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  .empty-quarter {
+    display: none;
   }
 
   /* Hide UI elements */
@@ -253,6 +403,10 @@
   }
 
   .info-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .back-images-grid {
     grid-template-columns: 1fr;
   }
 }
