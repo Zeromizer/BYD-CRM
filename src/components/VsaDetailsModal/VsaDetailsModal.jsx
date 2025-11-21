@@ -69,7 +69,6 @@ function VsaDetailsModal({ isOpen, onClose, customer, onSave }) {
     registrationNo: '',
     chassisNo: '',
     engineNo: '',
-    motorNo: '',
 
     // Insurance
     insuranceCompany: '',
@@ -110,7 +109,6 @@ function VsaDetailsModal({ isOpen, onClose, customer, onSave }) {
         registrationNo: customer.vsa_registrationNo || '',
         chassisNo: customer.vsa_chassisNo || '',
         engineNo: customer.vsa_engineNo || '',
-        motorNo: customer.vsa_motorNo || '',
         insuranceCompany: customer.vsa_insuranceCompany || '',
         insuranceFee: customer.vsa_insuranceFee || '',
         remarks1: customer.vsa_remarks1 || '',
@@ -461,16 +459,6 @@ function VsaDetailsModal({ isOpen, onClose, customer, onSave }) {
                     placeholder="e.g., ENG123456"
                   />
                 </div>
-              </div>
-
-              <div className="form-group">
-                <label>Motor No</label>
-                <input
-                  type="text"
-                  value={vsaData.motorNo}
-                  onChange={(e) => handleChange('motorNo', e.target.value)}
-                  placeholder="e.g., MOT123456"
-                />
               </div>
             </div>
           )}
