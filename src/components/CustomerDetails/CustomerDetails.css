@@ -186,6 +186,13 @@
   padding: 20px 0;
 }
 
+.scanner-section {
+  padding: 20px 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
 .warning-banner {
   background: rgba(241, 196, 15, 0.1);
   border: 2px solid rgba(241, 196, 15, 0.3);

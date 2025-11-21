@@ -9,6 +9,7 @@ import ExcelPopulateModal from '../ExcelPopulateModal/ExcelPopulateModal';
 import FormPrintModal from '../FormPrintModal/FormPrintModal';
 import CombinePrintModal from '../CombinePrintModal/CombinePrintModal';
 import DocumentViewer from '../DocumentViewer/DocumentViewer';
+import DocumentScanner from '../DocumentScanner/DocumentScanner';
 import './CustomerDetails.css';
 
 function CustomerDetails() {
@@ -125,6 +126,15 @@ function CustomerDetails() {
 
   const isFolder = (mimeType) => {
     return mimeType === 'application/vnd.google-apps.folder';
+  };
+
+  // Handle scan complete
+  const handleScanComplete = (uploadedFile) => {
+    console.log('Scan completed:', uploadedFile);
+    // Reload documents if we're on the documents tab
+    if (currentFolderId) {
+      loadCustomerDocuments(currentFolderId);
+    }
   };
 
   // Drag and drop handlers
@@ -349,6 +359,12 @@ function CustomerDetails() {
             onClick={() => setActiveTab('documents')}
           >
             Documents {!isSignedIn && '🔒'}
+          </button>
+          <button
+            className={`tab ${activeTab === 'scanner' ? 'active' : ''}`}
+            onClick={() => setActiveTab('scanner')}
+          >
+            Scanner {!isSignedIn && '🔒'}
           </button>
         </div>
 
@@ -601,7 +617,7 @@ function CustomerDetails() {
                 </div>
               </div>
             </>
-          ) : (
+          ) : activeTab === 'documents' ? (
             /* Documents Tab */
             <div className="documents-section">
               {!isSignedIn ? (
@@ -744,6 +760,29 @@ function CustomerDetails() {
                     </>
                   )}
                 </>
+              )}
+            </div>
+          ) : (
+            /* Scanner Tab */
+            <div className="scanner-section">
+              {!isSignedIn ? (
+                <div className="warning-banner">
+                  <p>⚠️ Please sign in to Google Drive to use the scanner</p>
+                </div>
+              ) : !customer.driveFolderId ? (
+                <div className="empty-state">
+                  <p>No Google Drive folder for this customer yet</p>
+                  <p className="empty-state-hint">
+                    A folder will be created when you generate forms or Excel files
+                  </p>
+                </div>
+              ) : (
+                <DocumentScanner
+                  customerId={customer.id}
+                  customerName={customer.name}
+                  customerFolderId={customer.driveFolderId}
+                  onScanComplete={handleScanComplete}
+                />
               )}
             </div>
           )}
