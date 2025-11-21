@@ -133,11 +133,14 @@ function FieldMappingModal({ isOpen, onClose, formType, template, onSave }) {
 
     if (!canvas || !img) return;
 
-    // Scale to fit screen while maintaining aspect ratio
-    const maxWidth = Math.min(window.innerWidth * 0.7, 1000);
-    const scale = maxWidth / img.width;
-    canvas.width = img.width * scale;
-    canvas.height = img.height * scale;
+    // Use original image dimensions for canvas internal size
+    // CSS max-width will handle the display scaling without distortion
+    canvas.width = img.width;
+    canvas.height = img.height;
+
+    // Set CSS dimensions to match for proper 1:1 pixel mapping
+    canvas.style.width = img.width + 'px';
+    canvas.style.height = img.height + 'px';
   };
 
   const redrawCanvas = () => {
@@ -147,16 +150,15 @@ function FieldMappingModal({ isOpen, onClose, formType, template, onSave }) {
     if (!canvas || !img) return;
 
     const ctx = canvas.getContext('2d');
-    const scale = canvas.width / img.width;
 
-    // Clear and draw image
+    // Clear and draw image at original size (1:1 pixel mapping)
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, img.width, img.height);
 
-    // Draw field markers
+    // Draw field markers at original coordinates
     Object.entries(mappings).forEach(([fieldId, field]) => {
-      const x = field.x * scale;
-      const y = field.y * scale;
+      const x = field.x;
+      const y = field.y;
 
       // Draw marker circle
       ctx.fillStyle = 'rgba(0, 188, 212, 0.3)';
@@ -185,13 +187,15 @@ function FieldMappingModal({ isOpen, onClose, formType, template, onSave }) {
     if (!canvas || !img) return;
 
     const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    const clickX = e.clientX - rect.left;
+    const clickY = e.clientY - rect.top;
 
-    // Convert to original image coordinates
-    const scale = canvas.width / img.width;
-    const originalX = x / scale;
-    const originalY = y / scale;
+    // Convert from CSS display coordinates to canvas pixel coordinates
+    // rect.width/height = CSS display size, canvas.width/height = internal size
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const canvasX = clickX * scaleX;
+    const canvasY = clickY * scaleY;
 
     // Check if custom value is required but empty
     if (selectedField === 'custom' && !customValue.trim()) {
@@ -199,12 +203,12 @@ function FieldMappingModal({ isOpen, onClose, formType, template, onSave }) {
       return;
     }
 
-    // Add field mapping
+    // Add field mapping using canvas coordinates
     const fieldId = 'field_' + Date.now();
     const newMapping = {
       type: selectedField,
-      x: originalX,
-      y: originalY,
+      x: canvasX,
+      y: canvasY,
       fontSize: fontSize,
       color: textColor,
     };
