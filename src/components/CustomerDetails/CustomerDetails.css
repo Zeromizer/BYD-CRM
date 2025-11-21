@@ -60,6 +60,26 @@
   border-bottom: 2px solid #f0f0f0;
 }
 
+/* VSA Section with header button */
+.vsa-section {
+  margin-bottom: 30px;
+}
+
+.vsa-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #f0f0f0;
+}
+
+.vsa-section-header h3 {
+  font-size: 16px;
+  color: #667eea;
+  margin: 0;
+}
+
 .info-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
