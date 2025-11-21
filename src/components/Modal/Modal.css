@@ -23,9 +23,9 @@
 }
 
 .modal-container {
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  background: var(--color-card-background);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xl);
   max-height: 90vh;
   display: flex;
   flex-direction: column;
@@ -62,21 +62,21 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 20px 24px;
-  border-bottom: 2px solid #f0f0f0;
+  padding: var(--spacing-lg) 24px;
+  border-bottom: 2px solid var(--color-border-light);
 }
 
 .modal-header h2 {
   margin: 0;
   font-size: 22px;
-  color: #1a1a2e;
+  color: var(--color-text-on-card);
 }
 
 .modal-close {
   background: none;
   border: none;
   font-size: 32px;
-  color: #999;
+  color: var(--color-text-tertiary);
   cursor: pointer;
   padding: 0;
   width: 32px;
@@ -84,13 +84,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   transition: all 0.2s;
 }
 
 .modal-close:hover {
-  background: #f5f5f5;
-  color: #333;
+  background: #f3f4f6;
+  color: var(--color-text-on-card);
 }
 
 .modal-body {

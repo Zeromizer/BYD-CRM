@@ -1,15 +1,60 @@
 :root {
+  /* Theme Colors - BYD Motor-East Design System */
+  --color-primary: #00BCD4; /* Cyan accent */
+  --color-primary-hover: #00ACC1;
+  --color-primary-light: rgba(0, 188, 212, 0.1);
+
+  --color-background-primary: #1f2937; /* Dark navy */
+  --color-background-secondary: #111827; /* Darker navy */
+  --color-background-tertiary: #374151; /* Medium navy */
+
+  --color-card-background: #ffffff;
+  --color-card-dark: #1e293b; /* Dark blue for inner cards */
+
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #9ca3af;
+  --color-text-tertiary: #6b7280;
+  --color-text-on-card: #1a1a2e;
+
+  --color-border: #374151;
+  --color-border-light: #e5e7eb;
+
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-error: #ef4444;
+  --color-info: #3b82f6;
+
+  /* Typography */
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
 
-  color: #1a1a2e;
-  background-color: #ffffff;
+  color: var(--color-text-primary);
+  background-color: var(--color-background-primary);
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  /* Spacing */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+
+  /* Border Radius */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
 }
 
 * {
@@ -22,11 +67,14 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  background-color: var(--color-background-primary);
+  color: var(--color-text-primary);
 }
 
 #root {
   width: 100%;
   min-height: 100vh;
+  background-color: var(--color-background-primary);
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -34,7 +82,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 button {
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   border: none;
   padding: 0.6em 1.2em;
   font-size: 1em;
@@ -46,12 +94,12 @@ button {
 
 button:focus,
 button:focus-visible {
-  outline: 2px solid #667eea;
+  outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
 
 a {
-  color: #667eea;
+  color: var(--color-primary);
   text-decoration: none;
 }
 
@@ -71,14 +119,14 @@ input, textarea, select {
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: var(--color-background-secondary);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
-  border-radius: 4px;
+  background: var(--color-background-tertiary);
+  border-radius: var(--radius-sm);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #a1a1a1;
+  background: var(--color-primary);
 }

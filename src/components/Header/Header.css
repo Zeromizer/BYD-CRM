@@ -1,9 +1,10 @@
 .header {
-  background: white;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  background: var(--color-background-secondary);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
   position: sticky;
   top: 0;
   z-index: 1000;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .header-container {
@@ -24,20 +25,32 @@
 .header-title {
   font-size: 24px;
   font-weight: 600;
-  color: #1a1a2e;
+  color: var(--color-text-primary);
   margin: 0;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
+  letter-spacing: 0.5px;
 }
 
-.version-badge {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  font-size: 12px;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-weight: 500;
+.byd-logo {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  letter-spacing: 2px;
+}
+
+.divider {
+  color: var(--color-primary);
+  font-weight: 300;
+  font-size: 28px;
+}
+
+.motor-east {
+  font-size: 18px;
+  font-weight: 400;
+  color: var(--color-primary);
+  letter-spacing: 1px;
 }
 
 .header-actions {
@@ -51,35 +64,40 @@
   align-items: center;
   gap: 8px;
   padding: 10px 20px;
-  background: #f5f5f5;
-  border: 1px solid #ddd;
-  border-radius: 6px;
+  background: var(--color-background-tertiary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
   cursor: pointer;
   transition: all 0.3s;
   font-size: 14px;
-  color: #666;
+  color: var(--color-text-secondary);
 }
 
 .auth-button:hover {
-  background: #e8e8e8;
+  background: var(--color-background-primary);
+  border-color: var(--color-primary);
 }
 
 .auth-button.connected {
-  background: linear-gradient(135deg, #1e88e5 0%, #1565c0 100%);
-  color: white;
+  background: var(--color-primary);
+  color: var(--color-text-primary);
   border: none;
+}
+
+.auth-button.connected:hover {
+  background: var(--color-primary-hover);
 }
 
 .status-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #999;
+  background: var(--color-text-tertiary);
 }
 
 .auth-button.connected .status-dot {
-  background: #4caf50;
-  box-shadow: 0 0 8px rgba(76, 175, 80, 0.6);
+  background: var(--color-success);
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
 }
 
 .dropdown {
@@ -89,9 +107,10 @@
 .dropdown-toggle {
   width: 40px;
   height: 40px;
-  border-radius: 6px;
-  border: 1px solid #ddd;
-  background: white;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: var(--color-background-tertiary);
+  color: var(--color-text-primary);
   cursor: pointer;
   font-size: 20px;
   display: flex;
@@ -101,16 +120,18 @@
 }
 
 .dropdown-toggle:hover {
-  background: #f5f5f5;
+  background: var(--color-background-primary);
+  border-color: var(--color-primary);
 }
 
 .dropdown-menu {
   position: absolute;
   right: 0;
   top: 45px;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  background: var(--color-background-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-xl);
   min-width: 200px;
   overflow: hidden;
   animation: slideDown 0.2s ease;
@@ -130,20 +151,21 @@
 .dropdown-item {
   display: block;
   padding: 12px 20px;
-  color: #333;
+  color: var(--color-text-primary);
   text-decoration: none;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: all 0.2s;
   font-size: 14px;
 }
 
 .dropdown-item:hover {
-  background: #f5f5f5;
+  background: var(--color-background-tertiary);
+  color: var(--color-primary);
 }
 
 .dropdown-divider {
   height: 1px;
-  background: #eee;
+  background: var(--color-border);
   margin: 5px 0;
 }
 
