@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import Modal from '../Modal/Modal';
 import './VsaDetailsModal.css';
 
@@ -40,7 +40,6 @@ const BODY_COLOURS = [
 function VsaDetailsModal({ isOpen, onClose, customer, onSave }) {
   const [activeTab, setActiveTab] = useState('newCarDetails');
   const [isSaving, setIsSaving] = useState(false);
-  const tabRefs = useRef({});
   const [vsaData, setVsaData] = useState({
     // BYD New Car Details
     makeModel: '',
@@ -133,20 +132,6 @@ function VsaDetailsModal({ isOpen, onClose, customer, onSave }) {
     });
   };
 
-  const handleTabChange = (tabName) => {
-    setActiveTab(tabName);
-    // Scroll the active tab into view on mobile
-    setTimeout(() => {
-      if (tabRefs.current[tabName]) {
-        tabRefs.current[tabName].scrollIntoView({
-          behavior: 'smooth',
-          block: 'nearest',
-          inline: 'center',
-        });
-      }
-    }, 100);
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSaving(true);
@@ -177,49 +162,43 @@ function VsaDetailsModal({ isOpen, onClose, customer, onSave }) {
         <div className="vsa-tabs">
           <button
             type="button"
-            ref={(el) => (tabRefs.current['newCarDetails'] = el)}
             className={`vsa-tab ${activeTab === 'newCarDetails' ? 'active' : ''}`}
-            onClick={() => handleTabChange('newCarDetails')}
+            onClick={() => setActiveTab('newCarDetails')}
           >
             BYD New Car Details
           </button>
           <button
             type="button"
-            ref={(el) => (tabRefs.current['newCarPackage'] = el)}
             className={`vsa-tab ${activeTab === 'newCarPackage' ? 'active' : ''}`}
-            onClick={() => handleTabChange('newCarPackage')}
+            onClick={() => setActiveTab('newCarPackage')}
           >
             BYD New Car Package
           </button>
           <button
             type="button"
-            ref={(el) => (tabRefs.current['tradeInCar'] = el)}
             className={`vsa-tab ${activeTab === 'tradeInCar' ? 'active' : ''}`}
-            onClick={() => handleTabChange('tradeInCar')}
+            onClick={() => setActiveTab('tradeInCar')}
           >
             Trade in Car Details
           </button>
           <button
             type="button"
-            ref={(el) => (tabRefs.current['deliveryDetails'] = el)}
             className={`vsa-tab ${activeTab === 'deliveryDetails' ? 'active' : ''}`}
-            onClick={() => handleTabChange('deliveryDetails')}
+            onClick={() => setActiveTab('deliveryDetails')}
           >
             Delivery Details
           </button>
           <button
             type="button"
-            ref={(el) => (tabRefs.current['insurance'] = el)}
             className={`vsa-tab ${activeTab === 'insurance' ? 'active' : ''}`}
-            onClick={() => handleTabChange('insurance')}
+            onClick={() => setActiveTab('insurance')}
           >
             Insurance
           </button>
           <button
             type="button"
-            ref={(el) => (tabRefs.current['remarks'] = el)}
             className={`vsa-tab ${activeTab === 'remarks' ? 'active' : ''}`}
-            onClick={() => handleTabChange('remarks')}
+            onClick={() => setActiveTab('remarks')}
           >
             Remarks
           </button>
