@@ -2,12 +2,12 @@
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--color-background-primary);
 }
 
 .app-main {
   flex: 1;
-  padding: 20px;
+  padding: 0;
   max-width: 1400px;
   width: 100%;
   margin: 0 auto;

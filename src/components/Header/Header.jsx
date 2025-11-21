@@ -30,8 +30,9 @@ function Header() {
       <div className="header-container">
         <div className="header-left">
           <h1 className="header-title">
-            BYD MotorEast CRM
-            <span className="version-badge">React</span>
+            <span className="byd-logo">BYD</span>
+            <span className="divider">|</span>
+            <span className="motor-east">MOTOR-EAST</span>
           </h1>
         </div>
 

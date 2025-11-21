@@ -1,18 +1,19 @@
 .dashboard {
   width: 100%;
+  padding: var(--spacing-lg);
 }
 
 .dashboard-grid {
   display: grid;
   grid-template-columns: 450px 1fr;
-  gap: 20px;
+  gap: var(--spacing-lg);
   height: calc(100vh - 100px);
 }
 
 .dashboard-card {
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  background: var(--color-card-background);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
   overflow: hidden;
   display: flex;
   flex-direction: column;
