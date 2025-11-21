@@ -69,9 +69,6 @@ body {
   min-height: 100vh;
   background-color: var(--color-background-primary);
   color: var(--color-text-primary);
-  /* Safe area insets for devices with notches */
-  padding-left: env(safe-area-inset-left);
-  padding-right: env(safe-area-inset-right);
 }
 
 #root {
@@ -93,22 +90,12 @@ button {
   font-family: inherit;
   cursor: pointer;
   transition: all 0.3s;
-  min-height: 44px; /* Minimum touch target size for mobile */
-  min-width: 44px;
 }
 
 button:focus,
 button:focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
-}
-
-/* Mobile-specific button improvements */
-@media (max-width: 768px) {
-  button {
-    padding: 0.75em 1.5em;
-    font-size: 16px; /* Prevents iOS zoom on input focus */
-  }
 }
 
 a {
@@ -123,24 +110,6 @@ a:hover {
 input, textarea, select {
   font-family: inherit;
   font-size: inherit;
-  min-height: 44px; /* Minimum touch target size */
-}
-
-/* Mobile input improvements */
-@media (max-width: 768px) {
-  input, textarea, select {
-    font-size: 16px; /* Prevents iOS zoom on input focus */
-    padding: 12px;
-  }
-
-  input[type="text"],
-  input[type="tel"],
-  input[type="email"],
-  input[type="number"],
-  textarea {
-    -webkit-appearance: none;
-    appearance: none;
-  }
 }
 
 /* Scrollbar styling */
