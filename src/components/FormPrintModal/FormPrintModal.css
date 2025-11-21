@@ -151,7 +151,7 @@
   border-radius: 8px;
   padding: 20px;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   overflow: auto;
   min-height: 600px;
