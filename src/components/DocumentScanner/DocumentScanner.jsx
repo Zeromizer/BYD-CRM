@@ -274,7 +274,7 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
           gray[(y + 1) * width + (x - 1)] + 2 * gray[(y + 1) * width + x] + gray[(y + 1) * width + (x + 1)];
 
         const magnitude = Math.sqrt(gx * gx + gy * gy);
-        edges[y * width + x] = magnitude > 50 ? 255 : 0; // Threshold
+        edges[y * width + x] = magnitude > 30 ? 255 : 0; // Lower threshold for better detection
       }
     }
     return edges;
@@ -330,18 +330,25 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
   // Find the document contour (largest quadrilateral)
   const findDocumentContour = (contours, width, height) => {
     let bestContour = null;
-    let maxArea = width * height * 0.1; // Minimum 10% of image area
+    let maxArea = width * height * 0.05; // Minimum 5% of image area (lowered for better detection)
+
+    console.log(`Looking for document in ${contours.length} contours, min area: ${maxArea}`);
 
     for (const contour of contours) {
       const approx = approximatePolygon(contour);
 
       if (approx.length === 4) {
         const area = polygonArea(approx);
+        console.log(`Found 4-sided contour with area: ${area}`);
         if (area > maxArea) {
           maxArea = area;
           bestContour = approx;
         }
       }
+    }
+
+    if (bestContour) {
+      console.log(`Best document contour found with area: ${maxArea}`);
     }
 
     return bestContour;
@@ -475,7 +482,9 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
     ];
 
     // Apply perspective transform using inverse mapping
-    const transform = getPerspectiveTransform(ordered, dst);
+    // We need inverse transform: dst coords -> src coords
+    // So we compute the transform from dst to ordered (not ordered to dst)
+    const transform = getPerspectiveTransform(dst, ordered);
 
     const srcImageData = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height);
     const dstImageData = outputCtx.createImageData(maxWidth, maxHeight);
@@ -484,14 +493,38 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
       for (let x = 0; x < maxWidth; x++) {
         const srcPoint = applyTransform({ x, y }, transform);
 
-        if (srcPoint.x >= 0 && srcPoint.x < canvas.width &&
-            srcPoint.y >= 0 && srcPoint.y < canvas.height) {
-          const srcIdx = (Math.floor(srcPoint.y) * canvas.width + Math.floor(srcPoint.x)) * 4;
+        if (srcPoint.x >= 0 && srcPoint.x < canvas.width - 1 &&
+            srcPoint.y >= 0 && srcPoint.y < canvas.height - 1) {
+
+          // Bilinear interpolation for better quality
+          const x0 = Math.floor(srcPoint.x);
+          const y0 = Math.floor(srcPoint.y);
+          const x1 = x0 + 1;
+          const y1 = y0 + 1;
+
+          const fx = srcPoint.x - x0;
+          const fy = srcPoint.y - y0;
+
+          const idx00 = (y0 * canvas.width + x0) * 4;
+          const idx10 = (y0 * canvas.width + x1) * 4;
+          const idx01 = (y1 * canvas.width + x0) * 4;
+          const idx11 = (y1 * canvas.width + x1) * 4;
+
           const dstIdx = (y * maxWidth + x) * 4;
 
-          dstImageData.data[dstIdx] = srcImageData.data[srcIdx];
-          dstImageData.data[dstIdx + 1] = srcImageData.data[srcIdx + 1];
-          dstImageData.data[dstIdx + 2] = srcImageData.data[srcIdx + 2];
+          // Interpolate each channel
+          for (let c = 0; c < 3; c++) {
+            const v00 = srcImageData.data[idx00 + c];
+            const v10 = srcImageData.data[idx10 + c];
+            const v01 = srcImageData.data[idx01 + c];
+            const v11 = srcImageData.data[idx11 + c];
+
+            const v0 = v00 * (1 - fx) + v10 * fx;
+            const v1 = v01 * (1 - fx) + v11 * fx;
+            const v = v0 * (1 - fy) + v1 * fy;
+
+            dstImageData.data[dstIdx + c] = Math.round(v);
+          }
           dstImageData.data[dstIdx + 3] = 255;
         }
       }
