@@ -61,7 +61,8 @@ function FormPrintModal({ isOpen, onClose, customer }) {
     const available = [];
 
     for (const [formType, template] of Object.entries(formTemplates)) {
-      if (template.fileType === 'image' && template.fieldMappings && Object.keys(template.fieldMappings).length > 0) {
+      // Allow all image forms, even without field mappings (for back pages, static forms, etc.)
+      if (template.fileType === 'image') {
         available.push({
           formType,
           name: FORM_TYPE_NAMES[formType] || formType,
