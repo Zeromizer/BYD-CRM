@@ -4,6 +4,7 @@ import useAuthStore from '../../stores/useAuthStore';
 import authService from '../../services/authService';
 import Modal from '../Modal/Modal';
 import CustomerForm from '../CustomerForm/CustomerForm';
+import VsaDetailsModal from '../VsaDetailsModal/VsaDetailsModal';
 import ExcelPopulateModal from '../ExcelPopulateModal/ExcelPopulateModal';
 import FormPrintModal from '../FormPrintModal/FormPrintModal';
 import CombinePrintModal from '../CombinePrintModal/CombinePrintModal';
@@ -26,30 +27,6 @@ function CustomerDetails() {
   // Documents state
   const [documents, setDocuments] = useState([]);
   const [loadingDocuments, setLoadingDocuments] = useState(false);
-
-  // VSA form state
-  const [vsaFormData, setVsaFormData] = useState({
-    vsaNo: '',
-    vehicleModel: '',
-    vehiclePrice: '',
-    tradeInValue: '',
-    downPayment: '',
-    loanAmount: '',
-  });
-
-  // Load VSA data when modal opens
-  useEffect(() => {
-    if (isVsaModalOpen && customer) {
-      setVsaFormData({
-        vsaNo: customer.vsaNo || '',
-        vehicleModel: customer.vehicleModel || '',
-        vehiclePrice: customer.vehiclePrice || '',
-        tradeInValue: customer.tradeInValue || '',
-        downPayment: customer.downPayment || '',
-        loanAmount: customer.loanAmount || '',
-      });
-    }
-  }, [isVsaModalOpen, customer]);
 
   // Load documents when Documents tab is active
   useEffect(() => {
@@ -154,22 +131,16 @@ function CustomerDetails() {
     }
   };
 
-  const handleVsaSubmit = async (e) => {
-    e.preventDefault();
+  const handleVsaSave = async (vsaUpdates) => {
     if (!customer) return;
-
-    setIsSubmitting(true);
 
     try {
       await new Promise((resolve) => setTimeout(resolve, 500));
-      updateCustomer(customer.id, vsaFormData);
+      updateCustomer(customer.id, vsaUpdates);
       await syncToDrive(isSignedIn);
-      setIsVsaModalOpen(false);
     } catch (error) {
       console.error('Error updating VSA details:', error);
-      alert('Failed to update VSA details. Please try again.');
-    } finally {
-      setIsSubmitting(false);
+      throw error;
     }
   };
 
@@ -401,98 +372,12 @@ function CustomerDetails() {
       </Modal>
 
       {/* VSA Details Modal */}
-      <Modal
+      <VsaDetailsModal
         isOpen={isVsaModalOpen}
         onClose={handleCloseVsaModal}
-        title="VSA Details"
-        size="medium"
-      >
-        <form onSubmit={handleVsaSubmit} className="vsa-form">
-          <div className="form-group">
-            <label htmlFor="vsaNo">VSA Number</label>
-            <input
-              type="text"
-              id="vsaNo"
-              value={vsaFormData.vsaNo}
-              onChange={(e) => setVsaFormData({ ...vsaFormData, vsaNo: e.target.value })}
-              placeholder="VSA-2024-001"
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="vehicleModel">Vehicle Model</label>
-            <input
-              type="text"
-              id="vehicleModel"
-              value={vsaFormData.vehicleModel}
-              onChange={(e) => setVsaFormData({ ...vsaFormData, vehicleModel: e.target.value })}
-              placeholder="BYD Seal, BYD Atto 3, etc."
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="vehiclePrice">Vehicle Price</label>
-            <input
-              type="text"
-              id="vehiclePrice"
-              value={vsaFormData.vehiclePrice}
-              onChange={(e) => setVsaFormData({ ...vsaFormData, vehiclePrice: e.target.value })}
-              placeholder="$150,000"
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="tradeInValue">Trade-In Value</label>
-            <input
-              type="text"
-              id="tradeInValue"
-              value={vsaFormData.tradeInValue}
-              onChange={(e) => setVsaFormData({ ...vsaFormData, tradeInValue: e.target.value })}
-              placeholder="$30,000"
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="downPayment">Down Payment</label>
-            <input
-              type="text"
-              id="downPayment"
-              value={vsaFormData.downPayment}
-              onChange={(e) => setVsaFormData({ ...vsaFormData, downPayment: e.target.value })}
-              placeholder="$50,000"
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="loanAmount">Loan Amount</label>
-            <input
-              type="text"
-              id="loanAmount"
-              value={vsaFormData.loanAmount}
-              onChange={(e) => setVsaFormData({ ...vsaFormData, loanAmount: e.target.value })}
-              placeholder="$100,000"
-            />
-          </div>
-
-          <div className="modal-actions">
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={handleCloseVsaModal}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="btn btn-primary"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? 'Saving...' : 'Save VSA Details'}
-            </button>
-          </div>
-        </form>
-      </Modal>
+        customer={customer}
+        onSave={handleVsaSave}
+      />
 
       {/* Delete Confirmation Modal */}
       <Modal
