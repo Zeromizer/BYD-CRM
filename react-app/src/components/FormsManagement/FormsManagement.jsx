@@ -3,6 +3,7 @@ import useFormsStore from '../../stores/useFormsStore';
 import useAuthStore from '../../stores/useAuthStore';
 import authService from '../../services/authService';
 import Modal from '../Modal/Modal';
+import FieldMappingModal from '../FieldMappingModal/FieldMappingModal';
 import './FormsManagement.css';
 
 const FORM_TYPE_NAMES = {
@@ -24,6 +25,7 @@ function FormsManagement() {
     loadFromLocalStorage,
     addTemplate,
     deleteTemplate,
+    updateFieldMappings,
   } = useFormsStore();
 
   const { isSignedIn } = useAuthStore();
@@ -32,6 +34,9 @@ function FormsManagement() {
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [selectedFormType, setSelectedFormType] = useState('test_drive');
+
+  const [showFieldMappingModal, setShowFieldMappingModal] = useState(false);
+  const [currentMappingFormType, setCurrentMappingFormType] = useState(null);
 
   useEffect(() => {
     loadFromLocalStorage();
@@ -210,6 +215,27 @@ function FormsManagement() {
     }
   };
 
+  const openFieldMapping = (formType) => {
+    const template = formTemplates[formType];
+    if (!template || template.fileType !== 'image') {
+      alert('This form does not support field mapping');
+      return;
+    }
+
+    setCurrentMappingFormType(formType);
+    setShowFieldMappingModal(true);
+  };
+
+  const closeFieldMapping = () => {
+    setShowFieldMappingModal(false);
+    setCurrentMappingFormType(null);
+  };
+
+  const saveFieldMappings = (formType, mappings) => {
+    updateFieldMappings(formType, mappings);
+    alert('Field mappings saved successfully!');
+  };
+
   const templatesArray = Object.entries(formTemplates);
 
   return (
@@ -265,6 +291,15 @@ function FormsManagement() {
                   </div>
                 </div>
                 <div className="form-actions">
+                  {hasFieldMapping && (
+                    <button
+                      className="btn btn-small btn-success"
+                      onClick={() => openFieldMapping(formType)}
+                      style={{ background: '#00bcd4' }}
+                    >
+                      ⚙️ Configure Fields
+                    </button>
+                  )}
                   <button
                     className="btn btn-small btn-primary"
                     onClick={() => handleViewForm(formType)}
@@ -342,6 +377,14 @@ function FormsManagement() {
           </div>
         </div>
       </Modal>
+
+      <FieldMappingModal
+        isOpen={showFieldMappingModal}
+        onClose={closeFieldMapping}
+        formType={currentMappingFormType}
+        template={currentMappingFormType ? formTemplates[currentMappingFormType] : null}
+        onSave={saveFieldMappings}
+      />
     </div>
   );
 }
