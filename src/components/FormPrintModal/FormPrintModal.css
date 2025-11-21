@@ -154,14 +154,36 @@
   align-items: center;
   justify-content: center;
   overflow: auto;
-  max-height: 600px;
+  min-height: 600px;
 }
 
-.preview-image {
+/* SVG-based Form Rendering */
+.filled-form-wrapper {
+  position: relative;
+  display: inline-block;
   max-width: 100%;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  background: white;
+}
+
+.filled-form-wrapper .form-image {
+  display: block;
+  width: 100%;
   height: auto;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-  border-radius: 4px;
+  background: white;
+}
+
+.form-text-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.form-text-overlay text {
+  user-select: none;
 }
 
 .preview-actions {
@@ -172,10 +194,48 @@
   border-top: 2px solid #e0e0e0;
 }
 
+/* Print Styles */
+@media print {
+  /* Hide everything except the form */
+  body * {
+    visibility: hidden;
+  }
+
+  .filled-form-wrapper,
+  .filled-form-wrapper * {
+    visibility: visible;
+  }
+
+  .filled-form-wrapper {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    box-shadow: none;
+    page-break-inside: avoid;
+  }
+
+  .filled-form-wrapper .form-image {
+    width: 100%;
+    height: auto;
+  }
+
+  /* Hide UI elements */
+  .no-print {
+    display: none !important;
+  }
+
+  /* Page settings */
+  @page {
+    size: A4;
+    margin: 0;
+  }
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .preview-container {
-    max-height: 400px;
+    min-height: 400px;
   }
 
   .preview-header {
