@@ -137,6 +137,31 @@ function CustomerDetails() {
     }
   };
 
+  // Delete document
+  const handleDeleteDocument = async (doc) => {
+    const confirmDelete = window.confirm(
+      `Are you sure you want to delete "${doc.name}"?\n\nThis will permanently delete the file from Google Drive.`
+    );
+
+    if (!confirmDelete) return;
+
+    try {
+      await window.gapi.client.drive.files.delete({
+        fileId: doc.id
+      });
+
+      console.log('Document deleted:', doc.name);
+
+      // Refresh the current folder
+      await loadCustomerDocuments(currentFolderId);
+
+      alert('Document deleted successfully');
+    } catch (error) {
+      console.error('Error deleting document:', error);
+      alert('Failed to delete document. Please try again.');
+    }
+  };
+
   // Drag and drop handlers
   const handleDragStart = (e, file) => {
     setDraggedFile(file);
@@ -706,6 +731,16 @@ function CustomerDetails() {
                                   <p>{formatDate(folder.createdTime)}</p>
                                 </div>
                                 <div className="document-actions">
+                                  <button
+                                    className="btn btn-small btn-danger"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDeleteDocument(folder);
+                                    }}
+                                    title="Delete folder"
+                                  >
+                                    🗑️
+                                  </button>
                                   <span className="chevron">›</span>
                                 </div>
                               </div>
@@ -750,6 +785,16 @@ function CustomerDetails() {
                                     }}
                                   >
                                     View
+                                  </button>
+                                  <button
+                                    className="btn btn-small btn-danger"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDeleteDocument(doc);
+                                    }}
+                                    title="Delete file"
+                                  >
+                                    🗑️
                                   </button>
                                 </div>
                               </div>

@@ -308,10 +308,28 @@
 
 .document-actions {
   margin-left: 15px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .document-actions button {
   pointer-events: all;
+}
+
+.btn-danger {
+  background: var(--color-error);
+  color: white;
+  padding: 6px 12px;
+  font-size: 16px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-danger:hover {
+  background: #dc2626;
+  transform: scale(1.1);
 }
 
 /* Breadcrumb Navigation */
