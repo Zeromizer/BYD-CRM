@@ -66,7 +66,6 @@ function CustomerDetails() {
         const response = await window.gapi.client.drive.files.list({
           q: `'${folderId}' in parents and trashed=false`,
           fields: 'nextPageToken, files(id, name, mimeType, size, createdTime, webViewLink, iconLink)',
-          orderBy: 'folder, name',
           pageSize: 1000,
           pageToken: pageToken,
         });
@@ -74,7 +73,23 @@ function CustomerDetails() {
         const files = response.result.files || [];
         allFiles = allFiles.concat(files);
         pageToken = response.result.nextPageToken;
+
+        console.log('API Page Response:', {
+          filesInPage: files.length,
+          hasNextPage: !!pageToken,
+          fileTypes: files.map(f => ({ name: f.name, mimeType: f.mimeType }))
+        });
       } while (pageToken);
+
+      // Sort folders first, then files, both alphabetically
+      allFiles.sort((a, b) => {
+        const aIsFolder = a.mimeType === 'application/vnd.google-apps.folder';
+        const bIsFolder = b.mimeType === 'application/vnd.google-apps.folder';
+
+        if (aIsFolder && !bIsFolder) return -1;
+        if (!aIsFolder && bIsFolder) return 1;
+        return a.name.localeCompare(b.name);
+      });
 
       console.log('Documents loaded:', {
         folderId,
