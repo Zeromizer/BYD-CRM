@@ -1,11 +1,31 @@
 /**
  * Google Drive API Configuration
+ *
+ * IMPORTANT: You MUST create your own Google OAuth credentials!
+ * The default credentials below will NOT work for your deployment.
+ *
+ * Follow the setup guide: GOOGLE_OAUTH_SETUP.md
+ *
+ * Quick Steps:
+ * 1. Go to https://console.cloud.google.com/
+ * 2. Create a new project
+ * 3. Enable Google Drive API
+ * 4. Create OAuth 2.0 Client ID (Web application)
+ * 5. Add authorized origin: https://zeromizer.github.io
+ * 6. Add redirect URI: https://zeromizer.github.io/BYD-CRM/
+ * 7. Create API Key and restrict it to Google Drive API
+ * 8. Replace CLIENT_ID and API_KEY below with your values
+ * 9. Commit and push changes
  */
 export const CONFIG = {
-  // Google OAuth 2.0 Client ID
+  // REPLACE WITH YOUR Google OAuth 2.0 Client ID
+  // Get this from: https://console.cloud.google.com/apis/credentials
+  // Format: xxxxx-xxxxx.apps.googleusercontent.com
   CLIENT_ID: '565047387986-d61n6b2aenll8dsjcdhjr85u1a1ck5ec.apps.googleusercontent.com',
 
-  // Google API Key
+  // REPLACE WITH YOUR Google API Key
+  // Get this from: https://console.cloud.google.com/apis/credentials
+  // Format: AIzaSyxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
   API_KEY: 'AIzaSyCJ6vqWOgQDXpYg09UkfzpbEPAb7WLPxlU',
 
   // OAuth Scopes
