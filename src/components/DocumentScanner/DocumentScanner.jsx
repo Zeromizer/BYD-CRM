@@ -33,11 +33,17 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
 
       console.log('Camera access granted, stream obtained:', stream);
 
+      // Set camera active FIRST to render the video element
+      setCameraActive(true);
+
+      // Wait a tick for React to render the video element
+      await new Promise(resolve => setTimeout(resolve, 100));
+
       if (!videoRef.current) {
-        console.error('Video ref is null!');
+        console.error('Video ref is still null after render!');
         setCameraLoading(false);
+        setCameraActive(false);
         setError('Video element not ready. Please try again.');
-        // Stop the stream since we can't use it
         stream.getTracks().forEach(track => track.stop());
         return;
       }
@@ -87,6 +93,7 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
       } catch (metadataError) {
         console.error('Metadata loading error:', metadataError);
         setCameraLoading(false);
+        setCameraActive(false);
         setError('Failed to initialize video. Please try again.');
         stream.getTracks().forEach(track => track.stop());
         return;
@@ -97,17 +104,18 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
         console.log('Attempting to play video...');
         await video.play();
         console.log('Video playing successfully');
-        setCameraActive(true);
         setCameraLoading(false);
       } catch (playError) {
         console.error('Error playing video:', playError);
         setCameraLoading(false);
+        setCameraActive(false);
         setError('Unable to start video playback. Please try again.');
         stream.getTracks().forEach(track => track.stop());
       }
     } catch (err) {
       console.error('Error accessing camera:', err);
       setCameraLoading(false);
+      setCameraActive(false);
       setError(`Unable to access camera: ${err.message}. Please check permissions.`);
     }
   };
