@@ -8,6 +8,7 @@ import VsaDetailsModal from '../VsaDetailsModal/VsaDetailsModal';
 import ExcelPopulateModal from '../ExcelPopulateModal/ExcelPopulateModal';
 import FormPrintModal from '../FormPrintModal/FormPrintModal';
 import CombinePrintModal from '../CombinePrintModal/CombinePrintModal';
+import DocumentViewer from '../DocumentViewer/DocumentViewer';
 import './CustomerDetails.css';
 
 function CustomerDetails() {
@@ -22,6 +23,8 @@ function CustomerDetails() {
   const [isExcelModalOpen, setIsExcelModalOpen] = useState(false);
   const [isFormPrintModalOpen, setIsFormPrintModalOpen] = useState(false);
   const [isCombinePrintModalOpen, setIsCombinePrintModalOpen] = useState(false);
+  const [isDocumentViewerOpen, setIsDocumentViewerOpen] = useState(false);
+  const [selectedDocument, setSelectedDocument] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Documents state
@@ -163,9 +166,13 @@ function CustomerDetails() {
   };
 
   const openDocument = (doc) => {
-    if (doc.webViewLink) {
-      window.open(doc.webViewLink, '_blank');
-    }
+    setSelectedDocument(doc);
+    setIsDocumentViewerOpen(true);
+  };
+
+  const handleCloseDocumentViewer = () => {
+    setIsDocumentViewerOpen(false);
+    setSelectedDocument(null);
   };
 
   const formatFileSize = (bytes) => {
@@ -523,8 +530,14 @@ function CustomerDetails() {
                         </p>
                       </div>
                       <div className="document-actions">
-                        <button className="btn btn-small btn-primary" onClick={() => openDocument(doc)}>
-                          Open
+                        <button
+                          className="btn btn-small btn-action"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openDocument(doc);
+                          }}
+                        >
+                          View
                         </button>
                       </div>
                     </div>
@@ -611,6 +624,13 @@ function CustomerDetails() {
         isOpen={isCombinePrintModalOpen}
         onClose={handleCloseCombinePrintModal}
         customer={customer}
+      />
+
+      {/* Document Viewer Modal */}
+      <DocumentViewer
+        isOpen={isDocumentViewerOpen}
+        onClose={handleCloseDocumentViewer}
+        document={selectedDocument}
       />
     </>
   );
