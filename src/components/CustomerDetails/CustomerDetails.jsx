@@ -196,17 +196,14 @@ function CustomerDetails() {
         <div className="customer-details-header">
           <h2>{customer.name}</h2>
           <div className="customer-actions">
-            <button className="btn btn-info" onClick={handleVsaDetails}>
-              🚗 VSA Details
+            <button className="btn btn-action" onClick={handleFormPrint}>
+              Print Form
             </button>
-            <button className="btn btn-success" onClick={handleFormPrint}>
-              📄 Print Form
+            <button className="btn btn-action" onClick={handleCombinePrint}>
+              Combine & Print
             </button>
-            <button className="btn btn-success" onClick={handleCombinePrint}>
-              📋 Combine & Print
-            </button>
-            <button className="btn btn-success" onClick={handleExcelPopulate}>
-              📊 Populate Excel
+            <button className="btn btn-action" onClick={handleExcelPopulate}>
+              Populate Excel
             </button>
           </div>
         </div>
