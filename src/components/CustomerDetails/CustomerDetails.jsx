@@ -237,8 +237,13 @@ function CustomerDetails() {
         <div className="customer-details-content">
           {activeTab === 'details' ? (
             <>
-              <div className="info-section">
-                <h3>Contact Information</h3>
+              <div className="vsa-section">
+                <div className="vsa-section-header">
+                  <h3>Contact Information</h3>
+                  <button className="btn btn-small btn-primary" onClick={handleEdit}>
+                    Edit Details
+                  </button>
+                </div>
                 <div className="info-grid">
                   <div className="info-item">
                     <label>Phone</label>
