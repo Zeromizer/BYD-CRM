@@ -551,41 +551,121 @@
   font-size: 13px;
 }
 
+/* Mobile back button */
+.mobile-back-button {
+  display: none;
+}
+
 @media (max-width: 768px) {
+  .customer-details-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-md);
+    padding: var(--spacing-md);
+  }
+
+  .customer-details-header h2 {
+    font-size: 20px;
+    word-break: break-word;
+    width: 100%;
+  }
+
+  .mobile-back-button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: var(--color-background-tertiary);
+    color: var(--color-text-primary);
+    border: none;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: var(--spacing-sm);
+  }
+
+  .mobile-back-button:hover {
+    background: var(--color-background-primary);
+  }
+
   .customer-actions {
     flex-wrap: wrap;
+    width: 100%;
+    gap: var(--spacing-sm);
+  }
+
+  .customer-actions button {
+    flex: 1;
+    min-width: 120px;
+  }
+
+  .customer-tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .customer-tabs::-webkit-scrollbar {
+    display: none;
   }
 
   .customer-tabs .tab {
     flex: 1;
-    padding: 12px 15px;
-    font-size: 14px;
+    min-width: 80px;
+    padding: 14px 16px;
+    font-size: 15px;
+  }
+
+  .customer-details-content {
+    padding: var(--spacing-md);
+  }
+
+  .info-grid {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-md);
   }
 
   .document-item {
     flex-direction: column;
     align-items: flex-start;
+    padding: var(--spacing-md);
   }
 
   .document-icon {
     margin-bottom: 10px;
+    font-size: 32px;
+  }
+
+  .document-info {
+    width: 100%;
   }
 
   .document-actions {
     margin-left: 0;
-    margin-top: 10px;
+    margin-top: var(--spacing-md);
     width: 100%;
+    display: flex;
+    gap: var(--spacing-sm);
   }
 
   .document-actions button {
-    width: 100%;
+    flex: 1;
   }
 
   .delete-actions {
     flex-direction: column-reverse;
+    gap: var(--spacing-sm);
   }
 
   .delete-actions button {
     width: 100%;
+  }
+
+  /* Improve folder items for touch */
+  .folder-item,
+  .file-item {
+    padding: var(--spacing-md);
+    min-height: 60px;
   }
 }
