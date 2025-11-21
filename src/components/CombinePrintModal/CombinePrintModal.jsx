@@ -198,14 +198,14 @@ function CombinePrintModal({ isOpen, onClose, customer }) {
           <div className="empty-state">
             <p>No forms available</p>
             <p className="empty-state-hint">
-              Upload image form templates and configure field mappings in Forms Management
+              Upload image form templates in Forms Management
             </p>
           </div>
         ) : availableForms.length < 2 ? (
           <div className="empty-state">
             <p>At least 2 forms required</p>
             <p className="empty-state-hint">
-              You need at least two different forms with field mappings configured to use this feature
+              You need at least two different image forms to use this feature
             </p>
           </div>
         ) : (

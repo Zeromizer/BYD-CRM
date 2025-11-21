@@ -260,14 +260,14 @@ class FormService {
   }
 
   /**
-   * Get available forms for customer (image forms with field mappings)
+   * Get available forms for customer (all image forms)
    */
   getAvailableForms(formTemplates) {
     const available = [];
 
     for (const [formType, template] of Object.entries(formTemplates)) {
-      // Only include image forms with field mappings
-      if (template.fileType === 'image' && template.fieldMappings && Object.keys(template.fieldMappings).length > 0) {
+      // Include all image forms, even without field mappings (for back pages, static forms, etc.)
+      if (template.fileType === 'image') {
         available.push({
           formType,
           name: this.getFormTypeName(formType),
