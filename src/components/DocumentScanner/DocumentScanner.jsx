@@ -327,52 +327,55 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
     setError(null);
 
     try {
-      // Convert data URL to blob
-      const response = await fetch(processedImage);
-      const blob = await response.blob();
+      // Convert data URL to base64 (remove data:image/jpeg;base64, prefix)
+      const base64Data = processedImage.split(',')[1];
 
       // Create a unique filename
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
       const filename = `Scan_${timestamp}.jpg`;
 
-      // Create metadata
+      console.log('Uploading document to Google Drive:', filename);
+
+      // Upload using Google Drive API
+      const boundary = '-------314159265358979323846';
+      const delimiter = "\r\n--" + boundary + "\r\n";
+      const close_delim = "\r\n--" + boundary + "--";
+
       const metadata = {
         name: filename,
         mimeType: 'image/jpeg',
         parents: [customerFolderId]
       };
 
-      // Create form data for multipart upload
-      const form = new FormData();
-      form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-      form.append('file', blob);
+      const multipartRequestBody =
+        delimiter +
+        'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
+        JSON.stringify(metadata) +
+        delimiter +
+        'Content-Type: image/jpeg\r\n' +
+        'Content-Transfer-Encoding: base64\r\n\r\n' +
+        base64Data +
+        close_delim;
 
-      // Upload to Google Drive
-      const token = window.gapi.auth.getToken();
-      const uploadResponse = await fetch(
-        'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart',
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token.access_token}`,
-          },
-          body: form
-        }
-      );
+      const request = window.gapi.client.request({
+        path: '/upload/drive/v3/files',
+        method: 'POST',
+        params: { uploadType: 'multipart' },
+        headers: {
+          'Content-Type': 'multipart/related; boundary="' + boundary + '"'
+        },
+        body: multipartRequestBody
+      });
 
-      if (!uploadResponse.ok) {
-        throw new Error(`Upload failed: ${uploadResponse.status}`);
-      }
-
-      const result = await uploadResponse.json();
-      console.log('Document uploaded:', result);
+      const response = await request;
+      console.log('Document uploaded successfully:', response.result);
 
       // Reset scanner
       resetScanner();
 
       // Notify parent component
       if (onScanComplete) {
-        onScanComplete(result);
+        onScanComplete(response.result);
       }
 
       alert('Document scanned and saved successfully!');
