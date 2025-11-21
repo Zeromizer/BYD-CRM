@@ -519,37 +519,91 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
     return Math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2);
   };
 
-  // Get perspective transformation matrix
+  // Get perspective transformation matrix (homography)
   const getPerspectiveTransform = (src, dst) => {
-    // Simplified perspective transform (inverse mapping)
-    // Returns coefficients for mapping dst -> src
-    const matrix = [];
+    // Calculate the homography matrix for perspective transform
+    // We need to solve: dst = H * src where H is 3x3 homography matrix
+
+    // Build the system of equations Ax = b
+    const A = [];
+    const b = [];
 
     for (let i = 0; i < 4; i++) {
-      matrix.push([
+      A.push([
         src[i].x, src[i].y, 1, 0, 0, 0, -dst[i].x * src[i].x, -dst[i].x * src[i].y
       ]);
-      matrix.push([
+      A.push([
         0, 0, 0, src[i].x, src[i].y, 1, -dst[i].y * src[i].x, -dst[i].y * src[i].y
       ]);
-    }
 
-    const b = [];
-    for (let i = 0; i < 4; i++) {
       b.push(dst[i].x);
       b.push(dst[i].y);
     }
 
-    // Solve using Gaussian elimination (simplified)
-    const coeffs = [1, 0, 0, 0, 1, 0, 0, 0]; // Identity as fallback
+    // Solve Ax = b using Gaussian elimination
+    const h = solveLinearSystem(A, b);
 
-    return coeffs;
+    // Return as 3x3 matrix
+    return {
+      h11: h[0], h12: h[1], h13: h[2],
+      h21: h[3], h22: h[4], h23: h[5],
+      h31: h[6], h32: h[7], h33: 1
+    };
   };
 
-  // Apply transform to point
+  // Solve linear system using Gaussian elimination
+  const solveLinearSystem = (A, b) => {
+    const n = A.length;
+    const augmented = A.map((row, i) => [...row, b[i]]);
+
+    // Forward elimination
+    for (let i = 0; i < n; i++) {
+      // Find pivot
+      let maxRow = i;
+      for (let k = i + 1; k < n; k++) {
+        if (Math.abs(augmented[k][i]) > Math.abs(augmented[maxRow][i])) {
+          maxRow = k;
+        }
+      }
+
+      // Swap rows
+      [augmented[i], augmented[maxRow]] = [augmented[maxRow], augmented[i]];
+
+      // Make all rows below this one 0 in current column
+      for (let k = i + 1; k < n; k++) {
+        const factor = augmented[k][i] / augmented[i][i];
+        for (let j = i; j < n + 1; j++) {
+          augmented[k][j] -= factor * augmented[i][j];
+        }
+      }
+    }
+
+    // Back substitution
+    const x = new Array(n).fill(0);
+    for (let i = n - 1; i >= 0; i--) {
+      x[i] = augmented[i][n];
+      for (let j = i + 1; j < n; j++) {
+        x[i] -= augmented[i][j] * x[j];
+      }
+      x[i] /= augmented[i][i];
+    }
+
+    return x;
+  };
+
+  // Apply transform to point using homography
   const applyTransform = (point, transform) => {
-    // Simple bilinear interpolation as approximation
-    return point; // Simplified - would need full perspective math
+    const { h11, h12, h13, h21, h22, h23, h31, h32, h33 } = transform;
+
+    const x = point.x;
+    const y = point.y;
+
+    const denominator = h31 * x + h32 * y + h33;
+
+    return {
+      x: (h11 * x + h12 * y + h13) / denominator,
+      y: (h21 * x + h22 * y + h23) / denominator
+    };
   };
 
   // Enhance document image
