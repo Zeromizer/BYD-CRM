@@ -223,35 +223,135 @@
 
 /* Responsive Design */
 @media (max-width: 768px) {
+  .document-scanner {
+    height: 100%;
+  }
+
+  .scanner-header {
+    margin-bottom: var(--spacing-md);
+    padding: 0 var(--spacing-md);
+  }
+
+  .scanner-header h3 {
+    font-size: 20px;
+  }
+
+  .scanner-hint {
+    font-size: 13px;
+  }
+
   .scanner-body {
-    padding: 20px;
+    padding: var(--spacing-md);
+    border-radius: var(--radius-md);
+  }
+
+  .error-banner {
+    margin-bottom: var(--spacing-md);
+    padding: var(--spacing-md);
+    font-size: 14px;
+  }
+
+  .btn-large {
+    width: 100%;
+    padding: 18px 32px;
+    font-size: 17px;
+  }
+
+  .camera-view {
+    gap: var(--spacing-md);
+  }
+
+  .camera-video {
+    width: 100%;
+    min-height: 300px;
+    max-height: 55vh;
+    border-radius: var(--radius-sm);
+  }
+
+  .camera-controls {
+    flex-direction: row;
+    justify-content: space-between;
+    gap: var(--spacing-md);
+  }
+
+  .camera-controls button {
+    flex: 1;
+    padding: 14px 24px;
+    font-size: 16px;
+    min-height: 48px;
+  }
+
+  .btn-capture {
+    padding: 16px 32px;
+    font-size: 17px;
+  }
+
+  .preview-view {
+    gap: var(--spacing-md);
+  }
+
+  .preview-image-single {
+    padding: var(--spacing-md);
+    max-height: 60vh;
+  }
+
+  .preview-image-single img {
+    max-height: 55vh;
+    border-radius: var(--radius-sm);
   }
 
   .preview-images {
     grid-template-columns: 1fr;
+    gap: var(--spacing-md);
+  }
+
+  .preview-image {
+    padding: var(--spacing-md);
   }
 
   .preview-image img {
-    max-height: 40vh;
-  }
-
-  .camera-video {
-    max-height: 60vh;
+    max-height: 35vh;
   }
 
   .preview-options {
     flex-direction: column;
-    gap: 15px;
+    gap: var(--spacing-md);
+    padding: var(--spacing-md);
+  }
+
+  .checkbox-label {
+    font-size: 15px;
+    padding: var(--spacing-sm) 0;
+  }
+
+  .checkbox-label input[type="checkbox"] {
+    width: 22px;
+    height: 22px;
   }
 
   .camera-controls,
   .preview-controls {
-    flex-direction: column;
+    gap: var(--spacing-md);
   }
 
-  .btn-large,
-  .btn-capture,
+  .preview-controls {
+    flex-direction: row;
+  }
+
   .preview-controls .btn {
-    width: 100%;
+    flex: 1;
+    padding: 14px 24px;
+    font-size: 16px;
+    min-height: 48px;
+  }
+
+  .loading-state,
+  .processing-state {
+    padding: var(--spacing-xl);
+  }
+
+  .loading-state p,
+  .processing-state p {
+    font-size: 15px;
   }
 }

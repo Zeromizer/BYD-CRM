@@ -171,18 +171,86 @@
 
 @media (max-width: 768px) {
   .header-container {
-    padding: 12px 15px;
+    padding: 10px 12px;
+    gap: var(--spacing-sm);
+  }
+
+  .header-left {
+    gap: 8px;
+    min-width: 0;
+    flex: 1;
   }
 
   .header-title {
-    font-size: 18px;
+    font-size: 16px;
+    letter-spacing: 0.3px;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .byd-logo {
+    font-size: 20px;
+    letter-spacing: 1px;
+  }
+
+  .divider {
+    font-size: 20px;
+  }
+
+  .motor-east {
+    font-size: 14px;
+    letter-spacing: 0.5px;
+  }
+
+  .header-actions {
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .auth-button {
+    padding: 10px;
+    min-width: 44px;
+    min-height: 44px;
   }
 
   .auth-button span:not(.status-dot) {
     display: none;
   }
 
-  .auth-button {
-    padding: 10px;
+  .dropdown-toggle {
+    width: 44px;
+    height: 44px;
+    font-size: 18px;
+  }
+
+  .dropdown-menu {
+    min-width: 180px;
+  }
+
+  .dropdown-item {
+    padding: 14px 18px;
+    font-size: 15px;
+  }
+}
+
+@media (max-width: 480px) {
+  .header-container {
+    padding: 8px 10px;
+  }
+
+  .header-title {
+    font-size: 14px;
+  }
+
+  .byd-logo {
+    font-size: 18px;
+  }
+
+  .motor-east {
+    font-size: 12px;
+  }
+
+  .divider {
+    font-size: 18px;
   }
 }
