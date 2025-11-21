@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import useAuthStore from '../../stores/useAuthStore';
 import './Header.css';
 
 function Header() {
+  const navigate = useNavigate();
   const { isSignedIn, initialize, signIn, signOut } = useAuthStore();
   const [showDropdown, setShowDropdown] = useState(false);
 
@@ -53,14 +55,17 @@ function Header() {
             </button>
             {showDropdown && (
               <div className="dropdown-menu">
-                <a className="dropdown-item" onClick={() => console.log('Statistics')}>
-                  View Statistics
+                <a className="dropdown-item" onClick={() => { navigate('/'); setShowDropdown(false); }}>
+                  Customer List
                 </a>
-                <a className="dropdown-item" onClick={() => console.log('Forms')}>
+                <a className="dropdown-item" onClick={() => { navigate('/forms'); setShowDropdown(false); }}>
                   Manage Forms
                 </a>
-                <a className="dropdown-item" onClick={() => console.log('Excel')}>
+                <a className="dropdown-item" onClick={() => { navigate('/excel'); setShowDropdown(false); }}>
                   Manage Excel
+                </a>
+                <a className="dropdown-item" onClick={() => console.log('Statistics')}>
+                  View Statistics
                 </a>
                 <a className="dropdown-item" onClick={() => console.log('Force Sync')}>
                   Force Sync
