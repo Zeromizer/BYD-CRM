@@ -311,13 +311,21 @@
 .breadcrumb-nav {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   padding: 12px 16px;
   background: #f9fafb;
   border-radius: var(--radius-md);
   margin-bottom: 20px;
   font-size: 14px;
+}
+
+.breadcrumb-path {
+  display: flex;
+  align-items: center;
   overflow-x: auto;
   white-space: nowrap;
+  flex: 1;
 }
 
 .breadcrumb-item {
@@ -345,6 +353,28 @@
 .breadcrumb-separator {
   color: var(--color-text-tertiary);
   margin: 0 4px;
+}
+
+.breadcrumb-drive-link {
+  background: none;
+  border: 2px solid var(--color-border-light);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  padding: 6px 12px;
+  border-radius: 6px;
+  transition: all 0.2s;
+  font-size: 20px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.breadcrumb-drive-link:hover {
+  background: rgba(var(--color-primary-rgb, 65, 105, 225), 0.1);
+  border-color: var(--color-primary);
+  transform: translateY(-1px);
 }
 
 /* Folders and Files Sections */
