@@ -3,7 +3,6 @@ import './DocumentScanner.css';
 
 function DocumentScanner({ customerId, customerName, customerFolderId, onScanComplete }) {
   const [cameraActive, setCameraActive] = useState(false);
-  const [cameraLoading, setCameraLoading] = useState(false);
   const [capturedImage, setCapturedImage] = useState(null);
   const [processedImage, setProcessedImage] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -20,9 +19,6 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
   const startCamera = async () => {
     try {
       setError(null);
-      setCameraLoading(true);
-      console.log('Requesting camera access...');
-
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: 'environment', // Use back camera on mobile
@@ -31,38 +27,14 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
         }
       });
 
-      console.log('Camera access granted, stream obtained:', stream);
-
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         streamRef.current = stream;
-
-        // Wait for video metadata to load
-        await new Promise((resolve) => {
-          if (videoRef.current) {
-            videoRef.current.onloadedmetadata = () => {
-              console.log('Video metadata loaded');
-              resolve();
-            };
-          }
-        });
-
-        // Explicitly play the video (required in some browsers)
-        try {
-          await videoRef.current.play();
-          console.log('Video playing successfully');
-          setCameraActive(true);
-          setCameraLoading(false);
-        } catch (playError) {
-          console.error('Error playing video:', playError);
-          setCameraLoading(false);
-          setError('Unable to start video playback. Please try again.');
-        }
+        setCameraActive(true);
       }
     } catch (err) {
       console.error('Error accessing camera:', err);
-      setCameraLoading(false);
-      setError(`Unable to access camera: ${err.message}. Please check permissions.`);
+      setError('Unable to access camera. Please check permissions.');
     }
   };
 
@@ -76,7 +48,6 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
       videoRef.current.srcObject = null;
     }
     setCameraActive(false);
-    setCameraLoading(false);
   };
 
   // Capture photo
@@ -366,18 +337,11 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
       )}
 
       <div className="scanner-body">
-        {!cameraActive && !capturedImage && !cameraLoading && (
+        {!cameraActive && !capturedImage && (
           <div className="scanner-start">
             <button className="btn btn-large btn-primary" onClick={startCamera}>
               📷 Start Camera
             </button>
-          </div>
-        )}
-
-        {cameraLoading && (
-          <div className="loading-state">
-            <div className="loading"></div>
-            <p>Starting camera...</p>
           </div>
         )}
 
@@ -387,7 +351,6 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
               ref={videoRef}
               autoPlay
               playsInline
-              muted
               className="camera-video"
             />
             <canvas ref={canvasRef} style={{ display: 'none' }} />
