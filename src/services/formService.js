@@ -20,6 +20,13 @@ class FormService {
       salesConsultant: customer.salesConsultant || '',
       vsaNo: customer.vsaNo || '',
       date: today,
+
+      // VSA Details - Delivery Details
+      dateOfRegistration: customer.vsa_dateOfRegistration || '',
+      registrationNo: customer.vsa_registrationNo || '',
+      chassisNo: customer.vsa_chassisNo || '',
+      engineNo: customer.vsa_engineNo || '',
+      motorNo: customer.vsa_motorNo || '',
     };
   }
 
