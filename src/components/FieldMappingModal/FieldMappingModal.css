@@ -71,6 +71,9 @@
   display: block;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   background: white;
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
 }
 
 .controls-panel {
