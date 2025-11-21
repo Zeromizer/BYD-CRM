@@ -801,7 +801,7 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
               <button
                 className="btn btn-primary"
                 onClick={uploadToGoogleDrive}
-                disabled={isUploading || isProcessing}
+                disabled={isUploading}
               >
                 {isUploading ? 'Uploading...' : 'Save to Drive'}
               </button>
