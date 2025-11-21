@@ -130,11 +130,48 @@
   .vsa-tabs {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap;
+    padding: 8px;
+    gap: 8px;
+    /* Add scroll snap for better mobile UX */
+    scroll-snap-type: x proximity;
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-primary) #f0f0f0;
+    /* Add subtle gradient to indicate scrollability */
+    position: relative;
   }
 
+  .vsa-tabs::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 2px;
+    width: 40px;
+    background: linear-gradient(to right, transparent, #f9fafb 70%);
+    pointer-events: none;
+  }
+
+  /* Make tabs more touch-friendly */
   .vsa-tab {
-    padding: 10px 15px;
-    font-size: 13px;
+    padding: 12px 20px;
+    font-size: 14px;
+    min-height: 44px;
+    min-width: fit-content;
+    flex-shrink: 0;
+    scroll-snap-align: start;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* Better tap feedback */
+    -webkit-tap-highlight-color: rgba(0, 188, 212, 0.1);
+  }
+
+  /* Make active tab more prominent on mobile */
+  .vsa-tab.active {
+    background: var(--color-card-background);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
   }
 
   .form-row {
@@ -142,15 +179,54 @@
   }
 
   .vsa-tab-content {
-    padding: 15px;
+    padding: 16px;
     min-height: 300px;
+  }
+
+  .tab-panel h3 {
+    font-size: 16px;
+  }
+
+  /* Make inputs more touch-friendly */
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    padding: 12px 14px;
+    font-size: 16px;
+    min-height: 44px;
+  }
+
+  .form-group label {
+    font-size: 13px;
   }
 
   .modal-actions {
     flex-direction: column-reverse;
+    gap: 12px;
   }
 
   .modal-actions button {
     width: 100%;
+    min-height: 48px;
+    font-size: 16px;
+  }
+
+  /* Custom scrollbar for webkit browsers */
+  .vsa-tabs::-webkit-scrollbar {
+    height: 6px;
+  }
+
+  .vsa-tabs::-webkit-scrollbar-track {
+    background: #f0f0f0;
+    border-radius: 3px;
+  }
+
+  .vsa-tabs::-webkit-scrollbar-thumb {
+    background: var(--color-primary);
+    border-radius: 3px;
+  }
+
+  .vsa-tabs::-webkit-scrollbar-thumb:hover {
+    background: var(--color-primary-hover);
   }
 }
