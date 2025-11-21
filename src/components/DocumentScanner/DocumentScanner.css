@@ -162,6 +162,27 @@
   flex: 1;
 }
 
+.preview-image-single {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  border-radius: var(--radius-md);
+  border: 2px solid var(--color-border-light);
+  padding: 20px;
+  flex: 1;
+}
+
+.preview-image-single img {
+  width: 100%;
+  height: auto;
+  max-height: 60vh;
+  object-fit: contain;
+  border-radius: var(--radius-sm);
+  background: #f0f0f0;
+}
+
 .preview-image {
   display: flex;
   flex-direction: column;
