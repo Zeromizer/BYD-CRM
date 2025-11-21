@@ -29,7 +29,9 @@ export const CONFIG = {
   API_KEY: 'AIzaSyDH6E6B4u1m_uvr0mSdCxaCYIkzjSqUuY8',
 
   // OAuth Scopes
-  SCOPES: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.appdata',
+  // drive: Full access to all Drive files (needed to view files uploaded outside the app AND create folders/files)
+  // drive.appdata: Access to app-specific data storage
+  SCOPES: 'https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/drive.appdata',
 
   // Discovery Documents
   DISCOVERY_DOCS: ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'],
