@@ -226,6 +226,12 @@ function CustomerDetails() {
             Details
           </button>
           <button
+            className={`tab ${activeTab === 'vsa' ? 'active' : ''}`}
+            onClick={() => setActiveTab('vsa')}
+          >
+            VSA
+          </button>
+          <button
             className={`tab ${activeTab === 'documents' ? 'active' : ''}`}
             onClick={() => setActiveTab('documents')}
           >
@@ -298,6 +304,178 @@ function CustomerDetails() {
                   <div className="info-value">{customer.notes}</div>
                 </div>
               )}
+            </>
+          ) : activeTab === 'vsa' ? (
+            /* VSA Tab */
+            <>
+              <div className="vsa-section">
+                <div className="vsa-section-header">
+                  <h3>BYD New Car Details</h3>
+                  <button className="btn btn-small btn-primary" onClick={handleVsaDetails}>
+                    Edit VSA Details
+                  </button>
+                </div>
+                <div className="info-grid">
+                  <div className="info-item">
+                    <label>Make & Model</label>
+                    <div className="info-value">{customer.vsa_makeModel || 'N/A'}</div>
+                  </div>
+                  <div className="info-item">
+                    <label>Year of Manufacture</label>
+                    <div className="info-value">{customer.vsa_yom || 'N/A'}</div>
+                  </div>
+                  <div className="info-item">
+                    <label>Body Colour</label>
+                    <div className="info-value">{customer.vsa_bodyColour || 'N/A'}</div>
+                  </div>
+                  <div className="info-item">
+                    <label>Upholstery</label>
+                    <div className="info-value">{customer.vsa_upholstery || 'N/A'}</div>
+                  </div>
+                  <div className="info-item">
+                    <label>P/R/Z Type</label>
+                    <div className="info-value">{customer.vsa_przType || 'N/A'}</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="info-section">
+                <h3>BYD New Car Package</h3>
+                <div className="info-grid">
+                  <div className="info-item">
+                    <label>Package</label>
+                    <div className="info-value">{customer.vsa_package || 'N/A'}</div>
+                  </div>
+                  <div className="info-item">
+                    <label>Selling with COE</label>
+                    <div className="info-value">{customer.vsa_sellingWithCOE || 'N/A'}</div>
+                  </div>
+                  <div className="info-item">
+                    <label>Selling Price on Price List</label>
+                    <div className="info-value">{customer.vsa_sellingPriceList || 'N/A'}</div>
+                  </div>
+                  <div className="info-item">
+                    <label>Purchase Price with COE</label>
+                    <div className="info-value">{customer.vsa_purchasePriceWithCOE || 'N/A'}</div>
+                  </div>
+                  <div className="info-item">
+                    <label>COE Rebate Level</label>
+                    <div className="info-value">{customer.vsa_coeRebateLevel || 'N/A'}</div>
+                  </div>
+                  <div className="info-item">
+                    <label>Deposit</label>
+                    <div className="info-value">{customer.vsa_deposit || 'N/A'}</div>
+                  </div>
+                  <div className="info-item">
+                    <label>Less: Others</label>
+                    <div className="info-value">{customer.vsa_lessOthers || 'N/A'}</div>
+                  </div>
+                  <div className="info-item">
+                    <label>Add: Others</label>
+                    <div className="info-value">{customer.vsa_addOthers || 'N/A'}</div>
+                  </div>
+                  <div className="info-item">
+                    <label>Approximate Delivery Date</label>
+                    <div className="info-value">{customer.vsa_deliveryDate || 'N/A'}</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="info-section">
+                <h3>Trade In Car Details</h3>
+                <div className="info-grid">
+                  <div className="info-item">
+                    <label>Trade in Car No</label>
+                    <div className="info-value">{customer.vsa_tradeInCarNo || 'N/A'}</div>
+                  </div>
+                  <div className="info-item">
+                    <label>Trade in Car Model</label>
+                    <div className="info-value">{customer.vsa_tradeInCarModel || 'N/A'}</div>
+                  </div>
+                  <div className="info-item">
+                    <label>Trade In Amount</label>
+                    <div className="info-value">{customer.vsa_tradeInAmount || 'N/A'}</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="info-section">
+                <h3>Delivery Details</h3>
+                <div className="info-grid">
+                  <div className="info-item">
+                    <label>Date of Registration</label>
+                    <div className="info-value">{customer.vsa_dateOfRegistration || 'N/A'}</div>
+                  </div>
+                  <div className="info-item">
+                    <label>Registration No</label>
+                    <div className="info-value">{customer.vsa_registrationNo || 'N/A'}</div>
+                  </div>
+                  <div className="info-item">
+                    <label>Chassis No</label>
+                    <div className="info-value">{customer.vsa_chassisNo || 'N/A'}</div>
+                  </div>
+                  <div className="info-item">
+                    <label>Engine No</label>
+                    <div className="info-value">{customer.vsa_engineNo || 'N/A'}</div>
+                  </div>
+                  <div className="info-item">
+                    <label>Motor No</label>
+                    <div className="info-value">{customer.vsa_motorNo || 'N/A'}</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="info-section">
+                <h3>Insurance</h3>
+                <div className="info-grid">
+                  <div className="info-item">
+                    <label>Insurance Company</label>
+                    <div className="info-value">{customer.vsa_insuranceCompany || 'N/A'}</div>
+                  </div>
+                  <div className="info-item">
+                    <label>Insurance Fee</label>
+                    <div className="info-value">{customer.vsa_insuranceFee || 'N/A'}</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="info-section">
+                <h3>Remarks & Loan Details</h3>
+                {customer.vsa_remarks1 && (
+                  <div className="info-item" style={{ marginBottom: '1rem' }}>
+                    <label>Remarks 1</label>
+                    <div className="info-value">{customer.vsa_remarks1}</div>
+                  </div>
+                )}
+                {customer.vsa_remarks2 && (
+                  <div className="info-item" style={{ marginBottom: '1rem' }}>
+                    <label>Remarks 2</label>
+                    <div className="info-value">{customer.vsa_remarks2}</div>
+                  </div>
+                )}
+                <div className="info-grid">
+                  <div className="info-item">
+                    <label>Loan Amount</label>
+                    <div className="info-value">{customer.vsa_loanAmount || 'N/A'}</div>
+                  </div>
+                  <div className="info-item">
+                    <label>Interest</label>
+                    <div className="info-value">{customer.vsa_interest || 'N/A'}</div>
+                  </div>
+                  <div className="info-item">
+                    <label>Tenure</label>
+                    <div className="info-value">{customer.vsa_tenure || 'N/A'}</div>
+                  </div>
+                  <div className="info-item">
+                    <label>Admin Fee</label>
+                    <div className="info-value">{customer.vsa_adminFee || 'N/A'}</div>
+                  </div>
+                  <div className="info-item">
+                    <label>Insurance Subsidy</label>
+                    <div className="info-value">{customer.vsa_insuranceSubsidy || 'N/A'}</div>
+                  </div>
+                </div>
+              </div>
             </>
           ) : (
             /* Documents Tab */
