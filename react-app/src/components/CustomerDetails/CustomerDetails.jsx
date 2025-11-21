@@ -4,6 +4,7 @@ import Modal from '../Modal/Modal';
 import CustomerForm from '../CustomerForm/CustomerForm';
 import ExcelPopulateModal from '../ExcelPopulateModal/ExcelPopulateModal';
 import FormPrintModal from '../FormPrintModal/FormPrintModal';
+import CombinePrintModal from '../CombinePrintModal/CombinePrintModal';
 import './CustomerDetails.css';
 
 function CustomerDetails() {
@@ -14,6 +15,7 @@ function CustomerDetails() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isExcelModalOpen, setIsExcelModalOpen] = useState(false);
   const [isFormPrintModalOpen, setIsFormPrintModalOpen] = useState(false);
+  const [isCombinePrintModalOpen, setIsCombinePrintModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleEdit = () => {
@@ -38,6 +40,14 @@ function CustomerDetails() {
 
   const handleCloseFormPrintModal = () => {
     setIsFormPrintModalOpen(false);
+  };
+
+  const handleCombinePrint = () => {
+    setIsCombinePrintModalOpen(true);
+  };
+
+  const handleCloseCombinePrintModal = () => {
+    setIsCombinePrintModalOpen(false);
   };
 
   const handleCloseEditModal = () => {
@@ -120,6 +130,9 @@ function CustomerDetails() {
           <div className="customer-actions">
             <button className="btn btn-success" onClick={handleFormPrint}>
               📄 Print Form
+            </button>
+            <button className="btn btn-success" onClick={handleCombinePrint}>
+              📋 Combine & Print
             </button>
             <button className="btn btn-success" onClick={handleExcelPopulate}>
               📊 Populate Excel
@@ -257,6 +270,13 @@ function CustomerDetails() {
       <FormPrintModal
         isOpen={isFormPrintModalOpen}
         onClose={handleCloseFormPrintModal}
+        customer={customer}
+      />
+
+      {/* Combine Print Modal */}
+      <CombinePrintModal
+        isOpen={isCombinePrintModalOpen}
+        onClose={handleCloseCombinePrintModal}
         customer={customer}
       />
     </>
