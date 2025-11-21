@@ -19,12 +19,48 @@ const FIELD_NAMES = {
   vsaNo: 'VSA No',
   date: "Today's Date",
 
+  // VSA Details - BYD New Car Details
+  makeModel: 'Make & Model',
+  yom: 'Year of Manufacture',
+  bodyColour: 'Body Colour',
+  upholstery: 'Upholstery',
+  przType: 'P/R/Z Type',
+
+  // VSA Details - BYD New Car Package
+  package: 'Package',
+  sellingWithCOE: 'Selling with COE',
+  sellingPriceList: 'Selling Price on Price List',
+  purchasePriceWithCOE: 'Purchase Price with COE',
+  coeRebateLevel: 'COE Rebate Level',
+  deposit: 'Deposit',
+  lessOthers: 'Less: Others',
+  addOthers: 'Add: Others',
+  deliveryDate: 'Approximate Delivery Date',
+
+  // VSA Details - Trade In Car Details
+  tradeInCarNo: 'Trade in Car No',
+  tradeInCarModel: 'Trade in Car Model',
+  tradeInAmount: 'Trade In Amount',
+
   // VSA Details - Delivery Details
   dateOfRegistration: 'Date of Registration',
   registrationNo: 'Registration No',
   chassisNo: 'Chassis No',
   engineNo: 'Engine No',
   motorNo: 'Motor No',
+
+  // VSA Details - Insurance
+  insuranceCompany: 'Insurance Company',
+  insuranceFee: 'Insurance Fee',
+
+  // VSA Details - Remarks
+  remarks1: 'Remarks 1',
+  remarks2: 'Remarks 2',
+  loanAmount: 'Loan Amount',
+  interest: 'Interest',
+  tenure: 'Tenure',
+  adminFee: 'Admin Fee',
+  insuranceSubsidy: 'Insurance Subsidy',
 };
 
 function ExcelPopulateModal({ isOpen, onClose, customer }) {
