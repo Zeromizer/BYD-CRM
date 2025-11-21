@@ -33,6 +33,10 @@ function CustomerDetails() {
   const [currentFolderId, setCurrentFolderId] = useState(null);
   const [folderPath, setFolderPath] = useState([]);
 
+  // Drag and drop state
+  const [draggedFile, setDraggedFile] = useState(null);
+  const [dropTargetFolder, setDropTargetFolder] = useState(null);
+
   // Load documents when Documents tab is active
   useEffect(() => {
     if (activeTab === 'documents' && customer && isSignedIn) {
@@ -121,6 +125,56 @@ function CustomerDetails() {
 
   const isFolder = (mimeType) => {
     return mimeType === 'application/vnd.google-apps.folder';
+  };
+
+  // Drag and drop handlers
+  const handleDragStart = (e, file) => {
+    setDraggedFile(file);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragEnd = () => {
+    setDraggedFile(null);
+    setDropTargetFolder(null);
+  };
+
+  const handleDragOver = (e, folder) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDropTargetFolder(folder.id);
+  };
+
+  const handleDragLeave = () => {
+    setDropTargetFolder(null);
+  };
+
+  const handleDrop = async (e, targetFolder) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!draggedFile || !targetFolder) {
+      return;
+    }
+
+    try {
+      // Move the file using Google Drive API
+      await window.gapi.client.drive.files.update({
+        fileId: draggedFile.id,
+        addParents: targetFolder.id,
+        removeParents: currentFolderId,
+      });
+
+      // Refresh the current folder to show updated file list
+      await loadCustomerDocuments(currentFolderId);
+
+      console.log(`Moved ${draggedFile.name} to ${targetFolder.name}`);
+    } catch (error) {
+      console.error('Error moving file:', error);
+      alert(`Failed to move file: ${error.message}`);
+    } finally {
+      setDraggedFile(null);
+      setDropTargetFolder(null);
+    }
   };
 
   const handleEdit = () => {
@@ -622,8 +676,11 @@ function CustomerDetails() {
                             {documents.filter(doc => isFolder(doc.mimeType)).map((folder) => (
                               <div
                                 key={folder.id}
-                                className="document-item folder-item"
+                                className={`document-item folder-item ${dropTargetFolder === folder.id ? 'drop-target' : ''}`}
                                 onClick={() => navigateToFolder(folder)}
+                                onDragOver={(e) => handleDragOver(e, folder)}
+                                onDragLeave={handleDragLeave}
+                                onDrop={(e) => handleDrop(e, folder)}
                               >
                                 <div className="document-icon">
                                   <span className="folder-icon">📁</span>
@@ -649,7 +706,10 @@ function CustomerDetails() {
                             {documents.filter(doc => !isFolder(doc.mimeType)).map((doc) => (
                               <div
                                 key={doc.id}
-                                className="document-item file-item"
+                                className={`document-item file-item ${draggedFile?.id === doc.id ? 'dragging' : ''}`}
+                                draggable
+                                onDragStart={(e) => handleDragStart(e, doc)}
+                                onDragEnd={handleDragEnd}
                                 onClick={() => openDocument(doc)}
                               >
                                 <div className="document-icon">

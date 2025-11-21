@@ -453,6 +453,41 @@
   background: #f9fafb;
 }
 
+/* Drag and Drop Styles */
+.file-item[draggable] {
+  cursor: grab;
+}
+
+.file-item[draggable]:active {
+  cursor: grabbing;
+}
+
+.file-item.dragging {
+  opacity: 0.5;
+  cursor: grabbing;
+}
+
+.folder-item.drop-target {
+  background: linear-gradient(135deg, #dbeafe 0%, #93c5fd 100%);
+  border-color: #3b82f6;
+  border-width: 3px;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+  transform: scale(1.02);
+}
+
+.folder-item.drop-target .folder-icon {
+  animation: bounce 0.5s ease-in-out infinite;
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
 /* Button Variants */
 .btn-info {
   background: var(--color-info);
