@@ -208,12 +208,6 @@ function CustomerDetails() {
             <button className="btn btn-success" onClick={handleExcelPopulate}>
               📊 Populate Excel
             </button>
-            <button className="btn btn-secondary" onClick={handleEdit}>
-              Edit
-            </button>
-            <button className="btn btn-danger" onClick={handleDelete}>
-              Delete
-            </button>
           </div>
         </div>
 
@@ -309,6 +303,12 @@ function CustomerDetails() {
                   <div className="info-value">{customer.notes}</div>
                 </div>
               )}
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '30px', paddingTop: '20px', borderTop: '1px solid #f0f0f0' }}>
+                <button className="btn btn-danger" onClick={handleDelete}>
+                  Delete Customer
+                </button>
+              </div>
             </>
           ) : activeTab === 'vsa' ? (
             /* VSA Tab */
