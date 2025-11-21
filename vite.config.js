@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
-  base: '/',  // Root deployment for BYD-CRM-REACT repo
+  base: '/BYD-CRM/',  // GitHub Pages deployment at zeromizer.github.io/BYD-CRM/
   build: {
     outDir: 'dist',
   }
