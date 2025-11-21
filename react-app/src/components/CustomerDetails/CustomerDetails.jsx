@@ -2,6 +2,7 @@ import { useState } from 'react';
 import useCustomerStore from '../../stores/useCustomerStore';
 import Modal from '../Modal/Modal';
 import CustomerForm from '../CustomerForm/CustomerForm';
+import ExcelPopulateModal from '../ExcelPopulateModal/ExcelPopulateModal';
 import './CustomerDetails.css';
 
 function CustomerDetails() {
@@ -10,6 +11,7 @@ function CustomerDetails() {
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isExcelModalOpen, setIsExcelModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleEdit = () => {
@@ -18,6 +20,14 @@ function CustomerDetails() {
 
   const handleDelete = () => {
     setIsDeleteModalOpen(true);
+  };
+
+  const handleExcelPopulate = () => {
+    setIsExcelModalOpen(true);
+  };
+
+  const handleCloseExcelModal = () => {
+    setIsExcelModalOpen(false);
   };
 
   const handleCloseEditModal = () => {
@@ -98,6 +108,9 @@ function CustomerDetails() {
         <div className="customer-details-header">
           <h2>{customer.name}</h2>
           <div className="customer-actions">
+            <button className="btn btn-success" onClick={handleExcelPopulate}>
+              📊 Populate Excel
+            </button>
             <button className="btn btn-secondary" onClick={handleEdit}>
               Edit
             </button>
@@ -219,6 +232,13 @@ function CustomerDetails() {
           </div>
         </div>
       </Modal>
+
+      {/* Excel Populate Modal */}
+      <ExcelPopulateModal
+        isOpen={isExcelModalOpen}
+        onClose={handleCloseExcelModal}
+        customer={customer}
+      />
     </>
   );
 }
