@@ -138,3 +138,42 @@
   font-size: 14px;
   color: var(--color-text-secondary);
 }
+
+@media (max-width: 768px) {
+  .customer-list-header {
+    padding: var(--spacing-md);
+  }
+
+  .customer-list-header h2 {
+    font-size: 18px;
+  }
+
+  .btn {
+    padding: 12px 20px;
+    font-size: 15px;
+  }
+
+  .search-box input {
+    font-size: 16px;
+    padding: 12px 15px;
+  }
+
+  .customer-item {
+    padding: var(--spacing-md);
+    min-height: 72px;
+  }
+
+  .customer-avatar {
+    width: 48px;
+    height: 48px;
+    font-size: 20px;
+  }
+
+  .customer-name {
+    font-size: 16px;
+  }
+
+  .customer-phone {
+    font-size: 14px;
+  }
+}

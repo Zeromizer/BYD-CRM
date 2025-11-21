@@ -223,35 +223,73 @@
 
 /* Responsive Design */
 @media (max-width: 768px) {
+  .scanner-header h3 {
+    font-size: 20px;
+  }
+
   .scanner-body {
-    padding: 20px;
+    padding: var(--spacing-md);
+  }
+
+  .btn-large {
+    width: 100%;
+    padding: 18px 32px;
+    font-size: 17px;
+  }
+
+  .camera-video {
+    min-height: 300px;
+    max-height: 55vh;
+  }
+
+  .camera-controls {
+    gap: var(--spacing-md);
+  }
+
+  .camera-controls button {
+    flex: 1;
+    padding: 14px 24px;
+    font-size: 16px;
+    min-height: 48px;
+  }
+
+  .btn-capture {
+    padding: 16px 32px;
+    font-size: 17px;
+  }
+
+  .preview-image-single {
+    padding: var(--spacing-md);
+  }
+
+  .preview-image-single img {
+    max-height: 55vh;
   }
 
   .preview-images {
     grid-template-columns: 1fr;
+    gap: var(--spacing-md);
   }
 
   .preview-image img {
-    max-height: 40vh;
-  }
-
-  .camera-video {
-    max-height: 60vh;
+    max-height: 35vh;
   }
 
   .preview-options {
     flex-direction: column;
-    gap: 15px;
+    gap: var(--spacing-md);
+    padding: var(--spacing-md);
   }
 
   .camera-controls,
   .preview-controls {
-    flex-direction: column;
+    gap: var(--spacing-md);
   }
 
-  .btn-large,
-  .btn-capture,
   .preview-controls .btn {
-    width: 100%;
+    flex: 1;
+    padding: 14px 24px;
+    font-size: 16px;
+    min-height: 48px;
   }
 }
