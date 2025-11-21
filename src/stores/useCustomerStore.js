@@ -1,16 +1,19 @@
 import { create } from 'zustand';
+import driveService from '../services/driveService';
 
 /**
  * Customer Store
  * Manages customer data, selection, and CRUD operations
  *
  * Compatible with vanilla JS app using 'bydCRM' localStorage key
+ * Syncs with Google Drive when signed in
  */
 const useCustomerStore = create((set, get) => ({
   // State
   customers: [],
   selectedCustomerId: null,
   isLoading: false,
+  isSyncing: false,
   error: null,
 
   // Actions
@@ -136,8 +139,64 @@ const useCustomerStore = create((set, get) => ({
     }
   },
 
+  /**
+   * Sync customers from Google Drive to localStorage
+   */
+  syncFromDrive: async (isSignedIn) => {
+    if (!isSignedIn) {
+      console.log('Not signed in, skipping Drive sync');
+      return;
+    }
+
+    try {
+      set({ isSyncing: true });
+      const { customers } = get();
+
+      // Sync with Drive (merges local and Drive data)
+      const syncedCustomers = await driveService.syncCustomers(customers);
+
+      // Update state and localStorage
+      set({ customers: syncedCustomers, isSyncing: false });
+      localStorage.setItem('bydCRM', JSON.stringify(syncedCustomers));
+
+      console.log('Synced customers from Drive:', syncedCustomers.length);
+    } catch (error) {
+      console.error('Failed to sync from Drive:', error);
+      set({ isSyncing: false, error: 'Failed to sync with Google Drive' });
+    }
+  },
+
+  /**
+   * Save customers to both localStorage and Google Drive
+   */
+  syncToDrive: async (isSignedIn) => {
+    // Always save to localStorage
+    get().saveToLocalStorage();
+
+    // If signed in, also save to Drive
+    if (!isSignedIn) {
+      console.log('Not signed in, saved to localStorage only');
+      return;
+    }
+
+    try {
+      set({ isSyncing: true });
+      const { customers } = get();
+
+      await driveService.saveCustomersToDrive(customers);
+
+      set({ isSyncing: false });
+      console.log('Synced customers to Drive:', customers.length);
+    } catch (error) {
+      console.error('Failed to sync to Drive:', error);
+      set({ isSyncing: false, error: 'Failed to sync with Google Drive' });
+      // Don't throw - data is saved to localStorage anyway
+    }
+  },
+
   setLoading: (isLoading) => set({ isLoading }),
   setError: (error) => set({ error }),
+  setSyncing: (isSyncing) => set({ isSyncing }),
 }));
 
 export default useCustomerStore;

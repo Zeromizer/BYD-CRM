@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import useCustomerStore from '../../stores/useCustomerStore';
+import useAuthStore from '../../stores/useAuthStore';
 import Modal from '../Modal/Modal';
 import CustomerForm from '../CustomerForm/CustomerForm';
 import './CustomerList.css';
 
 function CustomerList() {
-  const { customers, selectedCustomerId, selectCustomer, addCustomer, saveToLocalStorage } = useCustomerStore();
+  const { customers, selectedCustomerId, selectCustomer, addCustomer, syncToDrive } = useCustomerStore();
+  const { isSignedIn } = useAuthStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -39,8 +41,8 @@ function CustomerList() {
       // Add customer to store
       const newCustomer = addCustomer(formData);
 
-      // Save to localStorage
-      saveToLocalStorage();
+      // Save to localStorage and sync to Google Drive
+      await syncToDrive(isSignedIn);
 
       // Select the newly added customer
       selectCustomer(newCustomer.id);
