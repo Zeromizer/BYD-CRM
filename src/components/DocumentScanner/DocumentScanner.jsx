@@ -33,32 +33,45 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
 
       console.log('Camera access granted, stream obtained:', stream);
 
-      if (videoRef.current) {
-        const video = videoRef.current;
-        video.srcObject = stream;
-        streamRef.current = stream;
+      if (!videoRef.current) {
+        console.error('Video ref is null!');
+        setCameraLoading(false);
+        setError('Video element not ready. Please try again.');
+        // Stop the stream since we can't use it
+        stream.getTracks().forEach(track => track.stop());
+        return;
+      }
 
-        console.log('Video element state:', {
-          readyState: video.readyState,
-          videoWidth: video.videoWidth,
-          videoHeight: video.videoHeight
-        });
+      const video = videoRef.current;
+      console.log('Video element found:', video);
 
-        // Wait for video metadata to load with timeout
+      video.srcObject = stream;
+      streamRef.current = stream;
+
+      console.log('Video element state after setting srcObject:', {
+        readyState: video.readyState,
+        videoWidth: video.videoWidth,
+        videoHeight: video.videoHeight,
+        srcObject: video.srcObject
+      });
+
+      // Wait for video metadata to load with timeout
+      try {
         await new Promise((resolve, reject) => {
           const timeout = setTimeout(() => {
-            console.log('Metadata load timeout, attempting to play anyway');
+            console.log('Metadata load timeout (3s), attempting to play anyway');
             resolve();
           }, 3000);
 
           // If metadata already loaded, resolve immediately
           if (video.readyState >= 1) {
-            console.log('Video metadata already loaded');
+            console.log('Video metadata already loaded (readyState:', video.readyState, ')');
             clearTimeout(timeout);
             resolve();
             return;
           }
 
+          console.log('Waiting for loadedmetadata event...');
           video.onloadedmetadata = () => {
             console.log('Video metadata loaded via event');
             clearTimeout(timeout);
@@ -66,24 +79,31 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
           };
 
           video.onerror = (e) => {
-            console.error('Video error:', e);
+            console.error('Video error event:', e);
             clearTimeout(timeout);
             reject(new Error('Video element error'));
           };
         });
+      } catch (metadataError) {
+        console.error('Metadata loading error:', metadataError);
+        setCameraLoading(false);
+        setError('Failed to initialize video. Please try again.');
+        stream.getTracks().forEach(track => track.stop());
+        return;
+      }
 
-        // Explicitly play the video (required in some browsers)
-        try {
-          console.log('Attempting to play video...');
-          await video.play();
-          console.log('Video playing successfully');
-          setCameraActive(true);
-          setCameraLoading(false);
-        } catch (playError) {
-          console.error('Error playing video:', playError);
-          setCameraLoading(false);
-          setError('Unable to start video playback. Please try again.');
-        }
+      // Explicitly play the video (required in some browsers)
+      try {
+        console.log('Attempting to play video...');
+        await video.play();
+        console.log('Video playing successfully');
+        setCameraActive(true);
+        setCameraLoading(false);
+      } catch (playError) {
+        console.error('Error playing video:', playError);
+        setCameraLoading(false);
+        setError('Unable to start video playback. Please try again.');
+        stream.getTracks().forEach(track => track.stop());
       }
     } catch (err) {
       console.error('Error accessing camera:', err);
