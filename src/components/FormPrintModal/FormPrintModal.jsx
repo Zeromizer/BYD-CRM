@@ -145,10 +145,16 @@ function FormPrintModal({ isOpen, onClose, customer }) {
       }
     }
 
+    console.log('[FormPrintModal] Available forms:', available.map(f => ({ type: f.formType, name: f.name })));
     return available;
   };
 
   const availableForms = getAvailableForms();
+
+  // Debug logging for test drive form selection
+  console.log('[FormPrintModal] Selected form type:', selectedFormType);
+  console.log('[FormPrintModal] Is test_drive?', selectedFormType === 'test_drive');
+  console.log('[FormPrintModal] Customer drive folder:', customer?.driveFolderId);
 
   const loadFormImage = async (fileId) => {
     try {
@@ -296,7 +302,10 @@ function FormPrintModal({ isOpen, onClose, customer }) {
                   <select
                     id="formSelect"
                     value={selectedFormType}
-                    onChange={(e) => setSelectedFormType(e.target.value)}
+                    onChange={(e) => {
+                      console.log('[FormPrintModal] Form type changed to:', e.target.value);
+                      setSelectedFormType(e.target.value);
+                    }}
                     disabled={loading || !isSignedIn}
                   >
                     <option value="">-- Select a form --</option>
@@ -334,7 +343,11 @@ function FormPrintModal({ isOpen, onClose, customer }) {
                 )}
 
                 {/* Back Images Selection for Test Drive Form */}
-                {selectedFormType === 'test_drive' && (
+                {(() => {
+                  const shouldShow = selectedFormType === 'test_drive';
+                  console.log('[FormPrintModal] Checking back images section - shouldShow:', shouldShow, 'selectedFormType:', selectedFormType);
+                  return shouldShow;
+                })() && (
                   <div className="back-images-section">
                     <h4>Attach Images to Back of Form (Optional)</h4>
                     <p className="back-images-hint">
