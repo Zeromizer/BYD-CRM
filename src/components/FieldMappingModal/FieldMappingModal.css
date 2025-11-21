@@ -33,7 +33,7 @@
   font-size: 14px;
 }
 
-.canvas-container {
+.image-container {
   flex: 1;
   overflow: auto;
   border: 2px solid #cbd5e0;
@@ -66,14 +66,37 @@
   }
 }
 
-.mapping-canvas {
-  cursor: crosshair;
-  display: block;
+.image-wrapper {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  background: white;
+}
+
+.form-image {
+  display: block;
   max-width: 100%;
   height: auto;
-  object-fit: contain;
+  background: white;
+}
+
+.mapping-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  cursor: crosshair;
+  pointer-events: all;
+}
+
+.field-marker {
+  pointer-events: none;
+}
+
+.field-marker text {
+  user-select: none;
+  pointer-events: none;
 }
 
 .controls-panel {
@@ -251,7 +274,7 @@
 }
 
 @media (max-width: 768px) {
-  .canvas-container {
+  .image-container {
     min-height: 300px;
   }
 
