@@ -51,14 +51,28 @@ function FieldMappingModal({ isOpen, onClose, formType, template, onSave }) {
   const loadFormImage = async () => {
     if (!template || !template.fileId) {
       console.error('No template or file ID');
+      alert('No form template found. Please upload a form first.');
+      return;
+    }
+
+    if (!isSignedIn) {
+      alert('Please sign in to Google Drive first to configure form fields.');
       return;
     }
 
     setLoading(true);
 
     try {
-      // Fetch image from Google Drive
+      // Get fresh access token
       const token = authService.getAccessToken();
+
+      if (!token) {
+        throw new Error('No access token available. Please sign in again.');
+      }
+
+      console.log('Loading form image from Drive:', template.fileId);
+
+      // Fetch image from Google Drive
       const response = await fetch(
         `https://www.googleapis.com/drive/v3/files/${template.fileId}?alt=media`,
         {
@@ -69,7 +83,9 @@ function FieldMappingModal({ isOpen, onClose, formType, template, onSave }) {
       );
 
       if (!response.ok) {
-        throw new Error('Failed to fetch image from Drive');
+        const errorText = await response.text();
+        console.error('Drive API error:', response.status, errorText);
+        throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
       }
 
       const blob = await response.blob();
@@ -81,15 +97,17 @@ function FieldMappingModal({ isOpen, onClose, formType, template, onSave }) {
         setupCanvas();
         redrawCanvas();
         setLoading(false);
+        console.log('Form image loaded successfully');
       };
       img.onerror = () => {
-        console.error('Failed to load image');
+        console.error('Failed to load image from blob');
+        alert('Failed to load image. The file might be corrupted.');
         setLoading(false);
       };
       img.src = imageUrl;
     } catch (error) {
       console.error('Error loading form image:', error);
-      alert('Failed to load form image: ' + error.message);
+      alert('Failed to load form image: ' + error.message + '\n\nPlease make sure you are signed in to Google Drive.');
       setLoading(false);
     }
   };
