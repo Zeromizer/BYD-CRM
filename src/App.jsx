@@ -7,7 +7,7 @@ import './App.css';
 
 function App() {
   return (
-    <Router>
+    <Router basename="/BYD-CRM">
       <Routes>
         <Route path="/" element={<Layout />}>
           <Route index element={<Dashboard />} />
