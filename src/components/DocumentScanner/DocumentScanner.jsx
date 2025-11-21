@@ -5,11 +5,7 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraLoading, setCameraLoading] = useState(false);
   const [capturedImage, setCapturedImage] = useState(null);
-  const [processedImage, setProcessedImage] = useState(null);
-  const [isProcessing, setIsProcessing] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [autoCrop, setAutoCrop] = useState(true);
-  const [autoEnhance, setAutoEnhance] = useState(true);
   const [error, setError] = useState(null);
 
   const videoRef = useRef(null);
@@ -148,56 +144,6 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
     const imageDataUrl = canvas.toDataURL('image/jpeg', 0.95);
     setCapturedImage(imageDataUrl);
     stopCamera();
-
-    // Process the image
-    processImage(imageDataUrl);
-  };
-
-  // Process image with auto-crop and enhancement
-  const processImage = async (imageDataUrl) => {
-    setIsProcessing(true);
-    setError(null);
-
-    try {
-      const img = new Image();
-      img.src = imageDataUrl;
-
-      await new Promise((resolve, reject) => {
-        img.onload = resolve;
-        img.onerror = reject;
-      });
-
-      const canvas = document.createElement('canvas');
-      let ctx = canvas.getContext('2d');
-
-      // Start with original dimensions
-      canvas.width = img.width;
-      canvas.height = img.height;
-      ctx.drawImage(img, 0, 0);
-
-      // Auto-crop: Detect document edges
-      if (autoCrop) {
-        const croppedCanvas = detectAndCropDocument(canvas);
-        canvas.width = croppedCanvas.width;
-        canvas.height = croppedCanvas.height;
-        ctx = canvas.getContext('2d');
-        ctx.drawImage(croppedCanvas, 0, 0);
-      }
-
-      // Auto-enhance: Improve contrast, brightness, and sharpness
-      if (autoEnhance) {
-        enhanceDocument(canvas);
-      }
-
-      const processedDataUrl = canvas.toDataURL('image/jpeg', 0.95);
-      setProcessedImage(processedDataUrl);
-    } catch (err) {
-      console.error('Error processing image:', err);
-      setError('Failed to process image');
-      setProcessedImage(imageDataUrl); // Fallback to original
-    } finally {
-      setIsProcessing(false);
-    }
   };
 
   // Detect document edges and crop
@@ -705,14 +651,14 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
 
   // Upload to Google Drive
   const uploadToGoogleDrive = async () => {
-    if (!processedImage) return;
+    if (!capturedImage) return;
 
     setIsUploading(true);
     setError(null);
 
     try {
       // Convert data URL to base64 (remove data:image/jpeg;base64, prefix)
-      const base64Data = processedImage.split(',')[1];
+      const base64Data = capturedImage.split(',')[1];
 
       // Create a unique filename
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -774,7 +720,6 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
   // Reset scanner
   const resetScanner = () => {
     setCapturedImage(null);
-    setProcessedImage(null);
     setError(null);
   };
 
@@ -845,48 +790,9 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
 
         {capturedImage && (
           <div className="preview-view">
-            <div className="preview-options">
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={autoCrop}
-                  onChange={(e) => {
-                    setAutoCrop(e.target.checked);
-                    processImage(capturedImage);
-                  }}
-                />
-                <span>Auto-Crop</span>
-              </label>
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={autoEnhance}
-                  onChange={(e) => {
-                    setAutoEnhance(e.target.checked);
-                    processImage(capturedImage);
-                  }}
-                />
-                <span>Auto-Enhance</span>
-              </label>
+            <div className="preview-image-single">
+              <img src={capturedImage} alt="Captured document" />
             </div>
-
-            {isProcessing ? (
-              <div className="processing-state">
-                <div className="loading"></div>
-                <p>Processing image...</p>
-              </div>
-            ) : (
-              <div className="preview-images">
-                <div className="preview-image">
-                  <h4>Original</h4>
-                  <img src={capturedImage} alt="Original capture" />
-                </div>
-                <div className="preview-image">
-                  <h4>Processed</h4>
-                  <img src={processedImage || capturedImage} alt="Processed capture" />
-                </div>
-              </div>
-            )}
 
             <div className="preview-controls">
               <button className="btn btn-secondary" onClick={retakePhoto}>
