@@ -22,8 +22,7 @@ const FIELD_NAMES = {
 
 function FieldMappingModal({ isOpen, onClose, formType, template, onSave }) {
   const { isSignedIn } = useAuthStore();
-  const canvasRef = useRef(null);
-  const imageRef = useRef(null);
+  const svgRef = useRef(null);
 
   const [mappings, setMappings] = useState({});
   const [selectedField, setSelectedField] = useState('name');
@@ -32,14 +31,14 @@ function FieldMappingModal({ isOpen, onClose, formType, template, onSave }) {
   const [customValue, setCustomValue] = useState('');
   const [editingFieldId, setEditingFieldId] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageUrl, setImageUrl] = useState(null);
+  const [imageDimensions, setImageDimensions] = useState({ width: 0, height: 0 });
 
   // Load existing mappings and image when modal opens
   useEffect(() => {
     if (isOpen && template) {
       console.log('Loading template mappings:', template.fieldMappings);
       setMappings({ ...(template.fieldMappings || {}) });
-      setImageLoaded(false);
       loadFormImage();
     }
 
@@ -48,18 +47,10 @@ function FieldMappingModal({ isOpen, onClose, formType, template, onSave }) {
       setMappings({});
       setEditingFieldId(null);
       setCustomValue('');
-      setImageLoaded(false);
-      imageRef.current = null;
+      setImageUrl(null);
+      setImageDimensions({ width: 0, height: 0 });
     }
-  }, [isOpen, template?.fileId]); // Use fileId as dependency to detect template changes
-
-  // Redraw canvas whenever mappings change or image loads
-  useEffect(() => {
-    if (isOpen && imageRef.current && imageLoaded) {
-      console.log('Redrawing canvas with', Object.keys(mappings).length, 'mappings');
-      redrawCanvas();
-    }
-  }, [mappings, isOpen, imageLoaded]);
+  }, [isOpen, template?.fileId]);
 
   const loadFormImage = async () => {
     if (!template || !template.fileId) {
@@ -76,7 +67,6 @@ function FieldMappingModal({ isOpen, onClose, formType, template, onSave }) {
     setLoading(true);
 
     try {
-      // Get fresh access token
       const token = authService.getAccessToken();
 
       if (!token) {
@@ -85,7 +75,6 @@ function FieldMappingModal({ isOpen, onClose, formType, template, onSave }) {
 
       console.log('Loading form image from Drive:', template.fileId);
 
-      // Fetch image from Google Drive
       const response = await fetch(
         `https://www.googleapis.com/drive/v3/files/${template.fileId}?alt=media`,
         {
@@ -102,24 +91,10 @@ function FieldMappingModal({ isOpen, onClose, formType, template, onSave }) {
       }
 
       const blob = await response.blob();
-      const imageUrl = URL.createObjectURL(blob);
-
-      const img = new Image();
-      img.onload = () => {
-        imageRef.current = img;
-        setupCanvas();
-        setImageLoaded(true); // Trigger redraw effect
-        setLoading(false);
-        console.log('Form image loaded successfully');
-        console.log('Current mappings count:', Object.keys(mappings).length);
-      };
-      img.onerror = () => {
-        console.error('Failed to load image from blob');
-        alert('Failed to load image. The file might be corrupted.');
-        setLoading(false);
-        setImageLoaded(false);
-      };
-      img.src = imageUrl;
+      const url = URL.createObjectURL(blob);
+      setImageUrl(url);
+      setLoading(false);
+      console.log('Form image loaded successfully');
     } catch (error) {
       console.error('Error loading form image:', error);
       alert('Failed to load form image: ' + error.message + '\n\nPlease make sure you are signed in to Google Drive.');
@@ -127,75 +102,18 @@ function FieldMappingModal({ isOpen, onClose, formType, template, onSave }) {
     }
   };
 
-  const setupCanvas = () => {
-    const canvas = canvasRef.current;
-    const img = imageRef.current;
-
-    if (!canvas || !img) return;
-
-    // Use original image dimensions for canvas internal size
-    // CSS max-width will handle the display scaling without distortion
-    canvas.width = img.width;
-    canvas.height = img.height;
-
-    // Set CSS dimensions to match for proper 1:1 pixel mapping
-    canvas.style.width = img.width + 'px';
-    canvas.style.height = img.height + 'px';
-  };
-
-  const redrawCanvas = () => {
-    const canvas = canvasRef.current;
-    const img = imageRef.current;
-
-    if (!canvas || !img) return;
-
-    const ctx = canvas.getContext('2d');
-
-    // Clear and draw image at original size (1:1 pixel mapping)
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(img, 0, 0, img.width, img.height);
-
-    // Draw field markers at original coordinates
-    Object.entries(mappings).forEach(([fieldId, field]) => {
-      const x = field.x;
-      const y = field.y;
-
-      // Draw marker circle
-      ctx.fillStyle = 'rgba(0, 188, 212, 0.3)';
-      ctx.beginPath();
-      ctx.arc(x, y, 15, 0, 2 * Math.PI);
-      ctx.fill();
-
-      ctx.strokeStyle = '#00bcd4';
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.arc(x, y, 15, 0, 2 * Math.PI);
-      ctx.stroke();
-
-      // Draw field label
-      ctx.fillStyle = '#00bcd4';
-      ctx.font = 'bold 12px Arial';
-      const labelText = field.customValue || FIELD_NAMES[field.type] || field.type;
-      ctx.fillText(labelText, x + 20, y + 5);
+  const handleImageLoad = (e) => {
+    const img = e.target;
+    setImageDimensions({
+      width: img.naturalWidth,
+      height: img.naturalHeight,
     });
+    console.log('Image dimensions:', img.naturalWidth, 'x', img.naturalHeight);
+    console.log('Current mappings count:', Object.keys(mappings).length);
   };
 
-  const handleCanvasClick = (e) => {
-    const canvas = canvasRef.current;
-    const img = imageRef.current;
-
-    if (!canvas || !img) return;
-
-    const rect = canvas.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
-    const clickY = e.clientY - rect.top;
-
-    // Convert from CSS display coordinates to canvas pixel coordinates
-    // rect.width/height = CSS display size, canvas.width/height = internal size
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-    const canvasX = clickX * scaleX;
-    const canvasY = clickY * scaleY;
+  const handleSvgClick = (e) => {
+    if (!svgRef.current) return;
 
     // Check if custom value is required but empty
     if (selectedField === 'custom' && !customValue.trim()) {
@@ -203,12 +121,21 @@ function FieldMappingModal({ isOpen, onClose, formType, template, onSave }) {
       return;
     }
 
-    // Add field mapping using canvas coordinates
+    // Get click coordinates in SVG coordinate system
+    const svg = svgRef.current;
+    const pt = svg.createSVGPoint();
+    pt.x = e.clientX;
+    pt.y = e.clientY;
+
+    // Transform to SVG coordinates (automatically handles scaling)
+    const svgP = pt.matrixTransform(svg.getScreenCTM().inverse());
+
+    // Add field mapping
     const fieldId = 'field_' + Date.now();
     const newMapping = {
       type: selectedField,
-      x: canvasX,
-      y: canvasY,
+      x: svgP.x,
+      y: svgP.y,
       fontSize: fontSize,
       color: textColor,
     };
@@ -266,11 +193,10 @@ function FieldMappingModal({ isOpen, onClose, formType, template, onSave }) {
   };
 
   const handleClose = () => {
-    // Reset state
     setMappings({});
     setEditingFieldId(null);
     setCustomValue('');
-    imageRef.current = null;
+    setImageUrl(null);
     onClose();
   };
 
@@ -280,7 +206,7 @@ function FieldMappingModal({ isOpen, onClose, formType, template, onSave }) {
     <Modal isOpen={isOpen} onClose={handleClose} title="Configure Field Mappings" size="large">
       <div className="field-mapping-modal">
         <div className="field-mapping-content">
-          {/* Left Panel: Canvas */}
+          {/* Left Panel: Image with SVG Overlay */}
           <div className="canvas-panel">
             <div className="canvas-header">
               <h4>Click on the form to place fields</h4>
@@ -288,15 +214,38 @@ function FieldMappingModal({ isOpen, onClose, formType, template, onSave }) {
                 Clear All
               </button>
             </div>
-            <div className="canvas-container">
+            <div className="image-container">
               {loading ? (
                 <div className="canvas-loading">
                   <div className="loading"></div>
                   <p>Loading form image...</p>
                 </div>
-              ) : (
-                <canvas ref={canvasRef} onClick={handleCanvasClick} className="mapping-canvas" />
-              )}
+              ) : imageUrl ? (
+                <div className="image-wrapper">
+                  <img
+                    src={imageUrl}
+                    alt="Form template"
+                    onLoad={handleImageLoad}
+                    className="form-image"
+                  />
+                  {imageDimensions.width > 0 && (
+                    <svg
+                      ref={svgRef}
+                      className="mapping-overlay"
+                      viewBox={`0 0 ${imageDimensions.width} ${imageDimensions.height}`}
+                      onClick={handleSvgClick}
+                    >
+                      {Object.entries(mappings).map(([fieldId, field]) => (
+                        <FieldMarker
+                          key={fieldId}
+                          fieldId={fieldId}
+                          field={field}
+                        />
+                      ))}
+                    </svg>
+                  )}
+                </div>
+              ) : null}
             </div>
           </div>
 
@@ -398,6 +347,36 @@ function FieldMappingModal({ isOpen, onClose, formType, template, onSave }) {
         </div>
       </div>
     </Modal>
+  );
+}
+
+// SVG Marker Component
+function FieldMarker({ fieldId, field }) {
+  const displayText = field.customValue || FIELD_NAMES[field.type] || field.type;
+
+  return (
+    <g className="field-marker">
+      {/* Marker circle with fill */}
+      <circle
+        cx={field.x}
+        cy={field.y}
+        r="15"
+        fill="rgba(0, 188, 212, 0.3)"
+        stroke="#00bcd4"
+        strokeWidth="3"
+      />
+      {/* Label text */}
+      <text
+        x={field.x + 20}
+        y={field.y + 5}
+        fill="#00bcd4"
+        fontSize="12"
+        fontWeight="bold"
+        fontFamily="Arial"
+      >
+        {displayText}
+      </text>
+    </g>
   );
 }
 
