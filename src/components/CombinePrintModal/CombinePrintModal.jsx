@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import useFormsStore from '../../stores/useFormsStore';
 import useAuthStore from '../../stores/useAuthStore';
 import formService from '../../services/formService';
@@ -16,8 +16,6 @@ function CombinePrintModal({ isOpen, onClose, customer }) {
 
   // Test Drive Back Page state
   const [testDriveImages, setTestDriveImages] = useState([null, null, null, null]);
-  const [availableImages, setAvailableImages] = useState([]);
-  const [loadingImages, setLoadingImages] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -26,54 +24,26 @@ function CombinePrintModal({ isOpen, onClose, customer }) {
       setSide2FormType('');
       setProcessing(false);
       setTestDriveImages([null, null, null, null]);
-      setAvailableImages([]);
     }
   }, [isOpen, loadFromLocalStorage]);
 
-  const loadTestDriveImages = useCallback(async () => {
-    if (!customer?.driveFolderId) return;
-
-    setLoadingImages(true);
-    try {
-      // Find the Test Drive subfolder
-      const foldersResponse = await window.gapi.client.drive.files.list({
-        q: `'${customer.driveFolderId}' in parents and mimeType='application/vnd.google-apps.folder' and name='Test Drive' and trashed=false`,
-        fields: 'files(id, name)',
-      });
-
-      const testDriveFolder = foldersResponse.result.files?.[0];
-
-      if (!testDriveFolder) {
-        console.log('Test Drive folder not found');
-        setAvailableImages([]);
-        setLoadingImages(false);
-        return;
-      }
-
-      // Load image files from Test Drive folder
-      const imagesResponse = await window.gapi.client.drive.files.list({
-        q: `'${testDriveFolder.id}' in parents and trashed=false and (mimeType contains 'image/')`,
-        fields: 'files(id, name, mimeType, thumbnailLink, webContentLink)',
-        pageSize: 100,
-      });
-
-      const images = imagesResponse.result.files || [];
-      console.log('Found test drive images:', images.length);
-      setAvailableImages(images);
-    } catch (error) {
-      console.error('Error loading test drive images:', error);
-      setAvailableImages([]);
-    } finally {
-      setLoadingImages(false);
+  // Handle file upload
+  const handleImageUpload = (position, event) => {
+    const file = event.target.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      // Create preview URL
+      const previewUrl = URL.createObjectURL(file);
+      const newTestDriveImages = [...testDriveImages];
+      newTestDriveImages[position] = {
+        id: `local-${position}`,
+        name: file.name,
+        thumbnailLink: previewUrl,
+        isLocal: true,
+        file: file
+      };
+      setTestDriveImages(newTestDriveImages);
     }
-  }, [customer?.driveFolderId]);
-
-  // Load images from Test Drive folder when test_drive_back is selected
-  useEffect(() => {
-    if (side2FormType === 'test_drive_back' && customer?.driveFolderId && isSignedIn) {
-      loadTestDriveImages();
-    }
-  }, [side2FormType, customer?.driveFolderId, isSignedIn, loadTestDriveImages]);
+  };
 
   const availableForms = formService.getAvailableForms(formTemplates);
 
@@ -113,14 +83,24 @@ function CombinePrintModal({ isOpen, onClose, customer }) {
 
     // Load and draw all 4 images
     const imagePromises = testDriveImages.map(async (imageFile, index) => {
-      const token = authService.getAccessToken();
-      const response = await fetch(
-        `https://www.googleapis.com/drive/v3/files/${imageFile.id}?alt=media`,
-        {
-          headers: { Authorization: `Bearer ${token}` }
-        }
-      );
-      const blob = await response.blob();
+      let blob;
+
+      // Check if it's a local file or Google Drive file
+      if (imageFile.isLocal) {
+        // Use the File object directly
+        blob = imageFile.file;
+      } else {
+        // Fetch from Google Drive
+        const token = authService.getAccessToken();
+        const response = await fetch(
+          `https://www.googleapis.com/drive/v3/files/${imageFile.id}?alt=media`,
+          {
+            headers: { Authorization: `Bearer ${token}` }
+          }
+        );
+        blob = await response.blob();
+      }
+
       return new Promise((resolve) => {
         const img = new Image();
         img.onload = () => resolve({ img, index });
@@ -413,52 +393,62 @@ function CombinePrintModal({ isOpen, onClose, customer }) {
             {/* Test Drive Image Selector */}
             {(side1FormType === 'test_drive_back' || side2FormType === 'test_drive_back') && (
               <div className="test-drive-image-selector">
-                <h4>Select 4 Images for Back Page</h4>
+                <h4>Upload 4 Images for Back Page</h4>
                 <p className="helper-text">
-                  Images will be arranged in a 2x2 grid on the back page. Select images from your Test Drive folder.
+                  Images will be arranged in a 2x2 grid on the back page. Click to upload images from your computer.
                 </p>
 
-                {loadingImages ? (
-                  <div className="loading-state">Loading images from Test Drive folder...</div>
-                ) : availableImages.length === 0 ? (
-                  <div className="warning-banner">
-                    ⚠️ No images found in Test Drive folder. Please upload images to the customer's Test Drive folder first.
-                  </div>
-                ) : (
-                  <div className="image-grid-selector">
-                    {[0, 1, 2, 3].map((position) => (
-                      <div key={position} className="image-slot">
-                        <label>Image {position + 1} (Quarter {position + 1})</label>
-                        <select
-                          value={testDriveImages[position]?.id || ''}
-                          onChange={(e) => {
-                            const selectedImage = availableImages.find(img => img.id === e.target.value);
-                            const newImages = [...testDriveImages];
-                            newImages[position] = selectedImage || null;
-                            setTestDriveImages(newImages);
-                          }}
-                          disabled={processing}
-                        >
-                          <option value="">-- Select an image --</option>
-                          {availableImages.map((img) => (
-                            <option key={img.id} value={img.id}>
-                              {img.name}
-                            </option>
-                          ))}
-                        </select>
-                        {testDriveImages[position] && (
-                          <div className="image-preview-small">
-                            <img
-                              src={testDriveImages[position].thumbnailLink}
-                              alt={testDriveImages[position].name}
-                              style={{ maxWidth: '100px', maxHeight: '100px', objectFit: 'contain' }}
-                            />
-                          </div>
+                <div className="image-grid-selector">
+                  {[0, 1, 2, 3].map((position) => (
+                    <div key={position} className="image-slot">
+                      <label>Image {position + 1} (Quarter {position + 1})</label>
+
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handleImageUpload(position, e)}
+                        disabled={processing}
+                        style={{ display: 'none' }}
+                        id={`image-upload-${position}`}
+                      />
+
+                      <label
+                        htmlFor={`image-upload-${position}`}
+                        className="file-upload-button"
+                        style={{
+                          display: 'block',
+                          padding: '10px',
+                          border: '2px dashed #cbd5e0',
+                          borderRadius: '6px',
+                          textAlign: 'center',
+                          cursor: processing ? 'not-allowed' : 'pointer',
+                          background: testDriveImages[position] ? '#f7fafc' : 'white',
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        {testDriveImages[position] ? (
+                          <span style={{ color: '#27ae60', fontWeight: 600 }}>
+                            ✓ {testDriveImages[position].name}
+                          </span>
+                        ) : (
+                          <span style={{ color: '#7f8c8d' }}>
+                            📁 Click to upload image
+                          </span>
                         )}
-                      </div>
-                    ))}
-                  </div>
-                )}
+                      </label>
+
+                      {testDriveImages[position] && (
+                        <div className="image-preview-small">
+                          <img
+                            src={testDriveImages[position].thumbnailLink}
+                            alt={testDriveImages[position].name}
+                            style={{ maxWidth: '100px', maxHeight: '100px', objectFit: 'contain' }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 
