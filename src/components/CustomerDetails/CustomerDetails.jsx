@@ -64,7 +64,16 @@ function CustomerDetails() {
         orderBy: 'folder, name',
       });
 
-      setDocuments(response.result.files || []);
+      const files = response.result.files || [];
+      console.log('Documents loaded:', {
+        folderId,
+        totalFiles: files.length,
+        folders: files.filter(f => f.mimeType === 'application/vnd.google-apps.folder').length,
+        files: files.filter(f => f.mimeType !== 'application/vnd.google-apps.folder').length,
+        items: files.map(f => ({ name: f.name, type: f.mimeType }))
+      });
+
+      setDocuments(files);
     } catch (error) {
       console.error('Error loading documents:', error);
       setDocuments([]);
