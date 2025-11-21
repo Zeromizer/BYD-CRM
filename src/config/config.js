@@ -23,10 +23,10 @@ export const CONFIG = {
   // Format: xxxxx-xxxxx.apps.googleusercontent.com
   CLIENT_ID: '876961148543-8sdj3cti6q9tc523natb3g6jt789qlbr.apps.googleusercontent.com',
 
-  // REPLACE WITH YOUR Google API Key
+  // Google API Key
   // Get this from: https://console.cloud.google.com/apis/credentials
   // Format: AIzaSyxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-  API_KEY: 'AIzaSyCJ6vqWOgQDXpYg09UkfzpbEPAb7WLPxlU',
+  API_KEY: 'AIzaSyDH6E6B4u1m_uvr0mSdCxaCYIkzjSqUuY8',
 
   // OAuth Scopes
   SCOPES: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.appdata',
