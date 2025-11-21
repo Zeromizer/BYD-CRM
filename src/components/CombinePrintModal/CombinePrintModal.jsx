@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import useFormsStore from '../../stores/useFormsStore';
 import useAuthStore from '../../stores/useAuthStore';
 import formService from '../../services/formService';
+import authService from '../../services/authService';
 import Modal from '../Modal/Modal';
 import './CombinePrintModal.css';
 
@@ -13,16 +14,155 @@ function CombinePrintModal({ isOpen, onClose, customer }) {
   const [side2FormType, setSide2FormType] = useState('');
   const [processing, setProcessing] = useState(false);
 
+  // Test Drive Back Page state
+  const [testDriveImages, setTestDriveImages] = useState([null, null, null, null]);
+  const [availableImages, setAvailableImages] = useState([]);
+  const [loadingImages, setLoadingImages] = useState(false);
+
   useEffect(() => {
     if (isOpen) {
       loadFromLocalStorage();
       setSide1FormType('');
       setSide2FormType('');
       setProcessing(false);
+      setTestDriveImages([null, null, null, null]);
+      setAvailableImages([]);
     }
   }, [isOpen, loadFromLocalStorage]);
 
+  const loadTestDriveImages = useCallback(async () => {
+    if (!customer?.driveFolderId) return;
+
+    setLoadingImages(true);
+    try {
+      // Find the Test Drive subfolder
+      const foldersResponse = await window.gapi.client.drive.files.list({
+        q: `'${customer.driveFolderId}' in parents and mimeType='application/vnd.google-apps.folder' and name='Test Drive' and trashed=false`,
+        fields: 'files(id, name)',
+      });
+
+      const testDriveFolder = foldersResponse.result.files?.[0];
+
+      if (!testDriveFolder) {
+        console.log('Test Drive folder not found');
+        setAvailableImages([]);
+        setLoadingImages(false);
+        return;
+      }
+
+      // Load image files from Test Drive folder
+      const imagesResponse = await window.gapi.client.drive.files.list({
+        q: `'${testDriveFolder.id}' in parents and trashed=false and (mimeType contains 'image/')`,
+        fields: 'files(id, name, mimeType, thumbnailLink, webContentLink)',
+        pageSize: 100,
+      });
+
+      const images = imagesResponse.result.files || [];
+      console.log('Found test drive images:', images.length);
+      setAvailableImages(images);
+    } catch (error) {
+      console.error('Error loading test drive images:', error);
+      setAvailableImages([]);
+    } finally {
+      setLoadingImages(false);
+    }
+  }, [customer?.driveFolderId]);
+
+  // Load images from Test Drive folder when test_drive_back is selected
+  useEffect(() => {
+    if (side2FormType === 'test_drive_back' && customer?.driveFolderId && isSignedIn) {
+      loadTestDriveImages();
+    }
+  }, [side2FormType, customer?.driveFolderId, isSignedIn, loadTestDriveImages]);
+
   const availableForms = formService.getAvailableForms(formTemplates);
+
+  // Add Test Drive Back Page as a special option
+  const allFormOptions = [
+    ...availableForms,
+    {
+      formType: 'test_drive_back',
+      name: 'Test Drive Back Page (4 Images)',
+      template: { fileType: 'special' }
+    }
+  ];
+
+  const generateTestDriveBackPage = async () => {
+    // Validate that all 4 images are selected
+    if (testDriveImages.some(img => !img)) {
+      throw new Error('Please select all 4 images for the back page');
+    }
+
+    // Create a canvas to render the 4 images in 2x2 grid
+    const canvas = document.createElement('canvas');
+    // A4 dimensions at 300 DPI: 2480 x 3508 pixels
+    const width = 2480;
+    const height = 3508;
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+
+    // Fill with white background
+    ctx.fillStyle = 'white';
+    ctx.fillRect(0, 0, width, height);
+
+    // Calculate dimensions for each quarter (with small padding)
+    const padding = 20;
+    const quarterWidth = (width - padding * 3) / 2;
+    const quarterHeight = (height - padding * 3) / 2;
+
+    // Load and draw all 4 images
+    const imagePromises = testDriveImages.map(async (imageFile, index) => {
+      const token = authService.getAccessToken();
+      const response = await fetch(
+        `https://www.googleapis.com/drive/v3/files/${imageFile.id}?alt=media`,
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+      const blob = await response.blob();
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => resolve({ img, index });
+        img.src = URL.createObjectURL(blob);
+      });
+    });
+
+    const loadedImages = await Promise.all(imagePromises);
+
+    // Draw images in 2x2 grid
+    loadedImages.forEach(({ img, index }) => {
+      const col = index % 2;
+      const row = Math.floor(index / 2);
+      const x = padding + col * (quarterWidth + padding);
+      const y = padding + row * (quarterHeight + padding);
+
+      // Draw image to fit in quarter with aspect ratio maintained
+      const imgAspect = img.width / img.height;
+      const quarterAspect = quarterWidth / quarterHeight;
+
+      let drawWidth, drawHeight, drawX, drawY;
+
+      if (imgAspect > quarterAspect) {
+        // Image is wider than quarter
+        drawWidth = quarterWidth;
+        drawHeight = quarterWidth / imgAspect;
+        drawX = x;
+        drawY = y + (quarterHeight - drawHeight) / 2;
+      } else {
+        // Image is taller than quarter
+        drawHeight = quarterHeight;
+        drawWidth = quarterHeight * imgAspect;
+        drawX = x + (quarterWidth - drawWidth) / 2;
+        drawY = y;
+      }
+
+      ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
+    });
+
+    // Convert canvas to base64
+    return canvas.toDataURL('image/png');
+  };
 
   const handleCombinePrint = async () => {
     if (!side1FormType || !side2FormType) {
@@ -43,16 +183,27 @@ function CombinePrintModal({ isOpen, onClose, customer }) {
     setProcessing(true);
 
     try {
-      // Render both forms with customer data
-      const template1 = formTemplates[side1FormType];
-      const template2 = formTemplates[side2FormType];
+      let form1Data, form2Data, form1Name, form2Name;
 
-      const form1Data = await formService.renderFormWithData(template1, customer);
-      const form2Data = await formService.renderFormWithData(template2, customer);
+      // Render side 1
+      if (side1FormType === 'test_drive_back') {
+        form1Data = await generateTestDriveBackPage();
+        form1Name = 'Test Drive Back Page (4 Images)';
+      } else {
+        const template1 = formTemplates[side1FormType];
+        form1Data = await formService.renderFormWithData(template1, customer);
+        form1Name = formService.getFormTypeName(side1FormType);
+      }
 
-      // Get form names
-      const form1Name = formService.getFormTypeName(side1FormType);
-      const form2Name = formService.getFormTypeName(side2FormType);
+      // Render side 2
+      if (side2FormType === 'test_drive_back') {
+        form2Data = await generateTestDriveBackPage();
+        form2Name = 'Test Drive Back Page (4 Images)';
+      } else {
+        const template2 = formTemplates[side2FormType];
+        form2Data = await formService.renderFormWithData(template2, customer);
+        form2Name = formService.getFormTypeName(side2FormType);
+      }
 
       // Open combined print window
       openCombinedPrintWindow(form1Data, form2Data, form1Name, form2Name);
@@ -194,18 +345,11 @@ function CombinePrintModal({ isOpen, onClose, customer }) {
           </div>
         )}
 
-        {availableForms.length === 0 ? (
-          <div className="empty-state">
-            <p>No forms available</p>
-            <p className="empty-state-hint">
-              Upload image form templates in Forms Management
-            </p>
-          </div>
-        ) : availableForms.length < 2 ? (
+        {allFormOptions.length < 2 ? (
           <div className="empty-state">
             <p>At least 2 forms required</p>
             <p className="empty-state-hint">
-              You need at least two different image forms to use this feature
+              Upload image form templates in Forms Management
             </p>
           </div>
         ) : (
@@ -220,7 +364,14 @@ function CombinePrintModal({ isOpen, onClose, customer }) {
                   disabled={processing || !isSignedIn}
                 >
                   <option value="">-- Select a form --</option>
-                  {availableForms.map(({ formType, name, template }) => {
+                  {allFormOptions.map(({ formType, name, template }) => {
+                    if (formType === 'test_drive_back') {
+                      return (
+                        <option key={formType} value={formType}>
+                          {name}
+                        </option>
+                      );
+                    }
                     const fieldCount = Object.keys(template.fieldMappings || {}).length;
                     return (
                       <option key={formType} value={formType}>
@@ -240,7 +391,14 @@ function CombinePrintModal({ isOpen, onClose, customer }) {
                   disabled={processing || !isSignedIn}
                 >
                   <option value="">-- Select a form --</option>
-                  {availableForms.map(({ formType, name, template }) => {
+                  {allFormOptions.map(({ formType, name, template }) => {
+                    if (formType === 'test_drive_back') {
+                      return (
+                        <option key={formType} value={formType}>
+                          {name}
+                        </option>
+                      );
+                    }
                     const fieldCount = Object.keys(template.fieldMappings || {}).length;
                     return (
                       <option key={formType} value={formType}>
@@ -252,6 +410,58 @@ function CombinePrintModal({ isOpen, onClose, customer }) {
               </div>
             </div>
 
+            {/* Test Drive Image Selector */}
+            {(side1FormType === 'test_drive_back' || side2FormType === 'test_drive_back') && (
+              <div className="test-drive-image-selector">
+                <h4>Select 4 Images for Back Page</h4>
+                <p className="helper-text">
+                  Images will be arranged in a 2x2 grid on the back page. Select images from your Test Drive folder.
+                </p>
+
+                {loadingImages ? (
+                  <div className="loading-state">Loading images from Test Drive folder...</div>
+                ) : availableImages.length === 0 ? (
+                  <div className="warning-banner">
+                    ⚠️ No images found in Test Drive folder. Please upload images to the customer's Test Drive folder first.
+                  </div>
+                ) : (
+                  <div className="image-grid-selector">
+                    {[0, 1, 2, 3].map((position) => (
+                      <div key={position} className="image-slot">
+                        <label>Image {position + 1} (Quarter {position + 1})</label>
+                        <select
+                          value={testDriveImages[position]?.id || ''}
+                          onChange={(e) => {
+                            const selectedImage = availableImages.find(img => img.id === e.target.value);
+                            const newImages = [...testDriveImages];
+                            newImages[position] = selectedImage || null;
+                            setTestDriveImages(newImages);
+                          }}
+                          disabled={processing}
+                        >
+                          <option value="">-- Select an image --</option>
+                          {availableImages.map((img) => (
+                            <option key={img.id} value={img.id}>
+                              {img.name}
+                            </option>
+                          ))}
+                        </select>
+                        {testDriveImages[position] && (
+                          <div className="image-preview-small">
+                            <img
+                              src={testDriveImages[position].thumbnailLink}
+                              alt={testDriveImages[position].name}
+                              style={{ maxWidth: '100px', maxHeight: '100px', objectFit: 'contain' }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
             {side1FormType && side2FormType && (
               <div className="preview-info">
                 <h4>Print Preview</h4>
@@ -259,19 +469,27 @@ function CombinePrintModal({ isOpen, onClose, customer }) {
                   <div className="preview-item">
                     <div className="preview-page-number">Page 1 (Front)</div>
                     <div className="preview-form-name">
-                      {formService.getFormTypeName(side1FormType)}
+                      {side1FormType === 'test_drive_back'
+                        ? 'Test Drive Back Page (4 Images)'
+                        : formService.getFormTypeName(side1FormType)}
                     </div>
                     <div className="preview-field-count">
-                      {Object.keys(formTemplates[side1FormType].fieldMappings || {}).length} fields
+                      {side1FormType === 'test_drive_back'
+                        ? '4 images in 2x2 grid'
+                        : `${Object.keys(formTemplates[side1FormType].fieldMappings || {}).length} fields`}
                     </div>
                   </div>
                   <div className="preview-item">
                     <div className="preview-page-number">Page 2 (Back)</div>
                     <div className="preview-form-name">
-                      {formService.getFormTypeName(side2FormType)}
+                      {side2FormType === 'test_drive_back'
+                        ? 'Test Drive Back Page (4 Images)'
+                        : formService.getFormTypeName(side2FormType)}
                     </div>
                     <div className="preview-field-count">
-                      {Object.keys(formTemplates[side2FormType].fieldMappings || {}).length} fields
+                      {side2FormType === 'test_drive_back'
+                        ? '4 images in 2x2 grid'
+                        : `${Object.keys(formTemplates[side2FormType].fieldMappings || {}).length} fields`}
                     </div>
                   </div>
                 </div>
@@ -302,7 +520,10 @@ function CombinePrintModal({ isOpen, onClose, customer }) {
               !side2FormType ||
               side1FormType === side2FormType ||
               processing ||
-              !isSignedIn
+              !isSignedIn ||
+              // Validate test drive images if test_drive_back is selected
+              ((side1FormType === 'test_drive_back' || side2FormType === 'test_drive_back') &&
+                testDriveImages.some(img => !img))
             }
           >
             {processing ? 'Preparing...' : '🖨️ Print Double-Sided'}
