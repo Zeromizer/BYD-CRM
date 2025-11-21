@@ -12,28 +12,9 @@
     <!-- React Version Banner -->
     <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 20px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
         <span style="font-size: 16px; font-weight: 500;">🚀 Try our new React version!</span>
-        <a href="#" onclick="navigateToReact(); return false;" style="color: white; text-decoration: underline; margin-left: 10px; font-weight: 600; cursor: pointer;">Click here to preview</a>
+        <a href="https://zeromizer.github.io/BYD-CRM-REACT/" target="_blank" style="color: white; text-decoration: underline; margin-left: 10px; font-weight: 600;">Click here to preview</a>
         <span style="font-size: 13px; opacity: 0.9; margin-left: 15px;">(Your data is shared between both versions)</span>
     </div>
-    <script>
-        function navigateToReact() {
-            // Build the full URL to the React app
-            const baseUrl = window.location.origin;
-            const currentPath = window.location.pathname;
-
-            // Remove index.html if present, and ensure we have the directory
-            let dir = currentPath.endsWith('index.html')
-                ? currentPath.replace('index.html', '')
-                : currentPath.endsWith('/')
-                    ? currentPath
-                    : currentPath + '/';
-
-            // Navigate to react/ subdirectory
-            const reactUrl = baseUrl + dir + 'react/';
-            console.log('Navigating to:', reactUrl);
-            window.location.href = reactUrl;
-        }
-    </script>
 
     <div class="container">
         <div class="header">
