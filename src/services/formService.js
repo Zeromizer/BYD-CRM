@@ -21,12 +21,48 @@ class FormService {
       vsaNo: customer.vsaNo || '',
       date: today,
 
+      // VSA Details - BYD New Car Details
+      makeModel: customer.vsa_makeModel || '',
+      yom: customer.vsa_yom || '',
+      bodyColour: customer.vsa_bodyColour || '',
+      upholstery: customer.vsa_upholstery || '',
+      przType: customer.vsa_przType || '',
+
+      // VSA Details - BYD New Car Package
+      package: customer.vsa_package || '',
+      sellingWithCOE: customer.vsa_sellingWithCOE || '',
+      sellingPriceList: customer.vsa_sellingPriceList || '',
+      purchasePriceWithCOE: customer.vsa_purchasePriceWithCOE || '',
+      coeRebateLevel: customer.vsa_coeRebateLevel || '',
+      deposit: customer.vsa_deposit || '',
+      lessOthers: customer.vsa_lessOthers || '',
+      addOthers: customer.vsa_addOthers || '',
+      deliveryDate: customer.vsa_deliveryDate || '',
+
+      // VSA Details - Trade In Car Details
+      tradeInCarNo: customer.vsa_tradeInCarNo || '',
+      tradeInCarModel: customer.vsa_tradeInCarModel || '',
+      tradeInAmount: customer.vsa_tradeInAmount || '',
+
       // VSA Details - Delivery Details
       dateOfRegistration: customer.vsa_dateOfRegistration || '',
       registrationNo: customer.vsa_registrationNo || '',
       chassisNo: customer.vsa_chassisNo || '',
       engineNo: customer.vsa_engineNo || '',
       motorNo: customer.vsa_motorNo || '',
+
+      // VSA Details - Insurance
+      insuranceCompany: customer.vsa_insuranceCompany || '',
+      insuranceFee: customer.vsa_insuranceFee || '',
+
+      // VSA Details - Remarks
+      remarks1: customer.vsa_remarks1 || '',
+      remarks2: customer.vsa_remarks2 || '',
+      loanAmount: customer.vsa_loanAmount || '',
+      interest: customer.vsa_interest || '',
+      tenure: customer.vsa_tenure || '',
+      adminFee: customer.vsa_adminFee || '',
+      insuranceSubsidy: customer.vsa_insuranceSubsidy || '',
     };
   }
 
