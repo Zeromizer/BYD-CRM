@@ -58,22 +58,33 @@ function CustomerDetails() {
     setLoadingDocuments(true);
 
     try {
-      const response = await window.gapi.client.drive.files.list({
-        q: `'${folderId}' in parents and trashed=false`,
-        fields: 'files(id, name, mimeType, size, createdTime, webViewLink, iconLink)',
-        orderBy: 'folder, name',
-      });
+      let allFiles = [];
+      let pageToken = null;
 
-      const files = response.result.files || [];
+      // Fetch all pages of results
+      do {
+        const response = await window.gapi.client.drive.files.list({
+          q: `'${folderId}' in parents and trashed=false`,
+          fields: 'nextPageToken, files(id, name, mimeType, size, createdTime, webViewLink, iconLink)',
+          orderBy: 'folder, name',
+          pageSize: 1000,
+          pageToken: pageToken,
+        });
+
+        const files = response.result.files || [];
+        allFiles = allFiles.concat(files);
+        pageToken = response.result.nextPageToken;
+      } while (pageToken);
+
       console.log('Documents loaded:', {
         folderId,
-        totalFiles: files.length,
-        folders: files.filter(f => f.mimeType === 'application/vnd.google-apps.folder').length,
-        files: files.filter(f => f.mimeType !== 'application/vnd.google-apps.folder').length,
-        items: files.map(f => ({ name: f.name, type: f.mimeType }))
+        totalFiles: allFiles.length,
+        folders: allFiles.filter(f => f.mimeType === 'application/vnd.google-apps.folder').length,
+        files: allFiles.filter(f => f.mimeType !== 'application/vnd.google-apps.folder').length,
+        items: allFiles.map(f => ({ name: f.name, type: f.mimeType }))
       });
 
-      setDocuments(files);
+      setDocuments(allFiles);
     } catch (error) {
       console.error('Error loading documents:', error);
       setDocuments([]);
