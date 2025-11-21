@@ -18,6 +18,13 @@ const FIELD_NAMES = {
   salesConsultant: 'Sales Consultant',
   vsaNo: 'VSA No',
   date: "Today's Date",
+
+  // VSA Details - Delivery Details
+  dateOfRegistration: 'Date of Registration',
+  registrationNo: 'Registration No',
+  chassisNo: 'Chassis No',
+  engineNo: 'Engine No',
+  motorNo: 'Motor No',
 };
 
 function ExcelPopulateModal({ isOpen, onClose, customer }) {

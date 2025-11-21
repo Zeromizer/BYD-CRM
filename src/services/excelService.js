@@ -19,6 +19,13 @@ class ExcelService {
       salesConsultant: customer.salesConsultant || '',
       vsaNo: customer.vsaNo || '',
       date: new Date(), // Pass Date object to preserve Excel date formatting
+
+      // VSA Details - Delivery Details
+      dateOfRegistration: customer.vsa_dateOfRegistration || '',
+      registrationNo: customer.vsa_registrationNo || '',
+      chassisNo: customer.vsa_chassisNo || '',
+      engineNo: customer.vsa_engineNo || '',
+      motorNo: customer.vsa_motorNo || '',
     };
 
     return dataMapping;
