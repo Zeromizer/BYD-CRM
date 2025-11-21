@@ -1,8 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import useFormsStore from '../../stores/useFormsStore';
 import useAuthStore from '../../stores/useAuthStore';
 import formService from '../../services/formService';
-import authService from '../../services/authService';
 import Modal from '../Modal/Modal';
 import './CombinePrintModal.css';
 
@@ -14,10 +13,9 @@ function CombinePrintModal({ isOpen, onClose, customer }) {
   const [side2FormType, setSide2FormType] = useState('');
   const [processing, setProcessing] = useState(false);
 
-  // Test Drive Back Page state
+  // Test Drive Back Page state - now stores File objects instead of Drive metadata
   const [testDriveImages, setTestDriveImages] = useState([null, null, null, null]);
-  const [availableImages, setAvailableImages] = useState([]);
-  const [loadingImages, setLoadingImages] = useState(false);
+  const [imagePreviewUrls, setImagePreviewUrls] = useState([null, null, null, null]);
 
   useEffect(() => {
     if (isOpen) {
@@ -26,54 +24,47 @@ function CombinePrintModal({ isOpen, onClose, customer }) {
       setSide2FormType('');
       setProcessing(false);
       setTestDriveImages([null, null, null, null]);
-      setAvailableImages([]);
+      setImagePreviewUrls([null, null, null, null]);
     }
   }, [isOpen, loadFromLocalStorage]);
 
-  const loadTestDriveImages = useCallback(async () => {
-    if (!customer?.driveFolderId) return;
+  // Handle file upload for test drive images
+  const handleImageUpload = (position, event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
 
-    setLoadingImages(true);
-    try {
-      // Find the Test Drive subfolder
-      const foldersResponse = await window.gapi.client.drive.files.list({
-        q: `'${customer.driveFolderId}' in parents and mimeType='application/vnd.google-apps.folder' and name='Test Drive' and trashed=false`,
-        fields: 'files(id, name)',
-      });
-
-      const testDriveFolder = foldersResponse.result.files?.[0];
-
-      if (!testDriveFolder) {
-        console.log('Test Drive folder not found');
-        setAvailableImages([]);
-        setLoadingImages(false);
-        return;
-      }
-
-      // Load image files from Test Drive folder
-      const imagesResponse = await window.gapi.client.drive.files.list({
-        q: `'${testDriveFolder.id}' in parents and trashed=false and (mimeType contains 'image/')`,
-        fields: 'files(id, name, mimeType, thumbnailLink, webContentLink)',
-        pageSize: 100,
-      });
-
-      const images = imagesResponse.result.files || [];
-      console.log('Found test drive images:', images.length);
-      setAvailableImages(images);
-    } catch (error) {
-      console.error('Error loading test drive images:', error);
-      setAvailableImages([]);
-    } finally {
-      setLoadingImages(false);
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file');
+      return;
     }
-  }, [customer?.driveFolderId]);
 
-  // Load images from Test Drive folder when test_drive_back is selected
+    // Update images array
+    const newImages = [...testDriveImages];
+    newImages[position] = file;
+    setTestDriveImages(newImages);
+
+    // Create preview URL
+    const previewUrl = URL.createObjectURL(file);
+    const newPreviewUrls = [...imagePreviewUrls];
+
+    // Revoke old preview URL to prevent memory leaks
+    if (imagePreviewUrls[position]) {
+      URL.revokeObjectURL(imagePreviewUrls[position]);
+    }
+
+    newPreviewUrls[position] = previewUrl;
+    setImagePreviewUrls(newPreviewUrls);
+  };
+
+  // Clean up preview URLs when component unmounts or modal closes
   useEffect(() => {
-    if (side2FormType === 'test_drive_back' && customer?.driveFolderId && isSignedIn) {
-      loadTestDriveImages();
-    }
-  }, [side2FormType, customer?.driveFolderId, isSignedIn, loadTestDriveImages]);
+    return () => {
+      imagePreviewUrls.forEach(url => {
+        if (url) URL.revokeObjectURL(url);
+      });
+    };
+  }, [imagePreviewUrls]);
 
   const availableForms = formService.getAvailableForms(formTemplates);
 
@@ -90,7 +81,7 @@ function CombinePrintModal({ isOpen, onClose, customer }) {
   const generateTestDriveBackPage = async () => {
     // Validate that all 4 images are selected
     if (testDriveImages.some(img => !img)) {
-      throw new Error('Please select all 4 images for the back page');
+      throw new Error('Please upload all 4 images for the back page');
     }
 
     // Create a canvas to render the 4 images in 2x2 grid
@@ -111,20 +102,12 @@ function CombinePrintModal({ isOpen, onClose, customer }) {
     const quarterWidth = (width - padding * 3) / 2;
     const quarterHeight = (height - padding * 3) / 2;
 
-    // Load and draw all 4 images
-    const imagePromises = testDriveImages.map(async (imageFile, index) => {
-      const token = authService.getAccessToken();
-      const response = await fetch(
-        `https://www.googleapis.com/drive/v3/files/${imageFile.id}?alt=media`,
-        {
-          headers: { Authorization: `Bearer ${token}` }
-        }
-      );
-      const blob = await response.blob();
+    // Load and draw all 4 images from uploaded files
+    const imagePromises = testDriveImages.map(async (file, index) => {
       return new Promise((resolve) => {
         const img = new Image();
         img.onload = () => resolve({ img, index });
-        img.src = URL.createObjectURL(blob);
+        img.src = URL.createObjectURL(file);
       });
     });
 
@@ -410,55 +393,43 @@ function CombinePrintModal({ isOpen, onClose, customer }) {
               </div>
             </div>
 
-            {/* Test Drive Image Selector */}
+            {/* Test Drive Image Uploader */}
             {(side1FormType === 'test_drive_back' || side2FormType === 'test_drive_back') && (
               <div className="test-drive-image-selector">
-                <h4>Select 4 Images for Back Page</h4>
+                <h4>Upload 4 Images for Back Page</h4>
                 <p className="helper-text">
-                  Images will be arranged in a 2x2 grid on the back page. Select images from your Test Drive folder.
+                  Images will be arranged in a 2x2 grid on the back page. Click each slot below to upload an image from your device.
                 </p>
 
-                {loadingImages ? (
-                  <div className="loading-state">Loading images from Test Drive folder...</div>
-                ) : availableImages.length === 0 ? (
-                  <div className="warning-banner">
-                    ⚠️ No images found in Test Drive folder. Please upload images to the customer's Test Drive folder first.
-                  </div>
-                ) : (
-                  <div className="image-grid-selector">
-                    {[0, 1, 2, 3].map((position) => (
-                      <div key={position} className="image-slot">
-                        <label>Image {position + 1} (Quarter {position + 1})</label>
-                        <select
-                          value={testDriveImages[position]?.id || ''}
-                          onChange={(e) => {
-                            const selectedImage = availableImages.find(img => img.id === e.target.value);
-                            const newImages = [...testDriveImages];
-                            newImages[position] = selectedImage || null;
-                            setTestDriveImages(newImages);
-                          }}
-                          disabled={processing}
-                        >
-                          <option value="">-- Select an image --</option>
-                          {availableImages.map((img) => (
-                            <option key={img.id} value={img.id}>
-                              {img.name}
-                            </option>
-                          ))}
-                        </select>
-                        {testDriveImages[position] && (
-                          <div className="image-preview-small">
-                            <img
-                              src={testDriveImages[position].thumbnailLink}
-                              alt={testDriveImages[position].name}
-                              style={{ maxWidth: '100px', maxHeight: '100px', objectFit: 'contain' }}
-                            />
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <div className="image-grid-selector">
+                  {[0, 1, 2, 3].map((position) => (
+                    <div key={position} className="image-slot">
+                      <label htmlFor={`image-upload-${position}`}>
+                        Image {position + 1} (Quarter {position + 1})
+                      </label>
+                      <input
+                        id={`image-upload-${position}`}
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handleImageUpload(position, e)}
+                        disabled={processing}
+                        style={{ display: 'block', marginBottom: '10px' }}
+                      />
+                      {testDriveImages[position] && imagePreviewUrls[position] && (
+                        <div className="image-preview-small">
+                          <img
+                            src={imagePreviewUrls[position]}
+                            alt={`Preview ${position + 1}`}
+                            style={{ maxWidth: '150px', maxHeight: '150px', objectFit: 'contain', border: '1px solid #ddd', borderRadius: '4px' }}
+                          />
+                          <p style={{ fontSize: '12px', marginTop: '5px', color: '#666' }}>
+                            {testDriveImages[position].name}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 
