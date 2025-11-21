@@ -34,22 +34,48 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
       console.log('Camera access granted, stream obtained:', stream);
 
       if (videoRef.current) {
-        videoRef.current.srcObject = stream;
+        const video = videoRef.current;
+        video.srcObject = stream;
         streamRef.current = stream;
 
-        // Wait for video metadata to load
-        await new Promise((resolve) => {
-          if (videoRef.current) {
-            videoRef.current.onloadedmetadata = () => {
-              console.log('Video metadata loaded');
-              resolve();
-            };
+        console.log('Video element state:', {
+          readyState: video.readyState,
+          videoWidth: video.videoWidth,
+          videoHeight: video.videoHeight
+        });
+
+        // Wait for video metadata to load with timeout
+        await new Promise((resolve, reject) => {
+          const timeout = setTimeout(() => {
+            console.log('Metadata load timeout, attempting to play anyway');
+            resolve();
+          }, 3000);
+
+          // If metadata already loaded, resolve immediately
+          if (video.readyState >= 1) {
+            console.log('Video metadata already loaded');
+            clearTimeout(timeout);
+            resolve();
+            return;
           }
+
+          video.onloadedmetadata = () => {
+            console.log('Video metadata loaded via event');
+            clearTimeout(timeout);
+            resolve();
+          };
+
+          video.onerror = (e) => {
+            console.error('Video error:', e);
+            clearTimeout(timeout);
+            reject(new Error('Video element error'));
+          };
         });
 
         // Explicitly play the video (required in some browsers)
         try {
-          await videoRef.current.play();
+          console.log('Attempting to play video...');
+          await video.play();
           console.log('Video playing successfully');
           setCameraActive(true);
           setCameraLoading(false);
