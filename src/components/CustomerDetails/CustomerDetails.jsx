@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import useCustomerStore from '../../stores/useCustomerStore';
+import useAuthStore from '../../stores/useAuthStore';
 import Modal from '../Modal/Modal';
 import CustomerForm from '../CustomerForm/CustomerForm';
 import ExcelPopulateModal from '../ExcelPopulateModal/ExcelPopulateModal';
@@ -8,7 +9,8 @@ import CombinePrintModal from '../CombinePrintModal/CombinePrintModal';
 import './CustomerDetails.css';
 
 function CustomerDetails() {
-  const { getSelectedCustomer, updateCustomer, deleteCustomer, saveToLocalStorage } = useCustomerStore();
+  const { getSelectedCustomer, updateCustomer, deleteCustomer, syncToDrive } = useCustomerStore();
+  const { isSignedIn } = useAuthStore();
   const customer = getSelectedCustomer();
 
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -74,8 +76,8 @@ function CustomerDetails() {
       // Update customer in store
       updateCustomer(customer.id, formData);
 
-      // Save to localStorage
-      saveToLocalStorage();
+      // Save to localStorage and sync to Google Drive
+      await syncToDrive(isSignedIn);
 
       // Close modal
       setIsEditModalOpen(false);
@@ -99,8 +101,8 @@ function CustomerDetails() {
       // Delete customer from store
       deleteCustomer(customer.id);
 
-      // Save to localStorage
-      saveToLocalStorage();
+      // Save to localStorage and sync to Google Drive
+      await syncToDrive(isSignedIn);
 
       // Close modal
       setIsDeleteModalOpen(false);
