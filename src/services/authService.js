@@ -1,4 +1,4 @@
-import { CONFIG } from '../../../shared/config.js';
+import { CONFIG } from '../config/config.js';
 
 /**
  * Google Drive Authentication Service

@@ -1,161 +1,207 @@
 # BYD CRM Setup Guide
 
-This project contains two versions of the BYD CRM application:
-- **Classic Version**: Vanilla JavaScript (main `index.html`)
-- **React Version**: Modern React app (built to `/react/`)
+## Prerequisites
+
+- Node.js 18+ and npm
+- Modern web browser (Chrome, Firefox, Safari, or Edge)
+- Google account (for Drive integration)
 
 ## Quick Start
 
-### 1. Install Dependencies (First Time Only)
+### 1. Install Dependencies
 
 ```bash
-# Install React app dependencies
-cd react-app
 npm install
-cd ..
 ```
 
-### 2. Build the React App
-
-From the project root:
-
-```bash
-npm run build:react
-```
-
-This builds the React app to the `/react/` folder.
-
-### 3. Start the Server
+### 2. Start Development Server
 
 ```bash
 npm run dev
 ```
 
-or
+Access the app at **http://localhost:5173**
+
+### 3. Build for Production
 
 ```bash
-npm start
+npm run build
 ```
 
-This starts a Python HTTP server on port 8000.
+The production build will be output to the `dist/` folder.
 
-### 4. Access the Apps
+### 4. Preview Production Build
 
-Open your browser and navigate to:
-
-- **Classic Version**: http://localhost:8000 or http://localhost:8000/index.html
-- **React Version**: http://localhost:8000/react/
-
-You can also click the banner at the top of the Classic version to switch to React.
+```bash
+npm run preview
+```
 
 ## Development Workflow
 
-### Working on the Classic (Vanilla JS) Version
+### Local Development
 
-1. Start the server: `npm run dev`
-2. Edit files in `/src/`
-3. Refresh browser to see changes
+1. Make changes in `/src/` directory
+2. Changes auto-reload in browser (hot module replacement)
+3. Check browser console for any errors
 
-### Working on the React Version
+### Testing Features
 
-#### Option A: Production Build (Recommended for GitHub)
+1. **Customer Management**: Click "Add Customer" to create test data
+2. **Google Drive**: Click "Sign In" in header to authenticate
+3. **Forms**: Navigate to Forms Management to upload templates
+4. **Excel**: Navigate to Excel Integration to create templates
 
-1. Make changes in `/react-app/src/`
-2. Rebuild: `npm run build:react`
-3. Refresh browser at http://localhost:8000/react/
+### Building for Production
 
-#### Option B: Development Mode (Recommended for Local Development)
+1. Run `npm run build`
+2. Verify build output in `dist/` folder
+3. Test with `npm run preview`
+4. Commit `dist/` folder for GitHub Pages deployment
 
-1. Open a new terminal
-2. Navigate to react-app: `cd react-app`
-3. Start dev server: `npm run dev`
-4. Access at http://localhost:5173 (with hot reload)
+## Configuration
+
+### Google OAuth Setup
+
+The app is pre-configured with Google OAuth credentials:
+- **Client ID**: `565047387986-d61n6b2aenll8dsjcdhjr85u1a1ck5ec.apps.googleusercontent.com`
+- **API Key**: `AIzaSyCJ6vqWOgQDXpYg09UkfzpbEPAb7WLPxlU`
+
+If you need to use your own credentials:
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Create a new project or select existing
+3. Enable Google Drive API
+4. Create OAuth 2.0 credentials
+5. Update values in `src/stores/useAuthStore.js`
+
+### Authorized Redirect URIs
+
+For local development:
+- `http://localhost:5173`
+
+For production:
+- Your GitHub Pages URL or custom domain
 
 ## File Structure
 
 ```
 BYD-CRM/
-├── index.html              # Classic app entry
-├── src/                    # Classic app source
-│   ├── scripts/
-│   └── styles/
-├── react-app/              # React app source
-│   ├── src/
-│   ├── package.json
-│   └── vite.config.js
-├── react/                  # React build output (auto-generated)
-│   └── index.html
-├── shared/                 # Shared config between both apps
-│   └── config.js
-├── package.json            # Root scripts
-└── README.md
+├── src/                         # Source code
+│   ├── components/              # React components
+│   ├── stores/                  # Zustand state stores
+│   ├── services/                # Business logic
+│   ├── App.jsx                  # Main app component
+│   └── main.jsx                 # Entry point
+├── dist/                        # Production build (committed)
+├── public/                      # Static assets
+├── index.html                   # HTML template
+├── package.json                 # Dependencies and scripts
+├── vite.config.js              # Vite configuration
+└── README.md                    # Documentation
 ```
 
-## Scripts
+## Data Storage
 
-### Root Level (`package.json`)
+### LocalStorage
 
-- `npm run dev` - Start Python server (serves both apps)
-- `npm start` - Alias for `npm run dev`
-- `npm run build:react` - Build React app to `/react/`
+Data is stored in browser localStorage:
+- `bydCRM`: Customer data
+- `formTemplates`: Form template metadata
+- `excelTemplates`: Excel template metadata
 
-### React App (`react-app/package.json`)
+To clear all data:
+```javascript
+localStorage.clear()
+```
 
-- `npm run dev` - Start Vite dev server with hot reload
-- `npm run build` - Build for production
-- `npm run preview` - Preview production build
+### Google Drive
 
-## Data Persistence
-
-Both apps share data through:
-- **localStorage**: Customers, settings, form mappings
-- **Google Drive**: Files, templates, synced data
-
-Changes made in one app will appear in the other after a refresh.
+Files are organized in folders:
+- **BYD CRM - Form Templates**: PDF/image form templates
+- **BYD CRM - Excel Master Files**: Excel template files
+- **BYD CRM - Customer Files**: Generated customer documents
 
 ## Troubleshooting
 
-### React app shows blank page
-
-1. Check that you've built the React app: `npm run build:react`
-2. Verify `/react/` folder exists with `index.html`
-3. Clear browser cache and hard refresh (Ctrl+Shift+R)
-
-### "Module not found" errors
+### Module Not Found Errors
 
 ```bash
-cd react-app
+rm -rf node_modules package-lock.json
 npm install
+```
+
+### Build Errors
+
+```bash
+npm run lint
 npm run build
 ```
 
-### Port 8000 already in use
+Check console for specific error messages.
+
+### Google Sign-In Issues
+
+1. Check browser console for errors
+2. Verify redirect URI matches in Google Console
+3. Clear browser cache and cookies
+4. Try incognito/private mode
+
+### Port Already in Use
 
 ```bash
-# Find and kill the process
-lsof -ti:8000 | xargs kill -9
+# Kill process on port 5173
+lsof -ti:5173 | xargs kill -9
 
-# Or use a different port
-python3 -m http.server 3000
+# Or use different port
+npm run dev -- --port 3000
 ```
 
-### Changes not appearing in React app
+### LocalStorage Data Lost
 
-- If using production build: Run `npm run build:react` after making changes
-- If using dev mode: Changes should auto-reload
-- Check browser console for errors
+LocalStorage is browser-specific. Data will be lost if:
+- Browser cache is cleared
+- Different browser is used
+- Incognito mode is used
 
-## Deploying to GitHub Pages or Production
+**Solution**: Export customer data or use Google Drive sync feature.
 
-1. Build the React app: `npm run build:react`
-2. Commit all changes including `/react/` folder
-3. Push to your repository
-4. Configure your hosting to serve:
-   - Root: Classic app
-   - `/react/`: React app
+## Scripts Reference
+
+- `npm run dev` - Start development server (port 5173)
+- `npm run build` - Build for production
+- `npm run preview` - Preview production build
+- `npm run lint` - Run ESLint
+
+## Deploying to GitHub Pages
+
+1. Build the app:
+   ```bash
+   npm run build
+   ```
+
+2. Commit all changes including `dist/`:
+   ```bash
+   git add .
+   git commit -m "Build for production"
+   git push
+   ```
+
+3. In GitHub repository settings:
+   - Go to Pages
+   - Select source: Deploy from a branch
+   - Select branch: main
+   - Select folder: / (root)
+   - Save
+
+4. Access at: `https://[username].github.io/[repo-name]/`
 
 ## Need Help?
 
-- See `REACT_MIGRATION_GUIDE.md` for detailed React migration info
-- See `REACT_MIGRATION_PLAN.md` for the overall strategy
-- Check `react-app/README.md` for React-specific documentation
+- Check `README.md` for detailed documentation
+- Review browser console for errors
+- Check Network tab for failed API requests
+- Contact BYD MotorEast development team
+
+## License
+
+MIT
