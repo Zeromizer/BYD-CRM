@@ -1,9 +1,11 @@
 import { create } from 'zustand';
+import driveService from '../services/driveService';
 
 const useFormsStore = create((set, get) => ({
   formTemplates: {},
   isLoading: false,
   error: null,
+  lastSyncTime: null,
 
   // Load form templates from localStorage
   loadFromLocalStorage: () => {
@@ -32,6 +34,45 @@ const useFormsStore = create((set, get) => ({
     }
   },
 
+  // Sync form templates with Google Drive
+  syncWithDrive: async () => {
+    try {
+      set({ isLoading: true, error: null });
+      const { formTemplates } = get();
+
+      // Sync with Drive (Drive is source of truth)
+      const synced = await driveService.syncForms(formTemplates);
+
+      // Update state and localStorage
+      set({
+        formTemplates: synced,
+        isLoading: false,
+        lastSyncTime: new Date().toISOString()
+      });
+      localStorage.setItem('formTemplates', JSON.stringify(synced));
+
+      console.log('Form templates synced with Drive successfully');
+      return synced;
+    } catch (error) {
+      console.error('Failed to sync form templates with Drive:', error);
+      set({ error: 'Failed to sync with Google Drive', isLoading: false });
+      throw error;
+    }
+  },
+
+  // Save to Drive (called after any template modification)
+  saveToDrive: async () => {
+    try {
+      const { formTemplates } = get();
+      await driveService.saveFormsToDrive(formTemplates);
+      set({ lastSyncTime: new Date().toISOString() });
+      console.log('Form templates saved to Drive');
+    } catch (error) {
+      console.error('Failed to save form templates to Drive:', error);
+      // Don't throw - allow local changes to persist
+    }
+  },
+
   // Add or update a form template
   addTemplate: (formType, templateData) => {
     set((state) => ({
@@ -41,6 +82,7 @@ const useFormsStore = create((set, get) => ({
       },
     }));
     get().saveToLocalStorage();
+    get().saveToDrive(); // Sync to Drive
   },
 
   // Delete a form template
@@ -51,6 +93,7 @@ const useFormsStore = create((set, get) => ({
       return { formTemplates: newTemplates };
     });
     get().saveToLocalStorage();
+    get().saveToDrive(); // Sync to Drive
   },
 
   // Update field mappings for a template
@@ -65,6 +108,7 @@ const useFormsStore = create((set, get) => ({
       },
     }));
     get().saveToLocalStorage();
+    get().saveToDrive(); // Sync to Drive
   },
 
   // Get a specific template

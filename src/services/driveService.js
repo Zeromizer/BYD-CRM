@@ -7,6 +7,8 @@ import { CONFIG } from '../config/config.js';
 class DriveService {
   constructor() {
     this.customersFileId = null;
+    this.formsFileId = null;
+    this.excelFileId = null;
     this.rootFolderId = null;
   }
 
@@ -211,6 +213,286 @@ class DriveService {
     });
 
     return merged;
+  }
+
+  /**
+   * Get or create forms.json file in Google Drive
+   */
+  async getOrCreateFormsFile() {
+    try {
+      const folderId = await this.getOrCreateRootFolder();
+      const fileName = CONFIG.DATA_FILE_NAMES.FORMS || 'forms.json';
+
+      // Search for existing file
+      const response = await window.gapi.client.drive.files.list({
+        q: `name='${fileName}' and '${folderId}' in parents and trashed=false`,
+        fields: 'files(id, name)',
+        spaces: 'drive',
+      });
+
+      if (response.result.files && response.result.files.length > 0) {
+        this.formsFileId = response.result.files[0].id;
+        console.log('Found existing forms file:', this.formsFileId);
+        return this.formsFileId;
+      }
+
+      // Create new file with empty object
+      const fileMetadata = {
+        name: fileName,
+        mimeType: 'application/json',
+        parents: [folderId],
+      };
+
+      const fileContent = JSON.stringify({});
+      const file = new Blob([fileContent], { type: 'application/json' });
+
+      const form = new FormData();
+      form.append('metadata', new Blob([JSON.stringify(fileMetadata)], { type: 'application/json' }));
+      form.append('file', file);
+
+      const token = window.gapi.client.getToken().access_token;
+      const uploadResponse = await fetch(
+        'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: form,
+        }
+      );
+
+      const result = await uploadResponse.json();
+      this.formsFileId = result.id;
+      console.log('Created forms file:', this.formsFileId);
+      return this.formsFileId;
+    } catch (error) {
+      console.error('Failed to get/create forms file:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Load form templates from Google Drive
+   */
+  async loadFormsFromDrive() {
+    try {
+      const fileId = await this.getOrCreateFormsFile();
+
+      const response = await window.gapi.client.drive.files.get({
+        fileId: fileId,
+        alt: 'media',
+      });
+
+      const formTemplates = response.result || {};
+      console.log('Loaded form templates from Drive:', Object.keys(formTemplates).length);
+      return formTemplates;
+    } catch (error) {
+      console.error('Failed to load form templates from Drive:', error);
+      return {};
+    }
+  }
+
+  /**
+   * Save form templates to Google Drive
+   */
+  async saveFormsToDrive(formTemplates) {
+    try {
+      const fileId = await this.getOrCreateFormsFile();
+      const fileContent = JSON.stringify(formTemplates, null, 2);
+      const file = new Blob([fileContent], { type: 'application/json' });
+
+      const token = window.gapi.client.getToken().access_token;
+      const response = await fetch(
+        `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`,
+        {
+          method: 'PATCH',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: file,
+        }
+      );
+
+      if (response.ok) {
+        console.log('Saved form templates to Drive:', Object.keys(formTemplates).length);
+        return true;
+      } else {
+        throw new Error(`Failed to save forms: ${response.statusText}`);
+      }
+    } catch (error) {
+      console.error('Failed to save form templates to Drive:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Sync form templates: merge localStorage and Drive data
+   */
+  async syncForms(localForms) {
+    try {
+      const driveForms = await this.loadFormsFromDrive();
+
+      // Merge: Drive is source of truth, add any local-only templates
+      const merged = { ...driveForms };
+
+      // Add local templates that don't exist in drive
+      Object.keys(localForms).forEach(formType => {
+        if (!merged[formType]) {
+          merged[formType] = localForms[formType];
+        }
+      });
+
+      // Save merged data back to Drive
+      await this.saveFormsToDrive(merged);
+
+      console.log('Form templates synced successfully');
+      return merged;
+    } catch (error) {
+      console.error('Failed to sync form templates:', error);
+      return localForms;
+    }
+  }
+
+  /**
+   * Get or create excel.json file in Google Drive
+   */
+  async getOrCreateExcelFile() {
+    try {
+      const folderId = await this.getOrCreateRootFolder();
+      const fileName = CONFIG.DATA_FILE_NAMES.EXCEL || 'excel.json';
+
+      // Search for existing file
+      const response = await window.gapi.client.drive.files.list({
+        q: `name='${fileName}' and '${folderId}' in parents and trashed=false`,
+        fields: 'files(id, name)',
+        spaces: 'drive',
+      });
+
+      if (response.result.files && response.result.files.length > 0) {
+        this.excelFileId = response.result.files[0].id;
+        console.log('Found existing excel file:', this.excelFileId);
+        return this.excelFileId;
+      }
+
+      // Create new file with empty object
+      const fileMetadata = {
+        name: fileName,
+        mimeType: 'application/json',
+        parents: [folderId],
+      };
+
+      const fileContent = JSON.stringify({});
+      const file = new Blob([fileContent], { type: 'application/json' });
+
+      const form = new FormData();
+      form.append('metadata', new Blob([JSON.stringify(fileMetadata)], { type: 'application/json' }));
+      form.append('file', file);
+
+      const token = window.gapi.client.getToken().access_token;
+      const uploadResponse = await fetch(
+        'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: form,
+        }
+      );
+
+      const result = await uploadResponse.json();
+      this.excelFileId = result.id;
+      console.log('Created excel file:', this.excelFileId);
+      return this.excelFileId;
+    } catch (error) {
+      console.error('Failed to get/create excel file:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Load Excel templates from Google Drive
+   */
+  async loadExcelFromDrive() {
+    try {
+      const fileId = await this.getOrCreateExcelFile();
+
+      const response = await window.gapi.client.drive.files.get({
+        fileId: fileId,
+        alt: 'media',
+      });
+
+      const excelTemplates = response.result || {};
+      console.log('Loaded Excel templates from Drive:', Object.keys(excelTemplates).length);
+      return excelTemplates;
+    } catch (error) {
+      console.error('Failed to load Excel templates from Drive:', error);
+      return {};
+    }
+  }
+
+  /**
+   * Save Excel templates to Google Drive
+   */
+  async saveExcelToDrive(excelTemplates) {
+    try {
+      const fileId = await this.getOrCreateExcelFile();
+      const fileContent = JSON.stringify(excelTemplates, null, 2);
+      const file = new Blob([fileContent], { type: 'application/json' });
+
+      const token = window.gapi.client.getToken().access_token;
+      const response = await fetch(
+        `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`,
+        {
+          method: 'PATCH',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: file,
+        }
+      );
+
+      if (response.ok) {
+        console.log('Saved Excel templates to Drive:', Object.keys(excelTemplates).length);
+        return true;
+      } else {
+        throw new Error(`Failed to save Excel: ${response.statusText}`);
+      }
+    } catch (error) {
+      console.error('Failed to save Excel templates to Drive:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Sync Excel templates: merge localStorage and Drive data
+   */
+  async syncExcel(localExcel) {
+    try {
+      const driveExcel = await this.loadExcelFromDrive();
+
+      // Merge: Drive is source of truth, add any local-only templates
+      const merged = { ...driveExcel };
+
+      // Add local templates that don't exist in drive
+      Object.keys(localExcel).forEach(templateId => {
+        if (!merged[templateId]) {
+          merged[templateId] = localExcel[templateId];
+        }
+      });
+
+      // Save merged data back to Drive
+      await this.saveExcelToDrive(merged);
+
+      console.log('Excel templates synced successfully');
+      return merged;
+    } catch (error) {
+      console.error('Failed to sync Excel templates:', error);
+      return localExcel;
+    }
   }
 }
 
