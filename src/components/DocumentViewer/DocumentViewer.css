@@ -78,6 +78,64 @@
   font-size: 16px;
 }
 
+.viewer-image-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-lg);
+  overflow: auto;
+  background: #f9fafb;
+}
+
+.viewer-image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.viewer-fallback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: var(--spacing-xl);
+  text-align: center;
+}
+
+.fallback-icon {
+  font-size: 64px;
+  margin-bottom: var(--spacing-lg);
+}
+
+.viewer-fallback h3 {
+  margin: 0 0 var(--spacing-sm) 0;
+  color: var(--color-text-on-card);
+  font-size: 18px;
+  word-break: break-word;
+  max-width: 100%;
+}
+
+.file-type-label {
+  color: var(--color-text-tertiary);
+  font-size: 14px;
+  margin: 0 0 var(--spacing-lg) 0;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.fallback-message {
+  color: var(--color-text-tertiary);
+  margin-bottom: var(--spacing-lg);
+  font-size: 15px;
+  max-width: 400px;
+}
+
 @media (max-width: 768px) {
   .document-viewer {
     height: 60vh;
@@ -90,5 +148,13 @@
 
   .document-viewer-actions button {
     width: 100%;
+  }
+
+  .fallback-icon {
+    font-size: 48px;
+  }
+
+  .viewer-fallback h3 {
+    font-size: 16px;
   }
 }
