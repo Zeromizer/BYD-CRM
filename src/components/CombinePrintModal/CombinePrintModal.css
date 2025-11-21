@@ -239,11 +239,6 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.file-upload-button:hover {
-  border-color: #00bcd4 !important;
-  background: #f7fafc !important;
-}
-
 /* Responsive */
 @media (max-width: 768px) {
   .preview-grid {
