@@ -28,12 +28,6 @@ function FormPrintModal({ isOpen, onClose, customer }) {
   const [imageDimensions, setImageDimensions] = useState({ width: 0, height: 0 });
   const [showPreview, setShowPreview] = useState(false);
 
-  // Test drive form back images
-  const [selectedBackImages, setSelectedBackImages] = useState([null, null, null, null]);
-  const [availableImages, setAvailableImages] = useState([]);
-  const [loadingImages, setLoadingImages] = useState(false);
-  const [backImageUrls, setBackImageUrls] = useState([null, null, null, null]);
-
   useEffect(() => {
     if (isOpen) {
       loadFromLocalStorage();
@@ -41,76 +35,8 @@ function FormPrintModal({ isOpen, onClose, customer }) {
       setImageUrl(null);
       setShowPreview(false);
       setImageDimensions({ width: 0, height: 0 });
-      setSelectedBackImages([null, null, null, null]);
-      setBackImageUrls([null, null, null, null]);
-      setAvailableImages([]);
     }
   }, [isOpen, loadFromLocalStorage]);
-
-  // Load customer images when test drive form is selected
-  useEffect(() => {
-    if (selectedFormType === 'test_drive' && customer?.driveFolderId && isSignedIn) {
-      loadCustomerImages();
-    }
-  }, [selectedFormType, customer, isSignedIn]);
-
-  const loadCustomerImages = async () => {
-    if (!customer?.driveFolderId) return;
-
-    setLoadingImages(true);
-    try {
-      // Fetch all files from customer's folder recursively
-      const allFiles = await getAllFilesInFolder(customer.driveFolderId);
-
-      // Filter only image files
-      const imageFiles = allFiles.filter(file =>
-        file.mimeType.startsWith('image/') &&
-        !file.mimeType.includes('google-apps')
-      );
-
-      setAvailableImages(imageFiles);
-    } catch (error) {
-      console.error('Error loading customer images:', error);
-    } finally {
-      setLoadingImages(false);
-    }
-  };
-
-  const getAllFilesInFolder = async (folderId) => {
-    let allFiles = [];
-
-    try {
-      // Get files in current folder
-      let pageToken = null;
-      do {
-        const response = await window.gapi.client.drive.files.list({
-          q: `'${folderId}' in parents and trashed=false`,
-          fields: 'nextPageToken, files(id, name, mimeType, size, webViewLink)',
-          pageSize: 1000,
-          pageToken: pageToken,
-        });
-
-        const files = response.result.files || [];
-
-        // Add non-folder files
-        const nonFolderFiles = files.filter(f => f.mimeType !== 'application/vnd.google-apps.folder');
-        allFiles = allFiles.concat(nonFolderFiles);
-
-        // Recursively get files from subfolders
-        const folders = files.filter(f => f.mimeType === 'application/vnd.google-apps.folder');
-        for (const folder of folders) {
-          const subFiles = await getAllFilesInFolder(folder.id);
-          allFiles = allFiles.concat(subFiles);
-        }
-
-        pageToken = response.result.nextPageToken;
-      } while (pageToken);
-    } catch (error) {
-      console.error('Error fetching files from folder:', error);
-    }
-
-    return allFiles;
-  };
 
   const getCustomerDataMapping = (customer) => {
     const today = new Date().toLocaleDateString();
@@ -222,42 +148,6 @@ function FormPrintModal({ isOpen, onClose, customer }) {
     setShowPreview(false);
     setImageUrl(null);
     setImageDimensions({ width: 0, height: 0 });
-    // Clear back image URLs to free memory
-    backImageUrls.forEach(url => {
-      if (url) URL.revokeObjectURL(url);
-    });
-    setBackImageUrls([null, null, null, null]);
-  };
-
-  const handleBackImageSelect = async (index, fileId) => {
-    const newSelectedImages = [...selectedBackImages];
-    newSelectedImages[index] = fileId;
-    setSelectedBackImages(newSelectedImages);
-
-    // Load the image if a file is selected
-    if (fileId) {
-      try {
-        const url = await loadFormImage(fileId);
-        const newUrls = [...backImageUrls];
-        // Revoke old URL if exists
-        if (newUrls[index]) {
-          URL.revokeObjectURL(newUrls[index]);
-        }
-        newUrls[index] = url;
-        setBackImageUrls(newUrls);
-      } catch (error) {
-        console.error('Error loading back image:', error);
-        alert('Failed to load image: ' + error.message);
-      }
-    } else {
-      // Clear the image
-      const newUrls = [...backImageUrls];
-      if (newUrls[index]) {
-        URL.revokeObjectURL(newUrls[index]);
-      }
-      newUrls[index] = null;
-      setBackImageUrls(newUrls);
-    }
   };
 
   if (!isOpen) return null;
@@ -332,50 +222,6 @@ function FormPrintModal({ isOpen, onClose, customer }) {
                     </div>
                   </div>
                 )}
-
-                {/* Back Images Selection for Test Drive Form */}
-                {selectedFormType === 'test_drive' && (
-                  <div className="back-images-section">
-                    <h4>Attach Images to Back of Form (Optional)</h4>
-                    <p className="back-images-hint">
-                      Select up to 4 images to print on the back of the test drive form
-                    </p>
-
-                    {loadingImages ? (
-                      <div className="loading-state">
-                        <p>Loading available images...</p>
-                      </div>
-                    ) : availableImages.length === 0 ? (
-                      <div className="empty-state-small">
-                        <p>No images found in customer's folder</p>
-                      </div>
-                    ) : (
-                      <div className="back-images-grid">
-                        {[0, 1, 2, 3].map((index) => (
-                          <div key={index} className="back-image-selector">
-                            <label>Image {index + 1}</label>
-                            <select
-                              value={selectedBackImages[index] || ''}
-                              onChange={(e) => handleBackImageSelect(index, e.target.value || null)}
-                            >
-                              <option value="">-- No image --</option>
-                              {availableImages.map((img) => (
-                                <option key={img.id} value={img.id}>
-                                  {img.name}
-                                </option>
-                              ))}
-                            </select>
-                            {backImageUrls[index] && (
-                              <div className="image-preview-small">
-                                <img src={backImageUrls[index]} alt={`Preview ${index + 1}`} />
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
               </>
             )}
 
@@ -403,7 +249,6 @@ function FormPrintModal({ isOpen, onClose, customer }) {
             </div>
 
             <div className="preview-container">
-              {/* Front Page */}
               {imageUrl && (
                 <div className="filled-form-wrapper">
                   <img
@@ -443,25 +288,6 @@ function FormPrintModal({ isOpen, onClose, customer }) {
                       })}
                     </svg>
                   )}
-                </div>
-              )}
-
-              {/* Back Page - 4 Image Quarters (Test Drive Only) */}
-              {selectedFormType === 'test_drive' && backImageUrls.some(url => url !== null) && (
-                <div className="filled-form-wrapper back-page">
-                  <div className="four-quarter-grid">
-                    {backImageUrls.map((url, index) => (
-                      <div key={index} className="quarter-image">
-                        {url ? (
-                          <img src={url} alt={`Back image ${index + 1}`} />
-                        ) : (
-                          <div className="empty-quarter">
-                            <span>Image {index + 1}</span>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
                 </div>
               )}
             </div>
