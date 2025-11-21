@@ -18,10 +18,10 @@
  * 9. Commit and push changes
  */
 export const CONFIG = {
-  // REPLACE WITH YOUR Google OAuth 2.0 Client ID
+  // Google OAuth 2.0 Client ID
   // Get this from: https://console.cloud.google.com/apis/credentials
   // Format: xxxxx-xxxxx.apps.googleusercontent.com
-  CLIENT_ID: '565047387986-d61n6b2aenll8dsjcdhjr85u1a1ck5ec.apps.googleusercontent.com',
+  CLIENT_ID: '876961148543-8sdj3cti6q9tc523natb3g6jt789qlbr.apps.googleusercontent.com',
 
   // REPLACE WITH YOUR Google API Key
   // Get this from: https://console.cloud.google.com/apis/credentials
