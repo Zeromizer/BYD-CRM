@@ -32,21 +32,34 @@ function FieldMappingModal({ isOpen, onClose, formType, template, onSave }) {
   const [customValue, setCustomValue] = useState('');
   const [editingFieldId, setEditingFieldId] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
 
-  // Load existing mappings when modal opens
+  // Load existing mappings and image when modal opens
   useEffect(() => {
     if (isOpen && template) {
+      console.log('Loading template mappings:', template.fieldMappings);
       setMappings({ ...(template.fieldMappings || {}) });
+      setImageLoaded(false);
       loadFormImage();
     }
-  }, [isOpen, template]);
 
-  // Redraw canvas whenever mappings change
+    // Reset state when modal closes
+    if (!isOpen) {
+      setMappings({});
+      setEditingFieldId(null);
+      setCustomValue('');
+      setImageLoaded(false);
+      imageRef.current = null;
+    }
+  }, [isOpen, template?.fileId]); // Use fileId as dependency to detect template changes
+
+  // Redraw canvas whenever mappings change or image loads
   useEffect(() => {
-    if (isOpen && imageRef.current) {
+    if (isOpen && imageRef.current && imageLoaded) {
+      console.log('Redrawing canvas with', Object.keys(mappings).length, 'mappings');
       redrawCanvas();
     }
-  }, [mappings, isOpen]);
+  }, [mappings, isOpen, imageLoaded]);
 
   const loadFormImage = async () => {
     if (!template || !template.fileId) {
@@ -95,14 +108,16 @@ function FieldMappingModal({ isOpen, onClose, formType, template, onSave }) {
       img.onload = () => {
         imageRef.current = img;
         setupCanvas();
-        redrawCanvas();
+        setImageLoaded(true); // Trigger redraw effect
         setLoading(false);
         console.log('Form image loaded successfully');
+        console.log('Current mappings count:', Object.keys(mappings).length);
       };
       img.onerror = () => {
         console.error('Failed to load image from blob');
         alert('Failed to load image. The file might be corrupted.');
         setLoading(false);
+        setImageLoaded(false);
       };
       img.src = imageUrl;
     } catch (error) {
