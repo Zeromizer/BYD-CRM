@@ -3,6 +3,7 @@ import useCustomerStore from '../../stores/useCustomerStore';
 import Modal from '../Modal/Modal';
 import CustomerForm from '../CustomerForm/CustomerForm';
 import ExcelPopulateModal from '../ExcelPopulateModal/ExcelPopulateModal';
+import FormPrintModal from '../FormPrintModal/FormPrintModal';
 import './CustomerDetails.css';
 
 function CustomerDetails() {
@@ -12,6 +13,7 @@ function CustomerDetails() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isExcelModalOpen, setIsExcelModalOpen] = useState(false);
+  const [isFormPrintModalOpen, setIsFormPrintModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleEdit = () => {
@@ -28,6 +30,14 @@ function CustomerDetails() {
 
   const handleCloseExcelModal = () => {
     setIsExcelModalOpen(false);
+  };
+
+  const handleFormPrint = () => {
+    setIsFormPrintModalOpen(true);
+  };
+
+  const handleCloseFormPrintModal = () => {
+    setIsFormPrintModalOpen(false);
   };
 
   const handleCloseEditModal = () => {
@@ -108,6 +118,9 @@ function CustomerDetails() {
         <div className="customer-details-header">
           <h2>{customer.name}</h2>
           <div className="customer-actions">
+            <button className="btn btn-success" onClick={handleFormPrint}>
+              📄 Print Form
+            </button>
             <button className="btn btn-success" onClick={handleExcelPopulate}>
               📊 Populate Excel
             </button>
@@ -237,6 +250,13 @@ function CustomerDetails() {
       <ExcelPopulateModal
         isOpen={isExcelModalOpen}
         onClose={handleCloseExcelModal}
+        customer={customer}
+      />
+
+      {/* Form Print Modal */}
+      <FormPrintModal
+        isOpen={isFormPrintModalOpen}
+        onClose={handleCloseFormPrintModal}
         customer={customer}
       />
     </>
