@@ -20,12 +20,31 @@
 }
 
 @media (max-width: 1024px) {
+  .dashboard {
+    padding: var(--spacing-md);
+  }
+
   .dashboard-grid {
     grid-template-columns: 1fr;
     height: auto;
+    gap: var(--spacing-md);
   }
 
   .dashboard-card {
     min-height: 400px;
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard {
+    padding: var(--spacing-sm);
+  }
+
+  .dashboard-grid {
+    gap: var(--spacing-sm);
+  }
+
+  .dashboard-card {
+    min-height: 300px;
   }
 }
