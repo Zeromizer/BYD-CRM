@@ -540,18 +540,27 @@ function CustomerDetails() {
                   {/* Breadcrumb Navigation */}
                   {folderPath.length > 0 && (
                     <div className="breadcrumb-nav">
-                      {folderPath.map((folder, index) => (
-                        <span key={folder.id}>
-                          {index > 0 && <span className="breadcrumb-separator">/</span>}
-                          <button
-                            className={`breadcrumb-item ${index === folderPath.length - 1 ? 'active' : ''}`}
-                            onClick={() => navigateToBreadcrumb(index)}
-                            disabled={index === folderPath.length - 1}
-                          >
-                            {folder.name}
-                          </button>
-                        </span>
-                      ))}
+                      <div className="breadcrumb-path">
+                        {folderPath.map((folder, index) => (
+                          <span key={folder.id}>
+                            {index > 0 && <span className="breadcrumb-separator">/</span>}
+                            <button
+                              className={`breadcrumb-item ${index === folderPath.length - 1 ? 'active' : ''}`}
+                              onClick={() => navigateToBreadcrumb(index)}
+                              disabled={index === folderPath.length - 1}
+                            >
+                              {folder.name}
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                      <button
+                        className="breadcrumb-drive-link"
+                        onClick={() => window.open(`https://drive.google.com/drive/folders/${currentFolderId}`, '_blank')}
+                        title="Open in Google Drive"
+                      >
+                        📁
+                      </button>
                     </div>
                   )}
 
