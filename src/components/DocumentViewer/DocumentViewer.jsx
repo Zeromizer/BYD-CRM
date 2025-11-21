@@ -38,13 +38,28 @@ function DocumentViewer({ isOpen, onClose, document }) {
 
   const loadImageFile = async () => {
     try {
-      const response = await window.gapi.client.drive.files.get({
-        fileId: document.id,
-        alt: 'media',
-      });
+      // Get the access token
+      const token = window.gapi.auth.getToken();
+      if (!token) {
+        throw new Error('No access token available');
+      }
 
-      // Create blob URL from the response
-      const blob = new Blob([response.body], { type: document.mimeType });
+      // Fetch the file using the Drive API download URL
+      const response = await fetch(
+        `https://www.googleapis.com/drive/v3/files/${document.id}?alt=media`,
+        {
+          headers: {
+            Authorization: `Bearer ${token.access_token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch file: ${response.status}`);
+      }
+
+      // Convert response to blob
+      const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       setImageUrl(url);
       setLoading(false);
