@@ -30,16 +30,27 @@ function CustomerDetails() {
   // Documents state
   const [documents, setDocuments] = useState([]);
   const [loadingDocuments, setLoadingDocuments] = useState(false);
+  const [currentFolderId, setCurrentFolderId] = useState(null);
+  const [folderPath, setFolderPath] = useState([]);
 
   // Load documents when Documents tab is active
   useEffect(() => {
     if (activeTab === 'documents' && customer && isSignedIn) {
-      loadCustomerDocuments();
+      // Reset to root folder when switching to documents tab
+      setCurrentFolderId(customer.driveFolderId);
+      setFolderPath([{ id: customer.driveFolderId, name: customer.name }]);
     }
   }, [activeTab, customer, isSignedIn]);
 
-  const loadCustomerDocuments = async () => {
-    if (!customer.driveFolderId) {
+  // Load documents when current folder changes
+  useEffect(() => {
+    if (activeTab === 'documents' && currentFolderId && isSignedIn) {
+      loadCustomerDocuments(currentFolderId);
+    }
+  }, [currentFolderId, activeTab, isSignedIn]);
+
+  const loadCustomerDocuments = async (folderId) => {
+    if (!folderId) {
       setDocuments([]);
       return;
     }
@@ -48,9 +59,9 @@ function CustomerDetails() {
 
     try {
       const response = await window.gapi.client.drive.files.list({
-        q: `'${customer.driveFolderId}' in parents and trashed=false`,
+        q: `'${folderId}' in parents and trashed=false`,
         fields: 'files(id, name, mimeType, size, createdTime, webViewLink, iconLink)',
-        orderBy: 'createdTime desc',
+        orderBy: 'folder, name',
       });
 
       setDocuments(response.result.files || []);
@@ -60,6 +71,21 @@ function CustomerDetails() {
     } finally {
       setLoadingDocuments(false);
     }
+  };
+
+  const navigateToFolder = (folder) => {
+    setCurrentFolderId(folder.id);
+    setFolderPath([...folderPath, folder]);
+  };
+
+  const navigateToBreadcrumb = (index) => {
+    const folder = folderPath[index];
+    setCurrentFolderId(folder.id);
+    setFolderPath(folderPath.slice(0, index + 1));
+  };
+
+  const isFolder = (mimeType) => {
+    return mimeType === 'application/vnd.google-apps.folder';
   };
 
   const handleEdit = () => {
@@ -500,49 +526,110 @@ function CustomerDetails() {
                     Documents will be saved here when you generate forms or Excel files
                   </p>
                 </div>
-              ) : loadingDocuments ? (
-                <div className="loading-state">
-                  <div className="loading"></div>
-                  <p>Loading documents...</p>
-                </div>
-              ) : documents.length === 0 ? (
-                <div className="empty-state">
-                  <p>No documents found</p>
-                  <p className="empty-state-hint">
-                    Documents you generate will appear here
-                  </p>
-                </div>
               ) : (
-                <div className="documents-list">
-                  {documents.map((doc) => (
-                    <div key={doc.id} className="document-item" onClick={() => openDocument(doc)}>
-                      <div className="document-icon">
-                        {doc.iconLink ? (
-                          <img src={doc.iconLink} alt="" />
-                        ) : (
-                          <span>📄</span>
-                        )}
-                      </div>
-                      <div className="document-info">
-                        <h4>{doc.name}</h4>
-                        <p>
-                          {formatFileSize(doc.size)} • {formatDate(doc.createdTime)}
-                        </p>
-                      </div>
-                      <div className="document-actions">
-                        <button
-                          className="btn btn-small btn-action"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            openDocument(doc);
-                          }}
-                        >
-                          View
-                        </button>
-                      </div>
+                <>
+                  {/* Breadcrumb Navigation */}
+                  {folderPath.length > 0 && (
+                    <div className="breadcrumb-nav">
+                      {folderPath.map((folder, index) => (
+                        <span key={folder.id}>
+                          {index > 0 && <span className="breadcrumb-separator">/</span>}
+                          <button
+                            className={`breadcrumb-item ${index === folderPath.length - 1 ? 'active' : ''}`}
+                            onClick={() => navigateToBreadcrumb(index)}
+                            disabled={index === folderPath.length - 1}
+                          >
+                            {folder.name}
+                          </button>
+                        </span>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  )}
+
+                  {loadingDocuments ? (
+                    <div className="loading-state">
+                      <div className="loading"></div>
+                      <p>Loading documents...</p>
+                    </div>
+                  ) : documents.length === 0 ? (
+                    <div className="empty-state">
+                      <p>No documents found</p>
+                      <p className="empty-state-hint">
+                        Documents you generate will appear here
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Folders List */}
+                      {documents.filter(doc => isFolder(doc.mimeType)).length > 0 && (
+                        <div className="folders-section">
+                          <h3 className="section-title">Folders</h3>
+                          <div className="documents-list">
+                            {documents.filter(doc => isFolder(doc.mimeType)).map((folder) => (
+                              <div
+                                key={folder.id}
+                                className="document-item folder-item"
+                                onClick={() => navigateToFolder(folder)}
+                              >
+                                <div className="document-icon">
+                                  <span className="folder-icon">📁</span>
+                                </div>
+                                <div className="document-info">
+                                  <h4>{folder.name}</h4>
+                                  <p>{formatDate(folder.createdTime)}</p>
+                                </div>
+                                <div className="document-actions">
+                                  <span className="chevron">›</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Files List */}
+                      {documents.filter(doc => !isFolder(doc.mimeType)).length > 0 && (
+                        <div className="files-section">
+                          <h3 className="section-title">Files</h3>
+                          <div className="documents-list">
+                            {documents.filter(doc => !isFolder(doc.mimeType)).map((doc) => (
+                              <div
+                                key={doc.id}
+                                className="document-item file-item"
+                                onClick={() => openDocument(doc)}
+                              >
+                                <div className="document-icon">
+                                  {doc.iconLink ? (
+                                    <img src={doc.iconLink} alt="" />
+                                  ) : (
+                                    <span>📄</span>
+                                  )}
+                                </div>
+                                <div className="document-info">
+                                  <h4>{doc.name}</h4>
+                                  <p>
+                                    {formatFileSize(doc.size)} • {formatDate(doc.createdTime)}
+                                  </p>
+                                </div>
+                                <div className="document-actions">
+                                  <button
+                                    className="btn btn-small btn-action"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      openDocument(doc);
+                                    }}
+                                  >
+                                    View
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </>
               )}
             </div>
           )}
