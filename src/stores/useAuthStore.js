@@ -1,5 +1,8 @@
 import { create } from 'zustand';
 import authService from '../services/authService';
+import useCustomerStore from './useCustomerStore';
+import useFormsStore from './useFormsStore';
+import useExcelStore from './useExcelStore';
 
 /**
  * Authentication Store
@@ -34,7 +37,17 @@ const useAuthStore = create((set, get) => ({
     try {
       // Subscribe to auth changes
       authService.onAuthChange(async (isSignedIn) => {
+        const previousSignInState = get().isSignedIn;
         set({ isSignedIn });
+
+        // When user signs in (transition from false to true)
+        if (isSignedIn && !previousSignInState) {
+          console.log('User signing in - clearing old data before sync');
+          // Clear all existing data before loading new user's data
+          useCustomerStore.getState().clearAllData();
+          useFormsStore.getState().clearAllData();
+          useExcelStore.getState().clearAllData();
+        }
 
         // Trigger template sync when user signs in
         if (isSignedIn && get().onSignInCallback) {
@@ -95,7 +108,16 @@ const useAuthStore = create((set, get) => ({
   signOut: () => {
     try {
       set({ error: null });
+
+      // Clear all application data
+      useCustomerStore.getState().clearAllData();
+      useFormsStore.getState().clearAllData();
+      useExcelStore.getState().clearAllData();
+
+      // Sign out from auth service (clears localStorage)
       authService.signOut();
+
+      // Clear auth state
       set({
         isSignedIn: false,
         rootFolderId: null,
@@ -105,6 +127,8 @@ const useAuthStore = create((set, get) => ({
         formsDataFileId: null,
         excelDataFileId: null,
       });
+
+      console.log('Signed out successfully - all data cleared');
     } catch (error) {
       console.error('Sign out failed:', error);
       set({ error: error.message });
