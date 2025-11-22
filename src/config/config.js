@@ -47,6 +47,7 @@ export const CONFIG = {
     FORMS: 'BYD CRM - Form Templates',
     EXCEL_TEMPLATES: 'BYD CRM - Excel Master Files',
     CUSTOMER_FILES: 'BYD CRM - Customer Files',
+    CUSTOMERS: 'BYD_MotorEast_Customers',  // Main folder for all customer folders
     DOCUMENT_SUBFOLDERS: ['VSA', 'Trade In', 'Test Drive', 'PDPA & COE', 'Other'],
   },
 
