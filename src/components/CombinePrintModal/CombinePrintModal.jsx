@@ -511,10 +511,7 @@ function CombinePrintModal({ isOpen, onClose, customer }) {
               !side2FormType ||
               side1FormType === side2FormType ||
               processing ||
-              !isSignedIn ||
-              // Validate test drive images if test_drive_back is selected
-              ((side1FormType === 'test_drive_back' || side2FormType === 'test_drive_back') &&
-                testDriveImages.some(img => !img))
+              !isSignedIn
             }
           >
             {processing ? 'Preparing...' : '🖨️ Print Double-Sided'}
