@@ -61,11 +61,15 @@ const useCustomerStore = create((set, get) => ({
     // If signed in, create the folder structure
     if (isSignedIn) {
       try {
-        console.log(`Creating folder structure for customer: ${newCustomer.name}`);
+        console.log(`[Folder Creation] Starting for customer: ${newCustomer.name} (ID: ${newCustomer.id})`);
+        console.log('[Folder Creation] Calling driveService.createCustomerFolderStructure...');
+
         const folderInfo = await driveService.createCustomerFolderStructure(
           newCustomer.name,
           newCustomer.id
         );
+
+        console.log('[Folder Creation] Success! Folder info:', folderInfo);
 
         // Update customer with folder information
         updateCustomer(newCustomer.id, {
@@ -73,11 +77,19 @@ const useCustomerStore = create((set, get) => ({
           driveFolderLink: folderInfo.folderUrl,
         });
 
-        console.log(`Folder created for ${newCustomer.name}:`, folderInfo.folderUrl);
+        console.log(`[Folder Creation] Updated customer with folder link: ${folderInfo.folderUrl}`);
       } catch (error) {
-        console.error('Failed to create customer folder:', error);
+        console.error('[Folder Creation] FAILED:', error);
+        console.error('[Folder Creation] Error details:', {
+          message: error.message,
+          stack: error.stack,
+          response: error.response,
+        });
         // Don't throw - customer is already created, just log the error
+        alert(`Customer created successfully, but folder creation failed: ${error.message}`);
       }
+    } else {
+      console.log('[Folder Creation] Skipped - user not signed in to Google Drive');
     }
 
     // Sync to Drive

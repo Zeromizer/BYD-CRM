@@ -96,28 +96,43 @@ class DriveService {
    */
   async createCustomerFolderStructure(customerName, customerId) {
     try {
+      console.log(`[DriveService] Creating folder structure for: ${customerName} (${customerId})`);
+
+      console.log('[DriveService] Step 1: Getting/creating Customers folder...');
       const customersFolderId = await this.getOrCreateCustomersFolder();
+      console.log('[DriveService] Customers folder ID:', customersFolderId);
 
       // Create main customer folder (use customer name and ID for uniqueness)
       const mainFolderName = `${customerName} (${customerId})`;
+      console.log(`[DriveService] Step 2: Creating main folder "${mainFolderName}"...`);
       const mainFolder = await this.createFolder(mainFolderName, customersFolderId);
+      console.log('[DriveService] Main folder created:', mainFolder);
 
       // Create subfolders
       const subfolders = ['NIRC', 'Test Drive', 'Other Documents', 'VSA', 'Trade In'];
+      console.log(`[DriveService] Step 3: Creating ${subfolders.length} subfolders in parallel...`);
       const subfolderPromises = subfolders.map(subfolder =>
         this.createFolder(subfolder, mainFolder.id)
       );
 
-      await Promise.all(subfolderPromises);
+      const createdSubfolders = await Promise.all(subfolderPromises);
+      console.log(`[DriveService] All ${createdSubfolders.length} subfolders created successfully`);
 
-      console.log(`Created folder structure for customer: ${customerName}`);
-      return {
+      const result = {
         folderId: mainFolder.id,
         folderName: mainFolder.name,
         folderUrl: mainFolder.webViewLink,
       };
+
+      console.log(`[DriveService] ✅ Folder structure complete for ${customerName}:`, result);
+      return result;
     } catch (error) {
-      console.error('Failed to create customer folder structure:', error);
+      console.error('[DriveService] ❌ Failed to create customer folder structure:', error);
+      console.error('[DriveService] Error details:', {
+        message: error.message,
+        result: error.result,
+        body: error.body,
+      });
       throw error;
     }
   }
