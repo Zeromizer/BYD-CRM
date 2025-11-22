@@ -114,8 +114,9 @@ const useCustomerStore = create((set, get) => ({
             dateAdded: c.dateAdded,
             checklist: c.checklist || {},
             dealClosed: c.dealClosed || false,
-            driveFolderId: c.driveFolderId || null,
-            driveFolderLink: c.driveFolderLink || null,
+            // Preserve folder IDs from updates if provided, otherwise keep existing
+            driveFolderId: updates.driveFolderId !== undefined ? updates.driveFolderId : (c.driveFolderId || null),
+            driveFolderLink: updates.driveFolderLink !== undefined ? updates.driveFolderLink : (c.driveFolderLink || null),
           };
         }
         return c;
