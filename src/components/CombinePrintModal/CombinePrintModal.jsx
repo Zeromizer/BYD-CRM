@@ -28,32 +28,35 @@ function CombinePrintModal({ isOpen, onClose, customer }) {
     }
   }, [isOpen, loadFromLocalStorage]);
 
-  // Handle file upload for test drive images
-  const handleImageUpload = (position, event) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  // Handle file upload for test drive images - now handles multiple files
+  const handleImageUpload = (event) => {
+    const files = Array.from(event.target.files || []);
+    if (files.length === 0) return;
 
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      alert('Please select an image file');
+    // Limit to 4 images
+    const filesToUpload = files.slice(0, 4);
+
+    // Validate all files are images
+    if (filesToUpload.some(file => !file.type.startsWith('image/'))) {
+      alert('Please select only image files');
       return;
     }
 
-    // Update images array
-    const newImages = [...testDriveImages];
-    newImages[position] = file;
+    // Clean up old preview URLs
+    imagePreviewUrls.forEach(url => {
+      if (url) URL.revokeObjectURL(url);
+    });
+
+    // Update images array sequentially
+    const newImages = [null, null, null, null];
+    const newPreviewUrls = [null, null, null, null];
+
+    filesToUpload.forEach((file, index) => {
+      newImages[index] = file;
+      newPreviewUrls[index] = URL.createObjectURL(file);
+    });
+
     setTestDriveImages(newImages);
-
-    // Create preview URL
-    const previewUrl = URL.createObjectURL(file);
-    const newPreviewUrls = [...imagePreviewUrls];
-
-    // Revoke old preview URL to prevent memory leaks
-    if (imagePreviewUrls[position]) {
-      URL.revokeObjectURL(imagePreviewUrls[position]);
-    }
-
-    newPreviewUrls[position] = previewUrl;
     setImagePreviewUrls(newPreviewUrls);
   };
 
@@ -73,18 +76,13 @@ function CombinePrintModal({ isOpen, onClose, customer }) {
     ...availableForms,
     {
       formType: 'test_drive_back',
-      name: 'Test Drive Back Page (4 Images)',
+      name: 'Test Drive Back Page (Up to 4 Images)',
       template: { fileType: 'special' }
     }
   ];
 
   const generateTestDriveBackPage = async () => {
-    // Validate that all 4 images are selected
-    if (testDriveImages.some(img => !img)) {
-      throw new Error('Please upload all 4 images for the back page');
-    }
-
-    // Create a canvas to render the 4 images in 2x2 grid
+    // Create a canvas to render the images in 2x2 grid
     const canvas = document.createElement('canvas');
     // A4 dimensions at 300 DPI: 2480 x 3508 pixels
     const width = 2480;
@@ -102,14 +100,17 @@ function CombinePrintModal({ isOpen, onClose, customer }) {
     const quarterWidth = (width - padding * 3) / 2;
     const quarterHeight = (height - padding * 3) / 2;
 
-    // Load and draw all 4 images from uploaded files
-    const imagePromises = testDriveImages.map(async (file, index) => {
-      return new Promise((resolve) => {
-        const img = new Image();
-        img.onload = () => resolve({ img, index });
-        img.src = URL.createObjectURL(file);
-      });
-    });
+    // Load and draw only the uploaded images (filter out nulls)
+    const imagePromises = testDriveImages
+      .map(async (file, index) => {
+        if (!file) return null;
+        return new Promise((resolve) => {
+          const img = new Image();
+          img.onload = () => resolve({ img, index });
+          img.src = URL.createObjectURL(file);
+        });
+      })
+      .filter(promise => promise !== null);
 
     const loadedImages = await Promise.all(imagePromises);
 
@@ -396,40 +397,59 @@ function CombinePrintModal({ isOpen, onClose, customer }) {
             {/* Test Drive Image Uploader */}
             {(side1FormType === 'test_drive_back' || side2FormType === 'test_drive_back') && (
               <div className="test-drive-image-selector">
-                <h4>Upload 4 Images for Back Page</h4>
+                <h4>Upload Images for Back Page</h4>
                 <p className="helper-text">
-                  Images will be arranged in a 2x2 grid on the back page. Click each slot below to upload an image from your device.
+                  Select up to 4 images. They will be arranged sequentially in a 2x2 grid on the back page.
+                  You can upload 1 to 4 images, or leave it blank for an empty page.
                 </p>
 
-                <div className="image-grid-selector">
-                  {[0, 1, 2, 3].map((position) => (
-                    <div key={position} className="image-slot">
-                      <label htmlFor={`image-upload-${position}`}>
-                        Image {position + 1} (Quarter {position + 1})
-                      </label>
-                      <input
-                        id={`image-upload-${position}`}
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => handleImageUpload(position, e)}
-                        disabled={processing}
-                        style={{ display: 'block', marginBottom: '10px' }}
-                      />
-                      {testDriveImages[position] && imagePreviewUrls[position] && (
-                        <div className="image-preview-small">
-                          <img
-                            src={imagePreviewUrls[position]}
-                            alt={`Preview ${position + 1}`}
-                            style={{ maxWidth: '150px', maxHeight: '150px', objectFit: 'contain', border: '1px solid #ddd', borderRadius: '4px' }}
-                          />
-                          <p style={{ fontSize: '12px', marginTop: '5px', color: '#666' }}>
-                            {testDriveImages[position].name}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                <div style={{ marginBottom: '20px' }}>
+                  <input
+                    id="image-upload-multiple"
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handleImageUpload}
+                    disabled={processing}
+                    style={{ display: 'none' }}
+                  />
+                  <label htmlFor="image-upload-multiple">
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={() => document.getElementById('image-upload-multiple').click()}
+                      disabled={processing}
+                    >
+                      Choose Images (Up to 4)
+                    </button>
+                  </label>
                 </div>
+
+                {/* Image Previews */}
+                {testDriveImages.some(img => img) && (
+                  <div className="image-grid-selector">
+                    {testDriveImages.map((file, index) => {
+                      if (!file || !imagePreviewUrls[index]) return null;
+                      return (
+                        <div key={index} className="image-slot">
+                          <label>
+                            Position {index + 1} (Quarter {index + 1})
+                          </label>
+                          <div className="image-preview-small">
+                            <img
+                              src={imagePreviewUrls[index]}
+                              alt={`Preview ${index + 1}`}
+                              style={{ maxWidth: '150px', maxHeight: '150px', objectFit: 'contain', border: '1px solid #ddd', borderRadius: '4px' }}
+                            />
+                            <p style={{ fontSize: '12px', marginTop: '5px', color: '#666' }}>
+                              {file.name}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
 
