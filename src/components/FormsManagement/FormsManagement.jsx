@@ -39,6 +39,12 @@ function FormsManagement() {
   const [showFieldMappingModal, setShowFieldMappingModal] = useState(false);
   const [currentMappingFormType, setCurrentMappingFormType] = useState(null);
 
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importFile, setImportFile] = useState(null);
+  const [importConfig, setImportConfig] = useState(null);
+  const [importMasterFile, setImportMasterFile] = useState(null);
+  const [importing, setImporting] = useState(false);
+
   useEffect(() => {
     loadFromLocalStorage();
   }, [loadFromLocalStorage]);
@@ -237,19 +243,168 @@ function FormsManagement() {
     alert('Field mappings saved successfully!');
   };
 
+  // Export template configuration
+  const handleExportTemplate = (formType) => {
+    const template = formTemplates[formType];
+    if (!template) {
+      alert('Template not found');
+      return;
+    }
+
+    const exportData = {
+      formType,
+      formTypeName: FORM_TYPE_NAMES[formType] || formType,
+      fileName: template.fileName,
+      fileType: template.fileType,
+      fieldMappings: template.fieldMappings || {},
+      exportDate: new Date().toISOString(),
+      version: '1.0',
+    };
+
+    const dataStr = JSON.stringify(exportData, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${formType}_template_config.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    alert('Template configuration exported! Share this file with other users.');
+  };
+
+  // Handle import file selection
+  const handleImportFileSelect = (e) => {
+    const file = e.target.files[0];
+    if (file && file.type === 'application/json') {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const config = JSON.parse(event.target.result);
+          setImportConfig(config);
+        } catch (error) {
+          alert('Invalid template configuration file');
+          e.target.value = '';
+        }
+      };
+      reader.readAsText(file);
+      setImportFile(file);
+    } else {
+      alert('Please select a valid JSON template configuration file');
+      e.target.value = '';
+    }
+  };
+
+  // Import template
+  const handleImportTemplate = async () => {
+    if (!importConfig || !importMasterFile) {
+      alert('Please select both configuration and master files');
+      return;
+    }
+
+    if (!isSignedIn) {
+      alert('Please sign in to Google Drive to import templates');
+      return;
+    }
+
+    setImporting(true);
+
+    try {
+      // Check if form type already exists
+      if (formTemplates[importConfig.formType]) {
+        if (!window.confirm(`A template for "${importConfig.formTypeName}" already exists. Do you want to replace it?`)) {
+          setImporting(false);
+          return;
+        }
+      }
+
+      // Get or create forms folder
+      const formsFolderId = await getOrCreateFormsFolder();
+      if (!formsFolderId) {
+        alert('Failed to create forms folder. Please try again.');
+        setImporting(false);
+        return;
+      }
+
+      // Upload master file to Google Drive
+      const metadata = {
+        name: importMasterFile.name,
+        mimeType: importMasterFile.type,
+        parents: [formsFolderId],
+      };
+
+      const form = new FormData();
+      form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+      form.append('file', importMasterFile);
+
+      const token = authService.getAccessToken();
+      const response = await fetch(
+        'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink,webContentLink',
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: form,
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Upload failed: ' + response.statusText);
+      }
+
+      const result = await response.json();
+
+      // Store form template info with imported field mappings
+      const templateData = {
+        fileId: result.id,
+        fileName: result.name,
+        webViewLink: result.webViewLink,
+        webContentLink: result.webContentLink,
+        fileType: importConfig.fileType,
+        uploadDate: new Date().toISOString(),
+        fieldMappings: importConfig.fieldMappings || {},
+      };
+
+      addTemplate(importConfig.formType, templateData);
+
+      alert('Template imported successfully!');
+      setShowImportModal(false);
+      setImportFile(null);
+      setImportConfig(null);
+      setImportMasterFile(null);
+    } catch (error) {
+      console.error('Error importing template:', error);
+      alert('Failed to import template: ' + error.message);
+    } finally {
+      setImporting(false);
+    }
+  };
+
   const templatesArray = Object.entries(formTemplates);
 
   return (
     <div className="forms-management">
       <div className="forms-header">
         <h2>Forms Management</h2>
-        <button
-          className="btn btn-primary"
-          onClick={() => setShowUploadModal(true)}
-          disabled={!isSignedIn}
-        >
-          📄 Upload Form Template
-        </button>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button
+            className="btn btn-primary"
+            onClick={() => setShowUploadModal(true)}
+            disabled={!isSignedIn}
+          >
+            📄 Upload Form Template
+          </button>
+          <button
+            className="btn btn-success"
+            onClick={() => setShowImportModal(true)}
+            disabled={!isSignedIn}
+          >
+            📥 Import Template
+          </button>
+        </div>
       </div>
 
       {!isSignedIn && (
@@ -301,6 +456,12 @@ function FormsManagement() {
                       ⚙️ Configure Fields
                     </button>
                   )}
+                  <button
+                    className="btn btn-small btn-success"
+                    onClick={() => handleExportTemplate(formType)}
+                  >
+                    📤 Export
+                  </button>
                   <button
                     className="btn btn-small btn-primary"
                     onClick={() => handleViewForm(formType)}
@@ -374,6 +535,85 @@ function FormsManagement() {
               disabled={!selectedFile || uploading}
             >
               {uploading ? 'Uploading...' : 'Upload'}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Import Template Modal */}
+      <Modal
+        isOpen={showImportModal}
+        onClose={() => {
+          setShowImportModal(false);
+          setImportFile(null);
+          setImportConfig(null);
+          setImportMasterFile(null);
+        }}
+        title="Import Form Template"
+      >
+        <div className="upload-form">
+          <div className="info-banner" style={{ marginBottom: '15px', padding: '10px', background: '#e3f2fd', borderRadius: '4px' }}>
+            <p style={{ margin: 0, fontSize: '14px' }}>
+              📋 Import a template shared by another user. You'll need both the configuration file (.json) and the master form file (PDF/image).
+            </p>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="configFile">1. Configuration File (.json)</label>
+            <input
+              type="file"
+              id="configFile"
+              accept=".json"
+              onChange={handleImportFileSelect}
+              disabled={importing}
+            />
+            {importConfig && (
+              <p className="file-selected">
+                ✓ Config loaded: {importConfig.formTypeName}
+                <br />
+                <small>File type: {importConfig.fileType.toUpperCase()} • {Object.keys(importConfig.fieldMappings || {}).length} field(s) mapped</small>
+              </p>
+            )}
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="masterFile">2. Master Form File (PDF or Image)</label>
+            <input
+              type="file"
+              id="masterFile"
+              accept=".pdf,image/*"
+              onChange={(e) => setImportMasterFile(e.target.files[0])}
+              disabled={importing || !importConfig}
+            />
+            {importMasterFile && (
+              <p className="file-selected">✓ Selected: {importMasterFile.name}</p>
+            )}
+            {importConfig && !importMasterFile && (
+              <p className="file-hint">
+                Please upload a {importConfig.fileType === 'pdf' ? 'PDF' : 'image'} file that matches the exported template
+              </p>
+            )}
+          </div>
+
+          <div className="modal-actions">
+            <button
+              className="btn btn-secondary"
+              onClick={() => {
+                setShowImportModal(false);
+                setImportFile(null);
+                setImportConfig(null);
+                setImportMasterFile(null);
+              }}
+              disabled={importing}
+            >
+              Cancel
+            </button>
+            <button
+              className="btn btn-primary"
+              onClick={handleImportTemplate}
+              disabled={!importConfig || !importMasterFile || importing}
+            >
+              {importing ? 'Importing...' : 'Import Template'}
             </button>
           </div>
         </div>

@@ -111,6 +111,12 @@ function ExcelIntegration() {
   const [uploadingMaster, setUploadingMaster] = useState(false);
   const [masterFileToUpload, setMasterFileToUpload] = useState(null);
 
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importFile, setImportFile] = useState(null);
+  const [importConfig, setImportConfig] = useState(null);
+  const [importMasterFile, setImportMasterFile] = useState(null);
+  const [importing, setImporting] = useState(false);
+
   useEffect(() => {
     loadFromLocalStorage();
   }, [loadFromLocalStorage]);
@@ -360,18 +366,131 @@ function ExcelIntegration() {
     }
   };
 
+  // Export Excel template configuration
+  const handleExportTemplate = (templateId) => {
+    const template = excelTemplates[templateId];
+    if (!template) {
+      alert('Template not found');
+      return;
+    }
+
+    const exportData = {
+      templateName: template.name,
+      fileName: template.driveFileName,
+      fieldMappings: template.fieldMappings || {},
+      exportDate: new Date().toISOString(),
+      version: '1.0',
+    };
+
+    const dataStr = JSON.stringify(exportData, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${template.name.replace(/\s+/g, '_')}_excel_config.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    alert('Excel template configuration exported! Share this file with other users.');
+  };
+
+  // Handle import file selection
+  const handleImportFileSelect = (e) => {
+    const file = e.target.files[0];
+    if (file && file.type === 'application/json') {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const config = JSON.parse(event.target.result);
+          setImportConfig(config);
+        } catch (error) {
+          alert('Invalid template configuration file');
+          e.target.value = '';
+        }
+      };
+      reader.readAsText(file);
+      setImportFile(file);
+    } else {
+      alert('Please select a valid JSON template configuration file');
+      e.target.value = '';
+    }
+  };
+
+  // Import Excel template
+  const handleImportTemplate = async () => {
+    if (!importConfig || !importMasterFile) {
+      alert('Please select both configuration and master files');
+      return;
+    }
+
+    if (!isSignedIn) {
+      alert('Please sign in to Google Drive to import templates');
+      return;
+    }
+
+    setImporting(true);
+
+    try {
+      // Get or create Excel templates folder
+      const folderId = await getOrCreateExcelTemplatesFolder();
+      if (!folderId) {
+        alert('Failed to create Excel templates folder. Please try again.');
+        setImporting(false);
+        return;
+      }
+
+      // Upload master file to Google Drive
+      const fileId = await uploadFileToGoogleDrive(importMasterFile, folderId);
+
+      // Create template with imported configuration
+      const templateId = 'excel_' + Date.now();
+      const template = {
+        id: templateId,
+        name: importConfig.templateName,
+        createdDate: new Date().toISOString(),
+        fieldMappings: importConfig.fieldMappings || {},
+        driveFileId: fileId,
+        driveFileName: importMasterFile.name,
+      };
+
+      addTemplate(templateId, template);
+
+      alert('Excel template imported successfully!');
+      setShowImportModal(false);
+      setImportFile(null);
+      setImportConfig(null);
+      setImportMasterFile(null);
+    } catch (error) {
+      console.error('Error importing template:', error);
+      alert('Failed to import template: ' + error.message);
+    } finally {
+      setImporting(false);
+    }
+  };
+
   const templatesArray = Object.entries(excelTemplates);
 
   return (
     <div className="excel-integration">
       <div className="excel-header">
         <h2>Excel Integration</h2>
-        <button
-          className="btn btn-primary"
-          onClick={() => setShowCreateModal(true)}
-        >
-          📊 Create Excel Template
-        </button>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button
+            className="btn btn-primary"
+            onClick={() => setShowCreateModal(true)}
+          >
+            📊 Create Excel Template
+          </button>
+          <button
+            className="btn btn-success"
+            onClick={() => setShowImportModal(true)}
+            disabled={!isSignedIn}
+          >
+            📥 Import Template
+          </button>
+        </div>
       </div>
 
       {!isSignedIn && (
@@ -424,6 +543,12 @@ function ExcelIntegration() {
                     onClick={() => openUploadMasterModal(templateId)}
                   >
                     {hasMasterFile ? 'Update Master' : 'Upload Master'}
+                  </button>
+                  <button
+                    className="btn btn-small btn-success"
+                    onClick={() => handleExportTemplate(templateId)}
+                  >
+                    📤 Export
                   </button>
                   <button
                     className="btn btn-small btn-danger"
@@ -721,6 +846,85 @@ function ExcelIntegration() {
               disabled={!masterFileToUpload || uploadingMaster}
             >
               {uploadingMaster ? 'Uploading...' : 'Upload to Google Drive'}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Import Template Modal */}
+      <Modal
+        isOpen={showImportModal}
+        onClose={() => {
+          setShowImportModal(false);
+          setImportFile(null);
+          setImportConfig(null);
+          setImportMasterFile(null);
+        }}
+        title="Import Excel Template"
+      >
+        <div className="upload-form">
+          <div className="info-banner" style={{ marginBottom: '15px', padding: '10px', background: '#e3f2fd', borderRadius: '4px' }}>
+            <p style={{ margin: 0, fontSize: '14px' }}>
+              📋 Import a template shared by another user. You'll need both the configuration file (.json) and the master Excel file (.xlsx).
+            </p>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="excelConfigFile">1. Configuration File (.json)</label>
+            <input
+              type="file"
+              id="excelConfigFile"
+              accept=".json"
+              onChange={handleImportFileSelect}
+              disabled={importing}
+            />
+            {importConfig && (
+              <p className="file-selected">
+                ✓ Config loaded: {importConfig.templateName}
+                <br />
+                <small>{Object.keys(importConfig.fieldMappings || {}).length} field(s) mapped</small>
+              </p>
+            )}
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="excelMasterFile">2. Master Excel File (.xlsx)</label>
+            <input
+              type="file"
+              id="excelMasterFile"
+              accept=".xlsx,.xls"
+              onChange={(e) => setImportMasterFile(e.target.files[0])}
+              disabled={importing || !importConfig}
+            />
+            {importMasterFile && (
+              <p className="file-selected">✓ Selected: {importMasterFile.name}</p>
+            )}
+            {importConfig && !importMasterFile && (
+              <p className="file-hint">
+                Please upload an Excel file that matches the exported template
+              </p>
+            )}
+          </div>
+
+          <div className="modal-actions">
+            <button
+              className="btn btn-secondary"
+              onClick={() => {
+                setShowImportModal(false);
+                setImportFile(null);
+                setImportConfig(null);
+                setImportMasterFile(null);
+              }}
+              disabled={importing}
+            >
+              Cancel
+            </button>
+            <button
+              className="btn btn-primary"
+              onClick={handleImportTemplate}
+              disabled={!importConfig || !importMasterFile || importing}
+            >
+              {importing ? 'Importing...' : 'Import Template'}
             </button>
           </div>
         </div>
