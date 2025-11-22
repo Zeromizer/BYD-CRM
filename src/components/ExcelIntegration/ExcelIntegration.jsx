@@ -52,6 +52,7 @@ const FIELD_NAMES = {
   // VSA Details - Insurance
   insuranceCompany: 'Insurance Company',
   insuranceFee: 'Insurance Fee',
+  insuranceMonthlyFee: 'Insurance Monthly Fee',
 
   // VSA Details - Remarks
   remarks1: 'Remarks 1',
