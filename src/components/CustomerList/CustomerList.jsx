@@ -6,7 +6,7 @@ import CustomerForm from '../CustomerForm/CustomerForm';
 import './CustomerList.css';
 
 function CustomerList() {
-  const { customers, selectedCustomerId, selectCustomer, addCustomer, syncToDrive } = useCustomerStore();
+  const { customers, selectedCustomerId, selectCustomer, addCustomerWithFolder } = useCustomerStore();
   const { isSignedIn } = useAuthStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -38,11 +38,8 @@ function CustomerList() {
       // Simulate API call delay
       await new Promise((resolve) => setTimeout(resolve, 500));
 
-      // Add customer to store
-      const newCustomer = addCustomer(formData);
-
-      // Save to localStorage and sync to Google Drive
-      await syncToDrive(isSignedIn);
+      // Add customer to store and create folder structure in Drive
+      const newCustomer = await addCustomerWithFolder(formData, isSignedIn);
 
       // Select the newly added customer
       selectCustomer(newCustomer.id);

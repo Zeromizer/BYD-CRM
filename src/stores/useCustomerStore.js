@@ -49,6 +49,43 @@ const useCustomerStore = create((set, get) => ({
     return newCustomer;
   },
 
+  /**
+   * Add customer and create Google Drive folder structure
+   */
+  addCustomerWithFolder: async (customerData, isSignedIn) => {
+    const { addCustomer, updateCustomer, syncToDrive } = get();
+
+    // First, add the customer
+    const newCustomer = addCustomer(customerData);
+
+    // If signed in, create the folder structure
+    if (isSignedIn) {
+      try {
+        console.log(`Creating folder structure for customer: ${newCustomer.name}`);
+        const folderInfo = await driveService.createCustomerFolderStructure(
+          newCustomer.name,
+          newCustomer.id
+        );
+
+        // Update customer with folder information
+        updateCustomer(newCustomer.id, {
+          driveFolderId: folderInfo.folderId,
+          driveFolderLink: folderInfo.folderUrl,
+        });
+
+        console.log(`Folder created for ${newCustomer.name}:`, folderInfo.folderUrl);
+      } catch (error) {
+        console.error('Failed to create customer folder:', error);
+        // Don't throw - customer is already created, just log the error
+      }
+    }
+
+    // Sync to Drive
+    await syncToDrive(isSignedIn);
+
+    return newCustomer;
+  },
+
   updateCustomer: (id, updates) => {
     set((state) => ({
       customers: state.customers.map((c) => {
