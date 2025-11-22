@@ -1,35 +1,65 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useAuthStore from '../../stores/useAuthStore';
+import useCustomerStore from '../../stores/useCustomerStore';
 import useFormsStore from '../../stores/useFormsStore';
 import useExcelStore from '../../stores/useExcelStore';
+import syncCoordinator from '../../services/syncCoordinator';
+import SyncProgressModal from '../SyncProgressModal/SyncProgressModal';
 import './Header.css';
 
 function Header() {
   const navigate = useNavigate();
   const { isSignedIn, initialize, signIn, signOut, setOnSignInCallback } = useAuthStore();
-  const { syncWithDrive: syncForms } = useFormsStore();
-  const { syncWithDrive: syncExcel } = useExcelStore();
+  const customerStore = useCustomerStore();
+  const formsStore = useFormsStore();
+  const excelStore = useExcelStore();
   const [showDropdown, setShowDropdown] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [showSyncProgress, setShowSyncProgress] = useState(false);
+  const [syncProgress, setSyncProgress] = useState({
+    customers: { status: 'pending', detail: '' },
+    forms: { status: 'pending', detail: '' },
+    excel: { status: 'pending', detail: '' },
+    overall: 0,
+  });
 
-  // Set up template sync callback
+  // Set up sync coordinator callback
   useEffect(() => {
-    const syncTemplates = async () => {
-      console.log('Syncing templates with Google Drive...');
+    const syncAllData = async () => {
+      console.log('Starting parallel sync of all data...');
+      setShowSyncProgress(true);
+      setSyncing(true);
+
       try {
-        await Promise.all([
-          syncForms(),
-          syncExcel()
-        ]);
-        console.log('Template sync complete');
+        await syncCoordinator.syncAll(customerStore, formsStore, excelStore, isSignedIn);
+        console.log('Parallel sync complete');
+
+        // Keep modal visible for 1.5 seconds to show success
+        setTimeout(() => {
+          setShowSyncProgress(false);
+          setSyncing(false);
+        }, 1500);
       } catch (error) {
-        console.error('Template sync failed:', error);
+        console.error('Sync failed:', error);
+        setTimeout(() => {
+          setShowSyncProgress(false);
+          setSyncing(false);
+        }, 2000);
       }
     };
 
-    setOnSignInCallback(syncTemplates);
-  }, [setOnSignInCallback, syncForms, syncExcel]);
+    setOnSignInCallback(syncAllData);
+  }, [setOnSignInCallback, customerStore, formsStore, excelStore, isSignedIn]);
+
+  // Subscribe to progress updates
+  useEffect(() => {
+    const unsubscribe = syncCoordinator.onProgress((progress) => {
+      setSyncProgress(progress);
+    });
+
+    return unsubscribe;
+  }, []);
 
   // Initialize authentication on mount
   useEffect(() => {
@@ -56,19 +86,23 @@ function Header() {
 
     setSyncing(true);
     setShowDropdown(false);
+    setShowSyncProgress(true);
 
     try {
-      console.log('Force syncing templates...');
-      await Promise.all([
-        syncForms(),
-        syncExcel()
-      ]);
-      alert('Templates synced successfully!');
+      console.log('Force syncing all data...');
+      await syncCoordinator.syncAll(customerStore, formsStore, excelStore, isSignedIn);
+
+      // Keep modal visible for 1.5 seconds to show success
+      setTimeout(() => {
+        setShowSyncProgress(false);
+        setSyncing(false);
+      }, 1500);
     } catch (error) {
       console.error('Force sync failed:', error);
-      alert('Sync failed. Please try again.');
-    } finally {
-      setSyncing(false);
+      setTimeout(() => {
+        setShowSyncProgress(false);
+        setSyncing(false);
+      }, 2000);
     }
   };
 
@@ -141,6 +175,9 @@ function Header() {
           </div>
         </div>
       </div>
+
+      {/* Sync Progress Modal */}
+      <SyncProgressModal isOpen={showSyncProgress} progress={syncProgress} />
     </header>
   );
 }
