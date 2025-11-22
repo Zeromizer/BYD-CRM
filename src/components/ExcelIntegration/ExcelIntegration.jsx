@@ -3,6 +3,7 @@ import useExcelStore from '../../stores/useExcelStore';
 import useAuthStore from '../../stores/useAuthStore';
 import authService from '../../services/authService';
 import Modal from '../Modal/Modal';
+import JSZip from 'jszip';
 import './ExcelIntegration.css';
 
 const FIELD_NAMES = {
@@ -396,75 +397,225 @@ function ExcelIntegration() {
     alert('Excel template configuration exported! Share this file with other users.');
   };
 
-  // Handle import file selection
-  const handleImportFileSelect = (e) => {
-    const file = e.target.files[0];
-    if (file && file.type === 'application/json') {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        try {
-          const config = JSON.parse(event.target.result);
-          setImportConfig(config);
-        } catch (error) {
-          alert('Invalid template configuration file');
-          e.target.value = '';
+  // Export all Excel templates as a zip file
+  const handleExportAllTemplates = async () => {
+    const templatesArray = Object.entries(excelTemplates);
+
+    if (templatesArray.length === 0) {
+      alert('No templates to export');
+      return;
+    }
+
+    try {
+      const zip = new JSZip();
+
+      // Add each template configuration to the zip
+      templatesArray.forEach(([templateId, template]) => {
+        const exportData = {
+          templateName: template.name,
+          fileName: template.driveFileName,
+          fieldMappings: template.fieldMappings || {},
+          exportDate: new Date().toISOString(),
+          version: '1.0',
+        };
+
+        const dataStr = JSON.stringify(exportData, null, 2);
+        zip.file(`${template.name.replace(/\s+/g, '_')}_excel_config.json`, dataStr);
+      });
+
+      // Generate the zip file
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(zipBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `excel_templates_${new Date().toISOString().split('T')[0]}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      alert(`Successfully exported ${templatesArray.length} Excel template(s) to a zip file!`);
+    } catch (error) {
+      console.error('Error exporting templates:', error);
+      alert('Failed to export templates: ' + error.message);
+    }
+  };
+
+  // Handle import file selection (supports multiple JSON files or a zip file)
+  const handleImportFileSelect = async (e) => {
+    const files = Array.from(e.target.files);
+
+    if (files.length === 0) return;
+
+    try {
+      // Check if it's a zip file
+      if (files.length === 1 && files[0].name.endsWith('.zip')) {
+        const zip = new JSZip();
+        const zipContent = await zip.loadAsync(files[0]);
+        const configs = [];
+
+        // Extract all JSON files from the zip
+        const jsonFiles = Object.keys(zipContent.files).filter(filename =>
+          filename.endsWith('.json') && !zipContent.files[filename].dir
+        );
+
+        for (const filename of jsonFiles) {
+          const content = await zipContent.files[filename].async('text');
+          try {
+            const config = JSON.parse(content);
+            configs.push(config);
+          } catch (error) {
+            console.error(`Invalid JSON in ${filename}:`, error);
+          }
         }
-      };
-      reader.readAsText(file);
-      setImportFile(file);
-    } else {
-      alert('Please select a valid JSON template configuration file');
+
+        if (configs.length === 0) {
+          alert('No valid template configurations found in the zip file');
+          e.target.value = '';
+          return;
+        }
+
+        setImportConfig(configs);
+        setImportFile(files[0]);
+      } else {
+        // Handle multiple JSON files
+        const configs = [];
+
+        for (const file of files) {
+          if (file.type === 'application/json' || file.name.endsWith('.json')) {
+            const text = await file.text();
+            try {
+              const config = JSON.parse(text);
+              configs.push(config);
+            } catch (error) {
+              console.error(`Invalid JSON in ${file.name}:`, error);
+            }
+          }
+        }
+
+        if (configs.length === 0) {
+          alert('No valid JSON template configuration files selected');
+          e.target.value = '';
+          return;
+        }
+
+        setImportConfig(configs);
+        setImportFile(files[0]);
+      }
+    } catch (error) {
+      console.error('Error reading files:', error);
+      alert('Failed to read template files: ' + error.message);
       e.target.value = '';
     }
   };
 
-  // Import Excel template
+  // Import Excel template(s)
   const handleImportTemplate = async () => {
-    if (!importConfig || !importMasterFile) {
-      alert('Please select both configuration and master files');
+    const configs = Array.isArray(importConfig) ? importConfig : [importConfig];
+
+    if (configs.length === 0) {
+      alert('No configurations to import');
       return;
     }
 
-    if (!isSignedIn) {
-      alert('Please sign in to Google Drive to import templates');
+    // For single template import, require master file
+    if (configs.length === 1 && !importMasterFile) {
+      alert('Please select the master Excel file for this template');
+      return;
+    }
+
+    if (!isSignedIn && configs.length === 1 && importMasterFile) {
+      alert('Please sign in to Google Drive to import templates with master files');
       return;
     }
 
     setImporting(true);
 
     try {
-      // Get or create Excel templates folder
-      const folderId = await getOrCreateExcelTemplatesFolder();
-      if (!folderId) {
-        alert('Failed to create Excel templates folder. Please try again.');
-        setImporting(false);
-        return;
+      let successCount = 0;
+      let skipCount = 0;
+      const errors = [];
+
+      for (let i = 0; i < configs.length; i++) {
+        const config = configs[i];
+
+        try {
+          // For single import with master file
+          if (configs.length === 1 && importMasterFile) {
+            // Get or create Excel templates folder
+            const folderId = await getOrCreateExcelTemplatesFolder();
+            if (!folderId) {
+              alert('Failed to create Excel templates folder. Please try again.');
+              setImporting(false);
+              return;
+            }
+
+            // Upload master file to Google Drive
+            const fileId = await uploadFileToGoogleDrive(importMasterFile, folderId);
+
+            // Create template with imported configuration
+            const templateId = 'excel_' + Date.now();
+            const template = {
+              id: templateId,
+              name: config.templateName,
+              createdDate: new Date().toISOString(),
+              fieldMappings: config.fieldMappings || {},
+              driveFileId: fileId,
+              driveFileName: importMasterFile.name,
+            };
+
+            addTemplate(templateId, template);
+            successCount++;
+          } else if (configs.length > 1) {
+            // For bulk import without master files, just import the configuration
+            // User will need to upload master files later
+            const templateId = 'excel_' + Date.now() + '_' + i;
+            const template = {
+              id: templateId,
+              name: config.templateName,
+              createdDate: new Date().toISOString(),
+              fieldMappings: config.fieldMappings || {},
+              driveFileId: null,
+              driveFileName: config.fileName,
+            };
+
+            addTemplate(templateId, template);
+            successCount++;
+          }
+        } catch (error) {
+          console.error(`Error importing ${config.templateName}:`, error);
+          errors.push(`${config.templateName}: ${error.message}`);
+        }
       }
 
-      // Upload master file to Google Drive
-      const fileId = await uploadFileToGoogleDrive(importMasterFile, folderId);
+      // Show summary
+      let message = '';
+      if (successCount > 0) {
+        message += `Successfully imported ${successCount} Excel template(s).\n`;
+        if (configs.length > 1) {
+          message += 'Note: You will need to upload the master Excel files for each template separately.\n';
+        }
+      }
+      if (skipCount > 0) {
+        message += `Skipped ${skipCount} template(s).\n`;
+      }
+      if (errors.length > 0) {
+        message += `Failed to import ${errors.length} template(s):\n${errors.join('\n')}`;
+      }
 
-      // Create template with imported configuration
-      const templateId = 'excel_' + Date.now();
-      const template = {
-        id: templateId,
-        name: importConfig.templateName,
-        createdDate: new Date().toISOString(),
-        fieldMappings: importConfig.fieldMappings || {},
-        driveFileId: fileId,
-        driveFileName: importMasterFile.name,
-      };
+      if (message) {
+        alert(message);
+      }
 
-      addTemplate(templateId, template);
-
-      alert('Excel template imported successfully!');
-      setShowImportModal(false);
-      setImportFile(null);
-      setImportConfig(null);
-      setImportMasterFile(null);
+      if (successCount > 0) {
+        setShowImportModal(false);
+        setImportFile(null);
+        setImportConfig(null);
+        setImportMasterFile(null);
+      }
     } catch (error) {
-      console.error('Error importing template:', error);
-      alert('Failed to import template: ' + error.message);
+      console.error('Error importing templates:', error);
+      alert('Failed to import templates: ' + error.message);
     } finally {
       setImporting(false);
     }
@@ -490,6 +641,15 @@ function ExcelIntegration() {
           >
             📥 Import Template
           </button>
+          {templatesArray.length > 0 && (
+            <button
+              className="btn btn-success"
+              onClick={handleExportAllTemplates}
+              style={{ background: '#9c27b0' }}
+            >
+              📦 Export All
+            </button>
+          )}
         </div>
       </div>
 
@@ -860,51 +1020,88 @@ function ExcelIntegration() {
           setImportConfig(null);
           setImportMasterFile(null);
         }}
-        title="Import Excel Template"
+        title="Import Excel Template(s)"
       >
         <div className="upload-form">
           <div className="info-banner" style={{ marginBottom: '15px', padding: '10px', background: '#e3f2fd', borderRadius: '4px' }}>
             <p style={{ margin: 0, fontSize: '14px' }}>
-              📋 Import a template shared by another user. You'll need both the configuration file (.json) and the master Excel file (.xlsx).
+              📋 Import Excel template(s) shared by another user. You can import:
+              <br />• A single template (with configuration .json + master .xlsx file)
+              <br />• Multiple templates (select multiple .json files or a .zip file)
+              <br />• For bulk import, you'll upload master Excel files separately later
             </p>
           </div>
 
           <div className="form-group">
-            <label htmlFor="excelConfigFile">1. Configuration File (.json)</label>
+            <label htmlFor="excelConfigFile">
+              1. Configuration File(s) (.json or .zip)
+            </label>
             <input
               type="file"
               id="excelConfigFile"
-              accept=".json"
+              accept=".json,.zip"
               onChange={handleImportFileSelect}
               disabled={importing}
+              multiple
             />
             {importConfig && (
-              <p className="file-selected">
-                ✓ Config loaded: {importConfig.templateName}
-                <br />
-                <small>{Object.keys(importConfig.fieldMappings || {}).length} field(s) mapped</small>
-              </p>
+              <div className="file-selected">
+                {Array.isArray(importConfig) ? (
+                  <>
+                    <p style={{ margin: '5px 0', fontWeight: 'bold' }}>
+                      ✓ {importConfig.length} template(s) loaded:
+                    </p>
+                    <ul style={{ margin: '5px 0 5px 20px', fontSize: '13px' }}>
+                      {importConfig.map((config, idx) => (
+                        <li key={idx}>
+                          {config.templateName} ({Object.keys(config.fieldMappings || {}).length} field(s))
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                ) : (
+                  <>
+                    <p style={{ margin: 0 }}>
+                      ✓ Config loaded: {importConfig.templateName}
+                    </p>
+                    <small>{Object.keys(importConfig.fieldMappings || {}).length} field(s) mapped</small>
+                  </>
+                )}
+              </div>
             )}
           </div>
 
-          <div className="form-group">
-            <label htmlFor="excelMasterFile">2. Master Excel File (.xlsx)</label>
-            <input
-              type="file"
-              id="excelMasterFile"
-              accept=".xlsx,.xls"
-              onChange={(e) => setImportMasterFile(e.target.files[0])}
-              disabled={importing || !importConfig}
-            />
-            {importMasterFile && (
-              <p className="file-selected">✓ Selected: {importMasterFile.name}</p>
-            )}
-            {importConfig && !importMasterFile && (
-              <p className="file-hint">
-                Please upload an Excel file that matches the exported template
-              </p>
-            )}
-          </div>
+          {importConfig && !Array.isArray(importConfig) && (
+            <div className="form-group">
+              <label htmlFor="excelMasterFile">2. Master Excel File (.xlsx or .xls)</label>
+              <input
+                type="file"
+                id="excelMasterFile"
+                accept=".xlsx,.xls"
+                onChange={(e) => setImportMasterFile(e.target.files[0])}
+                disabled={importing}
+              />
+              {importMasterFile && (
+                <p className="file-selected">✓ Selected: {importMasterFile.name}</p>
+              )}
+              {!importMasterFile && (
+                <p className="file-hint">
+                  Please upload an Excel file that matches the exported template
+                </p>
+              )}
+            </div>
+          )}
+
+          {importConfig && Array.isArray(importConfig) && (
+            <div className="form-group">
+              <div style={{ padding: '10px', background: '#fff3cd', borderRadius: '4px', marginTop: '10px' }}>
+                <p style={{ margin: 0, fontSize: '13px' }}>
+                  ⚠️ Bulk import will import the template configurations only.
+                  <br />You'll need to upload the master Excel files for each template separately after import.
+                </p>
+              </div>
+            </div>
+          )}
 
           <div className="modal-actions">
             <button
@@ -922,9 +1119,9 @@ function ExcelIntegration() {
             <button
               className="btn btn-primary"
               onClick={handleImportTemplate}
-              disabled={!importConfig || !importMasterFile || importing}
+              disabled={!importConfig || importing || (!Array.isArray(importConfig) && !importMasterFile)}
             >
-              {importing ? 'Importing...' : 'Import Template'}
+              {importing ? 'Importing...' : `Import ${Array.isArray(importConfig) ? importConfig.length + ' Template(s)' : 'Template'}`}
             </button>
           </div>
         </div>
