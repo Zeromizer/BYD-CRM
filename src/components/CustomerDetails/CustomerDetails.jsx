@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import useCustomerStore from '../../stores/useCustomerStore';
 import useAuthStore from '../../stores/useAuthStore';
 import authService from '../../services/authService';
+import driveService from '../../services/driveService';
 import Modal from '../Modal/Modal';
 import CustomerForm from '../CustomerForm/CustomerForm';
 import VsaDetailsModal from '../VsaDetailsModal/VsaDetailsModal';
@@ -35,6 +36,7 @@ function CustomerDetails() {
   const [isDocumentViewerOpen, setIsDocumentViewerOpen] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deleteFolderChecked, setDeleteFolderChecked] = useState(false);
 
   // Documents state
   const [documents, setDocuments] = useState([]);
@@ -274,6 +276,7 @@ function CustomerDetails() {
   const handleCloseDeleteModal = () => {
     if (!isSubmitting) {
       setIsDeleteModalOpen(false);
+      setDeleteFolderChecked(false); // Reset checkbox
     }
   };
 
@@ -343,10 +346,31 @@ function CustomerDetails() {
     setIsSubmitting(true);
 
     try {
+      // Delete Google Drive folder if checkbox is checked
+      if (deleteFolderChecked && isSignedIn && customer.driveFolderId) {
+        try {
+          console.log(`Deleting Google Drive folder: ${customer.driveFolderId}`);
+          await driveService.deleteFolder(customer.driveFolderId);
+          console.log('Google Drive folder deleted successfully');
+        } catch (folderError) {
+          console.error('Error deleting Google Drive folder:', folderError);
+          // Ask user if they want to continue deleting the customer record
+          const continueDelete = window.confirm(
+            'Failed to delete the Google Drive folder. Would you like to continue deleting the customer record anyway?'
+          );
+          if (!continueDelete) {
+            setIsSubmitting(false);
+            return;
+          }
+        }
+      }
+
+      // Delete customer record
       await new Promise((resolve) => setTimeout(resolve, 300));
       deleteCustomer(customer.id);
       await syncToDrive(isSignedIn);
       setIsDeleteModalOpen(false);
+      setDeleteFolderChecked(false); // Reset checkbox
     } catch (error) {
       console.error('Error deleting customer:', error);
       alert('Failed to delete customer. Please try again.');
@@ -1027,6 +1051,39 @@ function CustomerDetails() {
           <p className="delete-info">
             This action cannot be undone. All customer data will be permanently removed.
           </p>
+
+          {/* Google Drive folder deletion option */}
+          {isSignedIn && customer.driveFolderId && (
+            <div style={{
+              margin: '20px 0',
+              padding: '15px',
+              backgroundColor: '#fff3cd',
+              border: '1px solid #ffc107',
+              borderRadius: '4px'
+            }}>
+              <label style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                cursor: 'pointer',
+                gap: '10px'
+              }}>
+                <input
+                  type="checkbox"
+                  checked={deleteFolderChecked}
+                  onChange={(e) => setDeleteFolderChecked(e.target.checked)}
+                  style={{ marginTop: '3px' }}
+                />
+                <span style={{ flex: 1 }}>
+                  <strong>Also delete Google Drive folder and all documents</strong>
+                  <br />
+                  <small style={{ color: '#856404' }}>
+                    This will permanently delete all files including NRIC, Test Drive photos, VSA forms, etc.
+                  </small>
+                </span>
+              </label>
+            </div>
+          )}
+
           <div className="delete-actions">
             <button
               className="btn btn-danger"
