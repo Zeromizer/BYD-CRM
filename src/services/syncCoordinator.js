@@ -3,6 +3,10 @@
  * Manages parallel syncing of all data types with progress tracking
  */
 
+import useCustomerStore from '../stores/useCustomerStore';
+import useFormsStore from '../stores/useFormsStore';
+import useExcelStore from '../stores/useExcelStore';
+
 class SyncCoordinator {
   constructor() {
     this.progressCallbacks = [];
@@ -30,7 +34,7 @@ class SyncCoordinator {
   /**
    * Sync all data in parallel with progress tracking
    */
-  async syncAll(customerStore, formsStore, excelStore, isSignedIn) {
+  async syncAll(isSignedIn) {
     if (!isSignedIn) {
       console.log('Not signed in, skipping sync');
       return;
@@ -65,8 +69,8 @@ class SyncCoordinator {
         (async () => {
           try {
             updateProgress('customers', 'syncing', 'Loading from Drive...');
-            await customerStore.syncFromDrive(isSignedIn);
-            const count = customerStore.getState().customers.length;
+            await useCustomerStore.getState().syncFromDrive(isSignedIn);
+            const count = useCustomerStore.getState().customers.length;
             updateProgress('customers', 'complete', `${count} customer${count !== 1 ? 's' : ''} synced`);
           } catch (error) {
             console.error('Customer sync failed:', error);
@@ -79,8 +83,8 @@ class SyncCoordinator {
         (async () => {
           try {
             updateProgress('forms', 'syncing', 'Loading templates...');
-            await formsStore.syncWithDrive();
-            const count = Object.keys(formsStore.getState().formTemplates).length;
+            await useFormsStore.getState().syncWithDrive();
+            const count = Object.keys(useFormsStore.getState().formTemplates).length;
             updateProgress('forms', 'complete', `${count} template${count !== 1 ? 's' : ''} synced`);
           } catch (error) {
             console.error('Forms sync failed:', error);
@@ -93,8 +97,8 @@ class SyncCoordinator {
         (async () => {
           try {
             updateProgress('excel', 'syncing', 'Loading templates...');
-            await excelStore.syncWithDrive();
-            const count = Object.keys(excelStore.getState().excelTemplates).length;
+            await useExcelStore.getState().syncWithDrive();
+            const count = Object.keys(useExcelStore.getState().excelTemplates).length;
             updateProgress('excel', 'complete', `${count} template${count !== 1 ? 's' : ''} synced`);
           } catch (error) {
             console.error('Excel sync failed:', error);
