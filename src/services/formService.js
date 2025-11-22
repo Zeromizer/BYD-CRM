@@ -54,6 +54,7 @@ class FormService {
       // VSA Details - Insurance
       insuranceCompany: customer.vsa_insuranceCompany || '',
       insuranceFee: customer.vsa_insuranceFee || '',
+      insuranceMonthlyFee: customer.vsa_insuranceMonthlyFee || '',
 
       // VSA Details - Remarks
       remarks1: customer.vsa_remarks1 || '',
