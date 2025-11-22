@@ -31,6 +31,11 @@
   align-items: center;
   gap: 12px;
   letter-spacing: 0.5px;
+  transition: opacity 0.2s;
+}
+
+.header-title:hover {
+  opacity: 0.8;
 }
 
 .byd-logo {

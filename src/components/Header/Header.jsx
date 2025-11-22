@@ -76,7 +76,7 @@ function Header() {
     <header className="header">
       <div className="header-container">
         <div className="header-left">
-          <h1 className="header-title">
+          <h1 className="header-title" onClick={() => navigate('/')} style={{ cursor: 'pointer' }} title="Go to homepage">
             <span className="byd-logo">BYD</span>
             <span className="divider">|</span>
             <span className="motor-east">MOTOR-EAST</span>
