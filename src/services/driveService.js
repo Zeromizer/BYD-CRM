@@ -21,6 +21,105 @@ class DriveService {
     this.formsFileId = null;
     this.excelFileId = null;
     this.rootFolderId = null;
+    this.customersFolderId = null;
+  }
+
+  /**
+   * Get or create the Customers folder within root folder
+   */
+  async getOrCreateCustomersFolder() {
+    if (this.customersFolderId) {
+      return this.customersFolderId;
+    }
+
+    try {
+      const rootFolderId = await this.getOrCreateRootFolder();
+      const folderName = 'Customers';
+
+      // Search for existing folder
+      const response = await window.gapi.client.drive.files.list({
+        q: `name='${folderName}' and '${rootFolderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
+        fields: 'files(id, name)',
+        spaces: 'drive',
+      });
+
+      if (response.result.files && response.result.files.length > 0) {
+        this.customersFolderId = response.result.files[0].id;
+        console.log('Found existing Customers folder:', this.customersFolderId);
+        return this.customersFolderId;
+      }
+
+      // Create new folder
+      const createResponse = await window.gapi.client.drive.files.create({
+        resource: {
+          name: folderName,
+          mimeType: 'application/vnd.google-apps.folder',
+          parents: [rootFolderId],
+        },
+        fields: 'id',
+      });
+
+      this.customersFolderId = createResponse.result.id;
+      console.log('Created Customers folder:', this.customersFolderId);
+      return this.customersFolderId;
+    } catch (error) {
+      console.error('Failed to get/create Customers folder:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create a folder in Google Drive
+   */
+  async createFolder(folderName, parentFolderId) {
+    try {
+      const response = await window.gapi.client.drive.files.create({
+        resource: {
+          name: folderName,
+          mimeType: 'application/vnd.google-apps.folder',
+          parents: [parentFolderId],
+        },
+        fields: 'id, name, webViewLink',
+      });
+
+      console.log(`Created folder "${folderName}":`, response.result.id);
+      return response.result;
+    } catch (error) {
+      console.error(`Failed to create folder "${folderName}":`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create customer folder structure
+   * Returns the main customer folder info
+   */
+  async createCustomerFolderStructure(customerName, customerId) {
+    try {
+      const customersFolderId = await this.getOrCreateCustomersFolder();
+
+      // Create main customer folder (use customer name and ID for uniqueness)
+      const mainFolderName = `${customerName} (${customerId})`;
+      const mainFolder = await this.createFolder(mainFolderName, customersFolderId);
+
+      // Create subfolders
+      const subfolders = ['NIRC', 'Test Drive', 'Other Documents', 'VSA', 'Trade In'];
+      const subfolderPromises = subfolders.map(subfolder =>
+        this.createFolder(subfolder, mainFolder.id)
+      );
+
+      await Promise.all(subfolderPromises);
+
+      console.log(`Created folder structure for customer: ${customerName}`);
+      return {
+        folderId: mainFolder.id,
+        folderName: mainFolder.name,
+        folderUrl: mainFolder.webViewLink,
+      };
+    } catch (error) {
+      console.error('Failed to create customer folder structure:', error);
+      throw error;
+    }
   }
 
   /**
