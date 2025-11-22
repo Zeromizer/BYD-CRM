@@ -63,6 +63,24 @@ const FIELD_NAMES = {
   insuranceSubsidy: 'Insurance Subsidy',
   monthlyRepayment: 'Monthly Repayment',
 
+  // Proposal Details
+  proposalModel: 'Proposal - Model',
+  proposalBank: 'Proposal - Bank',
+  proposalSellingPrice: 'Proposal - Selling Price',
+  proposalInterestRate: 'Proposal - Interest Rate',
+  proposalDownpayment: 'Proposal - Downpayment',
+  proposalLoanTenure: 'Proposal - Loan Tenure',
+  proposalLoanAmount: 'Proposal - Loan Amount',
+  proposalAdminFee: 'Proposal - Admin Fee',
+  proposalReferralFee: 'Proposal - Referral Fee',
+  proposalTradeInModel: 'Proposal - Trade In Model',
+  proposalLowLoanSurcharge: 'Proposal - Low Loan Surcharge',
+  proposalTradeInCarPlate: 'Proposal - Trade In Car Plate',
+  proposalNoLoanSurcharge: 'Proposal - No Loan Surcharge',
+  proposalQuotedTradeInPrice: 'Proposal - Quoted Trade In Price',
+  proposalBenefitsGiven: 'Proposal - Benefits Given',
+  proposalRemarks: 'Proposal - Remarks',
+
   custom: 'Custom Value',
 };
 
@@ -376,6 +394,25 @@ function FieldMappingModal({ isOpen, onClose, formType, template, onSave }) {
                     <option value="adminFee">Admin Fee</option>
                     <option value="insuranceSubsidy">Insurance Subsidy</option>
                     <option value="monthlyRepayment">Monthly Repayment</option>
+                  </optgroup>
+
+                  <optgroup label="Proposal">
+                    <option value="proposalModel">Model</option>
+                    <option value="proposalBank">Bank</option>
+                    <option value="proposalSellingPrice">Selling Price</option>
+                    <option value="proposalInterestRate">Interest Rate</option>
+                    <option value="proposalDownpayment">Downpayment</option>
+                    <option value="proposalLoanTenure">Loan Tenure</option>
+                    <option value="proposalLoanAmount">Loan Amount</option>
+                    <option value="proposalAdminFee">Admin Fee</option>
+                    <option value="proposalReferralFee">Referral Fee</option>
+                    <option value="proposalTradeInModel">Trade In Model</option>
+                    <option value="proposalLowLoanSurcharge">Low Loan Surcharge</option>
+                    <option value="proposalTradeInCarPlate">Trade In Car Plate</option>
+                    <option value="proposalNoLoanSurcharge">No Loan Surcharge</option>
+                    <option value="proposalQuotedTradeInPrice">Quoted Trade In Price</option>
+                    <option value="proposalBenefitsGiven">Benefits Given</option>
+                    <option value="proposalRemarks">Remarks</option>
                   </optgroup>
 
                   <optgroup label="Other">
