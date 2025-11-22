@@ -244,8 +244,32 @@ function FormsManagement() {
     alert('Field mappings saved successfully!');
   };
 
-  // Export template configuration
-  const handleExportTemplate = (formType) => {
+  // Download file from Google Drive
+  const downloadFileFromDrive = async (fileId) => {
+    try {
+      const token = authService.getAccessToken();
+      const response = await fetch(
+        `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch file: ${response.statusText}`);
+      }
+
+      return await response.blob();
+    } catch (error) {
+      console.error('Error downloading file from Drive:', error);
+      throw error;
+    }
+  };
+
+  // Export template configuration with master file
+  const handleExportTemplate = async (formType) => {
     const template = formTemplates[formType];
     if (!template) {
       alert('Template not found');
@@ -262,21 +286,53 @@ function FormsManagement() {
       version: '1.0',
     };
 
-    const dataStr = JSON.stringify(exportData, null, 2);
-    const dataBlob = new Blob([dataStr], { type: 'application/json' });
-    const url = URL.createObjectURL(dataBlob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${formType}_template_config.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    try {
+      // If template has a master file, download it and create a ZIP
+      if (template.fileId && template.fileName && isSignedIn) {
+        const zip = new JSZip();
 
-    alert('Template configuration exported! Share this file with other users.');
+        // Add configuration JSON
+        const dataStr = JSON.stringify(exportData, null, 2);
+        zip.file(`${formType}_config.json`, dataStr);
+
+        // Download and add master file
+        const masterFileBlob = await downloadFileFromDrive(template.fileId);
+        zip.file(template.fileName, masterFileBlob);
+
+        // Generate and download ZIP
+        const zipBlob = await zip.generateAsync({ type: 'blob' });
+        const url = URL.createObjectURL(zipBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${formType}_template.zip`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+
+        alert('Form template exported with master file!');
+      } else {
+        // No master file - export config only
+        const dataStr = JSON.stringify(exportData, null, 2);
+        const dataBlob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(dataBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${formType}_template_config.json`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+
+        alert('Template configuration exported!\n\nNote: No master file was included. You can upload it separately when importing.');
+      }
+    } catch (error) {
+      console.error('Error exporting template:', error);
+      alert('Failed to export template: ' + error.message);
+    }
   };
 
-  // Export all templates as a zip file
+  // Export all templates as a zip file with master files
   const handleExportAllTemplates = async () => {
     const templatesArray = Object.entries(formTemplates);
 
@@ -287,9 +343,10 @@ function FormsManagement() {
 
     try {
       const zip = new JSZip();
+      let masterFilesIncluded = 0;
 
-      // Add each template configuration to the zip
-      templatesArray.forEach(([formType, template]) => {
+      // Add each template configuration and master file to the zip
+      for (const [formType, template] of templatesArray) {
         const exportData = {
           formType,
           formTypeName: FORM_TYPE_NAMES[formType] || formType,
@@ -301,8 +358,22 @@ function FormsManagement() {
         };
 
         const dataStr = JSON.stringify(exportData, null, 2);
-        zip.file(`${formType}_template_config.json`, dataStr);
-      });
+        zip.file(`${formType}_config.json`, dataStr);
+
+        // Download and add master file if available
+        if (template.fileId && template.fileName && isSignedIn) {
+          try {
+            const masterFileBlob = await downloadFileFromDrive(template.fileId);
+            // Use a unique filename to avoid conflicts
+            const masterFileName = `${formType}_${template.fileName}`;
+            zip.file(masterFileName, masterFileBlob);
+            masterFilesIncluded++;
+          } catch (error) {
+            console.error(`Failed to download master file for ${formType}:`, error);
+            // Continue with other templates even if one fails
+          }
+        }
+      }
 
       // Generate the zip file
       const zipBlob = await zip.generateAsync({ type: 'blob' });
@@ -315,7 +386,14 @@ function FormsManagement() {
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
-      alert(`Successfully exported ${templatesArray.length} template(s) to a zip file!`);
+      let message = `Successfully exported ${templatesArray.length} form template(s)!`;
+      if (masterFilesIncluded > 0) {
+        message += `\n${masterFilesIncluded} master file(s) included.`;
+      }
+      if (masterFilesIncluded < templatesArray.length) {
+        message += `\n${templatesArray.length - masterFilesIncluded} template(s) exported without master files.`;
+      }
+      alert(message);
     } catch (error) {
       console.error('Error exporting templates:', error);
       alert('Failed to export templates: ' + error.message);
@@ -340,10 +418,41 @@ function FormsManagement() {
           filename.endsWith('.json') && !zipContent.files[filename].dir
         );
 
+        // Extract all master files (PDF and images)
+        const masterFiles = Object.keys(zipContent.files).filter(filename =>
+          (filename.endsWith('.pdf') || filename.match(/\.(jpg|jpeg|png|gif|bmp)$/i)) && !zipContent.files[filename].dir
+        );
+
         for (const filename of jsonFiles) {
           const content = await zipContent.files[filename].async('text');
           try {
             const config = JSON.parse(content);
+
+            // Try to find matching master file in the ZIP
+            // Look for files that match the pattern: formType_fileName
+            const formTypePrefix = filename.replace(/_config\.json$/, '');
+            let matchingMasterFile = null;
+
+            for (const masterFile of masterFiles) {
+              // Check if master file starts with form type prefix
+              if (masterFile.startsWith(formTypePrefix + '_')) {
+                matchingMasterFile = masterFile;
+                break;
+              }
+              // Also check if the master file matches the fileName in config
+              if (config.fileName && masterFile.endsWith(config.fileName)) {
+                matchingMasterFile = masterFile;
+                break;
+              }
+            }
+
+            // Store the master file blob with the config
+            if (matchingMasterFile) {
+              const masterBlob = await zipContent.files[matchingMasterFile].async('blob');
+              config._masterFileBlob = masterBlob;
+              config._masterFileName = config.fileName || matchingMasterFile.split('/').pop();
+            }
+
             configs.push(config);
           } catch (error) {
             console.error(`Invalid JSON in ${filename}:`, error);
@@ -399,14 +508,14 @@ function FormsManagement() {
       return;
     }
 
-    if (!isSignedIn) {
-      alert('Please sign in to Google Drive to import templates');
+    // For single template import without embedded master file, require master file
+    if (configs.length === 1 && !importMasterFile && !configs[0]._masterFileBlob) {
+      alert('Please select the master file for this template');
       return;
     }
 
-    // For single template import, require master file
-    if (configs.length === 1 && !importMasterFile) {
-      alert('Please select the master file for this template');
+    if (!isSignedIn) {
+      alert('Please sign in to Google Drive to import templates');
       return;
     }
 
@@ -422,6 +531,7 @@ function FormsManagement() {
 
       let successCount = 0;
       let skipCount = 0;
+      let masterFilesUploaded = 0;
       const errors = [];
 
       for (let i = 0; i < configs.length; i++) {
@@ -443,67 +553,80 @@ function FormsManagement() {
             }
           }
 
-          // For single import, use the provided master file
-          // For bulk import, we'll need to prompt for each file
+          let fileId = null;
+          let fileName = config.fileName;
+          let webViewLink = null;
+          let webContentLink = null;
+
+          // Determine which master file to use
+          let masterFileToUpload = null;
           if (configs.length === 1 && importMasterFile) {
-            // Upload master file to Google Drive
-            const metadata = {
-              name: importMasterFile.name,
-              mimeType: importMasterFile.type,
-              parents: [formsFolderId],
-            };
-
-            const form = new FormData();
-            form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-            form.append('file', importMasterFile);
-
-            const token = authService.getAccessToken();
-            const response = await fetch(
-              'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink,webContentLink',
-              {
-                method: 'POST',
-                headers: {
-                  Authorization: `Bearer ${token}`,
-                },
-                body: form,
-              }
-            );
-
-            if (!response.ok) {
-              throw new Error('Upload failed: ' + response.statusText);
-            }
-
-            const result = await response.json();
-
-            // Store form template info with imported field mappings
-            const templateData = {
-              fileId: result.id,
-              fileName: result.name,
-              webViewLink: result.webViewLink,
-              webContentLink: result.webContentLink,
-              fileType: config.fileType,
-              uploadDate: new Date().toISOString(),
-              fieldMappings: config.fieldMappings || {},
-            };
-
-            addTemplate(config.formType, templateData);
-            successCount++;
-          } else if (configs.length > 1) {
-            // For bulk import without master files, just import the configuration
-            // User will need to upload master files later
-            const templateData = {
-              fileId: null,
-              fileName: config.fileName,
-              webViewLink: null,
-              webContentLink: null,
-              fileType: config.fileType,
-              uploadDate: new Date().toISOString(),
-              fieldMappings: config.fieldMappings || {},
-            };
-
-            addTemplate(config.formType, templateData);
-            successCount++;
+            // Single import with manually selected file
+            masterFileToUpload = importMasterFile;
+            fileName = importMasterFile.name;
+          } else if (config._masterFileBlob) {
+            // Master file embedded in ZIP
+            const mimeType = config.fileType === 'pdf' ? 'application/pdf' : 'image/jpeg';
+            masterFileToUpload = new File([config._masterFileBlob], config._masterFileName, {
+              type: mimeType
+            });
+            fileName = config._masterFileName;
           }
+
+          // Upload master file to Google Drive if available
+          if (masterFileToUpload) {
+            try {
+              const metadata = {
+                name: masterFileToUpload.name,
+                mimeType: masterFileToUpload.type,
+                parents: [formsFolderId],
+              };
+
+              const form = new FormData();
+              form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+              form.append('file', masterFileToUpload);
+
+              const token = authService.getAccessToken();
+              const response = await fetch(
+                'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink,webContentLink',
+                {
+                  method: 'POST',
+                  headers: {
+                    Authorization: `Bearer ${token}`,
+                  },
+                  body: form,
+                }
+              );
+
+              if (!response.ok) {
+                throw new Error('Upload failed: ' + response.statusText);
+              }
+
+              const result = await response.json();
+              fileId = result.id;
+              fileName = result.name;
+              webViewLink = result.webViewLink;
+              webContentLink = result.webContentLink;
+              masterFilesUploaded++;
+            } catch (error) {
+              console.error(`Failed to upload master file for ${config.formTypeName}:`, error);
+              // Continue without master file
+            }
+          }
+
+          // Store form template info with imported field mappings
+          const templateData = {
+            fileId: fileId,
+            fileName: fileName,
+            webViewLink: webViewLink,
+            webContentLink: webContentLink,
+            fileType: config.fileType,
+            uploadDate: new Date().toISOString(),
+            fieldMappings: config.fieldMappings || {},
+          };
+
+          addTemplate(config.formType, templateData);
+          successCount++;
         } catch (error) {
           console.error(`Error importing ${config.formTypeName}:`, error);
           errors.push(`${config.formTypeName}: ${error.message}`);
@@ -514,8 +637,11 @@ function FormsManagement() {
       let message = '';
       if (successCount > 0) {
         message += `Successfully imported ${successCount} template(s).\n`;
-        if (configs.length > 1) {
-          message += 'Note: You will need to upload the master files for each template separately.\n';
+        if (masterFilesUploaded > 0) {
+          message += `${masterFilesUploaded} master file(s) uploaded to Google Drive.\n`;
+        }
+        if (masterFilesUploaded < successCount) {
+          message += `${successCount - masterFilesUploaded} template(s) imported without master files - you can upload them later.\n`;
         }
       }
       if (skipCount > 0) {
@@ -724,9 +850,9 @@ function FormsManagement() {
           <div className="info-banner" style={{ marginBottom: '15px', padding: '10px', background: '#e3f2fd', borderRadius: '4px' }}>
             <p style={{ margin: 0, fontSize: '14px' }}>
               📋 Import template(s) shared by another user. You can import:
-              <br />• A single template (with configuration .json + master file)
-              <br />• Multiple templates (select multiple .json files or a .zip file)
-              <br />• For bulk import, you'll upload master files separately later
+              <br />• A single template (with configuration .json + master PDF/image file)
+              <br />• A .zip file containing templates with master files (exported via Export or Export All)
+              <br />• Multiple .json configuration files (you'll upload master files separately later)
             </p>
           </div>
 
