@@ -7,6 +7,18 @@ class FormService {
   getFormDataMapping(customer) {
     const today = new Date().toLocaleDateString();
 
+    // Helper function to parse currency strings to numbers
+    const parseCurrency = (value) => {
+      if (!value) return 0;
+      const numericValue = parseFloat(value.toString().replace(/[^0-9.-]/g, ''));
+      return isNaN(numericValue) ? 0 : numericValue;
+    };
+
+    // Calculate net insurance monthly fee
+    const monthlyFee = parseCurrency(customer.vsa_insuranceMonthlyFee);
+    const subsidy = parseCurrency(customer.vsa_insuranceSubsidy);
+    const netMonthlyFee = monthlyFee - subsidy;
+
     return {
       name: customer.name || '',
       phone: customer.phone || '',
@@ -55,6 +67,7 @@ class FormService {
       insuranceCompany: customer.vsa_insuranceCompany || '',
       insuranceFee: customer.vsa_insuranceFee || '',
       insuranceMonthlyFee: customer.vsa_insuranceMonthlyFee || '',
+      insuranceMonthlyFeeNet: netMonthlyFee.toFixed(2),
 
       // VSA Details - Remarks
       remarks1: customer.vsa_remarks1 || '',

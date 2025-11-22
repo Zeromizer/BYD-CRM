@@ -52,6 +52,7 @@ const FIELD_NAMES = {
   insuranceCompany: 'Insurance Company',
   insuranceFee: 'Insurance Fee',
   insuranceMonthlyFee: 'Insurance Monthly Fee',
+  insuranceMonthlyFeeNet: 'Insurance Monthly Fee (Net)',
 
   // VSA Details - Remarks
   remarks1: 'Remarks 1',
@@ -364,6 +365,7 @@ function FieldMappingModal({ isOpen, onClose, formType, template, onSave }) {
                     <option value="insuranceCompany">Insurance Company</option>
                     <option value="insuranceFee">Insurance Fee</option>
                     <option value="insuranceMonthlyFee">Insurance Monthly Fee</option>
+                    <option value="insuranceMonthlyFeeNet">Insurance Monthly Fee (Net)</option>
                   </optgroup>
 
                   <optgroup label="VSA - Remarks & Loan">
