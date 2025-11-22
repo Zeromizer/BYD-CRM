@@ -74,7 +74,6 @@ function VsaDetailsModal({ isOpen, onClose, customer, onSave }) {
     // Insurance
     insuranceCompany: '',
     insuranceFee: '',
-    insuranceMonthlyFee: '',
 
     // Remarks
     remarks1: '',
@@ -114,7 +113,6 @@ function VsaDetailsModal({ isOpen, onClose, customer, onSave }) {
         motorNo: customer.vsa_motorNo || '',
         insuranceCompany: customer.vsa_insuranceCompany || '',
         insuranceFee: customer.vsa_insuranceFee || '',
-        insuranceMonthlyFee: customer.vsa_insuranceMonthlyFee || '',
         remarks1: customer.vsa_remarks1 || '',
         remarks2: customer.vsa_remarks2 || '',
         loanAmount: customer.vsa_loanAmount || '',
@@ -503,16 +501,6 @@ function VsaDetailsModal({ isOpen, onClose, customer, onSave }) {
                     placeholder="e.g., $1,200"
                   />
                 </div>
-              </div>
-
-              <div className="form-group">
-                <label>Insurance Monthly Fee</label>
-                <input
-                  type="text"
-                  value={vsaData.insuranceMonthlyFee}
-                  onChange={(e) => handleChange('insuranceMonthlyFee', e.target.value)}
-                  placeholder="e.g., $150"
-                />
               </div>
             </div>
           )}

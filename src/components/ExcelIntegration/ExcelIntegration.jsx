@@ -52,8 +52,7 @@ const FIELD_NAMES = {
   // VSA Details - Insurance
   insuranceCompany: 'Insurance Company',
   insuranceFee: 'Insurance Fee',
-  insuranceMonthlyFee: 'Insurance Monthly Fee',
-  insuranceMonthlyFeeNet: 'Insurance Monthly Fee (Net)',
+  insuranceFeeNet: 'Net Insurance Fee',
 
   // VSA Details - Remarks
   remarks1: 'Remarks 1',
@@ -550,8 +549,7 @@ function ExcelIntegration() {
                   <optgroup label="VSA - Insurance">
                     <option value="insuranceCompany">Insurance Company</option>
                     <option value="insuranceFee">Insurance Fee</option>
-                    <option value="insuranceMonthlyFee">Insurance Monthly Fee</option>
-                    <option value="insuranceMonthlyFeeNet">Insurance Monthly Fee (Net)</option>
+                    <option value="insuranceFeeNet">Net Insurance Fee</option>
                   </optgroup>
 
                   <optgroup label="VSA - Remarks & Loan">
