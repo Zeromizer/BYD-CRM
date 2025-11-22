@@ -52,6 +52,7 @@ const FIELD_NAMES = {
   // VSA Details - Insurance
   insuranceCompany: 'Insurance Company',
   insuranceFee: 'Insurance Fee',
+  insuranceFeeNet: 'Net Insurance Fee',
 
   // VSA Details - Remarks
   remarks1: 'Remarks 1',
@@ -61,6 +62,25 @@ const FIELD_NAMES = {
   tenure: 'Tenure',
   adminFee: 'Admin Fee',
   insuranceSubsidy: 'Insurance Subsidy',
+  monthlyRepayment: 'Monthly Repayment',
+
+  // Proposal Details
+  proposalModel: 'Proposal - Model',
+  proposalBank: 'Proposal - Bank',
+  proposalSellingPrice: 'Proposal - Selling Price',
+  proposalInterestRate: 'Proposal - Interest Rate',
+  proposalDownpayment: 'Proposal - Downpayment',
+  proposalLoanTenure: 'Proposal - Loan Tenure',
+  proposalLoanAmount: 'Proposal - Loan Amount',
+  proposalAdminFee: 'Proposal - Admin Fee',
+  proposalReferralFee: 'Proposal - Referral Fee',
+  proposalTradeInModel: 'Proposal - Trade In Model',
+  proposalLowLoanSurcharge: 'Proposal - Low Loan Surcharge',
+  proposalTradeInCarPlate: 'Proposal - Trade In Car Plate',
+  proposalNoLoanSurcharge: 'Proposal - No Loan Surcharge',
+  proposalQuotedTradeInPrice: 'Proposal - Quoted Trade In Price',
+  proposalBenefitsGiven: 'Proposal - Benefits Given',
+  proposalRemarks: 'Proposal - Remarks',
 };
 
 function ExcelIntegration() {
@@ -496,11 +516,90 @@ function ExcelIntegration() {
               <div className="form-group">
                 <label>Customer Field</label>
                 <select value={selectedField} onChange={(e) => setSelectedField(e.target.value)}>
-                  {Object.entries(FIELD_NAMES).map(([key, name]) => (
-                    <option key={key} value={key}>
-                      {name}
-                    </option>
-                  ))}
+                  <optgroup label="Basic Customer Information">
+                    <option value="name">Customer Name</option>
+                    <option value="phone">Phone Number</option>
+                    <option value="email">Email</option>
+                    <option value="nric">NRIC/FIN</option>
+                    <option value="occupation">Occupation</option>
+                    <option value="dob">Date of Birth</option>
+                    <option value="address">Address</option>
+                    <option value="addressContinue">Address Continue</option>
+                    <option value="fullAddress">Full Address (Combined)</option>
+                    <option value="salesConsultant">Sales Consultant</option>
+                    <option value="vsaNo">VSA No</option>
+                    <option value="date">Today's Date</option>
+                  </optgroup>
+
+                  <optgroup label="VSA - New Car Details">
+                    <option value="makeModel">Make & Model</option>
+                    <option value="yom">Year of Manufacture</option>
+                    <option value="bodyColour">Body Colour</option>
+                    <option value="upholstery">Upholstery</option>
+                    <option value="przType">P/R/Z Type</option>
+                  </optgroup>
+
+                  <optgroup label="VSA - New Car Package">
+                    <option value="package">Package</option>
+                    <option value="sellingWithCOE">Selling with COE</option>
+                    <option value="sellingPriceList">Selling Price on Price List</option>
+                    <option value="purchasePriceWithCOE">Purchase Price with COE</option>
+                    <option value="coeRebateLevel">COE Rebate Level</option>
+                    <option value="deposit">Deposit</option>
+                    <option value="lessOthers">Less: Others</option>
+                    <option value="addOthers">Add: Others</option>
+                    <option value="deliveryDate">Approximate Delivery Date</option>
+                  </optgroup>
+
+                  <optgroup label="VSA - Trade In Details">
+                    <option value="tradeInCarNo">Trade in Car No</option>
+                    <option value="tradeInCarModel">Trade in Car Model</option>
+                    <option value="tradeInAmount">Trade In Amount</option>
+                  </optgroup>
+
+                  <optgroup label="VSA - Delivery Details">
+                    <option value="dateOfRegistration">Date of Registration</option>
+                    <option value="registrationNo">Registration No</option>
+                    <option value="chassisNo">Chassis No</option>
+                    <option value="engineNo">Engine No</option>
+                    <option value="motorNo">Motor No</option>
+                  </optgroup>
+
+                  <optgroup label="VSA - Insurance">
+                    <option value="insuranceCompany">Insurance Company</option>
+                    <option value="insuranceFee">Insurance Fee</option>
+                    <option value="insuranceFeeNet">Net Insurance Fee</option>
+                  </optgroup>
+
+                  <optgroup label="VSA - Remarks & Loan">
+                    <option value="remarks1">Remarks 1</option>
+                    <option value="remarks2">Remarks 2</option>
+                    <option value="loanAmount">Loan Amount</option>
+                    <option value="interest">Interest</option>
+                    <option value="tenure">Tenure</option>
+                    <option value="adminFee">Admin Fee</option>
+                    <option value="insuranceSubsidy">Insurance Subsidy</option>
+                    <option value="monthlyRepayment">Monthly Repayment</option>
+                  </optgroup>
+
+                  <optgroup label="Proposal">
+                    <option value="proposalModel">Model</option>
+                    <option value="proposalBank">Bank</option>
+                    <option value="proposalSellingPrice">Selling Price</option>
+                    <option value="proposalInterestRate">Interest Rate</option>
+                    <option value="proposalDownpayment">Downpayment</option>
+                    <option value="proposalLoanTenure">Loan Tenure</option>
+                    <option value="proposalLoanAmount">Loan Amount</option>
+                    <option value="proposalAdminFee">Admin Fee</option>
+                    <option value="proposalReferralFee">Referral Fee</option>
+                    <option value="proposalTradeInModel">Trade In Model</option>
+                    <option value="proposalLowLoanSurcharge">Low Loan Surcharge</option>
+                    <option value="proposalTradeInCarPlate">Trade In Car Plate</option>
+                    <option value="proposalNoLoanSurcharge">No Loan Surcharge</option>
+                    <option value="proposalQuotedTradeInPrice">Quoted Trade In Price</option>
+                    <option value="proposalBenefitsGiven">Benefits Given</option>
+                    <option value="proposalRemarks">Remarks</option>
+                  </optgroup>
                 </select>
               </div>
               <div className="form-group">
