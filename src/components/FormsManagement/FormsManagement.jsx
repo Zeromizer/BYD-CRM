@@ -16,6 +16,7 @@ const FORM_TYPE_NAMES = {
   pdpa_consent_2: 'PDPA Consent 2',
   delivery_checklist_1: 'Delivery Checklist Form (1 of 2)',
   delivery_checklist_2: 'Delivery Checklist Form (2 of 2)',
+  proposal: 'Proposal Form',
   other: 'Other Form',
 };
 
