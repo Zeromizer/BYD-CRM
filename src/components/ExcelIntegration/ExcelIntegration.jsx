@@ -367,8 +367,32 @@ function ExcelIntegration() {
     }
   };
 
-  // Export Excel template configuration
-  const handleExportTemplate = (templateId) => {
+  // Download file from Google Drive
+  const downloadFileFromDrive = async (fileId) => {
+    try {
+      const token = authService.getAccessToken();
+      const response = await fetch(
+        `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch file: ${response.statusText}`);
+      }
+
+      return await response.blob();
+    } catch (error) {
+      console.error('Error downloading file from Drive:', error);
+      throw error;
+    }
+  };
+
+  // Export Excel template configuration with master file
+  const handleExportTemplate = async (templateId) => {
     const template = excelTemplates[templateId];
     if (!template) {
       alert('Template not found');
@@ -383,21 +407,53 @@ function ExcelIntegration() {
       version: '1.0',
     };
 
-    const dataStr = JSON.stringify(exportData, null, 2);
-    const dataBlob = new Blob([dataStr], { type: 'application/json' });
-    const url = URL.createObjectURL(dataBlob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${template.name.replace(/\s+/g, '_')}_excel_config.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    try {
+      // If template has a master file, download it and create a ZIP
+      if (template.driveFileId && template.driveFileName && isSignedIn) {
+        const zip = new JSZip();
 
-    alert('Excel template configuration exported! Share this file with other users.');
+        // Add configuration JSON
+        const dataStr = JSON.stringify(exportData, null, 2);
+        zip.file(`${template.name.replace(/\s+/g, '_')}_config.json`, dataStr);
+
+        // Download and add master file
+        const masterFileBlob = await downloadFileFromDrive(template.driveFileId);
+        zip.file(template.driveFileName, masterFileBlob);
+
+        // Generate and download ZIP
+        const zipBlob = await zip.generateAsync({ type: 'blob' });
+        const url = URL.createObjectURL(zipBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${template.name.replace(/\s+/g, '_')}_excel_template.zip`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+
+        alert('Excel template exported with master file!');
+      } else {
+        // No master file - export config only
+        const dataStr = JSON.stringify(exportData, null, 2);
+        const dataBlob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(dataBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${template.name.replace(/\s+/g, '_')}_excel_config.json`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+
+        alert('Excel template configuration exported!\n\nNote: No master file was included. You can upload it separately when importing.');
+      }
+    } catch (error) {
+      console.error('Error exporting template:', error);
+      alert('Failed to export template: ' + error.message);
+    }
   };
 
-  // Export all Excel templates as a zip file
+  // Export all Excel templates as a zip file with master files
   const handleExportAllTemplates = async () => {
     const templatesArray = Object.entries(excelTemplates);
 
@@ -408,9 +464,10 @@ function ExcelIntegration() {
 
     try {
       const zip = new JSZip();
+      let masterFilesIncluded = 0;
 
-      // Add each template configuration to the zip
-      templatesArray.forEach(([templateId, template]) => {
+      // Add each template configuration and master file to the zip
+      for (const [templateId, template] of templatesArray) {
         const exportData = {
           templateName: template.name,
           fileName: template.driveFileName,
@@ -420,8 +477,22 @@ function ExcelIntegration() {
         };
 
         const dataStr = JSON.stringify(exportData, null, 2);
-        zip.file(`${template.name.replace(/\s+/g, '_')}_excel_config.json`, dataStr);
-      });
+        zip.file(`${template.name.replace(/\s+/g, '_')}_config.json`, dataStr);
+
+        // Download and add master file if available
+        if (template.driveFileId && template.driveFileName && isSignedIn) {
+          try {
+            const masterFileBlob = await downloadFileFromDrive(template.driveFileId);
+            // Use a unique filename to avoid conflicts
+            const masterFileName = `${template.name.replace(/\s+/g, '_')}_${template.driveFileName}`;
+            zip.file(masterFileName, masterFileBlob);
+            masterFilesIncluded++;
+          } catch (error) {
+            console.error(`Failed to download master file for ${template.name}:`, error);
+            // Continue with other templates even if one fails
+          }
+        }
+      }
 
       // Generate the zip file
       const zipBlob = await zip.generateAsync({ type: 'blob' });
@@ -434,7 +505,14 @@ function ExcelIntegration() {
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
-      alert(`Successfully exported ${templatesArray.length} Excel template(s) to a zip file!`);
+      let message = `Successfully exported ${templatesArray.length} Excel template(s)!`;
+      if (masterFilesIncluded > 0) {
+        message += `\n${masterFilesIncluded} master file(s) included.`;
+      }
+      if (masterFilesIncluded < templatesArray.length) {
+        message += `\n${templatesArray.length - masterFilesIncluded} template(s) exported without master files.`;
+      }
+      alert(message);
     } catch (error) {
       console.error('Error exporting templates:', error);
       alert('Failed to export templates: ' + error.message);
@@ -459,10 +537,41 @@ function ExcelIntegration() {
           filename.endsWith('.json') && !zipContent.files[filename].dir
         );
 
+        // Extract all master files (Excel files)
+        const excelFiles = Object.keys(zipContent.files).filter(filename =>
+          (filename.endsWith('.xlsx') || filename.endsWith('.xls')) && !zipContent.files[filename].dir
+        );
+
         for (const filename of jsonFiles) {
           const content = await zipContent.files[filename].async('text');
           try {
             const config = JSON.parse(content);
+
+            // Try to find matching master file in the ZIP
+            // Look for files that match the pattern: templateName_fileName
+            const templateNamePrefix = filename.replace(/_config\.json$/, '');
+            let matchingMasterFile = null;
+
+            for (const excelFile of excelFiles) {
+              // Check if excel file starts with template name prefix
+              if (excelFile.startsWith(templateNamePrefix + '_')) {
+                matchingMasterFile = excelFile;
+                break;
+              }
+              // Also check if the excel file matches the fileName in config
+              if (config.fileName && excelFile.endsWith(config.fileName)) {
+                matchingMasterFile = excelFile;
+                break;
+              }
+            }
+
+            // Store the master file blob with the config
+            if (matchingMasterFile) {
+              const masterBlob = await zipContent.files[matchingMasterFile].async('blob');
+              config._masterFileBlob = masterBlob;
+              config._masterFileName = config.fileName || matchingMasterFile.split('/').pop();
+            }
+
             configs.push(config);
           } catch (error) {
             console.error(`Invalid JSON in ${filename}:`, error);
@@ -518,14 +627,14 @@ function ExcelIntegration() {
       return;
     }
 
-    // For single template import, require master file
-    if (configs.length === 1 && !importMasterFile) {
+    // For single template import without embedded master file, require master file
+    if (configs.length === 1 && !importMasterFile && !configs[0]._masterFileBlob) {
       alert('Please select the master Excel file for this template');
       return;
     }
 
-    if (!isSignedIn && configs.length === 1 && importMasterFile) {
-      alert('Please sign in to Google Drive to import templates with master files');
+    if (!isSignedIn) {
+      alert('Please sign in to Google Drive to import templates');
       return;
     }
 
@@ -534,54 +643,62 @@ function ExcelIntegration() {
     try {
       let successCount = 0;
       let skipCount = 0;
+      let masterFilesUploaded = 0;
       const errors = [];
+
+      // Get or create Excel templates folder
+      const folderId = await getOrCreateExcelTemplatesFolder();
+      if (!folderId) {
+        alert('Failed to create Excel templates folder. Please try again.');
+        setImporting(false);
+        return;
+      }
 
       for (let i = 0; i < configs.length; i++) {
         const config = configs[i];
 
         try {
-          // For single import with master file
+          let fileId = null;
+          let fileName = config.fileName;
+
+          // Determine which master file to use
+          let masterFileToUpload = null;
           if (configs.length === 1 && importMasterFile) {
-            // Get or create Excel templates folder
-            const folderId = await getOrCreateExcelTemplatesFolder();
-            if (!folderId) {
-              alert('Failed to create Excel templates folder. Please try again.');
-              setImporting(false);
-              return;
-            }
-
-            // Upload master file to Google Drive
-            const fileId = await uploadFileToGoogleDrive(importMasterFile, folderId);
-
-            // Create template with imported configuration
-            const templateId = 'excel_' + Date.now();
-            const template = {
-              id: templateId,
-              name: config.templateName,
-              createdDate: new Date().toISOString(),
-              fieldMappings: config.fieldMappings || {},
-              driveFileId: fileId,
-              driveFileName: importMasterFile.name,
-            };
-
-            addTemplate(templateId, template);
-            successCount++;
-          } else if (configs.length > 1) {
-            // For bulk import without master files, just import the configuration
-            // User will need to upload master files later
-            const templateId = 'excel_' + Date.now() + '_' + i;
-            const template = {
-              id: templateId,
-              name: config.templateName,
-              createdDate: new Date().toISOString(),
-              fieldMappings: config.fieldMappings || {},
-              driveFileId: null,
-              driveFileName: config.fileName,
-            };
-
-            addTemplate(templateId, template);
-            successCount++;
+            // Single import with manually selected file
+            masterFileToUpload = importMasterFile;
+            fileName = importMasterFile.name;
+          } else if (config._masterFileBlob) {
+            // Master file embedded in ZIP
+            masterFileToUpload = new File([config._masterFileBlob], config._masterFileName, {
+              type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            });
+            fileName = config._masterFileName;
           }
+
+          // Upload master file to Google Drive if available
+          if (masterFileToUpload) {
+            try {
+              fileId = await uploadFileToGoogleDrive(masterFileToUpload, folderId);
+              masterFilesUploaded++;
+            } catch (error) {
+              console.error(`Failed to upload master file for ${config.templateName}:`, error);
+              // Continue without master file
+            }
+          }
+
+          // Create template with imported configuration
+          const templateId = 'excel_' + Date.now() + '_' + i;
+          const template = {
+            id: templateId,
+            name: config.templateName,
+            createdDate: new Date().toISOString(),
+            fieldMappings: config.fieldMappings || {},
+            driveFileId: fileId,
+            driveFileName: fileName,
+          };
+
+          addTemplate(templateId, template);
+          successCount++;
         } catch (error) {
           console.error(`Error importing ${config.templateName}:`, error);
           errors.push(`${config.templateName}: ${error.message}`);
@@ -592,8 +709,11 @@ function ExcelIntegration() {
       let message = '';
       if (successCount > 0) {
         message += `Successfully imported ${successCount} Excel template(s).\n`;
-        if (configs.length > 1) {
-          message += 'Note: You will need to upload the master Excel files for each template separately.\n';
+        if (masterFilesUploaded > 0) {
+          message += `${masterFilesUploaded} master file(s) uploaded to Google Drive.\n`;
+        }
+        if (masterFilesUploaded < successCount) {
+          message += `${successCount - masterFilesUploaded} template(s) imported without master files - you can upload them later.\n`;
         }
       }
       if (skipCount > 0) {
@@ -1027,8 +1147,8 @@ function ExcelIntegration() {
             <p style={{ margin: 0, fontSize: '14px' }}>
               📋 Import Excel template(s) shared by another user. You can import:
               <br />• A single template (with configuration .json + master .xlsx file)
-              <br />• Multiple templates (select multiple .json files or a .zip file)
-              <br />• For bulk import, you'll upload master Excel files separately later
+              <br />• A .zip file containing templates with master files (exported via Export or Export All)
+              <br />• Multiple .json configuration files (you'll upload master files separately later)
             </p>
           </div>
 
