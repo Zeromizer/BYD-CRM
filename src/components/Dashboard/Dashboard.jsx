@@ -1,26 +1,17 @@
 import { useEffect } from 'react';
 import useCustomerStore from '../../stores/useCustomerStore';
-import useAuthStore from '../../stores/useAuthStore';
 import CustomerList from '../CustomerList/CustomerList';
 import CustomerDetails from '../CustomerDetails/CustomerDetails';
 import './Dashboard.css';
 
 function Dashboard() {
-  const { loadFromLocalStorage, syncFromDrive } = useCustomerStore();
-  const { isSignedIn } = useAuthStore();
+  const { loadFromLocalStorage } = useCustomerStore();
 
   useEffect(() => {
     // Load customer data from localStorage on mount
+    // Syncing with Drive is now handled centrally by syncCoordinator in Header
     loadFromLocalStorage();
   }, [loadFromLocalStorage]);
-
-  useEffect(() => {
-    // Sync with Google Drive when user signs in
-    if (isSignedIn) {
-      console.log('User signed in, syncing from Google Drive...');
-      syncFromDrive(isSignedIn);
-    }
-  }, [isSignedIn, syncFromDrive]);
 
   return (
     <div className="dashboard">
