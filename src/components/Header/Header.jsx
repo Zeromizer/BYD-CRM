@@ -1,9 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useAuthStore from '../../stores/useAuthStore';
-import useCustomerStore from '../../stores/useCustomerStore';
-import useFormsStore from '../../stores/useFormsStore';
-import useExcelStore from '../../stores/useExcelStore';
 import syncCoordinator from '../../services/syncCoordinator';
 import SyncProgressModal from '../SyncProgressModal/SyncProgressModal';
 import './Header.css';
@@ -11,9 +8,6 @@ import './Header.css';
 function Header() {
   const navigate = useNavigate();
   const { isSignedIn, initialize, signIn, signOut, setOnSignInCallback } = useAuthStore();
-  const customerStore = useCustomerStore();
-  const formsStore = useFormsStore();
-  const excelStore = useExcelStore();
   const [showDropdown, setShowDropdown] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [showSyncProgress, setShowSyncProgress] = useState(false);
@@ -32,7 +26,7 @@ function Header() {
       setSyncing(true);
 
       try {
-        await syncCoordinator.syncAll(customerStore, formsStore, excelStore, isSignedIn);
+        await syncCoordinator.syncAll(isSignedIn);
         console.log('Parallel sync complete');
 
         // Keep modal visible for 1.5 seconds to show success
@@ -50,7 +44,7 @@ function Header() {
     };
 
     setOnSignInCallback(syncAllData);
-  }, [setOnSignInCallback, customerStore, formsStore, excelStore, isSignedIn]);
+  }, [setOnSignInCallback, isSignedIn]);
 
   // Subscribe to progress updates
   useEffect(() => {
@@ -90,7 +84,7 @@ function Header() {
 
     try {
       console.log('Force syncing all data...');
-      await syncCoordinator.syncAll(customerStore, formsStore, excelStore, isSignedIn);
+      await syncCoordinator.syncAll(isSignedIn);
 
       // Keep modal visible for 1.5 seconds to show success
       setTimeout(() => {
