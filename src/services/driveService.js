@@ -25,7 +25,7 @@ class DriveService {
   }
 
   /**
-   * Get or create the Customers folder within root folder
+   * Get or create the Customers folder (searches in Drive root, not in BYD CRM folder)
    */
   async getOrCreateCustomersFolder() {
     if (this.customersFolderId) {
@@ -33,34 +33,32 @@ class DriveService {
     }
 
     try {
-      const rootFolderId = await this.getOrCreateRootFolder();
-      const folderName = 'Customers';
+      const folderName = CONFIG.FOLDER_NAMES.CUSTOMERS || 'BYD_MotorEast_Customers';
 
-      // Search for existing folder
+      // Search for existing folder in Drive root (not in any parent folder)
       const response = await window.gapi.client.drive.files.list({
-        q: `name='${folderName}' and '${rootFolderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
+        q: `name='${folderName}' and mimeType='application/vnd.google-apps.folder' and trashed=false`,
         fields: 'files(id, name)',
         spaces: 'drive',
       });
 
       if (response.result.files && response.result.files.length > 0) {
         this.customersFolderId = response.result.files[0].id;
-        console.log('Found existing Customers folder:', this.customersFolderId);
+        console.log(`Found existing Customers folder "${folderName}":`, this.customersFolderId);
         return this.customersFolderId;
       }
 
-      // Create new folder
+      // Create new folder in Drive root (no parent specified)
       const createResponse = await window.gapi.client.drive.files.create({
         resource: {
           name: folderName,
           mimeType: 'application/vnd.google-apps.folder',
-          parents: [rootFolderId],
         },
         fields: 'id',
       });
 
       this.customersFolderId = createResponse.result.id;
-      console.log('Created Customers folder:', this.customersFolderId);
+      console.log(`Created Customers folder "${folderName}":`, this.customersFolderId);
       return this.customersFolderId;
     } catch (error) {
       console.error('Failed to get/create Customers folder:', error);
