@@ -5,6 +5,7 @@ import authService from '../../services/authService';
 import Modal from '../Modal/Modal';
 import CustomerForm from '../CustomerForm/CustomerForm';
 import VsaDetailsModal from '../VsaDetailsModal/VsaDetailsModal';
+import ProposalDetailsModal from '../ProposalDetailsModal/ProposalDetailsModal';
 import ExcelPopulateModal from '../ExcelPopulateModal/ExcelPopulateModal';
 import FormPrintModal from '../FormPrintModal/FormPrintModal';
 import CombinePrintModal from '../CombinePrintModal/CombinePrintModal';
@@ -21,6 +22,7 @@ function CustomerDetails() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isVsaModalOpen, setIsVsaModalOpen] = useState(false);
+  const [isProposalModalOpen, setIsProposalModalOpen] = useState(false);
   const [isExcelModalOpen, setIsExcelModalOpen] = useState(false);
   const [isFormPrintModalOpen, setIsFormPrintModalOpen] = useState(false);
   const [isCombinePrintModalOpen, setIsCombinePrintModalOpen] = useState(false);
@@ -224,6 +226,10 @@ function CustomerDetails() {
     setIsVsaModalOpen(true);
   };
 
+  const handleProposalDetails = () => {
+    setIsProposalModalOpen(true);
+  };
+
   const handleExcelPopulate = () => {
     setIsExcelModalOpen(true);
   };
@@ -266,6 +272,12 @@ function CustomerDetails() {
     }
   };
 
+  const handleCloseProposalModal = () => {
+    if (!isSubmitting) {
+      setIsProposalModalOpen(false);
+    }
+  };
+
   const handleEditSubmit = async (formData) => {
     if (!customer) return;
 
@@ -293,6 +305,19 @@ function CustomerDetails() {
       await syncToDrive(isSignedIn);
     } catch (error) {
       console.error('Error updating VSA details:', error);
+      throw error;
+    }
+  };
+
+  const handleProposalSave = async (proposalUpdates) => {
+    if (!customer) return;
+
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      updateCustomer(customer.id, proposalUpdates);
+      await syncToDrive(isSignedIn);
+    } catch (error) {
+      console.error('Error updating proposal details:', error);
       throw error;
     }
   };
@@ -372,6 +397,12 @@ function CustomerDetails() {
             onClick={() => setActiveTab('details')}
           >
             Details
+          </button>
+          <button
+            className={`tab ${activeTab === 'proposal' ? 'active' : ''}`}
+            onClick={() => setActiveTab('proposal')}
+          >
+            Proposal
           </button>
           <button
             className={`tab ${activeTab === 'vsa' ? 'active' : ''}`}
@@ -468,6 +499,104 @@ function CustomerDetails() {
                 <button className="btn btn-danger" onClick={handleDelete}>
                   Delete Customer
                 </button>
+              </div>
+            </>
+          ) : activeTab === 'proposal' ? (
+            /* Proposal Tab */
+            <>
+              <div className="vsa-section">
+                <div className="vsa-section-header">
+                  <h3>Proposal Information</h3>
+                  <button className="btn btn-small btn-primary" onClick={handleProposalDetails}>
+                    Edit Proposal Details
+                  </button>
+                </div>
+
+                <div className="info-section">
+                  <h4>Vehicle & Finance</h4>
+                  <div className="info-grid">
+                    <div className="info-item">
+                      <label>Model</label>
+                      <div className="info-value">{customer.proposal_model || 'N/A'}</div>
+                    </div>
+                    <div className="info-item">
+                      <label>Bank</label>
+                      <div className="info-value">{customer.proposal_bank || 'N/A'}</div>
+                    </div>
+                    <div className="info-item">
+                      <label>Selling Price</label>
+                      <div className="info-value">{customer.proposal_sellingPrice || 'N/A'}</div>
+                    </div>
+                    <div className="info-item">
+                      <label>Interest Rate</label>
+                      <div className="info-value">{customer.proposal_interestRate || 'N/A'}</div>
+                    </div>
+                    <div className="info-item">
+                      <label>Downpayment</label>
+                      <div className="info-value">{customer.proposal_downpayment || 'N/A'}</div>
+                    </div>
+                    <div className="info-item">
+                      <label>Loan Tenure</label>
+                      <div className="info-value">{customer.proposal_loanTenure || 'N/A'}</div>
+                    </div>
+                    <div className="info-item">
+                      <label>Loan Amount</label>
+                      <div className="info-value">{customer.proposal_loanAmount || 'N/A'}</div>
+                    </div>
+                    <div className="info-item">
+                      <label>Admin Fee</label>
+                      <div className="info-value">{customer.proposal_adminFee || 'N/A'}</div>
+                    </div>
+                    <div className="info-item">
+                      <label>Referral Fee</label>
+                      <div className="info-value">{customer.proposal_referralFee || 'N/A'}</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="info-section">
+                  <h4>Trade-In & Charges</h4>
+                  <div className="info-grid">
+                    <div className="info-item">
+                      <label>Trade In Model</label>
+                      <div className="info-value">{customer.proposal_tradeInModel || 'N/A'}</div>
+                    </div>
+                    <div className="info-item">
+                      <label>Trade In Car Plate</label>
+                      <div className="info-value">{customer.proposal_tradeInCarPlate || 'N/A'}</div>
+                    </div>
+                    <div className="info-item">
+                      <label>Quoted Trade In Price</label>
+                      <div className="info-value">{customer.proposal_quotedTradeInPrice || 'N/A'}</div>
+                    </div>
+                    <div className="info-item">
+                      <label>Low Loan Surcharge</label>
+                      <div className="info-value">{customer.proposal_lowLoanSurcharge || 'N/A'}</div>
+                    </div>
+                    <div className="info-item">
+                      <label>No Loan Surcharge</label>
+                      <div className="info-value">{customer.proposal_noLoanSurcharge || 'N/A'}</div>
+                    </div>
+                  </div>
+                </div>
+
+                {(customer.proposal_benefitsGiven || customer.proposal_remarks) && (
+                  <div className="info-section">
+                    <h4>Notes</h4>
+                    {customer.proposal_benefitsGiven && (
+                      <div className="info-item" style={{ marginBottom: '1rem' }}>
+                        <label>Benefits Given</label>
+                        <div className="info-value">{customer.proposal_benefitsGiven}</div>
+                      </div>
+                    )}
+                    {customer.proposal_remarks && (
+                      <div className="info-item">
+                        <label>Remarks</label>
+                        <div className="info-value">{customer.proposal_remarks}</div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </>
           ) : activeTab === 'vsa' ? (
@@ -859,6 +988,14 @@ function CustomerDetails() {
         onClose={handleCloseVsaModal}
         customer={customer}
         onSave={handleVsaSave}
+      />
+
+      {/* Proposal Details Modal */}
+      <ProposalDetailsModal
+        isOpen={isProposalModalOpen}
+        onClose={handleCloseProposalModal}
+        customer={customer}
+        onSave={handleProposalSave}
       />
 
       {/* Delete Confirmation Modal */}
