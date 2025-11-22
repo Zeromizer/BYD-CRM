@@ -100,17 +100,17 @@ function CombinePrintModal({ isOpen, onClose, customer }) {
     const quarterWidth = (width - padding * 3) / 2;
     const quarterHeight = (height - padding * 3) / 2;
 
-    // Load and draw only the uploaded images (filter out nulls)
+    // Load and draw only the uploaded images (filter out nulls first)
     const imagePromises = testDriveImages
-      .map(async (file, index) => {
-        if (!file) return null;
+      .map((file, index) => ({ file, index }))
+      .filter(({ file }) => file !== null)
+      .map(({ file, index }) => {
         return new Promise((resolve) => {
           const img = new Image();
           img.onload = () => resolve({ img, index });
           img.src = URL.createObjectURL(file);
         });
-      })
-      .filter(promise => promise !== null);
+      });
 
     const loadedImages = await Promise.all(imagePromises);
 
