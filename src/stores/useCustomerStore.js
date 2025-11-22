@@ -197,6 +197,22 @@ const useCustomerStore = create((set, get) => ({
   setLoading: (isLoading) => set({ isLoading }),
   setError: (error) => set({ error }),
   setSyncing: (isSyncing) => set({ isSyncing }),
+
+  /**
+   * Clear all customer data (for sign out or account switching)
+   */
+  clearAllData: () => {
+    console.log('Clearing all customer data');
+    set({
+      customers: [],
+      selectedCustomerId: null,
+      isLoading: false,
+      isSyncing: false,
+      error: null,
+    });
+    // Clear from localStorage
+    localStorage.removeItem('bydCRM');
+  },
 }));
 
 export default useCustomerStore;

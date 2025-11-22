@@ -150,6 +150,18 @@ const useExcelStore = create((set, get) => ({
   clearError: () => {
     set({ error: null });
   },
+
+  // Clear all Excel templates (for sign out or account switching)
+  clearAllData: () => {
+    console.log('Clearing all Excel templates');
+    set({
+      excelTemplates: {},
+      isLoading: false,
+      error: null,
+      lastSyncTime: null,
+    });
+    localStorage.removeItem('excelTemplates');
+  },
 }));
 
 export default useExcelStore;

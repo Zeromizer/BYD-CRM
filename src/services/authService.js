@@ -137,7 +137,24 @@ class AuthService {
     }
 
     this.clearSession();
+    this.clearAllAppData();
     this.notifyAuthChange(false);
+  }
+
+  /**
+   * Clear all application data from localStorage
+   */
+  clearAllAppData() {
+    console.log('Clearing all application data');
+    // Clear customer data
+    localStorage.removeItem('bydCRM');
+    // Clear form templates
+    localStorage.removeItem('formTemplates');
+    // Clear Excel templates
+    localStorage.removeItem('excelTemplates');
+    // Clear folder IDs
+    localStorage.removeItem('formsFolderId');
+    localStorage.removeItem('excelTemplatesFolderId');
   }
 
   /**

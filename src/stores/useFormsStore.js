@@ -135,6 +135,18 @@ const useFormsStore = create((set, get) => ({
   clearError: () => {
     set({ error: null });
   },
+
+  // Clear all form templates (for sign out or account switching)
+  clearAllData: () => {
+    console.log('Clearing all form templates');
+    set({
+      formTemplates: {},
+      isLoading: false,
+      error: null,
+      lastSyncTime: null,
+    });
+    localStorage.removeItem('formTemplates');
+  },
 }));
 
 export default useFormsStore;
