@@ -68,6 +68,7 @@ class ExcelService {
       tenure: customer.vsa_tenure || '',
       adminFee: customer.vsa_adminFee || '',
       insuranceSubsidy: customer.vsa_insuranceSubsidy || '',
+      monthlyRepayment: customer.vsa_monthlyRepayment || '',
     };
 
     return dataMapping;
