@@ -311,11 +311,74 @@ function FieldMappingModal({ isOpen, onClose, formType, template, onSave }) {
                     }
                   }}
                 >
-                  {Object.entries(FIELD_NAMES).map(([key, name]) => (
-                    <option key={key} value={key}>
-                      {name}
-                    </option>
-                  ))}
+                  <optgroup label="Basic Customer Information">
+                    <option value="name">Customer Name</option>
+                    <option value="phone">Phone Number</option>
+                    <option value="email">Email</option>
+                    <option value="nric">NRIC/FIN</option>
+                    <option value="occupation">Occupation</option>
+                    <option value="dob">Date of Birth</option>
+                    <option value="address">Address</option>
+                    <option value="addressContinue">Address Continue</option>
+                    <option value="fullAddress">Full Address (Combined)</option>
+                    <option value="salesConsultant">Sales Consultant</option>
+                    <option value="vsaNo">VSA No</option>
+                    <option value="date">Today's Date</option>
+                  </optgroup>
+
+                  <optgroup label="VSA - New Car Details">
+                    <option value="makeModel">Make & Model</option>
+                    <option value="yom">Year of Manufacture</option>
+                    <option value="bodyColour">Body Colour</option>
+                    <option value="upholstery">Upholstery</option>
+                    <option value="przType">P/R/Z Type</option>
+                  </optgroup>
+
+                  <optgroup label="VSA - New Car Package">
+                    <option value="package">Package</option>
+                    <option value="sellingWithCOE">Selling with COE</option>
+                    <option value="sellingPriceList">Selling Price on Price List</option>
+                    <option value="purchasePriceWithCOE">Purchase Price with COE</option>
+                    <option value="coeRebateLevel">COE Rebate Level</option>
+                    <option value="deposit">Deposit</option>
+                    <option value="lessOthers">Less: Others</option>
+                    <option value="addOthers">Add: Others</option>
+                    <option value="deliveryDate">Approximate Delivery Date</option>
+                  </optgroup>
+
+                  <optgroup label="VSA - Trade In Details">
+                    <option value="tradeInCarNo">Trade in Car No</option>
+                    <option value="tradeInCarModel">Trade in Car Model</option>
+                    <option value="tradeInAmount">Trade In Amount</option>
+                  </optgroup>
+
+                  <optgroup label="VSA - Delivery Details">
+                    <option value="dateOfRegistration">Date of Registration</option>
+                    <option value="registrationNo">Registration No</option>
+                    <option value="chassisNo">Chassis No</option>
+                    <option value="engineNo">Engine No</option>
+                    <option value="motorNo">Motor No</option>
+                  </optgroup>
+
+                  <optgroup label="VSA - Insurance">
+                    <option value="insuranceCompany">Insurance Company</option>
+                    <option value="insuranceFee">Insurance Fee</option>
+                    <option value="insuranceMonthlyFee">Insurance Monthly Fee</option>
+                  </optgroup>
+
+                  <optgroup label="VSA - Remarks & Loan">
+                    <option value="remarks1">Remarks 1</option>
+                    <option value="remarks2">Remarks 2</option>
+                    <option value="loanAmount">Loan Amount</option>
+                    <option value="interest">Interest</option>
+                    <option value="tenure">Tenure</option>
+                    <option value="adminFee">Admin Fee</option>
+                    <option value="insuranceSubsidy">Insurance Subsidy</option>
+                  </optgroup>
+
+                  <optgroup label="Other">
+                    <option value="custom">Custom Value</option>
+                  </optgroup>
                 </select>
               </div>
 
