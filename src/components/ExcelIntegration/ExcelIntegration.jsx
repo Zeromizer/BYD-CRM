@@ -118,9 +118,22 @@ function ExcelIntegration() {
   const [importMasterFile, setImportMasterFile] = useState(null);
   const [importing, setImporting] = useState(false);
 
+  const [openDropdown, setOpenDropdown] = useState(null);
+
   useEffect(() => {
     loadFromLocalStorage();
   }, [loadFromLocalStorage]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (openDropdown && !event.target.closest('.excel-actions-dropdown')) {
+        setOpenDropdown(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [openDropdown]);
 
   const handleCreateTemplate = async () => {
     if (!templateName.trim()) {
@@ -812,30 +825,56 @@ function ExcelIntegration() {
                   </div>
                 </div>
                 <div className="excel-actions">
-                  <button
-                    className="btn btn-small btn-primary"
-                    onClick={() => openMappingModal(templateId)}
-                  >
-                    Map Fields
-                  </button>
-                  <button
-                    className={`btn btn-small ${hasMasterFile ? 'btn-secondary' : 'btn-success'}`}
-                    onClick={() => openUploadMasterModal(templateId)}
-                  >
-                    {hasMasterFile ? 'Update Master' : 'Upload Master'}
-                  </button>
-                  <button
-                    className="btn btn-small btn-success"
-                    onClick={() => handleExportTemplate(templateId)}
-                  >
-                    📤 Export
-                  </button>
-                  <button
-                    className="btn btn-small btn-danger"
-                    onClick={() => handleDeleteTemplate(templateId)}
-                  >
-                    Delete
-                  </button>
+                  <div className="excel-actions-dropdown">
+                    <button
+                      className="dropdown-toggle"
+                      onClick={() => setOpenDropdown(openDropdown === templateId ? null : templateId)}
+                    >
+                      Actions
+                      <span>{openDropdown === templateId ? '▲' : '▼'}</span>
+                    </button>
+                    {openDropdown === templateId && (
+                      <div className="dropdown-menu">
+                        <button
+                          className="dropdown-item"
+                          onClick={() => {
+                            openMappingModal(templateId);
+                            setOpenDropdown(null);
+                          }}
+                        >
+                          ⚙️ Map Fields
+                        </button>
+                        <button
+                          className="dropdown-item"
+                          onClick={() => {
+                            openUploadMasterModal(templateId);
+                            setOpenDropdown(null);
+                          }}
+                        >
+                          📄 {hasMasterFile ? 'Change' : 'Upload'} Master File
+                        </button>
+                        <button
+                          className="dropdown-item"
+                          onClick={() => {
+                            handleExportTemplate(templateId);
+                            setOpenDropdown(null);
+                          }}
+                        >
+                          📤 Export Template
+                        </button>
+                        <div className="dropdown-divider"></div>
+                        <button
+                          className="dropdown-item danger"
+                          onClick={() => {
+                            handleDeleteTemplate(templateId);
+                            setOpenDropdown(null);
+                          }}
+                        >
+                          🗑️ Delete Template
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             );
