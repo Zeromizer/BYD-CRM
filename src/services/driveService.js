@@ -315,24 +315,66 @@ class DriveService {
 
   /**
    * Merge local and drive customers
-   * Drive data is source of truth, but local changes are preserved
+   * SIMPLIFIED: Merge field-by-field, preferring non-null values
+   * This ensures folder IDs and other data aren't lost during sync
    */
   mergeCustomers(localCustomers, driveCustomers) {
-    // Create a map of drive customers by ID
+    // Create maps for easy lookup
     const driveMap = new Map();
     driveCustomers.forEach(customer => {
       driveMap.set(customer.id, customer);
     });
 
-    // Merge
-    const merged = [...driveCustomers];
-    const mergedIds = new Set(driveCustomers.map(c => c.id));
+    const localMap = new Map();
+    localCustomers.forEach(customer => {
+      localMap.set(customer.id, customer);
+    });
 
-    // Add local customers that don't exist in drive
-    localCustomers.forEach(localCustomer => {
-      if (!mergedIds.has(localCustomer.id)) {
+    // Get all unique customer IDs
+    const allIds = new Set([...driveMap.keys(), ...localMap.keys()]);
+
+    // Merge each customer
+    const merged = [];
+    allIds.forEach(id => {
+      const driveCustomer = driveMap.get(id);
+      const localCustomer = localMap.get(id);
+
+      // If only in one place, use that version
+      if (!driveCustomer) {
         merged.push(localCustomer);
+        return;
       }
+      if (!localCustomer) {
+        merged.push(driveCustomer);
+        return;
+      }
+
+      // Both exist - merge field by field, preferring non-null/non-empty values
+      const mergedCustomer = { ...driveCustomer };
+
+      // For critical fields like folder IDs, prefer local if drive is null
+      if (!mergedCustomer.driveFolderId && localCustomer.driveFolderId) {
+        mergedCustomer.driveFolderId = localCustomer.driveFolderId;
+      }
+      if (!mergedCustomer.driveFolderLink && localCustomer.driveFolderLink) {
+        mergedCustomer.driveFolderLink = localCustomer.driveFolderLink;
+      }
+
+      // Merge other fields - prefer local if drive is null/empty
+      Object.keys(localCustomer).forEach(key => {
+        if (key === 'id' || key === 'dateAdded') return; // Never overwrite these
+
+        const localValue = localCustomer[key];
+        const driveValue = mergedCustomer[key];
+
+        // If drive doesn't have this field but local does, use local
+        if ((driveValue === null || driveValue === undefined || driveValue === '') &&
+            (localValue !== null && localValue !== undefined && localValue !== '')) {
+          mergedCustomer[key] = localValue;
+        }
+      });
+
+      merged.push(mergedCustomer);
     });
 
     return merged;
