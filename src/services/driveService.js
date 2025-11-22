@@ -94,14 +94,14 @@ class DriveService {
    */
   async createCustomerFolderStructure(customerName, customerId) {
     try {
-      console.log(`[DriveService] Creating folder structure for: ${customerName} (${customerId})`);
+      console.log(`[DriveService] Creating folder structure for: ${customerName} (ID: ${customerId})`);
 
       console.log('[DriveService] Step 1: Getting/creating Customers folder...');
       const customersFolderId = await this.getOrCreateCustomersFolder();
       console.log('[DriveService] Customers folder ID:', customersFolderId);
 
-      // Create main customer folder (use customer name and ID for uniqueness)
-      const mainFolderName = `${customerName} (${customerId})`;
+      // Create main customer folder (just use customer name)
+      const mainFolderName = customerName;
       console.log(`[DriveService] Step 2: Creating main folder "${mainFolderName}"...`);
       const mainFolder = await this.createFolder(mainFolderName, customersFolderId);
       console.log('[DriveService] Main folder created:', mainFolder);

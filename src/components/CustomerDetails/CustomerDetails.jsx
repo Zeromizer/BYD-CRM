@@ -48,6 +48,15 @@ function CustomerDetails() {
 
   // Load documents when Documents tab is active
   useEffect(() => {
+    console.log('[CustomerDetails] Documents tab effect:', {
+      activeTab,
+      customerName: customer?.name,
+      customerId: customer?.id,
+      driveFolderId: customer?.driveFolderId,
+      driveFolderLink: customer?.driveFolderLink,
+      isSignedIn,
+    });
+
     if (activeTab === 'documents' && customer && isSignedIn) {
       // Reset to root folder when switching to documents tab
       setCurrentFolderId(customer.driveFolderId);
