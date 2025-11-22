@@ -14,9 +14,15 @@ import DocumentScanner from '../DocumentScanner/DocumentScanner';
 import './CustomerDetails.css';
 
 function CustomerDetails() {
-  const { getSelectedCustomer, updateCustomer, deleteCustomer, syncToDrive } = useCustomerStore();
+  const { customers, selectedCustomerId, updateCustomer, deleteCustomer, syncToDrive } = useCustomerStore();
   const { isSignedIn } = useAuthStore();
-  const customer = getSelectedCustomer();
+
+  // Derive customer from store state (this makes it reactive to changes)
+  const customer = customers.find((c) => {
+    const customerId = typeof c.id === 'string' ? parseInt(c.id) : c.id;
+    const targetId = typeof selectedCustomerId === 'string' ? parseInt(selectedCustomerId) : selectedCustomerId;
+    return customerId === targetId;
+  }) || null;
 
   const [activeTab, setActiveTab] = useState('details');
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
