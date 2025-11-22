@@ -20,6 +20,9 @@ const useAuthStore = create((set, get) => ({
   formsDataFileId: null,
   excelDataFileId: null,
 
+  // Callback for when templates need to sync
+  onSignInCallback: null,
+
   // Actions
   initialize: async () => {
     if (get().isInitializing || get().isInitialized) {
@@ -30,19 +33,38 @@ const useAuthStore = create((set, get) => ({
 
     try {
       // Subscribe to auth changes
-      authService.onAuthChange((isSignedIn) => {
+      authService.onAuthChange(async (isSignedIn) => {
         set({ isSignedIn });
+
+        // Trigger template sync when user signs in
+        if (isSignedIn && get().onSignInCallback) {
+          try {
+            await get().onSignInCallback();
+          } catch (error) {
+            console.error('Template sync on sign-in failed:', error);
+          }
+        }
       });
 
       // Initialize auth service
       await authService.initialize();
 
       // Set initial state
+      const isSignedIn = authService.isSignedIn();
       set({
-        isSignedIn: authService.isSignedIn(),
+        isSignedIn,
         isInitialized: true,
         isInitializing: false,
       });
+
+      // If already signed in, trigger sync
+      if (isSignedIn && get().onSignInCallback) {
+        try {
+          await get().onSignInCallback();
+        } catch (error) {
+          console.error('Initial template sync failed:', error);
+        }
+      }
 
       console.log('Auth store initialized');
     } catch (error) {
@@ -53,6 +75,11 @@ const useAuthStore = create((set, get) => ({
         isInitializing: false,
       });
     }
+  },
+
+  // Set callback for template sync
+  setOnSignInCallback: (callback) => {
+    set({ onSignInCallback: callback });
   },
 
   signIn: async () => {

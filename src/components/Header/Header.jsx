@@ -1,12 +1,35 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useAuthStore from '../../stores/useAuthStore';
+import useFormsStore from '../../stores/useFormsStore';
+import useExcelStore from '../../stores/useExcelStore';
 import './Header.css';
 
 function Header() {
   const navigate = useNavigate();
-  const { isSignedIn, initialize, signIn, signOut } = useAuthStore();
+  const { isSignedIn, initialize, signIn, signOut, setOnSignInCallback } = useAuthStore();
+  const { syncWithDrive: syncForms } = useFormsStore();
+  const { syncWithDrive: syncExcel } = useExcelStore();
   const [showDropdown, setShowDropdown] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+
+  // Set up template sync callback
+  useEffect(() => {
+    const syncTemplates = async () => {
+      console.log('Syncing templates with Google Drive...');
+      try {
+        await Promise.all([
+          syncForms(),
+          syncExcel()
+        ]);
+        console.log('Template sync complete');
+      } catch (error) {
+        console.error('Template sync failed:', error);
+      }
+    };
+
+    setOnSignInCallback(syncTemplates);
+  }, [setOnSignInCallback, syncForms, syncExcel]);
 
   // Initialize authentication on mount
   useEffect(() => {
@@ -25,11 +48,35 @@ function Header() {
     }
   };
 
+  const handleForceSync = async () => {
+    if (!isSignedIn) {
+      alert('Please connect to Google Drive first');
+      return;
+    }
+
+    setSyncing(true);
+    setShowDropdown(false);
+
+    try {
+      console.log('Force syncing templates...');
+      await Promise.all([
+        syncForms(),
+        syncExcel()
+      ]);
+      alert('Templates synced successfully!');
+    } catch (error) {
+      console.error('Force sync failed:', error);
+      alert('Sync failed. Please try again.');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   return (
     <header className="header">
       <div className="header-container">
         <div className="header-left">
-          <h1 className="header-title">
+          <h1 className="header-title" onClick={() => navigate('/')} style={{ cursor: 'pointer' }} title="Go to homepage">
             <span className="byd-logo">BYD</span>
             <span className="divider">|</span>
             <span className="motor-east">MOTOR-EAST</span>
@@ -68,8 +115,12 @@ function Header() {
                 <a className="dropdown-item" onClick={() => console.log('Statistics')}>
                   View Statistics
                 </a>
-                <a className="dropdown-item" onClick={() => console.log('Force Sync')}>
-                  Force Sync
+                <a
+                  className="dropdown-item"
+                  onClick={handleForceSync}
+                  style={{ opacity: syncing ? 0.6 : 1 }}
+                >
+                  {syncing ? 'Syncing...' : 'Force Sync'}
                 </a>
                 <a className="dropdown-item" onClick={() => console.log('Export')}>
                   Export Data

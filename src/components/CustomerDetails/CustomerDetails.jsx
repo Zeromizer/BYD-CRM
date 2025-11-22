@@ -768,6 +768,10 @@ function CustomerDetails() {
                     <label>Insurance Subsidy</label>
                     <div className="info-value">{customer.vsa_insuranceSubsidy || 'N/A'}</div>
                   </div>
+                  <div className="info-item">
+                    <label>Monthly Repayment</label>
+                    <div className="info-value">{customer.vsa_monthlyRepayment || 'N/A'}</div>
+                  </div>
                 </div>
               </div>
             </>
