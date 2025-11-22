@@ -46,9 +46,26 @@ function FormsManagement() {
   const [importMasterFile, setImportMasterFile] = useState(null);
   const [importing, setImporting] = useState(false);
 
+  const [openDropdown, setOpenDropdown] = useState(null);
+  const [showChangeMasterModal, setShowChangeMasterModal] = useState(false);
+  const [changeMasterFormType, setChangeMasterFormType] = useState(null);
+  const [newMasterFile, setNewMasterFile] = useState(null);
+  const [changingMaster, setChangingMaster] = useState(false);
+
   useEffect(() => {
     loadFromLocalStorage();
   }, [loadFromLocalStorage]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (openDropdown && !event.target.closest('.form-actions-dropdown')) {
+        setOpenDropdown(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [openDropdown]);
 
   const handleFileSelect = (e) => {
     const file = e.target.files[0];
@@ -242,6 +259,107 @@ function FormsManagement() {
   const saveFieldMappings = (formType, mappings) => {
     updateFieldMappings(formType, mappings);
     alert('Field mappings saved successfully!');
+  };
+
+  const openChangeMasterFile = (formType) => {
+    setChangeMasterFormType(formType);
+    setShowChangeMasterModal(true);
+    setOpenDropdown(null);
+  };
+
+  const handleChangeMasterFile = async () => {
+    if (!newMasterFile) {
+      alert('Please select a file to upload');
+      return;
+    }
+
+    if (!isSignedIn) {
+      alert('Please sign in to Google Drive to upload files');
+      return;
+    }
+
+    setChangingMaster(true);
+
+    try {
+      const template = formTemplates[changeMasterFormType];
+
+      // Delete old file from Google Drive if it exists
+      if (template.fileId) {
+        try {
+          await window.gapi.client.drive.files.delete({
+            fileId: template.fileId,
+          });
+        } catch (error) {
+          console.error('Error deleting old file:', error);
+          // Continue even if deletion fails
+        }
+      }
+
+      // Get or create forms folder
+      const formsFolderId = await getOrCreateFormsFolder();
+      if (!formsFolderId) {
+        alert('Failed to create forms folder. Please try again.');
+        setChangingMaster(false);
+        return;
+      }
+
+      // Upload new file to Google Drive
+      const metadata = {
+        name: newMasterFile.name,
+        mimeType: newMasterFile.type,
+        parents: [formsFolderId],
+      };
+
+      const form = new FormData();
+      form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+      form.append('file', newMasterFile);
+
+      const token = authService.getAccessToken();
+      const response = await fetch(
+        'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink,webContentLink',
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: form,
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Upload failed: ' + response.statusText);
+      }
+
+      const result = await response.json();
+
+      const isPDF = newMasterFile.type.includes('pdf');
+      const isImage = newMasterFile.type.includes('image');
+
+      // Update template with new file info
+      const updatedTemplate = {
+        ...template,
+        fileId: result.id,
+        fileName: result.name,
+        webViewLink: result.webViewLink,
+        webContentLink: result.webContentLink,
+        fileType: isPDF ? 'pdf' : 'image',
+        uploadDate: new Date().toISOString(),
+        // Keep existing field mappings for images, clear for PDFs
+        fieldMappings: isImage ? (template.fieldMappings || {}) : undefined,
+      };
+
+      addTemplate(changeMasterFormType, updatedTemplate);
+
+      alert('Master file updated successfully!');
+      setShowChangeMasterModal(false);
+      setNewMasterFile(null);
+      setChangeMasterFormType(null);
+    } catch (error) {
+      console.error('Error changing master file:', error);
+      alert('Failed to change master file: ' + error.message);
+    } finally {
+      setChangingMaster(false);
+    }
   };
 
   // Download file from Google Drive
@@ -742,33 +860,64 @@ function FormsManagement() {
                   </div>
                 </div>
                 <div className="form-actions">
-                  {hasFieldMapping && (
+                  <div className="form-actions-dropdown">
                     <button
-                      className="btn btn-small btn-success"
-                      onClick={() => openFieldMapping(formType)}
-                      style={{ background: '#00bcd4' }}
+                      className="dropdown-toggle"
+                      onClick={() => setOpenDropdown(openDropdown === formType ? null : formType)}
                     >
-                      ⚙️ Configure Fields
+                      Actions
+                      <span>{openDropdown === formType ? '▲' : '▼'}</span>
                     </button>
-                  )}
-                  <button
-                    className="btn btn-small btn-success"
-                    onClick={() => handleExportTemplate(formType)}
-                  >
-                    📤 Export
-                  </button>
-                  <button
-                    className="btn btn-small btn-primary"
-                    onClick={() => handleViewForm(formType)}
-                  >
-                    View
-                  </button>
-                  <button
-                    className="btn btn-small btn-danger"
-                    onClick={() => handleDeleteForm(formType)}
-                  >
-                    Delete
-                  </button>
+                    {openDropdown === formType && (
+                      <div className="dropdown-menu">
+                        <button
+                          className="dropdown-item"
+                          onClick={() => {
+                            handleViewForm(formType);
+                            setOpenDropdown(null);
+                          }}
+                        >
+                          👁️ View Form
+                        </button>
+                        <button
+                          className="dropdown-item"
+                          onClick={() => openChangeMasterFile(formType)}
+                        >
+                          📄 {template.fileId ? 'Change' : 'Upload'} Master File
+                        </button>
+                        {hasFieldMapping && (
+                          <button
+                            className="dropdown-item"
+                            onClick={() => {
+                              openFieldMapping(formType);
+                              setOpenDropdown(null);
+                            }}
+                          >
+                            ⚙️ Configure Fields
+                          </button>
+                        )}
+                        <button
+                          className="dropdown-item"
+                          onClick={() => {
+                            handleExportTemplate(formType);
+                            setOpenDropdown(null);
+                          }}
+                        >
+                          📤 Export Template
+                        </button>
+                        <div className="dropdown-divider"></div>
+                        <button
+                          className="dropdown-item danger"
+                          onClick={() => {
+                            handleDeleteForm(formType);
+                            setOpenDropdown(null);
+                          }}
+                        >
+                          🗑️ Delete Template
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             );
@@ -946,6 +1095,64 @@ function FormsManagement() {
               disabled={!importConfig || importing || (!Array.isArray(importConfig) && !importMasterFile)}
             >
               {importing ? 'Importing...' : `Import ${Array.isArray(importConfig) ? importConfig.length + ' Template(s)' : 'Template'}`}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Change Master File Modal */}
+      <Modal
+        isOpen={showChangeMasterModal}
+        onClose={() => {
+          setShowChangeMasterModal(false);
+          setNewMasterFile(null);
+          setChangeMasterFormType(null);
+        }}
+        title={`${formTemplates[changeMasterFormType]?.fileId ? 'Change' : 'Upload'} Master File`}
+      >
+        <div className="upload-form">
+          {changeMasterFormType && (
+            <div className="info-banner" style={{ marginBottom: '15px', padding: '10px', background: '#e3f2fd', borderRadius: '4px' }}>
+              <p style={{ margin: 0, fontSize: '14px' }}>
+                {formTemplates[changeMasterFormType]?.fileId
+                  ? `Replace the master file for "${FORM_TYPE_NAMES[changeMasterFormType]}". The old file will be deleted from Google Drive.`
+                  : `Upload a master file for "${FORM_TYPE_NAMES[changeMasterFormType]}".`}
+              </p>
+            </div>
+          )}
+
+          <div className="form-group">
+            <label htmlFor="newMasterFile">Select File (PDF or Image)</label>
+            <input
+              type="file"
+              id="newMasterFile"
+              accept=".pdf,image/*"
+              onChange={(e) => setNewMasterFile(e.target.files[0])}
+              disabled={changingMaster}
+            />
+            {newMasterFile && (
+              <p className="file-selected">Selected: {newMasterFile.name}</p>
+            )}
+          </div>
+
+          <div className="modal-actions">
+            <button
+              className="btn btn-secondary"
+              onClick={() => {
+                setShowChangeMasterModal(false);
+                setNewMasterFile(null);
+                setChangeMasterFormType(null);
+              }}
+              disabled={changingMaster}
+            >
+              Cancel
+            </button>
+            <button
+              className="btn btn-primary"
+              onClick={handleChangeMasterFile}
+              disabled={!newMasterFile || changingMaster}
+            >
+              {changingMaster ? 'Uploading...' : formTemplates[changeMasterFormType]?.fileId ? 'Change File' : 'Upload File'}
             </button>
           </div>
         </div>
