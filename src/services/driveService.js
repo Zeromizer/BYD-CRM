@@ -13,6 +13,17 @@ class DriveService {
   }
 
   /**
+   * Clear all cached folder and file IDs (for sign out or account switching)
+   */
+  clearCache() {
+    console.log('Clearing Drive service cache');
+    this.customersFileId = null;
+    this.formsFileId = null;
+    this.excelFileId = null;
+    this.rootFolderId = null;
+  }
+
+  /**
    * Get or create the root BYD CRM folder
    */
   async getOrCreateRootFolder() {

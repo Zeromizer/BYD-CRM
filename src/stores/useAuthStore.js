@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import authService from '../services/authService';
+import driveService from '../services/driveService';
 import useCustomerStore from './useCustomerStore';
 import useFormsStore from './useFormsStore';
 import useExcelStore from './useExcelStore';
@@ -47,6 +48,8 @@ const useAuthStore = create((set, get) => ({
           useCustomerStore.getState().clearAllData();
           useFormsStore.getState().clearAllData();
           useExcelStore.getState().clearAllData();
+          // Clear Drive service cache to prevent using old user's folder IDs
+          driveService.clearCache();
         }
 
         // Trigger template sync when user signs in
@@ -114,7 +117,10 @@ const useAuthStore = create((set, get) => ({
       useFormsStore.getState().clearAllData();
       useExcelStore.getState().clearAllData();
 
-      // Sign out from auth service (clears localStorage)
+      // Clear Drive service cache
+      driveService.clearCache();
+
+      // Sign out from auth service (clears localStorage and Drive cache)
       authService.signOut();
 
       // Clear auth state

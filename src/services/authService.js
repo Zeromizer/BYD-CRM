@@ -1,4 +1,5 @@
 import { CONFIG } from '../config/config.js';
+import driveService from './driveService.js';
 
 /**
  * Google Drive Authentication Service
@@ -155,6 +156,8 @@ class AuthService {
     // Clear folder IDs
     localStorage.removeItem('formsFolderId');
     localStorage.removeItem('excelTemplatesFolderId');
+    // Clear Drive service cached IDs
+    driveService.clearCache();
   }
 
   /**
