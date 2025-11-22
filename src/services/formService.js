@@ -77,24 +77,6 @@ class FormService {
       adminFee: customer.vsa_adminFee || '',
       insuranceSubsidy: customer.vsa_insuranceSubsidy || '',
       monthlyRepayment: customer.vsa_monthlyRepayment || '',
-
-      // Proposal Details
-      proposalModel: customer.proposal_model || '',
-      proposalBank: customer.proposal_bank || '',
-      proposalSellingPrice: customer.proposal_sellingPrice || '',
-      proposalInterestRate: customer.proposal_interestRate || '',
-      proposalDownpayment: customer.proposal_downpayment || '',
-      proposalLoanTenure: customer.proposal_loanTenure || '',
-      proposalLoanAmount: customer.proposal_loanAmount || '',
-      proposalAdminFee: customer.proposal_adminFee || '',
-      proposalReferralFee: customer.proposal_referralFee || '',
-      proposalTradeInModel: customer.proposal_tradeInModel || '',
-      proposalLowLoanSurcharge: customer.proposal_lowLoanSurcharge || '',
-      proposalTradeInCarPlate: customer.proposal_tradeInCarPlate || '',
-      proposalNoLoanSurcharge: customer.proposal_noLoanSurcharge || '',
-      proposalQuotedTradeInPrice: customer.proposal_quotedTradeInPrice || '',
-      proposalBenefitsGiven: customer.proposal_benefitsGiven || '',
-      proposalRemarks: customer.proposal_remarks || '',
     };
   }
 
