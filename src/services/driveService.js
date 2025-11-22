@@ -89,6 +89,22 @@ class DriveService {
   }
 
   /**
+   * Delete a folder from Google Drive
+   */
+  async deleteFolder(folderId) {
+    try {
+      await window.gapi.client.drive.files.delete({
+        fileId: folderId,
+      });
+      console.log(`Deleted folder: ${folderId}`);
+      return true;
+    } catch (error) {
+      console.error('Failed to delete folder:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Create customer folder structure
    * Returns the main customer folder info
    */
