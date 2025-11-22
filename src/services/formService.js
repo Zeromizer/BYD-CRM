@@ -14,10 +14,10 @@ class FormService {
       return isNaN(numericValue) ? 0 : numericValue;
     };
 
-    // Calculate net insurance monthly fee
-    const monthlyFee = parseCurrency(customer.vsa_insuranceMonthlyFee);
+    // Calculate net insurance fee
+    const insuranceFee = parseCurrency(customer.vsa_insuranceFee);
     const subsidy = parseCurrency(customer.vsa_insuranceSubsidy);
-    const netMonthlyFee = monthlyFee - subsidy;
+    const netInsuranceFee = insuranceFee - subsidy;
 
     return {
       name: customer.name || '',
@@ -66,8 +66,7 @@ class FormService {
       // VSA Details - Insurance
       insuranceCompany: customer.vsa_insuranceCompany || '',
       insuranceFee: customer.vsa_insuranceFee || '',
-      insuranceMonthlyFee: customer.vsa_insuranceMonthlyFee || '',
-      insuranceMonthlyFeeNet: netMonthlyFee.toFixed(2),
+      insuranceFeeNet: netInsuranceFee.toFixed(2),
 
       // VSA Details - Remarks
       remarks1: customer.vsa_remarks1 || '',

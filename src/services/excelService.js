@@ -6,10 +6,10 @@ class ExcelService {
    * Get customer data mapping for Excel population
    */
   getCustomerDataMapping(customer) {
-    // Calculate net insurance monthly fee
-    const monthlyFee = this.currencyToNumber(customer.vsa_insuranceMonthlyFee);
+    // Calculate net insurance fee
+    const insuranceFee = this.currencyToNumber(customer.vsa_insuranceFee);
     const subsidy = this.currencyToNumber(customer.vsa_insuranceSubsidy);
-    const netMonthlyFee = monthlyFee - subsidy;
+    const netInsuranceFee = insuranceFee - subsidy;
 
     const dataMapping = {
       name: customer.name || '',
@@ -58,8 +58,7 @@ class ExcelService {
       // VSA Details - Insurance
       insuranceCompany: customer.vsa_insuranceCompany || '',
       insuranceFee: customer.vsa_insuranceFee || '',
-      insuranceMonthlyFee: customer.vsa_insuranceMonthlyFee || '',
-      insuranceMonthlyFeeNet: netMonthlyFee.toFixed(2),
+      insuranceFeeNet: netInsuranceFee.toFixed(2),
 
       // VSA Details - Remarks
       remarks1: customer.vsa_remarks1 || '',
