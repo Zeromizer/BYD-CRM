@@ -83,6 +83,7 @@ function VsaDetailsModal({ isOpen, onClose, customer, onSave }) {
     tenure: '',
     adminFee: '',
     insuranceSubsidy: '',
+    monthlyRepayment: '',
   });
 
   useEffect(() => {
@@ -120,6 +121,7 @@ function VsaDetailsModal({ isOpen, onClose, customer, onSave }) {
         tenure: customer.vsa_tenure || '',
         adminFee: customer.vsa_adminFee || '',
         insuranceSubsidy: customer.vsa_insuranceSubsidy || '',
+        monthlyRepayment: customer.vsa_monthlyRepayment || '',
       });
       setActiveTab('newCarDetails');
     }
@@ -580,6 +582,16 @@ function VsaDetailsModal({ isOpen, onClose, customer, onSave }) {
                     placeholder="e.g., $1000"
                   />
                 </div>
+              </div>
+
+              <div className="form-group">
+                <label>Monthly Repayment</label>
+                <input
+                  type="text"
+                  value={vsaData.monthlyRepayment}
+                  onChange={(e) => handleChange('monthlyRepayment', e.target.value)}
+                  placeholder="e.g., $2,500"
+                />
               </div>
             </div>
           )}

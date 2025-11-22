@@ -62,6 +62,7 @@ const FIELD_NAMES = {
   tenure: 'Tenure',
   adminFee: 'Admin Fee',
   insuranceSubsidy: 'Insurance Subsidy',
+  monthlyRepayment: 'Monthly Repayment',
 };
 
 function ExcelIntegration() {
@@ -560,6 +561,7 @@ function ExcelIntegration() {
                     <option value="tenure">Tenure</option>
                     <option value="adminFee">Admin Fee</option>
                     <option value="insuranceSubsidy">Insurance Subsidy</option>
+                    <option value="monthlyRepayment">Monthly Repayment</option>
                   </optgroup>
                 </select>
               </div>

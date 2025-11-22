@@ -61,6 +61,7 @@ const FIELD_NAMES = {
   tenure: 'Tenure',
   adminFee: 'Admin Fee',
   insuranceSubsidy: 'Insurance Subsidy',
+  monthlyRepayment: 'Monthly Repayment',
 
   custom: 'Custom Value',
 };
@@ -374,6 +375,7 @@ function FieldMappingModal({ isOpen, onClose, formType, template, onSave }) {
                     <option value="tenure">Tenure</option>
                     <option value="adminFee">Admin Fee</option>
                     <option value="insuranceSubsidy">Insurance Subsidy</option>
+                    <option value="monthlyRepayment">Monthly Repayment</option>
                   </optgroup>
 
                   <optgroup label="Other">
