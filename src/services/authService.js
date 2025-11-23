@@ -156,6 +156,8 @@ class AuthService {
     // Clear folder IDs
     localStorage.removeItem('formsFolderId');
     localStorage.removeItem('excelTemplatesFolderId');
+    // Clear cached user email (CRITICAL for account switching!)
+    localStorage.removeItem('googleUserEmail');
     // Clear Drive service cached IDs
     driveService.clearCache();
   }
