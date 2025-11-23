@@ -43,8 +43,6 @@
   align-items: center;
   justify-content: center;
   min-height: 400px;
-  /* Smooth scrolling on iOS */
-  -webkit-overflow-scrolling: touch;
 }
 
 .canvas-loading {
@@ -159,8 +157,6 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-  /* Smooth scrolling on iOS */
-  -webkit-overflow-scrolling: touch;
 }
 
 .mapping-item {

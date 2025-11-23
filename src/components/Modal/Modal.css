@@ -10,15 +10,7 @@
   justify-content: center;
   z-index: 9999;
   padding: 20px;
-  /* iOS safe area support */
-  padding-top: max(20px, var(--safe-area-inset-top));
-  padding-bottom: max(20px, var(--safe-area-inset-bottom));
-  padding-left: max(20px, var(--safe-area-inset-left));
-  padding-right: max(20px, var(--safe-area-inset-right));
   animation: fadeIn 0.2s ease;
-  /* Prevent scrolling issues on iOS */
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
 }
 
 @keyframes fadeIn {
@@ -105,18 +97,11 @@
   padding: 24px;
   overflow-y: auto;
   flex: 1;
-  /* Smooth scrolling on iOS */
-  -webkit-overflow-scrolling: touch;
 }
 
 @media (max-width: 768px) {
   .modal-overlay {
     padding: 10px;
-    /* Maintain iOS safe area on mobile */
-    padding-top: max(10px, var(--safe-area-inset-top));
-    padding-bottom: max(10px, var(--safe-area-inset-bottom));
-    padding-left: max(10px, var(--safe-area-inset-left));
-    padding-right: max(10px, var(--safe-area-inset-right));
   }
 
   .modal-container {

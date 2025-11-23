@@ -155,8 +155,6 @@
   justify-content: center;
   overflow: auto;
   min-height: 600px;
-  /* Smooth scrolling on iOS */
-  -webkit-overflow-scrolling: touch;
 }
 
 /* SVG-based Form Rendering */
