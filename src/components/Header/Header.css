@@ -5,12 +5,17 @@
   top: 0;
   z-index: 1000;
   border-bottom: 1px solid var(--color-border);
+  /* iOS safe area support for notch and Dynamic Island */
+  padding-top: var(--safe-area-inset-top);
 }
 
 .header-container {
   max-width: 1400px;
   margin: 0 auto;
   padding: 15px 20px;
+  /* Add horizontal safe area padding for iOS landscape mode */
+  padding-left: max(20px, var(--safe-area-inset-left));
+  padding-right: max(20px, var(--safe-area-inset-right));
   display: flex;
   justify-content: space-between;
   align-items: center;
