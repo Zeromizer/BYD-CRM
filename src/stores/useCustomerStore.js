@@ -287,6 +287,78 @@ const useCustomerStore = create((set, get) => ({
     // Clear from localStorage
     localStorage.removeItem('bydCRM');
   },
+
+  /**
+   * Repair customer folder references after folder deletion/restoration
+   */
+  repairCustomerFolders: async (isSignedIn) => {
+    if (!isSignedIn) {
+      console.error('Must be signed in to repair folder references');
+      alert('Please sign in to Google Drive first');
+      return null;
+    }
+
+    try {
+      set({ isSyncing: true, error: null });
+      const { customers, syncToDrive } = get();
+
+      console.log('Starting folder repair for', customers.length, 'customers');
+
+      // Run repair process
+      const { customers: repairedCustomers, results } =
+        await driveService.repairCustomerFolderReferences(customers);
+
+      // Update state with repaired data
+      set({ customers: repairedCustomers });
+
+      // Save to both localStorage and Drive
+      await syncToDrive(isSignedIn);
+
+      set({ isSyncing: false });
+
+      return results;
+    } catch (error) {
+      console.error('Failed to repair customer folders:', error);
+      set({ isSyncing: false, error: 'Failed to repair customer folders' });
+      throw error;
+    }
+  },
+
+  /**
+   * Create missing folders for customers that don't have folder IDs
+   */
+  createMissingFolders: async (isSignedIn) => {
+    if (!isSignedIn) {
+      console.error('Must be signed in to create folders');
+      alert('Please sign in to Google Drive first');
+      return null;
+    }
+
+    try {
+      set({ isSyncing: true, error: null });
+      const { customers, syncToDrive } = get();
+
+      console.log('Creating missing folders...');
+
+      // Create folders for customers without folder IDs
+      const { customers: updatedCustomers, created, errors } =
+        await driveService.createMissingCustomerFolders(customers);
+
+      // Update state
+      set({ customers: updatedCustomers });
+
+      // Save to both localStorage and Drive
+      await syncToDrive(isSignedIn);
+
+      set({ isSyncing: false });
+
+      return { created, errors };
+    } catch (error) {
+      console.error('Failed to create missing folders:', error);
+      set({ isSyncing: false, error: 'Failed to create missing folders' });
+      throw error;
+    }
+  },
 }));
 
 export default useCustomerStore;
