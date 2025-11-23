@@ -114,8 +114,13 @@ const useCustomerStore = create((set, get) => ({
       customers: [...state.customers, newCustomer]
     }));
 
-    // Save to localStorage and Drive immediately
-    await syncToDrive(isSignedIn);
+    // Save to localStorage
+    get().saveToLocalStorage();
+
+    // If signed in, save ONLY this new customer to Drive (not all customers!)
+    if (isSignedIn && driveFolderId) {
+      await get().saveCustomerToFolder(newCustomer, isSignedIn);
+    }
 
     console.log('[Customer Created] With folder IDs:', { driveFolderId, driveFolderLink });
 

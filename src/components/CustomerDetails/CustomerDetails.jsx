@@ -15,7 +15,7 @@ import DocumentScanner from '../DocumentScanner/DocumentScanner';
 import './CustomerDetails.css';
 
 function CustomerDetails() {
-  const { customers, selectedCustomerId, updateCustomer, deleteCustomer, deleteCustomerHybrid, syncToDrive } = useCustomerStore();
+  const { customers, selectedCustomerId, updateCustomer, deleteCustomer, deleteCustomerHybrid, syncToDrive, saveCustomerToFolder, saveToLocalStorage } = useCustomerStore();
   const { isSignedIn } = useAuthStore();
 
   // Derive customer from store state (this makes it reactive to changes)
@@ -294,7 +294,18 @@ function CustomerDetails() {
     try {
       await new Promise((resolve) => setTimeout(resolve, 500));
       updateCustomer(customer.id, formData);
-      await syncToDrive(isSignedIn);
+
+      // Save to localStorage
+      saveToLocalStorage();
+
+      // Save only THIS customer to Drive (not all customers!)
+      if (isSignedIn && customer.driveFolderId) {
+        const updatedCustomer = customers.find(c => c.id === customer.id);
+        if (updatedCustomer) {
+          await saveCustomerToFolder({ ...updatedCustomer, ...formData }, isSignedIn);
+        }
+      }
+
       setIsEditModalOpen(false);
     } catch (error) {
       console.error('Error updating customer:', error);
@@ -310,7 +321,17 @@ function CustomerDetails() {
     try {
       await new Promise((resolve) => setTimeout(resolve, 500));
       updateCustomer(customer.id, vsaUpdates);
-      await syncToDrive(isSignedIn);
+
+      // Save to localStorage
+      saveToLocalStorage();
+
+      // Save only THIS customer to Drive (not all customers!)
+      if (isSignedIn && customer.driveFolderId) {
+        const updatedCustomer = customers.find(c => c.id === customer.id);
+        if (updatedCustomer) {
+          await saveCustomerToFolder({ ...updatedCustomer, ...vsaUpdates }, isSignedIn);
+        }
+      }
     } catch (error) {
       console.error('Error updating VSA details:', error);
       throw error;
@@ -333,7 +354,17 @@ function CustomerDetails() {
     try {
       await new Promise((resolve) => setTimeout(resolve, 500));
       updateCustomer(customer.id, proposalUpdates);
-      await syncToDrive(isSignedIn);
+
+      // Save to localStorage
+      saveToLocalStorage();
+
+      // Save only THIS customer to Drive (not all customers!)
+      if (isSignedIn && customer.driveFolderId) {
+        const updatedCustomer = customers.find(c => c.id === customer.id);
+        if (updatedCustomer) {
+          await saveCustomerToFolder({ ...updatedCustomer, ...proposalUpdates }, isSignedIn);
+        }
+      }
     } catch (error) {
       console.error('Error updating proposal details:', error);
       throw error;
