@@ -46,6 +46,8 @@
   flex: 1;
   overflow-y: auto;
   padding: var(--spacing-lg);
+  /* Smooth scrolling on iOS */
+  -webkit-overflow-scrolling: touch;
 }
 
 .info-section {
@@ -351,6 +353,8 @@
   overflow-x: auto;
   white-space: nowrap;
   flex: 1;
+  /* Smooth scrolling on iOS */
+  -webkit-overflow-scrolling: touch;
 }
 
 .breadcrumb-item {

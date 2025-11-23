@@ -105,6 +105,8 @@
   min-height: 200px;
   max-height: 400px;
   overflow-y: auto;
+  /* Smooth scrolling on iOS */
+  -webkit-overflow-scrolling: touch;
 }
 
 .preview-hint {
