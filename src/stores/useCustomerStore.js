@@ -214,40 +214,21 @@ const useCustomerStore = create((set, get) => ({
   },
 
   /**
-   * Sync customers from Google Drive to localStorage
+   * Sync customers from Google Drive to localStorage (HYBRID)
    */
   syncFromDrive: async (isSignedIn) => {
-    if (!isSignedIn) {
-      console.log('Not signed in, skipping Drive sync');
-      return;
-    }
-
-    try {
-      set({ isSyncing: true });
-      const { customers } = get();
-
-      // Sync with Drive (merges local and Drive data)
-      const syncedCustomers = await driveService.syncCustomers(customers);
-
-      // Update state and localStorage
-      set({ customers: syncedCustomers, isSyncing: false });
-      localStorage.setItem('bydCRM', JSON.stringify(syncedCustomers));
-
-      console.log('Synced customers from Drive:', syncedCustomers.length);
-    } catch (error) {
-      console.error('Failed to sync from Drive:', error);
-      set({ isSyncing: false, error: 'Failed to sync with Google Drive' });
-    }
+    // Use hybrid sync method
+    return get().syncFromDriveHybrid(isSignedIn);
   },
 
   /**
-   * Save customers to both localStorage and Google Drive
+   * Save customers to both localStorage and Google Drive (HYBRID)
    */
   syncToDrive: async (isSignedIn) => {
     // Always save to localStorage
     get().saveToLocalStorage();
 
-    // If signed in, also save to Drive
+    // If signed in, also save to Drive using hybrid method
     if (!isSignedIn) {
       console.log('Not signed in, saved to localStorage only');
       return;
@@ -257,10 +238,32 @@ const useCustomerStore = create((set, get) => ({
       set({ isSyncing: true });
       const { customers } = get();
 
-      await driveService.saveCustomersToDrive(customers);
+      // Save each customer to their individual folder + update index
+      const indexData = [];
+      for (const customer of customers) {
+        if (customer.driveFolderId) {
+          // Save individual customer.json
+          await driveService.saveCustomerData(customer, customer.driveFolderId);
+
+          // Build index entry
+          indexData.push({
+            id: customer.id,
+            name: customer.name,
+            vsaNo: customer.vsaNo,
+            driveFolderId: customer.driveFolderId,
+            driveFolderLink: customer.driveFolderLink,
+            lastModified: new Date().toISOString(),
+          });
+        }
+      }
+
+      // Save the index
+      if (indexData.length > 0) {
+        await driveService.saveCustomersIndex(indexData);
+      }
 
       set({ isSyncing: false });
-      console.log('Synced customers to Drive:', customers.length);
+      console.log('Synced customers to Drive (hybrid):', customers.length);
     } catch (error) {
       console.error('Failed to sync to Drive:', error);
       set({ isSyncing: false, error: 'Failed to sync with Google Drive' });
@@ -420,6 +423,8 @@ const useCustomerStore = create((set, get) => ({
 
   /**
    * HYBRID: Sync using hybrid approach (index + individual files)
+   * Loads index first, then loads full customer data from individual files
+   * Automatically migrates to hybrid structure if needed
    */
   syncFromDriveHybrid: async (isSignedIn) => {
     if (!isSignedIn) {
@@ -429,16 +434,82 @@ const useCustomerStore = create((set, get) => ({
 
     try {
       set({ isSyncing: true });
-      const { customers } = get();
 
-      // Sync with Drive using hybrid approach
-      const syncedCustomers = await driveService.syncCustomersHybrid(customers);
+      // Check if migration is needed
+      const migrationNeeded = await driveService.checkMigrationNeeded();
+
+      if (migrationNeeded) {
+        console.log('🚀 Hybrid structure not found - auto-migrating...');
+
+        // Get customers from localStorage as the source
+        const { customers } = get();
+
+        if (customers && customers.length > 0) {
+          // Migrate to hybrid structure
+          const migrationResult = await driveService.migrateToHybridStructure(customers);
+
+          if (migrationResult.success) {
+            console.log('✅ Auto-migration successful!');
+            // Update customers with any folder IDs that were created/updated
+            set({ customers: migrationResult.customers });
+            localStorage.setItem('bydCRM', JSON.stringify(migrationResult.customers));
+          } else {
+            console.error('❌ Auto-migration failed:', migrationResult.error);
+            throw new Error('Auto-migration failed');
+          }
+        } else {
+          // No local customers - create empty index
+          console.log('No local customers found - creating empty index');
+          await driveService.saveCustomersIndex([]);
+        }
+      }
+
+      // Load index from Drive
+      const driveIndex = await driveService.loadCustomersIndex();
+      console.log(`Loaded index with ${driveIndex.length} customers`);
+
+      // If index is empty, we're done
+      if (driveIndex.length === 0) {
+        set({ customers: [], isSyncing: false });
+        localStorage.setItem('bydCRM', JSON.stringify([]));
+        console.log('No customers in index');
+        return;
+      }
+
+      // Load full data for each customer
+      const fullCustomers = [];
+      for (const indexEntry of driveIndex) {
+        if (indexEntry.driveFolderId) {
+          try {
+            // Try to load full customer data from their folder
+            const customerData = await driveService.loadCustomerData(
+              indexEntry.id,
+              indexEntry.driveFolderId
+            );
+
+            if (customerData) {
+              fullCustomers.push(customerData);
+            } else {
+              // If customer.json doesn't exist, use index data
+              console.warn(`No customer.json found for ${indexEntry.name}, using index data`);
+              fullCustomers.push(indexEntry);
+            }
+          } catch (error) {
+            console.error(`Failed to load customer ${indexEntry.name}:`, error);
+            // Use index data as fallback
+            fullCustomers.push(indexEntry);
+          }
+        } else {
+          // No folder ID, use index data
+          fullCustomers.push(indexEntry);
+        }
+      }
 
       // Update state and localStorage
-      set({ customers: syncedCustomers, isSyncing: false });
-      localStorage.setItem('bydCRM', JSON.stringify(syncedCustomers));
+      set({ customers: fullCustomers, isSyncing: false });
+      localStorage.setItem('bydCRM', JSON.stringify(fullCustomers));
 
-      console.log('Synced customers from Drive (hybrid):', syncedCustomers.length);
+      console.log('Synced customers from Drive (hybrid):', fullCustomers.length);
     } catch (error) {
       console.error('Failed to sync from Drive (hybrid):', error);
       set({ isSyncing: false, error: 'Failed to sync with Google Drive' });
