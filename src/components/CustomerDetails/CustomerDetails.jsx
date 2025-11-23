@@ -401,6 +401,26 @@ function CustomerDetails() {
     return new Date(dateString).toLocaleString();
   };
 
+  // Format date to dd/mm/yyyy for customer details
+  const formatCustomerDate = (dateString) => {
+    if (!dateString) return 'N/A';
+
+    try {
+      const date = new Date(dateString);
+
+      // Check if date is valid
+      if (isNaN(date.getTime())) return dateString;
+
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = date.getFullYear();
+
+      return `${day}/${month}/${year}`;
+    } catch (error) {
+      return dateString;
+    }
+  };
+
   if (!customer) {
     return (
       <div className="customer-details">
@@ -489,7 +509,7 @@ function CustomerDetails() {
                   </div>
                   <div className="info-item">
                     <label>Date of Birth</label>
-                    <div className="info-value">{customer.dob || 'N/A'}</div>
+                    <div className="info-value">{formatCustomerDate(customer.dob)}</div>
                   </div>
                 </div>
               </div>
@@ -709,7 +729,7 @@ function CustomerDetails() {
                   </div>
                   <div className="info-item">
                     <label>Approximate Delivery Date</label>
-                    <div className="info-value">{customer.vsa_deliveryDate || 'N/A'}</div>
+                    <div className="info-value">{formatCustomerDate(customer.vsa_deliveryDate)}</div>
                   </div>
                 </div>
               </div>
@@ -737,7 +757,7 @@ function CustomerDetails() {
                 <div className="info-grid">
                   <div className="info-item">
                     <label>Date of Registration</label>
-                    <div className="info-value">{customer.vsa_dateOfRegistration || 'N/A'}</div>
+                    <div className="info-value">{formatCustomerDate(customer.vsa_dateOfRegistration)}</div>
                   </div>
                   <div className="info-item">
                     <label>Registration No</label>
