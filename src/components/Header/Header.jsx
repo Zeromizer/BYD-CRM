@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useAuthStore from '../../stores/useAuthStore';
 import useCustomerStore from '../../stores/useCustomerStore';
@@ -11,6 +11,7 @@ function Header() {
   const { isSignedIn, initialize, signIn, signOut, setOnSignInCallback } = useAuthStore();
   const { repairCustomerFolders, createMissingFolders } = useCustomerStore();
   const [showDropdown, setShowDropdown] = useState(false);
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0 });
   const [syncing, setSyncing] = useState(false);
   const [repairing, setRepairing] = useState(false);
   const [showSyncProgress, setShowSyncProgress] = useState(false);
@@ -20,6 +21,7 @@ function Header() {
     excel: { status: 'pending', detail: '' },
     overall: 0,
   });
+  const dropdownToggleRef = useRef(null);
 
   // Set up sync coordinator callback
   useEffect(() => {
@@ -62,6 +64,20 @@ function Header() {
   useEffect(() => {
     initialize();
   }, [initialize]);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showDropdown && dropdownToggleRef.current && !dropdownToggleRef.current.closest('.dropdown').contains(event.target)) {
+        setShowDropdown(false);
+      }
+    };
+
+    if (showDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showDropdown]);
 
   const handleAuth = () => {
     if (isSignedIn) {
@@ -166,6 +182,17 @@ function Header() {
     }
   };
 
+  const handleToggleDropdown = () => {
+    if (!showDropdown && dropdownToggleRef.current) {
+      // Calculate position when opening
+      const rect = dropdownToggleRef.current.getBoundingClientRect();
+      setDropdownPosition({
+        top: rect.bottom + 5, // 5px gap below button
+      });
+    }
+    setShowDropdown(!showDropdown);
+  };
+
   return (
     <header className="header">
       <div className="header-container">
@@ -189,14 +216,15 @@ function Header() {
 
           <div className="dropdown">
             <button
+              ref={dropdownToggleRef}
               className="dropdown-toggle"
-              onClick={() => setShowDropdown(!showDropdown)}
+              onClick={handleToggleDropdown}
               title="More Options"
             >
               ⋮
             </button>
             {showDropdown && (
-              <div className="dropdown-menu">
+              <div className="dropdown-menu" style={{ top: `${dropdownPosition.top}px` }}>
                 <a className="dropdown-item" onClick={() => { navigate('/'); setShowDropdown(false); }}>
                   Customer List
                 </a>

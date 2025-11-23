@@ -148,9 +148,7 @@
     position: fixed;
     left: 16px;
     right: 16px;
-    top: auto;
-    bottom: auto;
-    margin-top: 8px;
+    /* top is set dynamically via inline style */
     width: auto;
     min-width: unset;
     max-width: unset;
