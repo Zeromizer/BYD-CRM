@@ -525,18 +525,21 @@ const useCustomerStore = create((set, get) => ({
             lastModified: indexEntry.lastModified,
           };
         }
-        // New customer in Drive, use index data (will load full data when clicked)
+        // New customer in Drive, use index data (will load full data immediately)
         return indexEntry;
       });
 
-      // Update state with merged data
-      set({ customers: mergedCustomers, isSyncing: false });
+      // Update state with merged data (for instant display)
+      set({ customers: mergedCustomers });
       localStorage.setItem('bydCRM', JSON.stringify(mergedCustomers));
 
-      console.log(`✅ Synced customers from Drive (hybrid): ${mergedCustomers.length} - Full data loads on-demand`);
+      console.log(`✅ Loaded index with ${mergedCustomers.length} customers - Loading full data...`);
 
-      // Background: Load full data for customers that don't have it
-      get().backgroundLoadMissingCustomers(driveIndex);
+      // Load full data for customers that don't have it (AWAITED)
+      await get().loadMissingCustomerData(driveIndex);
+
+      set({ isSyncing: false });
+      console.log(`✅ All customer data synced from Drive (hybrid): ${driveIndex.length}`);
 
     } catch (error) {
       console.error('Failed to sync from Drive (hybrid):', error);
@@ -545,16 +548,16 @@ const useCustomerStore = create((set, get) => ({
   },
 
   /**
-   * Background load missing customer data
+   * Load missing customer data immediately
    * Loads full customer.json for customers that only have index data
    */
-  backgroundLoadMissingCustomers: async (indexEntries) => {
-    const { customers } = get();
+  loadMissingCustomerData: async (indexEntries) => {
+    let currentCustomers = get().customers;
 
     for (const indexEntry of indexEntries) {
       if (!indexEntry.driveFolderId) continue;
 
-      const customer = customers.find(c => c.id === indexEntry.id);
+      const customer = currentCustomers.find(c => c.id === indexEntry.id);
 
       // Check if customer has full data (has more than just index fields)
       const hasFullData = customer && (
@@ -564,25 +567,33 @@ const useCustomerStore = create((set, get) => ({
 
       if (!hasFullData) {
         try {
+          console.log(`📥 Loading full data for: ${indexEntry.name || indexEntry.id}`);
           const fullData = await driveService.loadCustomerData(
             indexEntry.id,
             indexEntry.driveFolderId
           );
 
           if (fullData) {
-            // Update this customer in the store
-            const updatedCustomers = customers.map(c =>
+            // Update this customer in the current array
+            currentCustomers = currentCustomers.map(c =>
               c.id === indexEntry.id ? fullData : c
             );
-            set({ customers: updatedCustomers });
-            localStorage.setItem('bydCRM', JSON.stringify(updatedCustomers));
-            console.log(`📥 Background loaded: ${fullData.name}`);
+            console.log(`✅ Loaded: ${fullData.name}`);
+          } else {
+            console.log(`⚠️ No customer.json found for ${indexEntry.name || indexEntry.id}, using index data`);
           }
         } catch (error) {
-          console.error(`Failed to background load ${indexEntry.name}:`, error);
+          console.error(`❌ Failed to load ${indexEntry.name}:`, error);
         }
+      } else {
+        console.log(`✓ ${customer.name} already has full data`);
       }
     }
+
+    // Update state once with all loaded data
+    set({ customers: currentCustomers });
+    localStorage.setItem('bydCRM', JSON.stringify(currentCustomers));
+    console.log(`✅ Full data loading complete`);
   },
 
   /**
