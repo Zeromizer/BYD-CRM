@@ -9,10 +9,11 @@ import './Header.css';
 function Header() {
   const navigate = useNavigate();
   const { isSignedIn, initialize, signIn, signOut, setOnSignInCallback } = useAuthStore();
-  const { repairCustomerFolders, createMissingFolders } = useCustomerStore();
+  const { repairCustomerFolders, createMissingFolders, checkMigrationNeeded, migrateToHybridStructure } = useCustomerStore();
   const [showDropdown, setShowDropdown] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [repairing, setRepairing] = useState(false);
+  const [migrating, setMigrating] = useState(false);
   const [showSyncProgress, setShowSyncProgress] = useState(false);
   const [syncProgress, setSyncProgress] = useState({
     customers: { status: 'pending', detail: '' },
@@ -166,6 +167,62 @@ function Header() {
     }
   };
 
+  const handleMigrateToHybrid = async () => {
+    if (!isSignedIn) {
+      alert('Please connect to Google Drive first');
+      return;
+    }
+
+    const description =
+      '🚀 Migrate to Hybrid Structure\n\n' +
+      'This will upgrade your data storage to the new hybrid system:\n\n' +
+      '✅ Creates "BYD Customers Data" folder\n' +
+      '✅ Moves all customer folders into this new folder\n' +
+      '✅ Creates individual customer.json files in each folder\n' +
+      '✅ Creates a lightweight index for fast loading\n' +
+      '✅ Ensures no duplicates\n\n' +
+      'Benefits:\n' +
+      '- Faster syncing (only changed customers update)\n' +
+      '- Better organization (data with documents)\n' +
+      '- More reliable (no single point of failure)\n' +
+      '- Scalable (grows efficiently with more customers)\n\n' +
+      'This process is safe and reversible.\n\n' +
+      'Continue with migration?';
+
+    const confirmed = window.confirm(description);
+
+    if (!confirmed) return;
+
+    setMigrating(true);
+    setShowDropdown(false);
+
+    try {
+      console.log('Starting migration to hybrid structure...');
+      const results = await migrateToHybridStructure(isSignedIn);
+
+      if (results) {
+        let message = '🎉 Migration Complete!\n\n';
+        message += `Total customers: ${results.total}\n`;
+        message += `📁 Folders created: ${results.foldersCreated}\n`;
+        message += `📦 Folders moved: ${results.foldersMoved}\n`;
+        message += `📝 Customer files created: ${results.customerFilesCreated}\n`;
+        message += `📇 Index created: ${results.indexCreated ? 'Yes' : 'No'}\n`;
+
+        if (results.errors.length > 0) {
+          message += `\n❌ Errors: ${results.errors.length}\n`;
+          message += 'Check console for details.';
+        }
+
+        alert(message);
+      }
+    } catch (error) {
+      console.error('Migration failed:', error);
+      alert('❌ Migration failed. Check console for details.\n\nYour data is safe and unchanged.');
+    } finally {
+      setMigrating(false);
+    }
+  };
+
   return (
     <header className="header">
       <div className="header-container">
@@ -232,6 +289,15 @@ function Header() {
                   title="Force re-scan all customers by searching Drive (use after folder deletion)"
                 >
                   {repairing ? 'Re-scanning...' : '🔄 Force Re-scan All Folders'}
+                </a>
+                <div className="dropdown-divider"></div>
+                <a
+                  className="dropdown-item"
+                  onClick={handleMigrateToHybrid}
+                  style={{ opacity: migrating ? 0.6 : 1, color: '#9b59b6', fontWeight: 'bold' }}
+                  title="Upgrade to hybrid data structure for better performance and reliability"
+                >
+                  {migrating ? 'Migrating...' : '🚀 Migrate to Hybrid Structure'}
                 </a>
                 <div className="dropdown-divider"></div>
                 <a className="dropdown-item" onClick={() => console.log('Export')}>
