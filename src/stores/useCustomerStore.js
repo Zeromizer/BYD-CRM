@@ -290,8 +290,11 @@ const useCustomerStore = create((set, get) => ({
 
   /**
    * Repair customer folder references after folder deletion/restoration
+   *
+   * @param {boolean} isSignedIn - Whether user is signed in to Google Drive
+   * @param {boolean} forceRescan - If true, skip validation and always search by name
    */
-  repairCustomerFolders: async (isSignedIn) => {
+  repairCustomerFolders: async (isSignedIn, forceRescan = false) => {
     if (!isSignedIn) {
       console.error('Must be signed in to repair folder references');
       alert('Please sign in to Google Drive first');
@@ -306,7 +309,7 @@ const useCustomerStore = create((set, get) => ({
 
       // Run repair process
       const { customers: repairedCustomers, results } =
-        await driveService.repairCustomerFolderReferences(customers);
+        await driveService.repairCustomerFolderReferences(customers, forceRescan);
 
       // Update state with repaired data
       set({ customers: repairedCustomers });
