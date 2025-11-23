@@ -166,6 +166,39 @@ const useCustomerStore = create((set, get) => ({
     });
   },
 
+  /**
+   * HYBRID: Delete customer and remove from Drive index
+   */
+  deleteCustomerHybrid: async (id, isSignedIn) => {
+    // Remove from local state
+    get().deleteCustomer(id);
+
+    // Save to localStorage
+    get().saveToLocalStorage();
+
+    // If signed in, also update the Drive index
+    if (isSignedIn) {
+      try {
+        // Load current index
+        const index = await driveService.loadCustomersIndex();
+
+        // Remove the deleted customer from index
+        const targetId = typeof id === 'string' ? parseInt(id) : id;
+        const updatedIndex = index.filter(entry => {
+          const entryId = typeof entry.id === 'string' ? parseInt(entry.id) : entry.id;
+          return entryId !== targetId;
+        });
+
+        // Save updated index
+        await driveService.saveCustomersIndex(updatedIndex);
+        console.log(`Removed customer ${id} from Drive index`);
+      } catch (error) {
+        console.error('Failed to update Drive index after deletion:', error);
+        // Don't throw - customer is already deleted locally
+      }
+    }
+  },
+
   selectCustomer: (id) => set({ selectedCustomerId: id }),
 
   getSelectedCustomer: () => {

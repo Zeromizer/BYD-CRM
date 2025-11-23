@@ -15,7 +15,7 @@ import DocumentScanner from '../DocumentScanner/DocumentScanner';
 import './CustomerDetails.css';
 
 function CustomerDetails() {
-  const { customers, selectedCustomerId, updateCustomer, deleteCustomer, syncToDrive } = useCustomerStore();
+  const { customers, selectedCustomerId, updateCustomer, deleteCustomer, deleteCustomerHybrid, syncToDrive } = useCustomerStore();
   const { isSignedIn } = useAuthStore();
 
   // Derive customer from store state (this makes it reactive to changes)
@@ -347,28 +347,52 @@ function CustomerDetails() {
 
     try {
       // Delete Google Drive folder if checkbox is checked
-      if (deleteFolderChecked && isSignedIn && customer.driveFolderId) {
-        try {
-          console.log(`Deleting Google Drive folder: ${customer.driveFolderId}`);
-          await driveService.deleteFolder(customer.driveFolderId);
-          console.log('Google Drive folder deleted successfully');
-        } catch (folderError) {
-          console.error('Error deleting Google Drive folder:', folderError);
-          // Ask user if they want to continue deleting the customer record
-          const continueDelete = window.confirm(
-            'Failed to delete the Google Drive folder. Would you like to continue deleting the customer record anyway?'
-          );
-          if (!continueDelete) {
-            setIsSubmitting(false);
-            return;
+      if (isSignedIn && customer.driveFolderId) {
+        if (deleteFolderChecked) {
+          // Delete entire folder including all documents
+          try {
+            console.log(`Deleting Google Drive folder: ${customer.driveFolderId}`);
+            await driveService.deleteFolder(customer.driveFolderId);
+            console.log('Google Drive folder deleted successfully');
+          } catch (folderError) {
+            console.error('Error deleting Google Drive folder:', folderError);
+            // Ask user if they want to continue deleting the customer record
+            const continueDelete = window.confirm(
+              'Failed to delete the Google Drive folder. Would you like to continue deleting the customer record anyway?'
+            );
+            if (!continueDelete) {
+              setIsSubmitting(false);
+              return;
+            }
+          }
+        } else {
+          // Just delete the customer.json file, keep the folder and documents
+          try {
+            console.log(`Deleting customer.json from folder: ${customer.driveFolderId}`);
+            const fileName = 'customer.json';
+            const response = await window.gapi.client.drive.files.list({
+              q: `name='${fileName}' and '${customer.driveFolderId}' in parents and trashed=false`,
+              fields: 'files(id, name)',
+              spaces: 'drive',
+            });
+
+            if (response.result.files && response.result.files.length > 0) {
+              const fileId = response.result.files[0].id;
+              await window.gapi.client.drive.files.delete({
+                fileId: fileId
+              });
+              console.log('customer.json deleted successfully');
+            }
+          } catch (fileError) {
+            console.error('Error deleting customer.json:', fileError);
+            // Continue anyway - the customer will still be removed from the system
           }
         }
       }
 
-      // Delete customer record
+      // Delete customer record and update Drive index
       await new Promise((resolve) => setTimeout(resolve, 300));
-      deleteCustomer(customer.id);
-      await syncToDrive(isSignedIn);
+      await deleteCustomerHybrid(customer.id, isSignedIn);
       setIsDeleteModalOpen(false);
       setDeleteFolderChecked(false); // Reset checkbox
     } catch (error) {
