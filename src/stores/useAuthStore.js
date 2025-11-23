@@ -42,28 +42,35 @@ const useAuthStore = create((set, get) => ({
         const previousSignInState = get().isSignedIn;
         const previousUserEmail = get().currentUserEmail;
 
-        // Get current user email if signed in
-        const currentUserEmail = isSignedIn ? authService.getUserEmail() : null;
+        // Get current user email if signed in (await to ensure we have it)
+        let currentUserEmail = null;
+        if (isSignedIn) {
+          currentUserEmail = authService.getUserEmail();
+          // If not cached, fetch it now
+          if (!currentUserEmail) {
+            currentUserEmail = await authService.fetchAndCacheUserEmail();
+          }
+        }
+
+        // Check if account switched (different user email)
+        const isDifferentUser = previousUserEmail && currentUserEmail &&
+                                previousUserEmail !== currentUserEmail;
+
+        if (isDifferentUser) {
+          console.log(`👤 Account switched from ${previousUserEmail} to ${currentUserEmail} - clearing old data`);
+          // Clear all existing data before loading new user's data
+          useCustomerStore.getState().clearAllData();
+          useFormsStore.getState().clearAllData();
+          useExcelStore.getState().clearAllData();
+          // Clear Drive service cache to prevent using old user's folder IDs
+          driveService.clearCache();
+        }
 
         set({ isSignedIn, currentUserEmail });
 
-        // When user signs in (transition from false to true)
-        if (isSignedIn && !previousSignInState) {
-          // Check if it's a different user
-          const isDifferentUser = previousUserEmail && currentUserEmail &&
-                                  previousUserEmail !== currentUserEmail;
-
-          if (isDifferentUser) {
-            console.log(`👤 Account switched from ${previousUserEmail} to ${currentUserEmail} - clearing old data`);
-            // Clear all existing data before loading new user's data
-            useCustomerStore.getState().clearAllData();
-            useFormsStore.getState().clearAllData();
-            useExcelStore.getState().clearAllData();
-            // Clear Drive service cache to prevent using old user's folder IDs
-            driveService.clearCache();
-          } else {
-            console.log(`✅ Same user signing in (${currentUserEmail}) - keeping local data, will merge with Drive`);
-          }
+        // When user signs in and it's the same user
+        if (isSignedIn && !previousSignInState && !isDifferentUser && currentUserEmail) {
+          console.log(`✅ Same user signing in (${currentUserEmail}) - keeping local data, will merge with Drive`);
         }
 
         // Trigger template sync when user signs in
@@ -137,9 +144,10 @@ const useAuthStore = create((set, get) => ({
       // Sign out from auth service (clears localStorage and Drive cache)
       authService.signOut();
 
-      // Clear auth state
+      // Clear auth state (including currentUserEmail for account switching detection)
       set({
         isSignedIn: false,
+        currentUserEmail: null,
         rootFolderId: null,
         formsFolderId: null,
         excelTemplatesFolderId: null,
