@@ -145,8 +145,10 @@
 /* Prevent dropdown from going off-screen on mobile */
 @media (max-width: 768px) {
   .dropdown-menu {
-    right: -12px; /* Align with screen edge accounting for padding */
-    min-width: 220px;
+    left: auto;
+    right: 0;  /* Keep aligned to dropdown button */
+    min-width: 180px;  /* Narrower to fit screen */
+    max-width: calc(100vw - 32px);  /* Never wider than screen minus padding */
   }
 }
 
