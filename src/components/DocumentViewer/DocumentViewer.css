@@ -87,8 +87,6 @@
   padding: var(--spacing-lg);
   overflow: auto;
   background: #f9fafb;
-  /* Smooth scrolling on iOS */
-  -webkit-overflow-scrolling: touch;
 }
 
 .viewer-image {
