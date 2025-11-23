@@ -675,6 +675,195 @@ class DriveService {
       return localExcel;
     }
   }
+
+  /**
+   * Validate if a folder ID still exists in Google Drive
+   */
+  async validateFolderId(folderId) {
+    if (!folderId) return false;
+
+    try {
+      await window.gapi.client.drive.files.get({
+        fileId: folderId,
+        fields: 'id, name, trashed'
+      });
+      return true;
+    } catch (error) {
+      console.log(`Folder ID ${folderId} is invalid or deleted`);
+      return false;
+    }
+  }
+
+  /**
+   * Search for a customer folder by name in the Customers folder
+   */
+  async findCustomerFolderByName(customerName) {
+    try {
+      const customersFolderId = await this.getOrCreateCustomersFolder();
+
+      // Search for folder with this name in the Customers folder
+      const response = await window.gapi.client.drive.files.list({
+        q: `name='${customerName.replace(/'/g, "\\'")}' and '${customersFolderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
+        fields: 'files(id, name, webViewLink)',
+        spaces: 'drive',
+      });
+
+      if (response.result.files && response.result.files.length > 0) {
+        const folder = response.result.files[0];
+        console.log(`Found existing folder for "${customerName}":`, folder.id);
+        return {
+          folderId: folder.id,
+          folderUrl: folder.webViewLink
+        };
+      }
+
+      console.log(`No folder found for "${customerName}"`);
+      return null;
+    } catch (error) {
+      console.error(`Error searching for folder "${customerName}":`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Repair customer folder references after folder deletion/restoration
+   * This scans all customers and attempts to re-link them to their folders
+   */
+  async repairCustomerFolderReferences(customers) {
+    console.log('🔧 Starting customer folder repair process...');
+    console.log(`Found ${customers.length} customers to check`);
+
+    const results = {
+      total: customers.length,
+      validated: 0,
+      repaired: 0,
+      notFound: 0,
+      created: 0,
+      errors: 0,
+      details: []
+    };
+
+    for (let i = 0; i < customers.length; i++) {
+      const customer = customers[i];
+      const customerName = customer.name || 'Unnamed Customer';
+
+      console.log(`\n[${i + 1}/${customers.length}] Checking: ${customerName} (ID: ${customer.id})`);
+
+      try {
+        // Check if customer has a folder ID
+        if (customer.driveFolderId) {
+          console.log(`  Current folder ID: ${customer.driveFolderId}`);
+
+          // Validate if the folder still exists
+          const isValid = await this.validateFolderId(customer.driveFolderId);
+
+          if (isValid) {
+            console.log(`  ✅ Folder ID is valid - no repair needed`);
+            results.validated++;
+            results.details.push({
+              customer: customerName,
+              status: 'valid',
+              folderId: customer.driveFolderId
+            });
+            continue;
+          } else {
+            console.log(`  ❌ Folder ID is invalid - searching for folder...`);
+          }
+        } else {
+          console.log(`  ⚠️ No folder ID - searching for folder...`);
+        }
+
+        // Try to find the folder by name
+        const folderInfo = await this.findCustomerFolderByName(customerName);
+
+        if (folderInfo) {
+          // Update customer with found folder
+          customer.driveFolderId = folderInfo.folderId;
+          customer.driveFolderLink = folderInfo.folderUrl;
+          console.log(`  ✅ Repaired! New folder ID: ${folderInfo.folderId}`);
+          results.repaired++;
+          results.details.push({
+            customer: customerName,
+            status: 'repaired',
+            oldId: customer.driveFolderId,
+            newId: folderInfo.folderId
+          });
+        } else {
+          // Folder not found - offer to create
+          console.log(`  ⚠️ Folder not found for "${customerName}"`);
+          results.notFound++;
+          results.details.push({
+            customer: customerName,
+            status: 'not_found',
+            message: 'Folder not found in Drive'
+          });
+        }
+      } catch (error) {
+        console.error(`  ❌ Error processing ${customerName}:`, error);
+        results.errors++;
+        results.details.push({
+          customer: customerName,
+          status: 'error',
+          error: error.message
+        });
+      }
+    }
+
+    console.log('\n🔧 Repair process complete!');
+    console.log(`✅ Valid: ${results.validated}`);
+    console.log(`🔧 Repaired: ${results.repaired}`);
+    console.log(`⚠️ Not found: ${results.notFound}`);
+    console.log(`❌ Errors: ${results.errors}`);
+
+    return {
+      customers,
+      results
+    };
+  }
+
+  /**
+   * Create missing folders for customers that don't have them
+   */
+  async createMissingCustomerFolders(customers) {
+    console.log('📁 Creating missing customer folders...');
+
+    let created = 0;
+    const errors = [];
+
+    for (const customer of customers) {
+      if (!customer.driveFolderId) {
+        try {
+          console.log(`Creating folder for: ${customer.name}`);
+          const folderInfo = await this.createCustomerFolderStructure(
+            customer.name,
+            customer.id
+          );
+
+          customer.driveFolderId = folderInfo.folderId;
+          customer.driveFolderLink = folderInfo.folderUrl;
+          created++;
+          console.log(`✅ Created folder for ${customer.name}`);
+        } catch (error) {
+          console.error(`❌ Failed to create folder for ${customer.name}:`, error);
+          errors.push({
+            customer: customer.name,
+            error: error.message
+          });
+        }
+      }
+    }
+
+    console.log(`\n📁 Created ${created} new folders`);
+    if (errors.length > 0) {
+      console.log(`❌ ${errors.length} errors occurred`);
+    }
+
+    return {
+      customers,
+      created,
+      errors
+    };
+  }
 }
 
 // Create singleton instance

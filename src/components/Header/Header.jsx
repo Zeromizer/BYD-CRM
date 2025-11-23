@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useAuthStore from '../../stores/useAuthStore';
+import useCustomerStore from '../../stores/useCustomerStore';
 import syncCoordinator from '../../services/syncCoordinator';
 import SyncProgressModal from '../SyncProgressModal/SyncProgressModal';
 import './Header.css';
@@ -8,8 +9,10 @@ import './Header.css';
 function Header() {
   const navigate = useNavigate();
   const { isSignedIn, initialize, signIn, signOut, setOnSignInCallback } = useAuthStore();
+  const { repairCustomerFolders, createMissingFolders } = useCustomerStore();
   const [showDropdown, setShowDropdown] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [repairing, setRepairing] = useState(false);
   const [showSyncProgress, setShowSyncProgress] = useState(false);
   const [syncProgress, setSyncProgress] = useState({
     customers: { status: 'pending', detail: '' },
@@ -100,6 +103,64 @@ function Header() {
     }
   };
 
+  const handleRepairFolders = async () => {
+    if (!isSignedIn) {
+      alert('Please connect to Google Drive first');
+      return;
+    }
+
+    const confirmed = window.confirm(
+      'This will scan all customers and re-link them to their folders in Google Drive.\n\n' +
+      'This fixes issues after folder deletion/restoration.\n\n' +
+      'Continue?'
+    );
+
+    if (!confirmed) return;
+
+    setRepairing(true);
+    setShowDropdown(false);
+
+    try {
+      console.log('Starting folder repair...');
+      const results = await repairCustomerFolders(isSignedIn);
+
+      if (results) {
+        // Show detailed results
+        let message = '✅ Folder Repair Complete!\n\n';
+        message += `Total customers: ${results.total}\n`;
+        message += `✅ Already valid: ${results.validated}\n`;
+        message += `🔧 Repaired: ${results.repaired}\n`;
+
+        if (results.notFound > 0) {
+          message += `⚠️ Not found: ${results.notFound}\n\n`;
+          message += 'Would you like to create folders for customers without them?';
+
+          const createNew = window.confirm(message);
+
+          if (createNew) {
+            console.log('Creating missing folders...');
+            const createResults = await createMissingFolders(isSignedIn);
+
+            if (createResults) {
+              alert(
+                `✅ Folder Creation Complete!\n\n` +
+                `Created: ${createResults.created} folders\n` +
+                `Errors: ${createResults.errors.length}`
+              );
+            }
+          }
+        } else {
+          alert(message);
+        }
+      }
+    } catch (error) {
+      console.error('Folder repair failed:', error);
+      alert('❌ Folder repair failed. Check console for details.');
+    } finally {
+      setRepairing(false);
+    }
+  };
+
   return (
     <header className="header">
       <div className="header-container">
@@ -149,6 +210,14 @@ function Header() {
                   style={{ opacity: syncing ? 0.6 : 1 }}
                 >
                   {syncing ? 'Syncing...' : 'Force Sync'}
+                </a>
+                <a
+                  className="dropdown-item"
+                  onClick={handleRepairFolders}
+                  style={{ opacity: repairing ? 0.6 : 1, color: '#e67e22' }}
+                  title="Fix customer folder links after folder deletion/restoration"
+                >
+                  {repairing ? 'Repairing...' : '🔧 Repair Customer Folders'}
                 </a>
                 <a className="dropdown-item" onClick={() => console.log('Export')}>
                   Export Data
