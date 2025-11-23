@@ -69,7 +69,7 @@ class SyncCoordinator {
         (async () => {
           try {
             updateProgress('customers', 'syncing', 'Loading from Drive...');
-            await useCustomerStore.getState().syncFromDrive(isSignedIn);
+            await useCustomerStore.getState().syncFromDriveHybrid(isSignedIn);
             const count = useCustomerStore.getState().customers.length;
             updateProgress('customers', 'complete', `${count} customer${count !== 1 ? 's' : ''} synced`);
           } catch (error) {
