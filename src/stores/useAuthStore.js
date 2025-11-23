@@ -15,6 +15,7 @@ const useAuthStore = create((set, get) => ({
   isInitialized: false,
   isInitializing: false,
   error: null,
+  currentUserEmail: null,  // Track current Google account
 
   // Drive Folder IDs (for future use)
   rootFolderId: null,
@@ -39,17 +40,30 @@ const useAuthStore = create((set, get) => ({
       // Subscribe to auth changes
       authService.onAuthChange(async (isSignedIn) => {
         const previousSignInState = get().isSignedIn;
-        set({ isSignedIn });
+        const previousUserEmail = get().currentUserEmail;
+
+        // Get current user email if signed in
+        const currentUserEmail = isSignedIn ? authService.getUserEmail() : null;
+
+        set({ isSignedIn, currentUserEmail });
 
         // When user signs in (transition from false to true)
         if (isSignedIn && !previousSignInState) {
-          console.log('User signing in - clearing old data before sync');
-          // Clear all existing data before loading new user's data
-          useCustomerStore.getState().clearAllData();
-          useFormsStore.getState().clearAllData();
-          useExcelStore.getState().clearAllData();
-          // Clear Drive service cache to prevent using old user's folder IDs
-          driveService.clearCache();
+          // Check if it's a different user
+          const isDifferentUser = previousUserEmail && currentUserEmail &&
+                                  previousUserEmail !== currentUserEmail;
+
+          if (isDifferentUser) {
+            console.log(`👤 Account switched from ${previousUserEmail} to ${currentUserEmail} - clearing old data`);
+            // Clear all existing data before loading new user's data
+            useCustomerStore.getState().clearAllData();
+            useFormsStore.getState().clearAllData();
+            useExcelStore.getState().clearAllData();
+            // Clear Drive service cache to prevent using old user's folder IDs
+            driveService.clearCache();
+          } else {
+            console.log(`✅ Same user signing in (${currentUserEmail}) - keeping local data, will merge with Drive`);
+          }
         }
 
         // Trigger template sync when user signs in

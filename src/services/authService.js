@@ -170,6 +170,9 @@ class AuthService {
     // Save to localStorage (same keys as vanilla JS)
     this.saveTokenToStorage(token, expiresIn);
 
+    // Fetch and cache user email
+    this.fetchAndCacheUserEmail();
+
     // Schedule token refresh
     this.scheduleTokenRefresh(expiresIn);
 
@@ -220,6 +223,7 @@ class AuthService {
   clearTokenFromStorage() {
     localStorage.removeItem('googleAccessToken');
     localStorage.removeItem('googleTokenExpiry');
+    localStorage.removeItem('googleUserEmail');
   }
 
   /**
@@ -373,6 +377,49 @@ class AuthService {
    */
   getAccessToken() {
     return this.accessToken;
+  }
+
+  /**
+   * Get current user's email
+   * Returns null if not signed in or if email cannot be retrieved
+   */
+  getUserEmail() {
+    if (!this.accessToken) {
+      return null;
+    }
+
+    try {
+      // Try to get from localStorage cache first
+      const cachedEmail = localStorage.getItem('googleUserEmail');
+      if (cachedEmail) {
+        return cachedEmail;
+      }
+
+      // If not cached, fetch from API (async, so return cached value or null for now)
+      this.fetchAndCacheUserEmail();
+      return null;
+    } catch (error) {
+      console.error('Failed to get user email:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Fetch user email from Google API and cache it
+   */
+  async fetchAndCacheUserEmail() {
+    try {
+      const response = await window.gapi.client.drive.about.get({
+        fields: 'user(emailAddress)'
+      });
+      const email = response.result.user.emailAddress;
+      localStorage.setItem('googleUserEmail', email);
+      console.log('User email cached:', email);
+      return email;
+    } catch (error) {
+      console.error('Failed to fetch user email:', error);
+      return null;
+    }
   }
 
   /**
