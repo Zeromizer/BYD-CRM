@@ -69,12 +69,15 @@ body {
   min-height: 100vh;
   background-color: var(--color-background-primary);
   color: var(--color-text-primary);
+  overflow-x: hidden; /* Prevent horizontal scroll on mobile */
+  width: 100%;
 }
 
 #root {
   width: 100%;
   min-height: 100vh;
   background-color: var(--color-background-primary);
+  overflow-x: hidden; /* Prevent horizontal scroll */
 }
 
 h1, h2, h3, h4, h5, h6 {
