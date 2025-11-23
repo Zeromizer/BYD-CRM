@@ -566,13 +566,17 @@
   }
 
   .customer-actions button {
-    min-width: 120px;
+    min-width: 130px;
+    min-height: 48px;
+    font-size: 15px;
+    padding: 12px 16px;
   }
 
   .customer-tabs .tab {
-    padding: 14px 16px;
+    padding: 16px 18px;
     font-size: 15px;
-    min-width: 80px;
+    min-width: 90px;
+    min-height: 50px;
   }
 
   .customer-details-content {

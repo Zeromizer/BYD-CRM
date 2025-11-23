@@ -37,14 +37,15 @@
 
 @media (max-width: 768px) {
   .dashboard {
-    padding: var(--spacing-sm);
+    padding: 8px;
   }
 
   .dashboard-grid {
-    gap: var(--spacing-sm);
+    gap: 12px;
   }
 
   .dashboard-card {
     min-height: 300px;
+    border-radius: 12px;
   }
 }

@@ -176,7 +176,7 @@
 
 @media (max-width: 768px) {
   .header-container {
-    padding: 10px 12px;
+    padding: 12px 16px;
   }
 
   .header-title {
@@ -184,17 +184,17 @@
   }
 
   .byd-logo {
-    font-size: 20px;
+    font-size: 19px;
   }
 
   .motor-east {
-    font-size: 14px;
+    font-size: 13px;
   }
 
   .auth-button {
-    padding: 10px;
-    min-width: 44px;
-    min-height: 44px;
+    padding: 12px;
+    min-width: 48px;
+    min-height: 48px;
   }
 
   .auth-button span:not(.status-dot) {
@@ -202,12 +202,13 @@
   }
 
   .dropdown-toggle {
-    width: 44px;
-    height: 44px;
+    width: 48px;
+    height: 48px;
   }
 
   .dropdown-item {
-    padding: 14px 18px;
-    font-size: 15px;
+    padding: 16px 20px;
+    font-size: 16px;
+    min-height: 52px;
   }
 }
