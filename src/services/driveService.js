@@ -677,19 +677,39 @@ class DriveService {
   }
 
   /**
-   * Validate if a folder ID still exists in Google Drive
+   * Validate if a folder ID still exists in Google Drive and is in the correct location
    */
-  async validateFolderId(folderId) {
+  async validateFolderId(folderId, checkParent = true) {
     if (!folderId) return false;
 
     try {
-      await window.gapi.client.drive.files.get({
+      const response = await window.gapi.client.drive.files.get({
         fileId: folderId,
-        fields: 'id, name, trashed'
+        fields: 'id, name, trashed, parents'
       });
+
+      const folder = response.result;
+
+      // Check if folder is trashed
+      if (folder.trashed) {
+        console.log(`Folder ID ${folderId} is in trash`);
+        return false;
+      }
+
+      // Optionally check if folder is in the correct parent (Customers folder)
+      if (checkParent && folder.parents) {
+        const customersFolderId = await this.getOrCreateCustomersFolder();
+        const isInCorrectParent = folder.parents.includes(customersFolderId);
+
+        if (!isInCorrectParent) {
+          console.log(`Folder ID ${folderId} exists but is not in the Customers folder`);
+          return false;
+        }
+      }
+
       return true;
     } catch (error) {
-      console.log(`Folder ID ${folderId} is invalid or deleted`);
+      console.log(`Folder ID ${folderId} is invalid or deleted:`, error.message);
       return false;
     }
   }
@@ -728,10 +748,14 @@ class DriveService {
   /**
    * Repair customer folder references after folder deletion/restoration
    * This scans all customers and attempts to re-link them to their folders
+   *
+   * @param {Array} customers - Array of customer objects
+   * @param {boolean} forceRescan - If true, skip validation and always search by name
    */
-  async repairCustomerFolderReferences(customers) {
+  async repairCustomerFolderReferences(customers, forceRescan = false) {
     console.log('🔧 Starting customer folder repair process...');
     console.log(`Found ${customers.length} customers to check`);
+    console.log(`Mode: ${forceRescan ? 'FORCE RE-SCAN (searching all by name)' : 'Smart repair (validate first)'}`);
 
     const results = {
       total: customers.length,
@@ -750,15 +774,17 @@ class DriveService {
       console.log(`\n[${i + 1}/${customers.length}] Checking: ${customerName} (ID: ${customer.id})`);
 
       try {
-        // Check if customer has a folder ID
-        if (customer.driveFolderId) {
+        let shouldSearchByName = false;
+
+        // Check if customer has a folder ID and we're not forcing a re-scan
+        if (customer.driveFolderId && !forceRescan) {
           console.log(`  Current folder ID: ${customer.driveFolderId}`);
 
-          // Validate if the folder still exists
-          const isValid = await this.validateFolderId(customer.driveFolderId);
+          // Validate if the folder still exists and is in the correct location
+          const isValid = await this.validateFolderId(customer.driveFolderId, true);
 
           if (isValid) {
-            console.log(`  ✅ Folder ID is valid - no repair needed`);
+            console.log(`  ✅ Folder ID is valid and in correct location - no repair needed`);
             results.validated++;
             results.details.push({
               customer: customerName,
@@ -767,36 +793,44 @@ class DriveService {
             });
             continue;
           } else {
-            console.log(`  ❌ Folder ID is invalid - searching for folder...`);
+            console.log(`  ❌ Folder ID is invalid or misplaced - searching for folder...`);
+            shouldSearchByName = true;
           }
+        } else if (forceRescan && customer.driveFolderId) {
+          console.log(`  🔄 Force re-scan mode - ignoring existing folder ID: ${customer.driveFolderId}`);
+          shouldSearchByName = true;
         } else {
           console.log(`  ⚠️ No folder ID - searching for folder...`);
+          shouldSearchByName = true;
         }
 
-        // Try to find the folder by name
-        const folderInfo = await this.findCustomerFolderByName(customerName);
+        // Search for the folder by name if needed
+        if (shouldSearchByName) {
+          const oldFolderId = customer.driveFolderId;
+          const folderInfo = await this.findCustomerFolderByName(customerName);
 
-        if (folderInfo) {
-          // Update customer with found folder
-          customer.driveFolderId = folderInfo.folderId;
-          customer.driveFolderLink = folderInfo.folderUrl;
-          console.log(`  ✅ Repaired! New folder ID: ${folderInfo.folderId}`);
-          results.repaired++;
-          results.details.push({
-            customer: customerName,
-            status: 'repaired',
-            oldId: customer.driveFolderId,
-            newId: folderInfo.folderId
-          });
-        } else {
-          // Folder not found - offer to create
-          console.log(`  ⚠️ Folder not found for "${customerName}"`);
-          results.notFound++;
-          results.details.push({
-            customer: customerName,
-            status: 'not_found',
-            message: 'Folder not found in Drive'
-          });
+          if (folderInfo) {
+            // Update customer with found folder
+            customer.driveFolderId = folderInfo.folderId;
+            customer.driveFolderLink = folderInfo.folderUrl;
+            console.log(`  ✅ Repaired! ${oldFolderId ? `Old: ${oldFolderId} → ` : ''}New: ${folderInfo.folderId}`);
+            results.repaired++;
+            results.details.push({
+              customer: customerName,
+              status: 'repaired',
+              oldId: oldFolderId,
+              newId: folderInfo.folderId
+            });
+          } else {
+            // Folder not found - offer to create
+            console.log(`  ⚠️ Folder not found for "${customerName}"`);
+            results.notFound++;
+            results.details.push({
+              customer: customerName,
+              status: 'not_found',
+              message: 'Folder not found in Drive'
+            });
+          }
         }
       } catch (error) {
         console.error(`  ❌ Error processing ${customerName}:`, error);

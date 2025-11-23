@@ -103,16 +103,21 @@ function Header() {
     }
   };
 
-  const handleRepairFolders = async () => {
+  const handleRepairFolders = async (forceRescan = false) => {
     if (!isSignedIn) {
       alert('Please connect to Google Drive first');
       return;
     }
 
+    const mode = forceRescan ? 'Force Re-scan' : 'Smart Repair';
+    const description = forceRescan
+      ? 'This will IGNORE existing folder IDs and search Google Drive by customer name to re-link ALL customers.\n\n' +
+        'Use this if folders were deleted and restored, or if folder links are broken.\n\n'
+      : 'This will validate existing folder IDs and only repair invalid ones.\n\n' +
+        'Folders that are still valid will be kept as-is.\n\n';
+
     const confirmed = window.confirm(
-      'This will scan all customers and re-link them to their folders in Google Drive.\n\n' +
-      'This fixes issues after folder deletion/restoration.\n\n' +
-      'Continue?'
+      `${mode}\n\n${description}Continue?`
     );
 
     if (!confirmed) return;
@@ -121,12 +126,12 @@ function Header() {
     setShowDropdown(false);
 
     try {
-      console.log('Starting folder repair...');
-      const results = await repairCustomerFolders(isSignedIn);
+      console.log(`Starting folder repair (${mode})...`);
+      const results = await repairCustomerFolders(isSignedIn, forceRescan);
 
       if (results) {
         // Show detailed results
-        let message = '✅ Folder Repair Complete!\n\n';
+        let message = `✅ ${mode} Complete!\n\n`;
         message += `Total customers: ${results.total}\n`;
         message += `✅ Already valid: ${results.validated}\n`;
         message += `🔧 Repaired: ${results.repaired}\n`;
@@ -211,14 +216,24 @@ function Header() {
                 >
                   {syncing ? 'Syncing...' : 'Force Sync'}
                 </a>
+                <div className="dropdown-divider"></div>
                 <a
                   className="dropdown-item"
-                  onClick={handleRepairFolders}
-                  style={{ opacity: repairing ? 0.6 : 1, color: '#e67e22' }}
-                  title="Fix customer folder links after folder deletion/restoration"
+                  onClick={() => handleRepairFolders(false)}
+                  style={{ opacity: repairing ? 0.6 : 1, color: '#3498db' }}
+                  title="Validate folder IDs and repair invalid ones"
                 >
-                  {repairing ? 'Repairing...' : '🔧 Repair Customer Folders'}
+                  {repairing ? 'Repairing...' : '🔧 Smart Repair Folders'}
                 </a>
+                <a
+                  className="dropdown-item"
+                  onClick={() => handleRepairFolders(true)}
+                  style={{ opacity: repairing ? 0.6 : 1, color: '#e67e22' }}
+                  title="Force re-scan all customers by searching Drive (use after folder deletion)"
+                >
+                  {repairing ? 'Re-scanning...' : '🔄 Force Re-scan All Folders'}
+                </a>
+                <div className="dropdown-divider"></div>
                 <a className="dropdown-item" onClick={() => console.log('Export')}>
                   Export Data
                 </a>
