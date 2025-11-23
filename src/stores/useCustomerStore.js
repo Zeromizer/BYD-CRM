@@ -362,6 +362,155 @@ const useCustomerStore = create((set, get) => ({
       throw error;
     }
   },
+
+  /**
+   * HYBRID: Check if migration to hybrid structure is needed
+   */
+  checkMigrationNeeded: async (isSignedIn) => {
+    if (!isSignedIn) {
+      return false;
+    }
+
+    try {
+      return await driveService.checkMigrationNeeded();
+    } catch (error) {
+      console.error('Failed to check migration status:', error);
+      return false;
+    }
+  },
+
+  /**
+   * HYBRID: Migrate to new hybrid structure
+   */
+  migrateToHybridStructure: async (isSignedIn) => {
+    if (!isSignedIn) {
+      console.error('Must be signed in to migrate');
+      alert('Please sign in to Google Drive first');
+      return null;
+    }
+
+    try {
+      set({ isSyncing: true, error: null });
+      const { customers } = get();
+
+      console.log('Starting migration to hybrid structure...');
+
+      // Run migration
+      const migrationResult = await driveService.migrateToHybridStructure(customers);
+
+      if (migrationResult.success) {
+        // Update state with migrated customers
+        set({ customers: migrationResult.customers });
+
+        // Save to localStorage
+        localStorage.setItem('bydCRM', JSON.stringify(migrationResult.customers));
+
+        set({ isSyncing: false });
+
+        return migrationResult.results;
+      } else {
+        throw new Error(migrationResult.error || 'Migration failed');
+      }
+    } catch (error) {
+      console.error('Failed to migrate:', error);
+      set({ isSyncing: false, error: 'Failed to migrate to hybrid structure' });
+      throw error;
+    }
+  },
+
+  /**
+   * HYBRID: Sync using hybrid approach (index + individual files)
+   */
+  syncFromDriveHybrid: async (isSignedIn) => {
+    if (!isSignedIn) {
+      console.log('Not signed in, skipping hybrid sync');
+      return;
+    }
+
+    try {
+      set({ isSyncing: true });
+      const { customers } = get();
+
+      // Sync with Drive using hybrid approach
+      const syncedCustomers = await driveService.syncCustomersHybrid(customers);
+
+      // Update state and localStorage
+      set({ customers: syncedCustomers, isSyncing: false });
+      localStorage.setItem('bydCRM', JSON.stringify(syncedCustomers));
+
+      console.log('Synced customers from Drive (hybrid):', syncedCustomers.length);
+    } catch (error) {
+      console.error('Failed to sync from Drive (hybrid):', error);
+      set({ isSyncing: false, error: 'Failed to sync with Google Drive' });
+    }
+  },
+
+  /**
+   * HYBRID: Save individual customer to their folder
+   */
+  saveCustomerToFolder: async (customer, isSignedIn) => {
+    if (!isSignedIn || !customer.driveFolderId) {
+      console.log('Cannot save to folder: not signed in or no folder ID');
+      return false;
+    }
+
+    try {
+      // Add lastModified timestamp
+      const customerData = {
+        ...customer,
+        lastModified: new Date().toISOString(),
+      };
+
+      // Save to individual customer.json
+      await driveService.saveCustomerData(customerData, customer.driveFolderId);
+
+      // Update index
+      const index = await driveService.loadCustomersIndex();
+      const indexEntry = {
+        id: customer.id,
+        name: customer.name,
+        vsaNo: customer.vsaNo,
+        driveFolderId: customer.driveFolderId,
+        driveFolderLink: customer.driveFolderLink,
+        lastModified: customerData.lastModified,
+      };
+
+      // Update or add to index
+      const existingIndex = index.findIndex(e => e.id === customer.id);
+      if (existingIndex >= 0) {
+        index[existingIndex] = indexEntry;
+      } else {
+        index.push(indexEntry);
+      }
+
+      await driveService.saveCustomersIndex(index);
+
+      console.log(`Saved customer ${customer.name} to folder (hybrid)`);
+      return true;
+    } catch (error) {
+      console.error('Failed to save customer to folder:', error);
+      return false;
+    }
+  },
+
+  /**
+   * HYBRID: Load full customer data from their folder
+   */
+  loadCustomerFromFolder: async (customerId, customerFolderId, isSignedIn) => {
+    if (!isSignedIn || !customerFolderId) {
+      console.log('Cannot load from folder: not signed in or no folder ID');
+      return null;
+    }
+
+    try {
+      const customerData = await driveService.loadCustomerData(customerId, customerFolderId);
+      console.log(`Loaded customer ${customerId} from folder (hybrid)`);
+      return customerData;
+    } catch (error) {
+      console.error('Failed to load customer from folder:', error);
+      return null;
+    }
+  },
 }));
 
 export default useCustomerStore;

@@ -22,20 +22,22 @@ class DriveService {
     this.excelFileId = null;
     this.rootFolderId = null;
     this.customersFolderId = null;
+    this.customersDataFolderId = null;
   }
 
   /**
-   * Get or create the Customers folder (searches in Drive root, not in BYD CRM folder)
+   * Get or create the Customers Data folder (new hybrid structure)
+   * This folder contains both customer folders AND the index file
    */
-  async getOrCreateCustomersFolder() {
-    if (this.customersFolderId) {
-      return this.customersFolderId;
+  async getOrCreateCustomersDataFolder() {
+    if (this.customersDataFolderId) {
+      return this.customersDataFolderId;
     }
 
     try {
-      const folderName = CONFIG.FOLDER_NAMES.CUSTOMERS || 'BYD_MotorEast_Customers';
+      const folderName = CONFIG.FOLDER_NAMES.CUSTOMERS_DATA || 'BYD Customers Data';
 
-      // Search for existing folder in Drive root (not in any parent folder)
+      // Search for existing folder in Drive root
       const response = await window.gapi.client.drive.files.list({
         q: `name='${folderName}' and mimeType='application/vnd.google-apps.folder' and trashed=false`,
         fields: 'files(id, name)',
@@ -43,12 +45,12 @@ class DriveService {
       });
 
       if (response.result.files && response.result.files.length > 0) {
-        this.customersFolderId = response.result.files[0].id;
-        console.log(`Found existing Customers folder "${folderName}":`, this.customersFolderId);
-        return this.customersFolderId;
+        this.customersDataFolderId = response.result.files[0].id;
+        console.log(`Found existing Customers Data folder "${folderName}":`, this.customersDataFolderId);
+        return this.customersDataFolderId;
       }
 
-      // Create new folder in Drive root (no parent specified)
+      // Create new folder in Drive root
       const createResponse = await window.gapi.client.drive.files.create({
         resource: {
           name: folderName,
@@ -57,13 +59,22 @@ class DriveService {
         fields: 'id',
       });
 
-      this.customersFolderId = createResponse.result.id;
-      console.log(`Created Customers folder "${folderName}":`, this.customersFolderId);
-      return this.customersFolderId;
+      this.customersDataFolderId = createResponse.result.id;
+      console.log(`Created Customers Data folder "${folderName}":`, this.customersDataFolderId);
+      return this.customersDataFolderId;
     } catch (error) {
-      console.error('Failed to get/create Customers folder:', error);
+      console.error('Failed to get/create Customers Data folder:', error);
       throw error;
     }
+  }
+
+  /**
+   * LEGACY: Get or create the old Customers folder
+   * Kept for backward compatibility during migration
+   */
+  async getOrCreateCustomersFolder() {
+    // Now points to the new structure
+    return this.getOrCreateCustomersDataFolder();
   }
 
   /**
@@ -147,6 +158,224 @@ class DriveService {
         result: error.result,
         body: error.body,
       });
+      throw error;
+    }
+  }
+
+  /**
+   * Get or create the customers index file (lightweight listing)
+   */
+  async getOrCreateCustomersIndex() {
+    try {
+      const folderId = await this.getOrCreateCustomersDataFolder();
+      const fileName = CONFIG.DATA_FILE_NAMES.CUSTOMERS_INDEX || 'customers_index.json';
+
+      // Search for existing file
+      const response = await window.gapi.client.drive.files.list({
+        q: `name='${fileName}' and '${folderId}' in parents and trashed=false`,
+        fields: 'files(id, name)',
+        spaces: 'drive',
+      });
+
+      if (response.result.files && response.result.files.length > 0) {
+        const fileId = response.result.files[0].id;
+        console.log('Found existing customers index:', fileId);
+        return fileId;
+      }
+
+      // Create new index file with empty array
+      const fileMetadata = {
+        name: fileName,
+        mimeType: 'application/json',
+        parents: [folderId],
+      };
+
+      const fileContent = JSON.stringify([]);
+      const file = new Blob([fileContent], { type: 'application/json' });
+
+      const form = new FormData();
+      form.append('metadata', new Blob([JSON.stringify(fileMetadata)], { type: 'application/json' }));
+      form.append('file', file);
+
+      const token = window.gapi.client.getToken().access_token;
+      const uploadResponse = await fetch(
+        'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: form,
+        }
+      );
+
+      const result = await uploadResponse.json();
+      console.log('Created customers index:', result.id);
+      return result.id;
+    } catch (error) {
+      console.error('Failed to get/create customers index:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Load customers index from Google Drive
+   */
+  async loadCustomersIndex() {
+    try {
+      const fileId = await this.getOrCreateCustomersIndex();
+
+      const response = await window.gapi.client.drive.files.get({
+        fileId: fileId,
+        alt: 'media',
+      });
+
+      const index = response.result || [];
+      console.log('Loaded customers index from Drive:', index.length, 'customers');
+      return index;
+    } catch (error) {
+      console.error('Failed to load customers index:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Save customers index to Google Drive
+   */
+  async saveCustomersIndex(indexData) {
+    try {
+      const fileId = await this.getOrCreateCustomersIndex();
+      const fileContent = JSON.stringify(indexData, null, 2);
+      const file = new Blob([fileContent], { type: 'application/json' });
+
+      const token = window.gapi.client.getToken().access_token;
+      const response = await fetch(
+        `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`,
+        {
+          method: 'PATCH',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: file,
+        }
+      );
+
+      if (response.ok) {
+        console.log('Saved customers index to Drive:', indexData.length, 'customers');
+        return true;
+      } else {
+        throw new Error(`Failed to save index: ${response.statusText}`);
+      }
+    } catch (error) {
+      console.error('Failed to save customers index:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Load individual customer data from their folder
+   */
+  async loadCustomerData(customerId, customerFolderId) {
+    try {
+      const fileName = CONFIG.DATA_FILE_NAMES.CUSTOMER_DETAILS || 'customer.json';
+
+      // Search for customer.json in the customer's folder
+      const response = await window.gapi.client.drive.files.list({
+        q: `name='${fileName}' and '${customerFolderId}' in parents and trashed=false`,
+        fields: 'files(id, name)',
+        spaces: 'drive',
+      });
+
+      if (response.result.files && response.result.files.length > 0) {
+        const fileId = response.result.files[0].id;
+
+        // Load the file content
+        const dataResponse = await window.gapi.client.drive.files.get({
+          fileId: fileId,
+          alt: 'media',
+        });
+
+        console.log(`Loaded customer data for ID ${customerId}`);
+        return dataResponse.result;
+      }
+
+      console.log(`No customer.json found for customer ${customerId}`);
+      return null;
+    } catch (error) {
+      console.error(`Failed to load customer data for ${customerId}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Save individual customer data to their folder
+   */
+  async saveCustomerData(customerData, customerFolderId) {
+    try {
+      const fileName = CONFIG.DATA_FILE_NAMES.CUSTOMER_DETAILS || 'customer.json';
+
+      // Search for existing customer.json file
+      const response = await window.gapi.client.drive.files.list({
+        q: `name='${fileName}' and '${customerFolderId}' in parents and trashed=false`,
+        fields: 'files(id, name)',
+        spaces: 'drive',
+      });
+
+      const fileContent = JSON.stringify(customerData, null, 2);
+      const file = new Blob([fileContent], { type: 'application/json' });
+      const token = window.gapi.client.getToken().access_token;
+
+      if (response.result.files && response.result.files.length > 0) {
+        // Update existing file
+        const fileId = response.result.files[0].id;
+        const updateResponse = await fetch(
+          `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`,
+          {
+            method: 'PATCH',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+            body: file,
+          }
+        );
+
+        if (updateResponse.ok) {
+          console.log(`Updated customer.json for ${customerData.name}`);
+          return true;
+        } else {
+          throw new Error(`Failed to update: ${updateResponse.statusText}`);
+        }
+      } else {
+        // Create new file
+        const fileMetadata = {
+          name: fileName,
+          mimeType: 'application/json',
+          parents: [customerFolderId],
+        };
+
+        const form = new FormData();
+        form.append('metadata', new Blob([JSON.stringify(fileMetadata)], { type: 'application/json' }));
+        form.append('file', file);
+
+        const uploadResponse = await fetch(
+          'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+            body: form,
+          }
+        );
+
+        const result = await uploadResponse.json();
+        console.log(`Created customer.json for ${customerData.name}:`, result.id);
+        return true;
+      }
+    } catch (error) {
+      console.error(`Failed to save customer data for ${customerData.name}:`, error);
       throw error;
     }
   }
@@ -307,7 +536,51 @@ class DriveService {
   }
 
   /**
-   * Sync customers: merge localStorage and Drive data
+   * HYBRID SYNC: Sync using index + individual customer files
+   * This is the new efficient sync method
+   */
+  async syncCustomersHybrid(localCustomers) {
+    try {
+      console.log('🔄 Starting hybrid sync...');
+
+      // Load index from Drive
+      const driveIndex = await this.loadCustomersIndex();
+      console.log(`Loaded index with ${driveIndex.length} customers`);
+
+      // Build index entries for local customers
+      const localIndex = localCustomers.map(c => ({
+        id: c.id,
+        name: c.name,
+        vsaNo: c.vsaNo,
+        driveFolderId: c.driveFolderId,
+        driveFolderLink: c.driveFolderLink,
+        lastModified: c.lastModified || c.dateAdded || new Date().toISOString(),
+      }));
+
+      // Merge indices
+      const mergedIndex = this.mergeIndices(localIndex, driveIndex);
+
+      // Save merged index back to Drive
+      await this.saveCustomersIndex(mergedIndex);
+
+      // For full customer data, we'll load on-demand when needed
+      // Return the index as lightweight customer list
+      const lightweightCustomers = mergedIndex.map(indexEntry => {
+        const localCustomer = localCustomers.find(c => c.id === indexEntry.id);
+        return localCustomer || indexEntry;
+      });
+
+      console.log('✅ Hybrid sync complete');
+      return lightweightCustomers;
+    } catch (error) {
+      console.error('Failed to sync customers (hybrid):', error);
+      return localCustomers;
+    }
+  }
+
+  /**
+   * LEGACY: Sync customers using old centralized file method
+   * Kept for backward compatibility during migration
    */
   async syncCustomers(localCustomers) {
     try {
@@ -320,13 +593,60 @@ class DriveService {
       // Save merged data back to Drive
       await this.saveCustomersToDrive(merged);
 
-      console.log('Customers synced successfully');
+      console.log('Customers synced successfully (legacy method)');
       return merged;
     } catch (error) {
       console.error('Failed to sync customers:', error);
       // Return local data if sync fails
       return localCustomers;
     }
+  }
+
+  /**
+   * Merge index entries from local and drive
+   */
+  mergeIndices(localIndex, driveIndex) {
+    const driveMap = new Map();
+    driveIndex.forEach(entry => {
+      driveMap.set(entry.id, entry);
+    });
+
+    const localMap = new Map();
+    localIndex.forEach(entry => {
+      localMap.set(entry.id, entry);
+    });
+
+    // Get all unique customer IDs
+    const allIds = new Set([...driveMap.keys(), ...localMap.keys()]);
+
+    // Merge each entry
+    const merged = [];
+    allIds.forEach(id => {
+      const driveEntry = driveMap.get(id);
+      const localEntry = localMap.get(id);
+
+      // If only in one place, use that version
+      if (!driveEntry) {
+        merged.push(localEntry);
+        return;
+      }
+      if (!localEntry) {
+        merged.push(driveEntry);
+        return;
+      }
+
+      // Both exist - use the one with newer lastModified date
+      const driveDate = new Date(driveEntry.lastModified || 0);
+      const localDate = new Date(localEntry.lastModified || 0);
+
+      if (localDate > driveDate) {
+        merged.push(localEntry);
+      } else {
+        merged.push(driveEntry);
+      }
+    });
+
+    return merged;
   }
 
   /**
@@ -853,6 +1173,204 @@ class DriveService {
       customers,
       results
     };
+  }
+
+  /**
+   * MIGRATION: Migrate from old centralized structure to new hybrid structure
+   * This will:
+   * 1. Create "BYD Customers Data" folder if it doesn't exist
+   * 2. Move/verify all customer folders are in this new folder
+   * 3. Create customer.json in each customer folder
+   * 4. Create customers_index.json
+   * 5. Clean up old customers.json file (optional)
+   */
+  async migrateToHybridStructure(customers) {
+    console.log('🚀 Starting migration to hybrid structure...');
+    console.log(`Found ${customers.length} customers to migrate`);
+
+    const results = {
+      total: customers.length,
+      foldersCreated: 0,
+      foldersMoved: 0,
+      customerFilesCreated: 0,
+      indexCreated: false,
+      errors: [],
+      details: [],
+    };
+
+    try {
+      // Step 1: Create/get the new "BYD Customers Data" folder
+      console.log('\n📁 Step 1: Creating "BYD Customers Data" folder...');
+      const customersDataFolderId = await this.getOrCreateCustomersDataFolder();
+      console.log(`✅ Folder ID: ${customersDataFolderId}`);
+
+      // Step 2: Process each customer
+      console.log('\n📋 Step 2: Processing customers...');
+      for (let i = 0; i < customers.length; i++) {
+        const customer = customers[i];
+        const customerName = customer.name || 'Unnamed Customer';
+
+        console.log(`\n[${i + 1}/${customers.length}] Processing: ${customerName}`);
+
+        try {
+          let customerFolderId = customer.driveFolderId;
+
+          // Check if customer has a folder
+          if (!customerFolderId) {
+            console.log(`  ⚠️ No folder ID - creating new folder...`);
+            const folderInfo = await this.createCustomerFolderStructure(customerName, customer.id);
+            customerFolderId = folderInfo.folderId;
+            customer.driveFolderId = folderInfo.folderId;
+            customer.driveFolderLink = folderInfo.folderUrl;
+            results.foldersCreated++;
+            console.log(`  ✅ Created folder: ${customerFolderId}`);
+          } else {
+            // Verify folder exists and check its parent
+            console.log(`  🔍 Verifying folder: ${customerFolderId}`);
+            const folderResponse = await window.gapi.client.drive.files.get({
+              fileId: customerFolderId,
+              fields: 'id, name, parents, webViewLink, trashed',
+            });
+
+            const folder = folderResponse.result;
+
+            if (folder.trashed) {
+              console.log(`  ⚠️ Folder is in trash - creating new folder...`);
+              const folderInfo = await this.createCustomerFolderStructure(customerName, customer.id);
+              customerFolderId = folderInfo.folderId;
+              customer.driveFolderId = folderInfo.folderId;
+              customer.driveFolderLink = folderInfo.folderUrl;
+              results.foldersCreated++;
+            } else {
+              // Check if folder is in correct parent
+              const currentParent = folder.parents?.[0];
+              if (currentParent !== customersDataFolderId) {
+                console.log(`  📦 Moving folder to "BYD Customers Data"...`);
+                // Move folder to new parent
+                await window.gapi.client.drive.files.update({
+                  fileId: customerFolderId,
+                  addParents: customersDataFolderId,
+                  removeParents: currentParent,
+                  fields: 'id, parents',
+                });
+                results.foldersMoved++;
+                console.log(`  ✅ Moved folder from ${currentParent} to ${customersDataFolderId}`);
+              } else {
+                console.log(`  ✅ Folder already in correct location`);
+              }
+            }
+          }
+
+          // Step 3: Create customer.json in the folder
+          console.log(`  📝 Creating customer.json...`);
+          await this.saveCustomerData(customer, customerFolderId);
+          results.customerFilesCreated++;
+          console.log(`  ✅ Created customer.json`);
+
+          results.details.push({
+            customer: customerName,
+            status: 'success',
+            folderId: customerFolderId,
+          });
+
+        } catch (error) {
+          console.error(`  ❌ Error processing ${customerName}:`, error);
+          results.errors.push({
+            customer: customerName,
+            error: error.message,
+          });
+          results.details.push({
+            customer: customerName,
+            status: 'error',
+            error: error.message,
+          });
+        }
+      }
+
+      // Step 4: Create customers_index.json
+      console.log('\n📇 Step 3: Creating customers index...');
+      const indexData = customers.map(c => ({
+        id: c.id,
+        name: c.name,
+        vsaNo: c.vsaNo,
+        driveFolderId: c.driveFolderId,
+        driveFolderLink: c.driveFolderLink,
+        lastModified: new Date().toISOString(),
+      }));
+
+      await this.saveCustomersIndex(indexData);
+      results.indexCreated = true;
+      console.log(`✅ Created index with ${indexData.length} entries`);
+
+      // Summary
+      console.log('\n🎉 Migration complete!');
+      console.log(`✅ Folders created: ${results.foldersCreated}`);
+      console.log(`📦 Folders moved: ${results.foldersMoved}`);
+      console.log(`📝 Customer files created: ${results.customerFilesCreated}`);
+      console.log(`📇 Index created: ${results.indexCreated ? 'Yes' : 'No'}`);
+      console.log(`❌ Errors: ${results.errors.length}`);
+
+      return {
+        success: true,
+        customers,
+        results,
+      };
+
+    } catch (error) {
+      console.error('❌ Migration failed:', error);
+      results.errors.push({
+        customer: 'MIGRATION',
+        error: error.message,
+      });
+      return {
+        success: false,
+        customers,
+        results,
+        error: error.message,
+      };
+    }
+  }
+
+  /**
+   * Check if migration is needed
+   * Returns true if old structure is detected
+   */
+  async checkMigrationNeeded() {
+    try {
+      // Check if new folder exists
+      const newFolderName = CONFIG.FOLDER_NAMES.CUSTOMERS_DATA || 'BYD Customers Data';
+      const response = await window.gapi.client.drive.files.list({
+        q: `name='${newFolderName}' and mimeType='application/vnd.google-apps.folder' and trashed=false`,
+        fields: 'files(id, name)',
+        spaces: 'drive',
+      });
+
+      if (response.result.files && response.result.files.length > 0) {
+        // New folder exists - check if index exists
+        const folderId = response.result.files[0].id;
+        const indexName = CONFIG.DATA_FILE_NAMES.CUSTOMERS_INDEX || 'customers_index.json';
+
+        const indexResponse = await window.gapi.client.drive.files.list({
+          q: `name='${indexName}' and '${folderId}' in parents and trashed=false`,
+          fields: 'files(id, name)',
+          spaces: 'drive',
+        });
+
+        if (indexResponse.result.files && indexResponse.result.files.length > 0) {
+          console.log('✅ Hybrid structure detected - no migration needed');
+          return false;
+        } else {
+          console.log('⚠️ New folder exists but no index - migration recommended');
+          return true;
+        }
+      }
+
+      console.log('⚠️ New folder structure not found - migration needed');
+      return true;
+    } catch (error) {
+      console.error('Error checking migration status:', error);
+      return true; // Assume migration needed on error
+    }
   }
 
   /**

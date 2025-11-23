@@ -47,13 +47,14 @@ export const CONFIG = {
     FORMS: 'BYD CRM - Form Templates',
     EXCEL_TEMPLATES: 'BYD CRM - Excel Master Files',
     CUSTOMER_FILES: 'BYD CRM - Customer Files',
-    CUSTOMERS: 'BYD_MotorEast_Customers',  // Main folder for all customer folders
-    DOCUMENT_SUBFOLDERS: ['VSA', 'Trade In', 'Test Drive', 'PDPA & COE', 'Other'],
+    CUSTOMERS_DATA: 'BYD Customers Data',  // NEW: Main folder for customer data + folders
+    DOCUMENT_SUBFOLDERS: ['NIRC', 'Test Drive', 'Other Documents', 'VSA', 'Trade In'],
   },
 
   // Data File Names
   DATA_FILE_NAMES: {
-    CUSTOMERS: 'customers.json',
+    CUSTOMERS_INDEX: 'customers_index.json',  // Lightweight index for listing
+    CUSTOMER_DETAILS: 'customer.json',        // Individual customer file
     FORMS: 'forms.json',
     EXCEL: 'excel.json',
   },
