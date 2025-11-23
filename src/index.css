@@ -116,14 +116,19 @@ input, textarea, select {
 }
 
 @media (max-width: 768px) {
+  /* Larger touch-friendly buttons on mobile */
   button {
-    font-size: 16px;
-    padding: 0.75em 1.5em;
+    font-size: 15px;
+    padding: 12px 20px;
+    min-height: 48px;
+    min-width: 48px;
   }
 
+  /* Prevent zoom on input focus (iOS) */
   input, textarea, select {
     font-size: 16px;
-    padding: 12px;
+    padding: 14px;
+    min-height: 48px;
   }
 }
 
