@@ -456,7 +456,7 @@ const useCustomerStore = create((set, get) => ({
 
   /**
    * HYBRID: Sync using hybrid approach (index + individual files)
-   * Loads index first, then loads full customer data from individual files
+   * OPTIMIZED: Loads only index, lazy-loads full customer data on-demand
    * Automatically migrates to hybrid structure if needed
    */
   syncFromDriveHybrid: async (isSignedIn) => {
@@ -497,9 +497,9 @@ const useCustomerStore = create((set, get) => ({
         }
       }
 
-      // Load index from Drive
+      // Load index from Drive (lightweight, fast)
       const driveIndex = await driveService.loadCustomersIndex();
-      console.log(`Loaded index with ${driveIndex.length} customers`);
+      console.log(`✅ Loaded index with ${driveIndex.length} customers (index-only mode)`);
 
       // If index is empty, we're done
       if (driveIndex.length === 0) {
@@ -509,43 +509,79 @@ const useCustomerStore = create((set, get) => ({
         return;
       }
 
-      // Load full data for each customer
-      const fullCustomers = [];
-      for (const indexEntry of driveIndex) {
-        if (indexEntry.driveFolderId) {
-          try {
-            // Try to load full customer data from their folder
-            const customerData = await driveService.loadCustomerData(
-              indexEntry.id,
-              indexEntry.driveFolderId
-            );
+      // OPTIMIZATION: Merge index with localStorage data
+      // This gives us instant display with local data + Drive index metadata
+      const { customers: localCustomers } = get();
+      const localMap = new Map(localCustomers.map(c => [c.id, c]));
 
-            if (customerData) {
-              fullCustomers.push(customerData);
-            } else {
-              // If customer.json doesn't exist, use index data
-              console.warn(`No customer.json found for ${indexEntry.name}, using index data`);
-              fullCustomers.push(indexEntry);
-            }
-          } catch (error) {
-            console.error(`Failed to load customer ${indexEntry.name}:`, error);
-            // Use index data as fallback
-            fullCustomers.push(indexEntry);
-          }
-        } else {
-          // No folder ID, use index data
-          fullCustomers.push(indexEntry);
+      const mergedCustomers = driveIndex.map(indexEntry => {
+        const localData = localMap.get(indexEntry.id);
+        if (localData) {
+          // Use local data but update metadata from index
+          return {
+            ...localData,
+            driveFolderId: indexEntry.driveFolderId || localData.driveFolderId,
+            driveFolderLink: indexEntry.driveFolderLink || localData.driveFolderLink,
+            lastModified: indexEntry.lastModified,
+          };
         }
-      }
+        // New customer in Drive, use index data (will load full data when clicked)
+        return indexEntry;
+      });
 
-      // Update state and localStorage
-      set({ customers: fullCustomers, isSyncing: false });
-      localStorage.setItem('bydCRM', JSON.stringify(fullCustomers));
+      // Update state with merged data
+      set({ customers: mergedCustomers, isSyncing: false });
+      localStorage.setItem('bydCRM', JSON.stringify(mergedCustomers));
 
-      console.log('Synced customers from Drive (hybrid):', fullCustomers.length);
+      console.log(`✅ Synced customers from Drive (hybrid): ${mergedCustomers.length} - Full data loads on-demand`);
+
+      // Background: Load full data for customers that don't have it
+      get().backgroundLoadMissingCustomers(driveIndex);
+
     } catch (error) {
       console.error('Failed to sync from Drive (hybrid):', error);
       set({ isSyncing: false, error: 'Failed to sync with Google Drive' });
+    }
+  },
+
+  /**
+   * Background load missing customer data
+   * Loads full customer.json for customers that only have index data
+   */
+  backgroundLoadMissingCustomers: async (indexEntries) => {
+    const { customers } = get();
+
+    for (const indexEntry of indexEntries) {
+      if (!indexEntry.driveFolderId) continue;
+
+      const customer = customers.find(c => c.id === indexEntry.id);
+
+      // Check if customer has full data (has more than just index fields)
+      const hasFullData = customer && (
+        customer.phone || customer.email || customer.nric ||
+        customer.vsa_makeModel || customer.proposal_model
+      );
+
+      if (!hasFullData) {
+        try {
+          const fullData = await driveService.loadCustomerData(
+            indexEntry.id,
+            indexEntry.driveFolderId
+          );
+
+          if (fullData) {
+            // Update this customer in the store
+            const updatedCustomers = customers.map(c =>
+              c.id === indexEntry.id ? fullData : c
+            );
+            set({ customers: updatedCustomers });
+            localStorage.setItem('bydCRM', JSON.stringify(updatedCustomers));
+            console.log(`📥 Background loaded: ${fullData.name}`);
+          }
+        } catch (error) {
+          console.error(`Failed to background load ${indexEntry.name}:`, error);
+        }
+      }
     }
   },
 
