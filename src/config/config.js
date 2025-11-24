@@ -41,6 +41,10 @@ export const CONFIG = {
   PERIODIC_REFRESH_INTERVAL: 50 * 60 * 1000, // 50 minutes
   HEALTH_CHECK_INTERVAL: 10 * 60 * 1000, // 10 minutes
 
+  // Persistent Session Settings
+  ENABLE_PERSISTENT_AUTH: true, // Keep user logged in until manual sign-out
+  AUTO_SIGNIN_ON_STARTUP: true, // Attempt silent sign-in when app loads
+
   // Google Drive Folder Names
   FOLDER_NAMES: {
     ROOT: 'BYD CRM',

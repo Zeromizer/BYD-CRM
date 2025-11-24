@@ -35,7 +35,19 @@ class AuthService {
       await this.initializeGis();
 
       // Try to restore session from storage
-      this.restoreSession();
+      const restored = this.restoreSession();
+
+      // If persistent auth is enabled and session wasn't restored, try silent sign-in
+      if (CONFIG.ENABLE_PERSISTENT_AUTH && CONFIG.AUTO_SIGNIN_ON_STARTUP && !restored) {
+        const hasPersistentSession = this.hasPersistentSession();
+        if (hasPersistentSession) {
+          console.log('Attempting silent sign-in for persistent session...');
+          // Use setTimeout to avoid blocking initialization
+          setTimeout(() => {
+            this.attemptSilentSignIn();
+          }, 1000);
+        }
+      }
 
       return true;
     } catch (error) {
@@ -122,8 +134,33 @@ class AuthService {
       throw new Error('Token client not initialized');
     }
 
+    // Enable persistent session if configured
+    if (CONFIG.ENABLE_PERSISTENT_AUTH) {
+      this.enablePersistentSession();
+    }
+
     // Request access token
-    this.tokenClient.requestAccessToken({ prompt: 'consent' });
+    // Use 'select_account' instead of 'consent' for better UX on return visits
+    this.tokenClient.requestAccessToken({ prompt: 'select_account' });
+  }
+
+  /**
+   * Attempt silent sign-in (no user interaction)
+   */
+  attemptSilentSignIn() {
+    if (!this.tokenClient) {
+      console.error('Token client not initialized');
+      return;
+    }
+
+    try {
+      console.log('Attempting silent sign-in...');
+      // prompt: '' or 'none' for completely silent authentication
+      this.tokenClient.requestAccessToken({ prompt: '' });
+    } catch (error) {
+      console.log('Silent sign-in failed:', error);
+      // Silently fail - user will need to sign in manually
+    }
   }
 
   /**
@@ -136,6 +173,9 @@ class AuthService {
         console.log('Token revoked');
       });
     }
+
+    // Disable persistent session on explicit sign-out
+    this.disablePersistentSession();
 
     this.clearSession();
     this.clearAllAppData();
@@ -284,18 +324,29 @@ class AuthService {
 
     try {
       console.log('Refreshing token...');
+      // Use prompt: '' for silent refresh (no user interaction)
       this.tokenClient.requestAccessToken({ prompt: '' });
       this.refreshRetryCount = 0;
     } catch (error) {
       console.error('Token refresh failed:', error);
 
+      // Retry with exponential backoff
       if (this.refreshRetryCount < CONFIG.MAX_REFRESH_RETRIES) {
         this.refreshRetryCount++;
-        setTimeout(() => this.refreshToken(), 5000);
+        const retryDelay = Math.min(5000 * Math.pow(2, this.refreshRetryCount - 1), 30000);
+        console.log(`Retrying token refresh in ${retryDelay}ms (attempt ${this.refreshRetryCount}/${CONFIG.MAX_REFRESH_RETRIES})`);
+        setTimeout(() => this.refreshToken(), retryDelay);
       } else {
-        this.clearSession();
-        this.notifyAuthChange(false);
-        alert('Your Google Drive session has expired. Please reconnect.');
+        // Only clear session if not using persistent auth
+        if (!CONFIG.ENABLE_PERSISTENT_AUTH || !this.hasPersistentSession()) {
+          this.clearSession();
+          this.notifyAuthChange(false);
+          alert('Your Google Drive session has expired. Please reconnect.');
+        } else {
+          console.log('Persistent session enabled - will retry on next periodic refresh');
+          // Reset retry count for next attempt
+          this.refreshRetryCount = 0;
+        }
       }
     }
   }
@@ -441,6 +492,29 @@ class AuthService {
     this.onAuthChangeCallbacks.forEach(callback => {
       callback(isSignedIn);
     });
+  }
+
+  /**
+   * Enable persistent session
+   */
+  enablePersistentSession() {
+    localStorage.setItem('persistentSessionEnabled', 'true');
+    console.log('Persistent session enabled');
+  }
+
+  /**
+   * Disable persistent session
+   */
+  disablePersistentSession() {
+    localStorage.removeItem('persistentSessionEnabled');
+    console.log('Persistent session disabled');
+  }
+
+  /**
+   * Check if persistent session is enabled
+   */
+  hasPersistentSession() {
+    return localStorage.getItem('persistentSessionEnabled') === 'true';
   }
 }
 
