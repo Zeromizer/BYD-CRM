@@ -1,57 +1,97 @@
+/* ============================================
+   DASHBOARD - Mobile-First with Smart Navigation
+   ============================================ */
+
 .dashboard {
   width: 100%;
-  padding: var(--spacing-lg);
+  padding: 0;
+  height: 100%;
 }
 
 .dashboard-grid {
   display: grid;
-  grid-template-columns: 450px 1fr;
-  gap: var(--spacing-lg);
-  height: calc(100vh - 100px);
+  grid-template-columns: 1fr;
+  height: calc(100vh - 73px);
+  width: 100%;
+  position: relative;
 }
 
 .dashboard-card {
   background: var(--color-card-background);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  width: 100%;
+  height: 100%;
 }
 
+/* Mobile Navigation Pattern - Up to 1024px (tablets included) */
 @media (max-width: 1024px) {
   .dashboard {
-    padding: var(--spacing-md);
+    padding: 0;
   }
 
   .dashboard-grid {
     grid-template-columns: 1fr;
-    height: auto;
-    gap: var(--spacing-md);
+    gap: 0;
   }
 
-  .dashboard-card {
-    min-height: 400px;
+  .customer-list-panel,
+  .customer-details-panel {
+    grid-column: 1;
+    grid-row: 1;
+    border-radius: 0;
+    box-shadow: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+  }
+
+  /* Hide panels based on selection state */
+  .mobile-hidden {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
+
+  /* Show the active panel */
+  .customer-list-panel:not(.mobile-hidden),
+  .customer-details-panel:not(.mobile-hidden) {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    z-index: 10;
   }
 }
 
-@media (max-width: 768px) {
+/* Desktop Layout - Above 1024px */
+@media (min-width: 1025px) {
   .dashboard {
-    padding: 12px;
-    width: 100%;
-    max-width: 100vw; /* Prevent horizontal overflow */
-    overflow-x: hidden;
+    padding: var(--spacing-lg);
   }
 
   .dashboard-grid {
-    gap: 16px;
-    width: 100%;
+    grid-template-columns: 450px 1fr;
+    gap: var(--spacing-lg);
+    height: calc(100vh - 100px);
   }
 
   .dashboard-card {
-    min-height: 300px;
-    border-radius: 12px;
-    width: 100%;
-    max-width: 100%; /* Ensure cards don't overflow */
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    position: relative;
+  }
+
+  /* Always show both panels on desktop */
+  .mobile-hidden {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
   }
 }

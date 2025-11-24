@@ -10,6 +10,63 @@
   align-items: center;
   padding: var(--spacing-lg);
   border-bottom: 2px solid var(--color-border-light);
+  gap: 12px;
+}
+
+/* Mobile Back Button */
+.btn-back-mobile {
+  display: none; /* Hidden on desktop */
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: var(--color-primary);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.btn-back-mobile:hover {
+  background: var(--color-primary-dark);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
+}
+
+.btn-back-mobile:active {
+  transform: scale(0.95);
+}
+
+.btn-back-mobile svg {
+  flex-shrink: 0;
+  stroke-width: 2.5;
+}
+
+/* Show back button on mobile and tablets */
+@media (max-width: 1024px) {
+  .btn-back-mobile {
+    display: flex !important; /* Force show on mobile */
+    order: -1; /* Place it first in flex container */
+  }
+
+  .customer-details-header {
+    flex-wrap: wrap;
+  }
+
+  .customer-details-header h2 {
+    flex: 1 1 100%;
+    order: 0;
+    margin-top: 8px;
+  }
+
+  .customer-actions {
+    flex: 1 1 100%;
+    order: 1;
+    margin-top: 12px;
+  }
 }
 
 .customer-details-header h2 {

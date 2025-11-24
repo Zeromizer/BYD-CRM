@@ -15,7 +15,7 @@ import DocumentScanner from '../DocumentScanner/DocumentScanner';
 import './CustomerDetails.css';
 
 function CustomerDetails() {
-  const { customers, selectedCustomerId, updateCustomer, deleteCustomer, deleteCustomerHybrid, syncToDrive, saveCustomerToFolder, saveToLocalStorage } = useCustomerStore();
+  const { customers, selectedCustomerId, selectCustomer, updateCustomer, deleteCustomer, deleteCustomerHybrid, syncToDrive, saveCustomerToFolder, saveToLocalStorage } = useCustomerStore();
   const { isSignedIn } = useAuthStore();
 
   // Derive customer from store state (this makes it reactive to changes)
@@ -490,6 +490,19 @@ function CustomerDetails() {
     <>
       <div className="customer-details">
         <div className="customer-details-header">
+          {/* Mobile Back Button */}
+          <button
+            className="btn-back-mobile"
+            onClick={() => selectCustomer(null)}
+            aria-label="Back to customer list"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <line x1="19" y1="12" x2="5" y2="12"></line>
+              <polyline points="12 19 5 12 12 5"></polyline>
+            </svg>
+            <span>Back</span>
+          </button>
+
           <h2>{customer.name}</h2>
           <div className="customer-actions">
             <button className="btn btn-action" onClick={handleFormPrint}>
