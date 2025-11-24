@@ -825,27 +825,13 @@
     text-overflow: ellipsis;
   }
 
-  .document-actions {
-    margin-left: 8px;
-    margin-top: 0;
-    width: auto;
-    gap: 6px;
-    flex-shrink: 0;
-  }
-
-  .document-actions button {
-    flex: none;
-    padding: 6px 10px;
-    font-size: 12px;
-    min-height: auto;
-  }
-
   /* Simplified folder styling on mobile */
   .folder-item {
     background: #e0f2fe !important;
     border: 1px solid #bae6fd !important;
     padding: 10px 12px;
     min-height: auto;
+    cursor: pointer;
   }
 
   .folder-item:hover {
@@ -856,6 +842,9 @@
 
   .folder-item .chevron {
     font-size: 18px;
+    color: #0284c7;
+    margin-left: auto;
+    flex-shrink: 0;
   }
 
   /* Simplified file styling on mobile */
@@ -864,18 +853,7 @@
     border: 1px solid #e5e7eb;
     padding: 10px 12px;
     min-height: auto;
-  }
-
-  .file-item .document-actions {
-    flex-direction: column;
-    gap: 4px;
-  }
-
-  .file-item .document-actions button {
-    width: 60px;
-    padding: 4px 8px;
-    font-size: 11px;
-    white-space: nowrap;
+    cursor: pointer;
   }
 
   /* Compact section headers on mobile */
@@ -896,5 +874,87 @@
 
   .delete-actions button {
     width: 100%;
+  }
+}
+
+/* Trash Bin Zone */
+.trash-bin-zone {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  border: 3px dashed rgba(255, 255, 255, 0.5);
+  border-radius: 16px;
+  padding: 24px 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  z-index: 1000;
+  box-shadow: 0 8px 24px rgba(239, 68, 68, 0.4);
+  animation: slideUpFade 0.3s ease;
+  cursor: pointer;
+  user-select: none;
+}
+
+@keyframes slideUpFade {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.trash-bin-zone:hover {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  border-color: rgba(255, 255, 255, 0.8);
+  box-shadow: 0 12px 32px rgba(239, 68, 68, 0.5);
+}
+
+.trash-bin-icon {
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.trash-bin-label {
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0;
+  text-align: center;
+}
+
+/* Drag feedback */
+.document-item.dragging {
+  opacity: 0.5;
+  cursor: grabbing;
+}
+
+.document-item.drop-target {
+  background: #dbeafe !important;
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 2px #3b82f6;
+}
+
+/* Mobile adjustments for trash bin */
+@media (max-width: 768px) {
+  .trash-bin-zone {
+    bottom: 80px;
+    padding: 20px 32px;
+  }
+
+  .trash-bin-icon svg {
+    width: 40px;
+    height: 40px;
+  }
+
+  .trash-bin-label {
+    font-size: 13px;
   }
 }

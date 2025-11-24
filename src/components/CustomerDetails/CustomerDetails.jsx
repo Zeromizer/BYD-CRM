@@ -48,6 +48,8 @@ function CustomerDetails() {
   // Drag and drop state
   const [draggedFile, setDraggedFile] = useState(null);
   const [dropTargetFolder, setDropTargetFolder] = useState(null);
+  const [longPressTimer, setLongPressTimer] = useState(null);
+  const [isDragMode, setIsDragMode] = useState(false);
 
   // Load documents when Documents tab is active
   useEffect(() => {
@@ -182,21 +184,59 @@ function CustomerDetails() {
     }
   };
 
+  // Long press handlers
+  const handleLongPressStart = (e, item) => {
+    const timer = setTimeout(() => {
+      setDraggedFile(item);
+      setIsDragMode(true);
+    }, 500); // 500ms long press
+    setLongPressTimer(timer);
+  };
+
+  const handleLongPressEnd = () => {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      setLongPressTimer(null);
+    }
+  };
+
+  const handleLongPressCancel = () => {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      setLongPressTimer(null);
+    }
+  };
+
+  // Click to open/view
+  const handleItemClick = (item) => {
+    if (isDragMode) return; // Don't open if in drag mode
+
+    if (item.mimeType === 'application/vnd.google-apps.folder') {
+      navigateToFolder(item);
+    } else {
+      openDocument(item);
+    }
+  };
+
   // Drag and drop handlers
   const handleDragStart = (e, file) => {
     setDraggedFile(file);
+    setIsDragMode(true);
     e.dataTransfer.effectAllowed = 'move';
   };
 
   const handleDragEnd = () => {
     setDraggedFile(null);
     setDropTargetFolder(null);
+    setIsDragMode(false);
   };
 
   const handleDragOver = (e, folder) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
-    setDropTargetFolder(folder.id);
+    if (folder) {
+      setDropTargetFolder(folder.id);
+    }
   };
 
   const handleDragLeave = () => {
@@ -229,7 +269,27 @@ function CustomerDetails() {
     } finally {
       setDraggedFile(null);
       setDropTargetFolder(null);
+      setIsDragMode(false);
     }
+  };
+
+  // Handle drop on trash bin
+  const handleTrashDrop = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!draggedFile) return;
+
+    const confirmDelete = window.confirm(
+      `Are you sure you want to delete "${draggedFile.name}"?`
+    );
+
+    if (confirmDelete) {
+      await handleDeleteDocument(draggedFile);
+    }
+
+    setDraggedFile(null);
+    setIsDragMode(false);
   };
 
   const handleEdit = () => {
@@ -1032,8 +1092,15 @@ function CustomerDetails() {
                             {documents.filter(doc => isFolder(doc.mimeType)).map((folder) => (
                               <div
                                 key={folder.id}
-                                className={`document-item folder-item ${dropTargetFolder === folder.id ? 'drop-target' : ''}`}
-                                onClick={() => navigateToFolder(folder)}
+                                className={`document-item folder-item ${dropTargetFolder === folder.id ? 'drop-target' : ''} ${draggedFile?.id === folder.id ? 'dragging' : ''}`}
+                                draggable
+                                onDragStart={(e) => handleDragStart(e, folder)}
+                                onDragEnd={handleDragEnd}
+                                onClick={() => handleItemClick(folder)}
+                                onTouchStart={(e) => handleLongPressStart(e, folder)}
+                                onTouchEnd={handleLongPressEnd}
+                                onTouchMove={handleLongPressCancel}
+                                onTouchCancel={handleLongPressCancel}
                                 onDragOver={(e) => handleDragOver(e, folder)}
                                 onDragLeave={handleDragLeave}
                                 onDrop={(e) => handleDrop(e, folder)}
@@ -1045,19 +1112,7 @@ function CustomerDetails() {
                                   <h4>{folder.name}</h4>
                                   <p>{formatDate(folder.createdTime)}</p>
                                 </div>
-                                <div className="document-actions">
-                                  <button
-                                    className="btn btn-small btn-danger"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleDeleteDocument(folder);
-                                    }}
-                                    title="Delete folder"
-                                  >
-                                    🗑️
-                                  </button>
-                                  <span className="chevron">›</span>
-                                </div>
+                                <span className="chevron">›</span>
                               </div>
                             ))}
                           </div>
@@ -1076,7 +1131,11 @@ function CustomerDetails() {
                                 draggable
                                 onDragStart={(e) => handleDragStart(e, doc)}
                                 onDragEnd={handleDragEnd}
-                                onClick={() => openDocument(doc)}
+                                onClick={() => handleItemClick(doc)}
+                                onTouchStart={(e) => handleLongPressStart(e, doc)}
+                                onTouchEnd={handleLongPressEnd}
+                                onTouchMove={handleLongPressCancel}
+                                onTouchCancel={handleLongPressCancel}
                               >
                                 <div className="document-icon">
                                   {doc.iconLink ? (
@@ -1091,33 +1150,34 @@ function CustomerDetails() {
                                     {formatFileSize(doc.size)} • {formatDate(doc.createdTime)}
                                   </p>
                                 </div>
-                                <div className="document-actions">
-                                  <button
-                                    className="btn btn-small btn-action"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      openDocument(doc);
-                                    }}
-                                  >
-                                    View
-                                  </button>
-                                  <button
-                                    className="btn btn-small btn-danger"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleDeleteDocument(doc);
-                                    }}
-                                    title="Delete file"
-                                  >
-                                    🗑️
-                                  </button>
-                                </div>
                               </div>
                             ))}
                           </div>
                         </div>
                       )}
                     </>
+                  )}
+
+                  {/* Trash Bin - appears during drag mode */}
+                  {isDragMode && (
+                    <div
+                      className="trash-bin-zone"
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                      }}
+                      onDrop={handleTrashDrop}
+                    >
+                      <div className="trash-bin-icon">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <polyline points="3 6 5 6 21 6"></polyline>
+                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                          <line x1="10" y1="11" x2="10" y2="17"></line>
+                          <line x1="14" y1="11" x2="14" y2="17"></line>
+                        </svg>
+                      </div>
+                      <p className="trash-bin-label">Drag here to delete</p>
+                    </div>
                   )}
                 </>
               )}
