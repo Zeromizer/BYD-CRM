@@ -161,6 +161,12 @@ function CustomerDetails() {
 
   // Delete document
   const handleDeleteDocument = async (doc) => {
+    // Protect customer.json files from deletion
+    if (doc.name === 'customer.json') {
+      alert('⚠️ Cannot delete customer.json\n\nThis file is protected and contains important customer data.');
+      return;
+    }
+
     const confirmDelete = window.confirm(
       `Are you sure you want to delete "${doc.name}"?\n\nThis will permanently delete the file from Google Drive.`
     );
@@ -186,6 +192,11 @@ function CustomerDetails() {
 
   // Long press handlers
   const handleLongPressStart = (e, item) => {
+    // Prevent dragging customer.json files
+    if (item.name === 'customer.json') {
+      return;
+    }
+
     const timer = setTimeout(() => {
       setDraggedFile(item);
       setIsDragMode(true);
@@ -220,6 +231,12 @@ function CustomerDetails() {
 
   // Drag and drop handlers
   const handleDragStart = (e, file) => {
+    // Prevent dragging customer.json files
+    if (file.name === 'customer.json') {
+      e.preventDefault();
+      return;
+    }
+
     setDraggedFile(file);
     setIsDragMode(true);
     e.dataTransfer.effectAllowed = 'move';
@@ -1127,8 +1144,8 @@ function CustomerDetails() {
                             {documents.filter(doc => !isFolder(doc.mimeType)).map((doc) => (
                               <div
                                 key={doc.id}
-                                className={`document-item file-item ${draggedFile?.id === doc.id ? 'dragging' : ''}`}
-                                draggable
+                                className={`document-item file-item ${draggedFile?.id === doc.id ? 'dragging' : ''} ${doc.name === 'customer.json' ? 'protected-file' : ''}`}
+                                draggable={doc.name !== 'customer.json'}
                                 onDragStart={(e) => handleDragStart(e, doc)}
                                 onDragEnd={handleDragEnd}
                                 onClick={() => handleItemClick(doc)}
@@ -1145,7 +1162,14 @@ function CustomerDetails() {
                                   )}
                                 </div>
                                 <div className="document-info">
-                                  <h4>{doc.name}</h4>
+                                  <h4>
+                                    {doc.name}
+                                    {doc.name === 'customer.json' && (
+                                      <span className="protected-badge" title="Protected file - cannot be deleted or moved">
+                                        🔒
+                                      </span>
+                                    )}
+                                  </h4>
                                   <p>
                                     {formatFileSize(doc.size)} • {formatDate(doc.createdTime)}
                                   </p>
