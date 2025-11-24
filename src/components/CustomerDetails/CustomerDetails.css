@@ -10,12 +10,54 @@
   align-items: center;
   padding: var(--spacing-lg);
   border-bottom: 2px solid var(--color-border-light);
+  gap: 12px;
+}
+
+/* Mobile Back Button */
+.btn-back-mobile {
+  display: none; /* Hidden on desktop */
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: var(--color-background-tertiary);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.btn-back-mobile:hover {
+  background: var(--color-background-primary);
+  border-color: var(--color-primary);
+}
+
+.btn-back-mobile:active {
+  transform: scale(0.97);
+}
+
+.btn-back-mobile svg {
+  flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+  .btn-back-mobile {
+    display: flex; /* Show on mobile */
+  }
 }
 
 .customer-details-header h2 {
   margin: 0;
   font-size: 24px;
   color: var(--color-text-on-card);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .customer-actions {
