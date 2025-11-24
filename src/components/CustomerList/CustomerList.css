@@ -1,206 +1,93 @@
-/* ============================================
-   CUSTOMER LIST - Mobile-First Design
-   ============================================ */
-
 .customer-list {
   display: flex;
   flex-direction: column;
   height: 100%;
-  position: relative;
 }
-
-/* ============================================
-   COMPACT HEADER
-   ============================================ */
 
 .customer-list-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--color-border);
-  flex-shrink: 0;
-  background: var(--color-background-secondary);
-}
-
-.header-content {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  padding: var(--spacing-lg);
+  border-bottom: 2px solid var(--color-border-light);
 }
 
 .customer-list-header h2 {
   margin: 0;
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--color-text-primary);
+  font-size: 20px;
+  color: var(--color-text-on-card);
 }
 
-.customer-count {
-  background: var(--color-background-tertiary);
-  color: var(--color-text-secondary);
-  font-size: 13px;
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 12px;
-  min-width: 24px;
-  text-align: center;
-}
-
-/* Desktop Add Button */
-.btn-add-desktop {
-  display: none; /* Hidden on mobile */
-  align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  background: var(--color-primary);
-  color: var(--color-text-primary);
+.btn {
+  padding: 10px 20px;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   cursor: pointer;
   font-size: 14px;
   font-weight: 500;
-  transition: all 0.2s ease;
+  transition: all 0.3s;
 }
 
-.btn-add-desktop:hover {
-  background: var(--color-primary-hover);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 188, 212, 0.3);
-}
-
-.btn-add-desktop:active {
-  transform: translateY(0);
-}
-
-/* ============================================
-   COMPACT SEARCH
-   ============================================ */
-
-.search-container {
-  position: relative;
-  padding: 8px 16px;
-  border-bottom: 1px solid var(--color-border);
-  flex-shrink: 0;
-}
-
-.search-icon {
-  position: absolute;
-  left: 26px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--color-text-tertiary);
-  pointer-events: none;
-}
-
-.search-input {
-  width: 100%;
-  padding: 10px 36px 10px 36px;
-  border: 1px solid var(--color-border);
-  border-radius: 10px;
-  font-size: 15px;
-  background: var(--color-background-primary);
+.btn-primary {
+  background: var(--color-primary);
   color: var(--color-text-primary);
-  transition: all 0.2s ease;
 }
 
-.search-input:focus {
+.btn-primary:hover {
+  background: var(--color-primary-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 188, 212, 0.4);
+}
+
+.search-box {
+  padding: var(--spacing-md) var(--spacing-lg);
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.search-box input {
+  width: 100%;
+  padding: 10px 15px;
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  background: #f9fafb;
+  color: var(--color-text-on-card);
+}
+
+.search-box input:focus {
   outline: none;
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(0, 188, 212, 0.1);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
 }
 
-.search-clear {
-  position: absolute;
-  right: 26px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: var(--color-background-tertiary);
-  border: none;
-  border-radius: 50%;
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  color: var(--color-text-tertiary);
-  transition: all 0.2s ease;
-}
-
-.search-clear:hover {
-  background: var(--color-background-primary);
-  color: var(--color-text-primary);
-}
-
-.search-clear:active {
-  transform: translateY(-50%) scale(0.9);
-}
-
-/* ============================================
-   CUSTOMER LIST/GRID
-   ============================================ */
-
-.customers-scroll {
+.customer-items {
   flex: 1;
   overflow-y: auto;
-  overflow-x: hidden;
+  padding: 10px;
 }
 
-.customer-grid {
-  padding: 4px 8px 80px 8px; /* Bottom padding for FAB */
-}
-
-/* ============================================
-   COMPACT CUSTOMER CARDS
-   ============================================ */
-
-.customer-card {
+.customer-item {
   display: flex;
   align-items: center;
-  padding: 10px 12px;
-  margin-bottom: 4px;
-  border-radius: 10px;
+  padding: var(--spacing-md);
+  border-radius: var(--radius-md);
   cursor: pointer;
-  transition: all 0.2s ease;
-  position: relative;
-  background: var(--color-background-secondary);
-  border: 1px solid transparent;
-  min-height: 56px; /* Reduced from 72px */
+  transition: all 0.2s;
+  margin-bottom: var(--spacing-sm);
 }
 
-.customer-card:active {
-  transform: scale(0.98);
+.customer-item:hover {
+  background: #f9fafb;
 }
 
-.customer-card:hover {
-  background: var(--color-background-tertiary);
-}
-
-.customer-card.selected {
+.customer-item.active {
   background: var(--color-primary-light);
-  border-color: var(--color-primary);
-}
-
-.card-indicator {
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 3px;
-  height: 0;
-  background: var(--color-primary);
-  border-radius: 0 3px 3px 0;
-  transition: height 0.2s ease;
-}
-
-.customer-card.selected .card-indicator {
-  height: 70%;
+  border-left: 4px solid var(--color-primary);
 }
 
 .customer-avatar {
-  width: 36px; /* Reduced from 48px */
-  height: 36px;
+  width: 45px;
+  height: 45px;
   border-radius: 50%;
   background: var(--color-primary);
   color: var(--color-text-primary);
@@ -208,84 +95,29 @@
   align-items: center;
   justify-content: center;
   font-weight: 600;
-  font-size: 16px; /* Reduced from 20px */
-  margin-right: 12px;
+  font-size: 18px;
+  margin-right: var(--spacing-md);
   flex-shrink: 0;
 }
 
-.customer-details {
+.customer-info {
   flex: 1;
   min-width: 0;
 }
 
 .customer-name {
   font-weight: 600;
-  font-size: 15px; /* Reduced from 16px */
-  color: var(--color-text-primary);
-  margin-bottom: 2px;
+  color: var(--color-text-on-card);
+  margin-bottom: 4px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  line-height: 1.3;
 }
 
 .customer-phone {
-  font-size: 13px; /* Reduced from 14px */
+  font-size: 13px;
   color: var(--color-text-tertiary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  line-height: 1.3;
 }
-
-.card-arrow {
-  flex-shrink: 0;
-  color: var(--color-text-tertiary);
-  opacity: 0.4;
-  transition: all 0.2s ease;
-}
-
-.customer-card.selected .card-arrow {
-  color: var(--color-primary);
-  opacity: 1;
-  transform: translateX(2px);
-}
-
-/* ============================================
-   FLOATING ACTION BUTTON (Mobile)
-   ============================================ */
-
-.fab {
-  position: fixed;
-  right: 16px;
-  bottom: 20px;
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: var(--color-primary);
-  color: var(--color-text-primary);
-  border: none;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), 0 2px 4px rgba(0, 0, 0, 0.2);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  z-index: 100;
-}
-
-.fab:hover {
-  transform: scale(1.1) rotate(90deg);
-  box-shadow: 0 6px 20px rgba(0, 188, 212, 0.4), 0 3px 6px rgba(0, 0, 0, 0.3);
-}
-
-.fab:active {
-  transform: scale(0.95) rotate(90deg);
-}
-
-/* ============================================
-   EMPTY STATE
-   ============================================ */
 
 .empty-state {
   display: flex;
@@ -293,65 +125,48 @@
   align-items: center;
   justify-content: center;
   height: 100%;
-  padding: 32px 20px;
-  text-align: center;
-}
-
-.empty-state svg {
   color: var(--color-text-tertiary);
-  opacity: 0.5;
-  margin-bottom: 16px;
+  text-align: center;
+  padding: 40px 20px;
 }
 
-.empty-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--color-text-primary);
-  margin: 0 0 8px 0;
+.empty-state p {
+  margin: 5px 0;
 }
 
 .empty-hint {
   font-size: 14px;
   color: var(--color-text-secondary);
-  margin: 0;
 }
 
-/* ============================================
-   DESKTOP OPTIMIZATIONS
-   ============================================ */
-
-@media (min-width: 769px) {
+@media (max-width: 768px) {
   .customer-list-header {
-    padding: 16px 20px;
+    padding: var(--spacing-md);
   }
 
   .customer-list-header h2 {
-    font-size: 20px;
+    font-size: 18px;
   }
 
-  .btn-add-desktop {
-    display: flex; /* Show on desktop */
-  }
-
-  .search-container {
+  .btn {
     padding: 12px 20px;
+    font-size: 15px;
   }
 
-  .customer-grid {
-    padding: 8px 12px 20px 12px; /* Less bottom padding on desktop */
+  .search-box input {
+    font-size: 16px;
+    padding: 12px 15px;
   }
 
-  .customer-card {
-    padding: 12px 16px;
-    margin-bottom: 6px;
-    min-height: 64px;
+  .customer-item {
+    padding: var(--spacing-md);
+    min-height: 72px;
   }
 
   .customer-avatar {
-    width: 42px;
-    height: 42px;
-    font-size: 18px;
-    margin-right: 14px;
+    width: 48px;
+    height: 48px;
+    font-size: 20px;
   }
 
   .customer-name {
@@ -361,29 +176,4 @@
   .customer-phone {
     font-size: 14px;
   }
-
-  .fab {
-    display: none; /* Hide FAB on desktop */
-  }
-}
-
-/* ============================================
-   SCROLLBAR STYLING
-   ============================================ */
-
-.customers-scroll::-webkit-scrollbar {
-  width: 6px;
-}
-
-.customers-scroll::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.customers-scroll::-webkit-scrollbar-thumb {
-  background: var(--color-border);
-  border-radius: 3px;
-}
-
-.customers-scroll::-webkit-scrollbar-thumb:hover {
-  background: var(--color-text-tertiary);
 }
