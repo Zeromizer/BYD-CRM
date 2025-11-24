@@ -751,6 +751,26 @@
     gap: var(--spacing-md);
   }
 
+  /* Side-by-side labels and values on mobile */
+  .info-item {
+    flex-direction: row;
+    align-items: baseline;
+    gap: 12px;
+  }
+
+  .info-item label {
+    min-width: 110px;
+    max-width: 110px;
+    flex-shrink: 0;
+    margin-bottom: 0;
+    font-size: 11px;
+  }
+
+  .info-value {
+    flex: 1;
+    font-size: 14px;
+  }
+
   .document-item {
     flex-direction: column;
     align-items: flex-start;
