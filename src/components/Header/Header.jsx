@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useAuthStore from '../../stores/useAuthStore';
-import useCustomerStore from '../../stores/useCustomerStore';
 import syncCoordinator from '../../services/syncCoordinator';
 import SyncProgressModal from '../SyncProgressModal/SyncProgressModal';
 import './Header.css';
@@ -9,11 +8,9 @@ import './Header.css';
 function Header() {
   const navigate = useNavigate();
   const { isSignedIn, initialize, signIn, signOut, setOnSignInCallback } = useAuthStore();
-  const { repairCustomerFolders, createMissingFolders } = useCustomerStore();
   const [showDropdown, setShowDropdown] = useState(false);
   const [dropdownPosition, setDropdownPosition] = useState({ top: 0 });
   const [syncing, setSyncing] = useState(false);
-  const [repairing, setRepairing] = useState(false);
   const [showSyncProgress, setShowSyncProgress] = useState(false);
   const [syncProgress, setSyncProgress] = useState({
     customers: { status: 'pending', detail: '' },
@@ -119,69 +116,6 @@ function Header() {
     }
   };
 
-  const handleRepairFolders = async (forceRescan = false) => {
-    if (!isSignedIn) {
-      alert('Please connect to Google Drive first');
-      return;
-    }
-
-    const mode = forceRescan ? 'Force Re-scan' : 'Smart Repair';
-    const description = forceRescan
-      ? 'This will IGNORE existing folder IDs and search Google Drive by customer name to re-link ALL customers.\n\n' +
-        'Use this if folders were deleted and restored, or if folder links are broken.\n\n'
-      : 'This will validate existing folder IDs and only repair invalid ones.\n\n' +
-        'Folders that are still valid will be kept as-is.\n\n';
-
-    const confirmed = window.confirm(
-      `${mode}\n\n${description}Continue?`
-    );
-
-    if (!confirmed) return;
-
-    setRepairing(true);
-    setShowDropdown(false);
-
-    try {
-      console.log(`Starting folder repair (${mode})...`);
-      const results = await repairCustomerFolders(isSignedIn, forceRescan);
-
-      if (results) {
-        // Show detailed results
-        let message = `✅ ${mode} Complete!\n\n`;
-        message += `Total customers: ${results.total}\n`;
-        message += `✅ Already valid: ${results.validated}\n`;
-        message += `🔧 Repaired: ${results.repaired}\n`;
-
-        if (results.notFound > 0) {
-          message += `⚠️ Not found: ${results.notFound}\n\n`;
-          message += 'Would you like to create folders for customers without them?';
-
-          const createNew = window.confirm(message);
-
-          if (createNew) {
-            console.log('Creating missing folders...');
-            const createResults = await createMissingFolders(isSignedIn);
-
-            if (createResults) {
-              alert(
-                `✅ Folder Creation Complete!\n\n` +
-                `Created: ${createResults.created} folders\n` +
-                `Errors: ${createResults.errors.length}`
-              );
-            }
-          }
-        } else {
-          alert(message);
-        }
-      }
-    } catch (error) {
-      console.error('Folder repair failed:', error);
-      alert('❌ Folder repair failed. Check console for details.');
-    } finally {
-      setRepairing(false);
-    }
-  };
-
   const handleToggleDropdown = () => {
     if (!showDropdown && dropdownToggleRef.current) {
       // Calculate position when opening
@@ -236,47 +170,12 @@ function Header() {
                 <a className="dropdown-item" onClick={() => { navigate('/excel'); setShowDropdown(false); }}>
                   Manage Excel
                 </a>
-                <a className="dropdown-item" onClick={() => console.log('Statistics')}>
-                  View Statistics
-                </a>
                 <a
                   className="dropdown-item"
                   onClick={handleForceSync}
                   style={{ opacity: syncing ? 0.6 : 1 }}
                 >
                   {syncing ? 'Syncing...' : 'Force Sync'}
-                </a>
-                <div className="dropdown-divider"></div>
-                <a
-                  className="dropdown-item"
-                  onClick={() => handleRepairFolders(false)}
-                  style={{ opacity: repairing ? 0.6 : 1, color: '#3498db' }}
-                  title="Validate folder IDs and repair invalid ones"
-                >
-                  {repairing ? 'Repairing...' : '🔧 Smart Repair Folders'}
-                </a>
-                <a
-                  className="dropdown-item"
-                  onClick={() => handleRepairFolders(true)}
-                  style={{ opacity: repairing ? 0.6 : 1, color: '#e67e22' }}
-                  title="Force re-scan all customers by searching Drive (use after folder deletion)"
-                >
-                  {repairing ? 'Re-scanning...' : '🔄 Force Re-scan All Folders'}
-                </a>
-                <div className="dropdown-divider"></div>
-                <a className="dropdown-item" onClick={() => console.log('Export')}>
-                  Export Data
-                </a>
-                <a className="dropdown-item" onClick={() => console.log('Import')}>
-                  Import Data
-                </a>
-                <div className="dropdown-divider"></div>
-                <a
-                  className="dropdown-item"
-                  href="../"
-                  rel="noopener noreferrer"
-                >
-                  Switch to Classic Version
                 </a>
               </div>
             )}
