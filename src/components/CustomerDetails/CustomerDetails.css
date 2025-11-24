@@ -292,6 +292,22 @@
   display: flex;
   border-bottom: 2px solid var(--color-border-light);
   background: #f9fafb;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+.customer-tabs::-webkit-scrollbar {
+  height: 3px;
+}
+
+.customer-tabs::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.customer-tabs::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 3px;
 }
 
 .customer-tabs .tab {
@@ -305,6 +321,8 @@
   border-bottom: 3px solid transparent;
   transition: all 0.3s;
   outline: none;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .customer-tabs .tab:hover {
@@ -710,10 +728,18 @@
   }
 
   .customer-tabs .tab {
-    padding: 16px 18px;
-    font-size: 15px;
-    min-width: 90px;
-    min-height: 50px;
+    padding: 12px 14px;
+    font-size: 14px;
+    min-width: auto;
+    min-height: 44px;
+  }
+
+  /* Smaller Edit Details button on mobile */
+  .vsa-section-header .btn-small,
+  .vsa-section-header .btn-primary {
+    padding: 8px 14px;
+    font-size: 13px;
+    min-height: auto;
   }
 
   .customer-details-content {
