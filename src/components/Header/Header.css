@@ -137,9 +137,11 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-xl);
-  min-width: 200px;
+  min-width: 240px;
+  max-width: 320px;
   overflow: hidden;
   animation: slideDown 0.2s ease;
+  z-index: 1001;
 }
 
 /* Mobile-friendly dropdown: full width positioned sheet */
@@ -154,6 +156,8 @@
     max-width: unset;
     border-radius: 12px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    max-height: calc(100vh - 120px); /* Prevent dropdown from going off screen */
+    overflow-y: auto; /* Allow scrolling if content is too long */
   }
 }
 
@@ -176,6 +180,9 @@
   cursor: pointer;
   transition: all 0.2s;
   font-size: 14px;
+  white-space: nowrap; /* Prevent text wrapping on desktop */
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .dropdown-item:hover {
@@ -225,5 +232,11 @@
     padding: 16px 20px;
     font-size: 16px;
     min-height: 52px;
+    white-space: normal; /* Allow text wrapping on mobile */
+    word-wrap: break-word;
+    overflow: visible;
+    text-overflow: clip;
+    display: flex;
+    align-items: center;
   }
 }
