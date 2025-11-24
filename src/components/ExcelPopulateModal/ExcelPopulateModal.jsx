@@ -127,31 +127,16 @@ function ExcelPopulateModal({ isOpen, onClose, customer }) {
             customer.id
           );
 
-          // Get or create document subfolders
-          const documentFolders = await excelService.getOrCreateDocumentSubfolders(
-            customerFolderId,
-            customer.id
-          );
+          // Save directly to customer's main folder (no subfolders)
+          // Convert blob to File
+          const file = new File([blob], fileName, {
+            type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          });
 
-          // Determine which folder to save to
-          const documentType = excelService.getDocumentType(selectedTemplate.name);
-          const targetFolderId = documentFolders[documentType];
+          // Upload to Drive
+          await excelService.uploadFileToDrive(file, customerFolderId, fileName);
 
-          if (targetFolderId) {
-            // Convert blob to File
-            const file = new File([blob], fileName, {
-              type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            });
-
-            // Upload to Drive
-            await excelService.uploadFileToDrive(file, targetFolderId, fileName);
-
-            alert('Excel file generated and saved to Google Drive successfully!\n\nYou can find it in the customer\'s folder.');
-          } else {
-            // Download only if upload failed
-            excelService.downloadExcelFile(blob, fileName);
-            alert('Excel file generated! (Could not save to Drive - check your connection)');
-          }
+          alert('Excel file generated and saved to Google Drive successfully!\n\nYou can find it in the customer\'s main folder.');
         } catch (error) {
           console.error('Error saving to Drive:', error);
           // Download if Drive save failed
