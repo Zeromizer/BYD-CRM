@@ -37,6 +37,7 @@ function CustomerDetails() {
   const [selectedDocument, setSelectedDocument] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deleteFolderChecked, setDeleteFolderChecked] = useState(false);
+  const [showActionsMenu, setShowActionsMenu] = useState(false);
 
   // Documents state
   const [documents, setDocuments] = useState([]);
@@ -490,30 +491,84 @@ function CustomerDetails() {
     <>
       <div className="customer-details">
         <div className="customer-details-header">
-          {/* Mobile Back Button */}
+          {/* Back Arrow */}
           <button
-            className="btn-back-mobile"
+            className="btn-back-arrow"
             onClick={() => selectCustomer(null)}
             aria-label="Back to customer list"
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <line x1="19" y1="12" x2="5" y2="12"></line>
-              <polyline points="12 19 5 12 12 5"></polyline>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <path d="M19 12H5M12 19l-7-7 7-7" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
-            <span>Back</span>
           </button>
 
           <h2>{customer.name}</h2>
-          <div className="customer-actions">
-            <button className="btn btn-action" onClick={handleFormPrint}>
-              Print Form
+
+          {/* Actions Dropdown */}
+          <div className="actions-dropdown">
+            <button
+              className="btn-actions-toggle"
+              onClick={() => setShowActionsMenu(!showActionsMenu)}
+              aria-label="Customer actions"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="1" fill="currentColor"/>
+                <circle cx="19" cy="12" r="1" fill="currentColor"/>
+                <circle cx="5" cy="12" r="1" fill="currentColor"/>
+              </svg>
             </button>
-            <button className="btn btn-action" onClick={handleCombinePrint}>
-              Combine & Print
-            </button>
-            <button className="btn btn-action" onClick={handleExcelPopulate}>
-              Populate Excel
-            </button>
+
+            {showActionsMenu && (
+              <>
+                <div className="actions-backdrop" onClick={() => setShowActionsMenu(false)}></div>
+                <div className="actions-menu">
+                  <button
+                    className="action-menu-item"
+                    onClick={() => {
+                      setShowActionsMenu(false);
+                      handleFormPrint();
+                    }}
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                      <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                      <rect x="6" y="14" width="12" height="8"></rect>
+                    </svg>
+                    <span>Print Form</span>
+                  </button>
+                  <button
+                    className="action-menu-item"
+                    onClick={() => {
+                      setShowActionsMenu(false);
+                      handleCombinePrint();
+                    }}
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                      <polyline points="14 2 14 8 20 8"></polyline>
+                      <line x1="16" y1="13" x2="8" y2="13"></line>
+                      <line x1="16" y1="17" x2="8" y2="17"></line>
+                    </svg>
+                    <span>Combine & Print</span>
+                  </button>
+                  <button
+                    className="action-menu-item"
+                    onClick={() => {
+                      setShowActionsMenu(false);
+                      handleExcelPopulate();
+                    }}
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                      <polyline points="14 2 14 8 20 8"></polyline>
+                      <line x1="12" y1="18" x2="12" y2="12"></line>
+                      <line x1="9" y1="15" x2="15" y2="15"></line>
+                    </svg>
+                    <span>Populate Excel</span>
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
