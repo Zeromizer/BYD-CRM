@@ -186,8 +186,10 @@ function Header() {
     if (!showDropdown && dropdownToggleRef.current) {
       // Calculate position when opening
       const rect = dropdownToggleRef.current.getBoundingClientRect();
+      const isMobile = window.innerWidth <= 768;
+
       setDropdownPosition({
-        top: rect.bottom + 5, // 5px gap below button
+        top: isMobile ? rect.bottom + 8 : rect.bottom + 5, // More gap on mobile for better spacing
       });
     }
     setShowDropdown(!showDropdown);
