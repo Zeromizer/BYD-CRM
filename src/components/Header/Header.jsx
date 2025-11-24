@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useAuthStore from '../../stores/useAuthStore';
 import syncCoordinator from '../../services/syncCoordinator';
@@ -9,7 +9,6 @@ function Header() {
   const navigate = useNavigate();
   const { isSignedIn, initialize, signIn, signOut, setOnSignInCallback } = useAuthStore();
   const [showDropdown, setShowDropdown] = useState(false);
-  const [dropdownPosition, setDropdownPosition] = useState({ top: 0 });
   const [syncing, setSyncing] = useState(false);
   const [showSyncProgress, setShowSyncProgress] = useState(false);
   const [syncProgress, setSyncProgress] = useState({
@@ -18,7 +17,6 @@ function Header() {
     excel: { status: 'pending', detail: '' },
     overall: 0,
   });
-  const dropdownToggleRef = useRef(null);
 
   // Set up sync coordinator callback
   useEffect(() => {
@@ -62,20 +60,6 @@ function Header() {
     initialize();
   }, [initialize]);
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (showDropdown && dropdownToggleRef.current && !dropdownToggleRef.current.closest('.dropdown').contains(event.target)) {
-        setShowDropdown(false);
-      }
-    };
-
-    if (showDropdown) {
-      document.addEventListener('mousedown', handleClickOutside);
-      return () => document.removeEventListener('mousedown', handleClickOutside);
-    }
-  }, [showDropdown]);
-
   const handleAuth = () => {
     if (isSignedIn) {
       // If signed in, sign out
@@ -117,15 +101,6 @@ function Header() {
   };
 
   const handleToggleDropdown = () => {
-    if (!showDropdown && dropdownToggleRef.current) {
-      // Calculate position when opening
-      const rect = dropdownToggleRef.current.getBoundingClientRect();
-      const isMobile = window.innerWidth <= 768;
-
-      setDropdownPosition({
-        top: isMobile ? rect.bottom + 8 : rect.bottom + 5, // More gap on mobile for better spacing
-      });
-    }
     setShowDropdown(!showDropdown);
   };
 
@@ -150,35 +125,107 @@ function Header() {
             <span>{isSignedIn ? 'Connected' : 'Connect Drive'}</span>
           </button>
 
-          <div className="dropdown">
+          <div className="mobile-menu">
             <button
-              ref={dropdownToggleRef}
-              className="dropdown-toggle"
+              className="mobile-menu-toggle"
               onClick={handleToggleDropdown}
               title="More Options"
+              aria-label="Menu"
             >
-              ⋮
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="3" y1="12" x2="21" y2="12"></line>
+                <line x1="3" y1="6" x2="21" y2="6"></line>
+                <line x1="3" y1="18" x2="21" y2="18"></line>
+              </svg>
             </button>
+
+            {/* Backdrop overlay */}
             {showDropdown && (
-              <div className="dropdown-menu" style={{ top: `${dropdownPosition.top}px` }}>
-                <a className="dropdown-item" onClick={() => { navigate('/'); setShowDropdown(false); }}>
-                  Customer List
-                </a>
-                <a className="dropdown-item" onClick={() => { navigate('/forms'); setShowDropdown(false); }}>
-                  Manage Forms
-                </a>
-                <a className="dropdown-item" onClick={() => { navigate('/excel'); setShowDropdown(false); }}>
-                  Manage Excel
-                </a>
+              <div
+                className="mobile-menu-backdrop"
+                onClick={() => setShowDropdown(false)}
+              ></div>
+            )}
+
+            {/* Mobile menu sheet */}
+            <div className={`mobile-menu-sheet ${showDropdown ? 'open' : ''}`}>
+              <div className="mobile-menu-header">
+                <h3>Menu</h3>
+                <button
+                  className="mobile-menu-close"
+                  onClick={() => setShowDropdown(false)}
+                  aria-label="Close menu"
+                >
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  </svg>
+                </button>
+              </div>
+
+              <nav className="mobile-menu-content">
                 <a
-                  className="dropdown-item"
-                  onClick={handleForceSync}
+                  className="mobile-menu-item"
+                  onClick={() => { navigate('/'); setShowDropdown(false); }}
+                >
+                  <svg className="menu-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                    <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                  </svg>
+                  <span>Customer List</span>
+                  <svg className="menu-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                  </svg>
+                </a>
+
+                <a
+                  className="mobile-menu-item"
+                  onClick={() => { navigate('/forms'); setShowDropdown(false); }}
+                >
+                  <svg className="menu-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                    <polyline points="10 9 9 9 8 9"></polyline>
+                  </svg>
+                  <span>Manage Forms</span>
+                  <svg className="menu-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                  </svg>
+                </a>
+
+                <a
+                  className="mobile-menu-item"
+                  onClick={() => { navigate('/excel'); setShowDropdown(false); }}
+                >
+                  <svg className="menu-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path>
+                    <polyline points="13 2 13 9 20 9"></polyline>
+                  </svg>
+                  <span>Manage Excel</span>
+                  <svg className="menu-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                  </svg>
+                </a>
+
+                <a
+                  className="mobile-menu-item"
+                  onClick={() => { handleForceSync(); setShowDropdown(false); }}
                   style={{ opacity: syncing ? 0.6 : 1 }}
                 >
-                  {syncing ? 'Syncing...' : 'Force Sync'}
+                  <svg className="menu-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="23 4 23 10 17 10"></polyline>
+                    <polyline points="1 20 1 14 7 14"></polyline>
+                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                  </svg>
+                  <span>{syncing ? 'Syncing...' : 'Force Sync'}</span>
+                  <svg className="menu-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                  </svg>
                 </a>
-              </div>
-            )}
+              </nav>
+            </div>
           </div>
         </div>
       </div>
