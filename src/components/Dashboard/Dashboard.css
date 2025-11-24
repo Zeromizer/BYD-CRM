@@ -1,77 +1,57 @@
-/* ============================================
-   DASHBOARD - Mobile-First with Smart Navigation
-   ============================================ */
-
 .dashboard {
   width: 100%;
-  padding: 0; /* No padding on mobile */
+  padding: var(--spacing-lg);
 }
 
 .dashboard-grid {
   display: grid;
-  grid-template-columns: 1fr; /* Single column on mobile */
-  height: calc(100vh - 73px); /* Full height minus header */
-  width: 100%;
+  grid-template-columns: 450px 1fr;
+  gap: var(--spacing-lg);
+  height: calc(100vh - 100px);
 }
 
 .dashboard-card {
   background: var(--color-card-background);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  width: 100%;
 }
 
-/* Mobile Navigation Pattern */
-@media (max-width: 768px) {
-  /* Hide panels based on selection state */
-  .mobile-hidden {
-    display: none !important;
-  }
-
-  .customer-list-panel {
-    border-radius: 0; /* Full screen on mobile */
-    box-shadow: none;
-  }
-
-  .customer-details-panel {
-    border-radius: 0; /* Full screen on mobile */
-    box-shadow: none;
-    position: relative;
-  }
-}
-
-/* Desktop Layout */
-@media (min-width: 769px) {
-  .dashboard {
-    padding: var(--spacing-lg);
-  }
-
-  .dashboard-grid {
-    grid-template-columns: 450px 1fr; /* Side-by-side on desktop */
-    gap: var(--spacing-lg);
-    height: calc(100vh - 100px);
-  }
-
-  .dashboard-card {
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-lg);
-  }
-
-  /* Always show both panels on desktop */
-  .mobile-hidden {
-    display: flex !important;
-  }
-}
-
-/* Tablet Adjustments */
-@media (min-width: 769px) and (max-width: 1024px) {
+@media (max-width: 1024px) {
   .dashboard {
     padding: var(--spacing-md);
   }
 
   .dashboard-grid {
-    grid-template-columns: 400px 1fr;
+    grid-template-columns: 1fr;
+    height: auto;
     gap: var(--spacing-md);
+  }
+
+  .dashboard-card {
+    min-height: 400px;
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard {
+    padding: 12px;
+    width: 100%;
+    max-width: 100vw; /* Prevent horizontal overflow */
+    overflow-x: hidden;
+  }
+
+  .dashboard-grid {
+    gap: 16px;
+    width: 100%;
+  }
+
+  .dashboard-card {
+    min-height: 300px;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 100%; /* Ensure cards don't overflow */
   }
 }

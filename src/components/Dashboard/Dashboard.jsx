@@ -5,7 +5,7 @@ import CustomerDetails from '../CustomerDetails/CustomerDetails';
 import './Dashboard.css';
 
 function Dashboard() {
-  const { loadFromLocalStorage, selectedCustomerId } = useCustomerStore();
+  const { loadFromLocalStorage } = useCustomerStore();
 
   useEffect(() => {
     // Load customer data from localStorage on mount
@@ -16,13 +16,10 @@ function Dashboard() {
   return (
     <div className="dashboard">
       <div className="dashboard-grid">
-        {/* Customer List - Hidden on mobile when customer selected */}
-        <div className={`dashboard-card customer-list-panel ${selectedCustomerId ? 'mobile-hidden' : ''}`}>
+        <div className="dashboard-card">
           <CustomerList />
         </div>
-
-        {/* Customer Details - Hidden on mobile when no customer selected */}
-        <div className={`dashboard-card customer-details-panel ${!selectedCustomerId ? 'mobile-hidden' : ''}`}>
+        <div className="dashboard-card">
           <CustomerDetails />
         </div>
       </div>
