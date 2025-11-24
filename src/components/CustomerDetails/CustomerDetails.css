@@ -866,6 +866,29 @@
     min-height: auto;
   }
 
+  .file-item .document-actions {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .file-item .document-actions button {
+    width: 60px;
+    padding: 4px 8px;
+    font-size: 11px;
+    white-space: nowrap;
+  }
+
+  /* Compact section headers on mobile */
+  .folders-section,
+  .files-section {
+    margin-bottom: 20px;
+  }
+
+  .section-title {
+    font-size: 12px;
+    margin-bottom: 8px;
+  }
+
   .delete-actions {
     flex-direction: column-reverse;
     gap: var(--spacing-sm);
