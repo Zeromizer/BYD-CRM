@@ -771,31 +771,99 @@
     font-size: 14px;
   }
 
+  /* Compact document items on mobile */
+  .documents-list {
+    gap: 8px;
+  }
+
   .document-item {
-    flex-direction: column;
-    align-items: flex-start;
-    padding: var(--spacing-md);
+    flex-direction: row;
+    align-items: center;
+    padding: 10px 12px;
+    min-height: auto;
+    gap: 10px;
+  }
+
+  .document-item:hover {
+    transform: none;
   }
 
   .document-icon {
-    margin-bottom: 10px;
-    font-size: 32px;
+    width: 32px;
+    height: 32px;
+    margin-right: 0;
+    flex-shrink: 0;
+  }
+
+  .document-icon img {
+    width: 24px;
+    height: 24px;
+  }
+
+  .document-icon span,
+  .folder-icon {
+    font-size: 24px !important;
   }
 
   .document-info {
-    width: 100%;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .document-info h4 {
+    font-size: 14px;
+    margin: 0 0 2px 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .document-info p {
+    font-size: 11px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .document-actions {
-    margin-left: 0;
-    margin-top: var(--spacing-md);
-    width: 100%;
-    display: flex;
-    gap: var(--spacing-sm);
+    margin-left: 8px;
+    margin-top: 0;
+    width: auto;
+    gap: 6px;
+    flex-shrink: 0;
   }
 
   .document-actions button {
-    flex: 1;
+    flex: none;
+    padding: 6px 10px;
+    font-size: 12px;
+    min-height: auto;
+  }
+
+  /* Simplified folder styling on mobile */
+  .folder-item {
+    background: #e0f2fe !important;
+    border: 1px solid #bae6fd !important;
+    padding: 10px 12px;
+    min-height: auto;
+  }
+
+  .folder-item:hover {
+    background: #bae6fd !important;
+    box-shadow: none !important;
+    transform: none !important;
+  }
+
+  .folder-item .chevron {
+    font-size: 18px;
+  }
+
+  /* Simplified file styling on mobile */
+  .file-item {
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    padding: 10px 12px;
+    min-height: auto;
   }
 
   .delete-actions {
@@ -805,11 +873,5 @@
 
   .delete-actions button {
     width: 100%;
-  }
-
-  .folder-item,
-  .file-item {
-    padding: var(--spacing-md);
-    min-height: 60px;
   }
 }
