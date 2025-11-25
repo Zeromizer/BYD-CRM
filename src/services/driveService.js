@@ -23,6 +23,7 @@ class DriveService {
     this.rootFolderId = null;
     this.customersFolderId = null;
     this.customersDataFolderId = null;
+    this.formFilesFolderId = null;
   }
 
   /**
@@ -714,6 +715,51 @@ class DriveService {
     });
 
     return merged;
+  }
+
+  /**
+   * Get or create Form Files subfolder in the main BYD CRM folder
+   * This is where actual PDF/image form files are stored
+   */
+  async getOrCreateFormFilesFolder() {
+    if (this.formFilesFolderId) {
+      return this.formFilesFolderId;
+    }
+
+    try {
+      const parentFolderId = await this.getOrCreateRootFolder();
+      const folderName = 'Form Files';
+
+      // Search for existing folder
+      const response = await window.gapi.client.drive.files.list({
+        q: `name='${folderName}' and '${parentFolderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
+        fields: 'files(id, name)',
+        spaces: 'drive',
+      });
+
+      if (response.result.files && response.result.files.length > 0) {
+        this.formFilesFolderId = response.result.files[0].id;
+        console.log('Found existing Form Files folder:', this.formFilesFolderId);
+        return this.formFilesFolderId;
+      }
+
+      // Create new folder
+      const createResponse = await window.gapi.client.drive.files.create({
+        resource: {
+          name: folderName,
+          mimeType: 'application/vnd.google-apps.folder',
+          parents: [parentFolderId],
+        },
+        fields: 'id',
+      });
+
+      this.formFilesFolderId = createResponse.result.id;
+      console.log('Created Form Files folder:', this.formFilesFolderId);
+      return this.formFilesFolderId;
+    } catch (error) {
+      console.error('Failed to get/create Form Files folder:', error);
+      throw error;
+    }
   }
 
   /**
