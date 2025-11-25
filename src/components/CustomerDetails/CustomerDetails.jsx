@@ -4,6 +4,7 @@ import useAuthStore from '../../stores/useAuthStore';
 import driveService from '../../services/driveService';
 import Modal from '../Modal/Modal';
 import ExcelPopulateModal from '../ExcelPopulateModal/ExcelPopulateModal';
+import PrintManager from '../Documents/PrintManager/PrintManager';
 import FormPrintModal from '../FormPrintModal/FormPrintModal';
 import CombinePrintModal from '../CombinePrintModal/CombinePrintModal';
 import DocumentViewer from '../DocumentViewer/DocumentViewer';
@@ -171,6 +172,7 @@ function CustomerDetails() {
   });
   const [originalVsaData, setOriginalVsaData] = useState(null);
   const [isExcelModalOpen, setIsExcelModalOpen] = useState(false);
+  const [isPrintManagerOpen, setIsPrintManagerOpen] = useState(false);
   const [isFormPrintModalOpen, setIsFormPrintModalOpen] = useState(false);
   const [isCombinePrintModalOpen, setIsCombinePrintModalOpen] = useState(false);
   const [isDocumentViewerOpen, setIsDocumentViewerOpen] = useState(false);
@@ -817,6 +819,14 @@ function CustomerDetails() {
     setIsExcelModalOpen(false);
   };
 
+  const handlePrintDocuments = () => {
+    setIsPrintManagerOpen(true);
+  };
+
+  const handleClosePrintManager = () => {
+    setIsPrintManagerOpen(false);
+  };
+
   const handleFormPrint = () => {
     setIsFormPrintModalOpen(true);
   };
@@ -994,6 +1004,20 @@ function CustomerDetails() {
                     className="action-menu-item"
                     onClick={() => {
                       setShowActionsMenu(false);
+                      handlePrintDocuments();
+                    }}
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                      <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                      <rect x="6" y="14" width="12" height="8"></rect>
+                    </svg>
+                    <span>Print Documents ⭐</span>
+                  </button>
+                  <button
+                    className="action-menu-item"
+                    onClick={() => {
+                      setShowActionsMenu(false);
                       handleFormPrint();
                     }}
                   >
@@ -1002,7 +1026,7 @@ function CustomerDetails() {
                       <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
                       <rect x="6" y="14" width="12" height="8"></rect>
                     </svg>
-                    <span>Print Form</span>
+                    <span>Print Form (Legacy)</span>
                   </button>
                   <button
                     className="action-menu-item"
@@ -2340,14 +2364,21 @@ function CustomerDetails() {
         customer={customer}
       />
 
-      {/* Form Print Modal */}
+      {/* Print Manager (New System) */}
+      <PrintManager
+        isOpen={isPrintManagerOpen}
+        onClose={handleClosePrintManager}
+        customer={customer}
+      />
+
+      {/* Form Print Modal (Legacy) */}
       <FormPrintModal
         isOpen={isFormPrintModalOpen}
         onClose={handleCloseFormPrintModal}
         customer={customer}
       />
 
-      {/* Combine Print Modal */}
+      {/* Combine Print Modal (Legacy) */}
       <CombinePrintModal
         isOpen={isCombinePrintModalOpen}
         onClose={handleCloseCombinePrintModal}
