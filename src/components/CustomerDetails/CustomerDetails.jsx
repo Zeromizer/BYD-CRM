@@ -1,10 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import useCustomerStore from '../../stores/useCustomerStore';
 import useAuthStore from '../../stores/useAuthStore';
-import authService from '../../services/authService';
 import driveService from '../../services/driveService';
 import Modal from '../Modal/Modal';
-import CustomerForm from '../CustomerForm/CustomerForm';
 import VsaDetailsModal from '../VsaDetailsModal/VsaDetailsModal';
 import ProposalDetailsModal from '../ProposalDetailsModal/ProposalDetailsModal';
 import ExcelPopulateModal from '../ExcelPopulateModal/ExcelPopulateModal';
@@ -26,8 +24,24 @@ function CustomerDetails() {
   }) || null;
 
   const [activeTab, setActiveTab] = useState('details');
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+
+  // Inline editing state for Details tab
+  const [detailsFormData, setDetailsFormData] = useState({
+    name: '',
+    phone: '',
+    email: '',
+    nric: '',
+    occupation: '',
+    dob: '',
+    salesConsultant: '',
+    vsaNo: '',
+    address: '',
+    addressContinue: '',
+    notes: '',
+  });
+  const [originalDetailsData, setOriginalDetailsData] = useState(null);
+  const [detailsErrors, setDetailsErrors] = useState({});
   const [isVsaModalOpen, setIsVsaModalOpen] = useState(false);
   const [isProposalModalOpen, setIsProposalModalOpen] = useState(false);
   const [isExcelModalOpen, setIsExcelModalOpen] = useState(false);
@@ -55,6 +69,91 @@ function CustomerDetails() {
   const [showFolderMenu, setShowFolderMenu] = useState(false);
   const [selectedFileToMove, setSelectedFileToMove] = useState(null);
   const longPressTimerRef = useRef(null);
+
+  // Initialize details form data when customer changes
+  useEffect(() => {
+    if (customer) {
+      const formData = {
+        name: customer.name || '',
+        phone: customer.phone || '',
+        email: customer.email || '',
+        nric: customer.nric || '',
+        occupation: customer.occupation || '',
+        dob: customer.dob || '',
+        salesConsultant: customer.salesConsultant || '',
+        vsaNo: customer.vsaNo || '',
+        address: customer.address || '',
+        addressContinue: customer.addressContinue || '',
+        notes: customer.notes || '',
+      };
+      setDetailsFormData(formData);
+      setOriginalDetailsData(formData);
+      setDetailsErrors({});
+    }
+  }, [customer?.id]);
+
+  // Check if details form has changes
+  const hasDetailsChanges = originalDetailsData && JSON.stringify(detailsFormData) !== JSON.stringify(originalDetailsData);
+
+  // Handle details form field change
+  const handleDetailsChange = (e) => {
+    const { name, value } = e.target;
+    setDetailsFormData((prev) => ({ ...prev, [name]: value }));
+    if (detailsErrors[name]) {
+      setDetailsErrors((prev) => ({ ...prev, [name]: '' }));
+    }
+  };
+
+  // Validate details form
+  const validateDetails = () => {
+    const newErrors = {};
+    if (!detailsFormData.name.trim()) {
+      newErrors.name = 'Name is required';
+    }
+    if (!detailsFormData.phone.trim()) {
+      newErrors.phone = 'Contact number is required';
+    }
+    if (detailsFormData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(detailsFormData.email)) {
+      newErrors.email = 'Invalid email format';
+    }
+    setDetailsErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  // Save details changes
+  const handleDetailsSave = async () => {
+    if (!validateDetails()) return;
+    if (!customer) return;
+
+    setIsSubmitting(true);
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      updateCustomer(customer.id, detailsFormData);
+      saveToLocalStorage();
+
+      if (isSignedIn && customer.driveFolderId) {
+        const updatedCustomer = customers.find(c => c.id === customer.id);
+        if (updatedCustomer) {
+          await saveCustomerToFolder({ ...updatedCustomer, ...detailsFormData }, isSignedIn);
+        }
+      }
+
+      setOriginalDetailsData(detailsFormData);
+    } catch (error) {
+      console.error('Error updating customer:', error);
+      alert('Failed to update customer. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Cancel details changes
+  const handleDetailsCancel = () => {
+    if (originalDetailsData) {
+      setDetailsFormData(originalDetailsData);
+      setDetailsErrors({});
+    }
+  };
 
   // Load documents when Documents tab is active
   useEffect(() => {
@@ -409,10 +508,6 @@ function CustomerDetails() {
     setIsDragMode(false);
   };
 
-  const handleEdit = () => {
-    setIsEditModalOpen(true);
-  };
-
   const handleDelete = () => {
     setIsDeleteModalOpen(true);
   };
@@ -445,12 +540,6 @@ function CustomerDetails() {
     setIsCombinePrintModalOpen(false);
   };
 
-  const handleCloseEditModal = () => {
-    if (!isSubmitting) {
-      setIsEditModalOpen(false);
-    }
-  };
-
   const handleCloseDeleteModal = () => {
     if (!isSubmitting) {
       setIsDeleteModalOpen(false);
@@ -461,35 +550,6 @@ function CustomerDetails() {
   const handleCloseVsaModal = () => {
     if (!isSubmitting) {
       setIsVsaModalOpen(false);
-    }
-  };
-
-  const handleEditSubmit = async (formData) => {
-    if (!customer) return;
-
-    setIsSubmitting(true);
-
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      updateCustomer(customer.id, formData);
-
-      // Save to localStorage
-      saveToLocalStorage();
-
-      // Save only THIS customer to Drive (not all customers!)
-      if (isSignedIn && customer.driveFolderId) {
-        const updatedCustomer = customers.find(c => c.id === customer.id);
-        if (updatedCustomer) {
-          await saveCustomerToFolder({ ...updatedCustomer, ...formData }, isSignedIn);
-        }
-      }
-
-      setIsEditModalOpen(false);
-    } catch (error) {
-      console.error('Error updating customer:', error);
-      alert('Failed to update customer. Please try again.');
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -787,77 +847,182 @@ function CustomerDetails() {
         <div className="customer-details-content">
           {activeTab === 'details' ? (
             <>
-              <div className="vsa-section">
-                <div className="vsa-section-header">
-                  <h3>Contact Information</h3>
-                  <button className="btn btn-small btn-primary" onClick={handleEdit}>
-                    Edit Details
-                  </button>
-                </div>
-                <div className="info-grid">
-                  <div className="info-item">
-                    <label>Phone</label>
-                    <div className="info-value">{customer.phone || 'N/A'}</div>
+              <div className="info-section">
+                <h3>Contact Information</h3>
+                <div className="inline-edit-grid">
+                  <div className="inline-edit-item">
+                    <label htmlFor="name">Name <span className="required">*</span></label>
+                    <input
+                      type="text"
+                      id="name"
+                      name="name"
+                      value={detailsFormData.name}
+                      onChange={handleDetailsChange}
+                      className={detailsErrors.name ? 'error' : ''}
+                      disabled={isSubmitting}
+                    />
+                    {detailsErrors.name && <span className="error-message">{detailsErrors.name}</span>}
                   </div>
-                  <div className="info-item">
-                    <label>Email</label>
-                    <div className="info-value">{customer.email || 'N/A'}</div>
+                  <div className="inline-edit-item">
+                    <label htmlFor="phone">Phone <span className="required">*</span></label>
+                    <input
+                      type="tel"
+                      id="phone"
+                      name="phone"
+                      value={detailsFormData.phone}
+                      onChange={handleDetailsChange}
+                      className={detailsErrors.phone ? 'error' : ''}
+                      disabled={isSubmitting}
+                    />
+                    {detailsErrors.phone && <span className="error-message">{detailsErrors.phone}</span>}
                   </div>
-                  <div className="info-item">
-                    <label>NRIC/FIN</label>
-                    <div className="info-value">{customer.nric || 'N/A'}</div>
+                  <div className="inline-edit-item">
+                    <label htmlFor="email">Email</label>
+                    <input
+                      type="email"
+                      id="email"
+                      name="email"
+                      value={detailsFormData.email}
+                      onChange={handleDetailsChange}
+                      className={detailsErrors.email ? 'error' : ''}
+                      disabled={isSubmitting}
+                    />
+                    {detailsErrors.email && <span className="error-message">{detailsErrors.email}</span>}
                   </div>
-                  <div className="info-item">
-                    <label>Date of Birth</label>
-                    <div className="info-value">{formatCustomerDate(customer.dob)}</div>
+                  <div className="inline-edit-item">
+                    <label htmlFor="nric">NRIC/FIN</label>
+                    <input
+                      type="text"
+                      id="nric"
+                      name="nric"
+                      value={detailsFormData.nric}
+                      onChange={handleDetailsChange}
+                      placeholder="S1234567A or F1234567N"
+                      disabled={isSubmitting}
+                    />
+                  </div>
+                  <div className="inline-edit-item">
+                    <label htmlFor="dob">Date of Birth</label>
+                    <input
+                      type="date"
+                      id="dob"
+                      name="dob"
+                      value={detailsFormData.dob}
+                      onChange={handleDetailsChange}
+                      disabled={isSubmitting}
+                    />
                   </div>
                 </div>
               </div>
 
               <div className="info-section">
                 <h3>Additional Information</h3>
-                <div className="info-grid">
-                  <div className="info-item">
-                    <label>Occupation</label>
-                    <div className="info-value">{customer.occupation || 'N/A'}</div>
+                <div className="inline-edit-grid">
+                  <div className="inline-edit-item">
+                    <label htmlFor="occupation">Occupation</label>
+                    <input
+                      type="text"
+                      id="occupation"
+                      name="occupation"
+                      value={detailsFormData.occupation}
+                      onChange={handleDetailsChange}
+                      placeholder="e.g., Engineer, Teacher"
+                      disabled={isSubmitting}
+                    />
                   </div>
-                  <div className="info-item">
-                    <label>Sales Consultant</label>
-                    <div className="info-value">{customer.salesConsultant || 'N/A'}</div>
+                  <div className="inline-edit-item">
+                    <label htmlFor="salesConsultant">Sales Consultant</label>
+                    <input
+                      type="text"
+                      id="salesConsultant"
+                      name="salesConsultant"
+                      value={detailsFormData.salesConsultant}
+                      onChange={handleDetailsChange}
+                      disabled={isSubmitting}
+                    />
                   </div>
-                  <div className="info-item">
-                    <label>VSA No</label>
-                    <div className="info-value">{customer.vsaNo || 'N/A'}</div>
+                  <div className="inline-edit-item">
+                    <label htmlFor="vsaNo">VSA No</label>
+                    <input
+                      type="text"
+                      id="vsaNo"
+                      name="vsaNo"
+                      value={detailsFormData.vsaNo}
+                      onChange={handleDetailsChange}
+                      placeholder="VSA Number"
+                      disabled={isSubmitting}
+                    />
                   </div>
                 </div>
               </div>
 
-              {customer.address && (
-                <div className="info-section">
-                  <h3>Address</h3>
-                  <div className="info-value">
-                    {customer.address}
-                    {customer.addressContinue && (
-                      <>
-                        <br />
-                        {customer.addressContinue}
-                      </>
-                    )}
+              <div className="info-section">
+                <h3>Address</h3>
+                <div className="inline-edit-grid">
+                  <div className="inline-edit-item">
+                    <label htmlFor="address">Address</label>
+                    <input
+                      type="text"
+                      id="address"
+                      name="address"
+                      value={detailsFormData.address}
+                      onChange={handleDetailsChange}
+                      placeholder="e.g., 99 YISHUN AVE 1, 13-39"
+                      disabled={isSubmitting}
+                    />
+                  </div>
+                  <div className="inline-edit-item">
+                    <label htmlFor="addressContinue">Address Continue</label>
+                    <input
+                      type="text"
+                      id="addressContinue"
+                      name="addressContinue"
+                      value={detailsFormData.addressContinue}
+                      onChange={handleDetailsChange}
+                      placeholder="e.g., SINGAPORE 769139"
+                      disabled={isSubmitting}
+                    />
                   </div>
                 </div>
-              )}
+              </div>
 
-              {customer.notes && (
-                <div className="info-section">
-                  <h3>Notes</h3>
-                  <div className="info-value">{customer.notes}</div>
+              <div className="info-section">
+                <h3>Notes</h3>
+                <div className="inline-edit-full">
+                  <textarea
+                    id="notes"
+                    name="notes"
+                    value={detailsFormData.notes}
+                    onChange={handleDetailsChange}
+                    rows="3"
+                    disabled={isSubmitting}
+                    placeholder="Add notes about this customer..."
+                  />
                 </div>
-              )}
+              </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '30px', paddingTop: '20px', borderTop: '1px solid #f0f0f0' }}>
+              <div className="details-actions">
                 <button className="btn btn-danger" onClick={handleDelete}>
                   Delete Customer
                 </button>
+                <div className="details-actions-right">
+                  {hasDetailsChanges && (
+                    <button
+                      className="btn btn-secondary"
+                      onClick={handleDetailsCancel}
+                      disabled={isSubmitting}
+                    >
+                      Cancel
+                    </button>
+                  )}
+                  <button
+                    className="btn btn-primary"
+                    onClick={handleDetailsSave}
+                    disabled={isSubmitting || !hasDetailsChanges}
+                  >
+                    {isSubmitting ? 'Saving...' : 'Save Changes'}
+                  </button>
+                </div>
               </div>
             </>
           ) : activeTab === 'proposal' ? (
@@ -1392,21 +1557,6 @@ function CustomerDetails() {
           )}
         </div>
       </div>
-
-      {/* Edit Customer Modal */}
-      <Modal
-        isOpen={isEditModalOpen}
-        onClose={handleCloseEditModal}
-        title="Edit Customer"
-        size="large"
-      >
-        <CustomerForm
-          customer={customer}
-          onSubmit={handleEditSubmit}
-          onCancel={handleCloseEditModal}
-          isSubmitting={isSubmitting}
-        />
-      </Modal>
 
       {/* VSA Details Modal */}
       <VsaDetailsModal
