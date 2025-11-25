@@ -417,6 +417,10 @@
   border-radius: var(--radius-md);
   cursor: pointer;
   transition: all 0.3s;
+  /* Prevent context menu on mobile */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .document-item:hover {

@@ -198,6 +198,9 @@ function CustomerDetails() {
       return;
     }
 
+    // Prevent default context menu on mobile (download, share, print)
+    e.preventDefault();
+
     console.log('Long press started for:', item.name);
     const timer = setTimeout(() => {
       console.log('Long press completed, entering drag mode');
