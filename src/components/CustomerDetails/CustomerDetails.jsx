@@ -49,6 +49,7 @@ function CustomerDetails() {
   const [draggedFile, setDraggedFile] = useState(null);
   const [dropTargetFolder, setDropTargetFolder] = useState(null);
   const [dropTargetBreadcrumb, setDropTargetBreadcrumb] = useState(null);
+  const [isDragMode, setIsDragMode] = useState(false);
 
   // Mobile folder menu state
   const [showFolderMenu, setShowFolderMenu] = useState(false);
