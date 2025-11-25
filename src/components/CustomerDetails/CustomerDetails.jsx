@@ -48,9 +48,12 @@ function CustomerDetails() {
   // Drag and drop state
   const [draggedFile, setDraggedFile] = useState(null);
   const [dropTargetFolder, setDropTargetFolder] = useState(null);
-  const [longPressTimer, setLongPressTimer] = useState(null);
   const [isDragMode, setIsDragMode] = useState(false);
-  const [autoScrollInterval, setAutoScrollInterval] = useState(null);
+
+  // Touch drag state
+  const longPressTimerRef = useRef(null);
+  const autoScrollIntervalRef = useRef(null);
+  const touchStartYRef = useRef(0);
 
   // Load documents when Documents tab is active
   useEffect(() => {
@@ -191,97 +194,126 @@ function CustomerDetails() {
     }
   };
 
-  // Long press handlers
-  const handleLongPressStart = (e, item) => {
+  // Touch drag handlers
+  const handleTouchStart = (e, item) => {
     // Prevent dragging customer.json files
     if (item.name === 'customer.json') {
       return;
     }
 
-    // Prevent default context menu on mobile (download, share, print)
+    // Prevent default context menu
     e.preventDefault();
 
-    console.log('Long press started for:', item.name);
-    const timer = setTimeout(() => {
-      console.log('Long press completed, entering drag mode');
+    const touch = e.touches[0];
+    touchStartYRef.current = touch.clientY;
+
+    // Start long press timer
+    longPressTimerRef.current = setTimeout(() => {
       setDraggedFile(item);
       setIsDragMode(true);
-    }, 500); // 500ms long press
-    setLongPressTimer(timer);
+      // Start checking for auto-scroll
+      startAutoScrollCheck();
+    }, 500);
   };
 
-  const handleLongPressEnd = () => {
-    console.log('Long press ended');
-    if (longPressTimer) {
-      clearTimeout(longPressTimer);
-      setLongPressTimer(null);
-    }
-    stopAutoScroll();
-  };
-
-  const handleLongPressCancel = () => {
-    console.log('Long press cancelled');
-    if (longPressTimer) {
-      clearTimeout(longPressTimer);
-      setLongPressTimer(null);
-    }
-  };
-
-  // Combined touch move handler
   const handleTouchMove = (e) => {
-    console.log('Touch move - isDragMode:', isDragMode);
-    if (isDragMode) {
-      // If already in drag mode, enable auto-scroll
-      handleDragScroll(e);
-    } else {
-      // If not in drag mode yet, cancel the long press
-      handleLongPressCancel();
-    }
-  };
-
-  // Auto-scroll when dragging near edges
-  const handleDragScroll = (e) => {
-    if (!isDragMode) return;
-
     const touch = e.touches[0];
     if (!touch) return;
 
-    console.log('Drag scroll check - Y position:', touch.clientY);
+    // Check if we moved significantly - if so, cancel long press
+    const moveDistance = Math.abs(touch.clientY - touchStartYRef.current);
+    if (moveDistance > 10 && longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+      return;
+    }
 
-    const scrollZone = 100; // pixels from edge to trigger scroll
-    const scrollSpeed = 10; // pixels per frame
+    // If in drag mode, update auto-scroll based on position
+    if (isDragMode) {
+      checkAndScroll(touch.clientY);
+      updateDropTarget(touch.clientX, touch.clientY);
+    }
+  };
+
+  const handleTouchEnd = async () => {
+    // Clear long press timer
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+
+    // Stop auto-scrolling
+    stopAutoScroll();
+
+    // If we were dragging and over a folder, perform the drop
+    if (isDragMode && draggedFile && dropTargetFolder) {
+      const targetFolder = documents.find(doc => doc.id === dropTargetFolder);
+      if (targetFolder && draggedFile.id !== targetFolder.id) {
+        try {
+          // Move the file using Google Drive API
+          await window.gapi.client.drive.files.update({
+            fileId: draggedFile.id,
+            addParents: targetFolder.id,
+            removeParents: currentFolderId,
+          });
+
+          // Refresh the current folder
+          await loadCustomerDocuments(currentFolderId);
+        } catch (error) {
+          console.error('Error moving file:', error);
+          alert(`Failed to move file: ${error.message}`);
+        }
+      }
+    }
+
+    // Reset drag state
+    setDraggedFile(null);
+    setIsDragMode(false);
+    setDropTargetFolder(null);
+  };
+
+  // Auto-scroll logic
+  const startAutoScrollCheck = () => {
+    // Create interval that continuously checks position and scrolls
+    autoScrollIntervalRef.current = setInterval(() => {
+      // This will be updated by handleTouchMove
+    }, 50);
+  };
+
+  const checkAndScroll = (touchY) => {
+    const scrollZone = 100;
+    const scrollSpeed = 8;
     const viewportHeight = window.innerHeight;
-    const touchY = touch.clientY;
 
-    // Stop any existing scroll
-    if (autoScrollInterval) {
-      clearInterval(autoScrollInterval);
-      setAutoScrollInterval(null);
-    }
-
-    // Check if near top edge
+    // Near top - scroll up
     if (touchY < scrollZone) {
-      console.log('Starting auto-scroll UP');
-      const interval = setInterval(() => {
-        window.scrollBy(0, -scrollSpeed);
-      }, 16); // ~60fps
-      setAutoScrollInterval(interval);
+      window.scrollBy(0, -scrollSpeed);
     }
-    // Check if near bottom edge
+    // Near bottom - scroll down
     else if (touchY > viewportHeight - scrollZone) {
-      console.log('Starting auto-scroll DOWN');
-      const interval = setInterval(() => {
-        window.scrollBy(0, scrollSpeed);
-      }, 16); // ~60fps
-      setAutoScrollInterval(interval);
+      window.scrollBy(0, scrollSpeed);
+    }
+  };
+
+  const updateDropTarget = (touchX, touchY) => {
+    // Get element at touch position
+    const element = document.elementFromPoint(touchX, touchY);
+    if (!element) return;
+
+    // Find if it's a folder
+    const folderElement = element.closest('.folder-item');
+    if (folderElement) {
+      const folderId = folderElement.getAttribute('data-folder-id');
+      setDropTargetFolder(folderId);
+    } else {
+      setDropTargetFolder(null);
     }
   };
 
   const stopAutoScroll = () => {
-    console.log('Stopping auto-scroll');
-    if (autoScrollInterval) {
-      clearInterval(autoScrollInterval);
-      setAutoScrollInterval(null);
+    if (autoScrollIntervalRef.current) {
+      clearInterval(autoScrollIntervalRef.current);
+      autoScrollIntervalRef.current = null;
     }
   };
 
@@ -1177,15 +1209,15 @@ function CustomerDetails() {
                             {documents.filter(doc => isFolder(doc.mimeType)).map((folder) => (
                               <div
                                 key={folder.id}
+                                data-folder-id={folder.id}
                                 className={`document-item folder-item ${dropTargetFolder === folder.id ? 'drop-target' : ''} ${draggedFile?.id === folder.id ? 'dragging' : ''}`}
                                 draggable
                                 onDragStart={(e) => handleDragStart(e, folder)}
                                 onDragEnd={handleDragEnd}
                                 onClick={() => handleItemClick(folder)}
-                                onTouchStart={(e) => handleLongPressStart(e, folder)}
-                                onTouchEnd={handleLongPressEnd}
+                                onTouchStart={(e) => handleTouchStart(e, folder)}
                                 onTouchMove={handleTouchMove}
-                                onTouchCancel={handleLongPressCancel}
+                                onTouchEnd={handleTouchEnd}
                                 onDragOver={(e) => handleDragOver(e, folder)}
                                 onDragLeave={handleDragLeave}
                                 onDrop={(e) => handleDrop(e, folder)}
@@ -1217,10 +1249,9 @@ function CustomerDetails() {
                                 onDragStart={(e) => handleDragStart(e, doc)}
                                 onDragEnd={handleDragEnd}
                                 onClick={() => handleItemClick(doc)}
-                                onTouchStart={(e) => handleLongPressStart(e, doc)}
-                                onTouchEnd={handleLongPressEnd}
+                                onTouchStart={(e) => handleTouchStart(e, doc)}
                                 onTouchMove={handleTouchMove}
-                                onTouchCancel={handleLongPressCancel}
+                                onTouchEnd={handleTouchEnd}
                               >
                                 <div className="document-icon">
                                   {doc.iconLink ? (
