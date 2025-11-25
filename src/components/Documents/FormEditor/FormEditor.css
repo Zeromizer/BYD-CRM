@@ -323,30 +323,51 @@
   }
 }
 
-/* Field Markers */
+/* Field Markers - WYSIWYG accurate positioning */
 .field-marker {
   position: absolute;
   white-space: nowrap;
   pointer-events: auto;
-  padding: 4px 8px;
-  background: rgba(255, 255, 255, 0.8);
-  border: 2px solid transparent;
-  border-radius: 4px;
+  /* No padding - text position must match exactly where it will print */
+  padding: 0;
+  background: transparent;
+  border: none;
   transition: all 0.2s;
   z-index: 10;
 }
 
-.field-marker:hover {
+/* Highlight background shown via pseudo-element so it doesn't affect text position */
+.field-marker::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -4px;
+  right: -4px;
+  bottom: -2px;
+  background: rgba(255, 255, 255, 0.8);
+  border: 2px solid transparent;
+  border-radius: 4px;
+  z-index: -1;
+  transition: all 0.2s;
+}
+
+.field-marker:hover::before {
   background: rgba(255, 255, 255, 0.95);
   border-color: #00bcd4;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.field-marker:hover {
   z-index: 20;
 }
 
-.field-marker.selected {
+.field-marker.selected::before {
   background: rgba(76, 175, 80, 0.2);
   border-color: #4caf50;
   box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.3);
+}
+
+.field-marker.selected {
   z-index: 30;
 }
 
@@ -354,6 +375,52 @@
   opacity: 0.7;
   cursor: grabbing;
   z-index: 40;
+}
+
+/* Text alignment positioning - transform based on alignment */
+.field-marker.align-left {
+  /* Default - left edge at x position */
+}
+
+.field-marker.align-center {
+  /* Center of text at x position */
+  transform: translateX(-50%);
+}
+
+.field-marker.align-right {
+  /* Right edge at x position */
+  transform: translateX(-100%);
+}
+
+/* Position crosshair indicator - shows exact anchor point when selected */
+.field-marker.selected::after {
+  content: '';
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border: 2px solid #4caf50;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 100;
+}
+
+/* Position crosshair for left alignment - top-left corner */
+.field-marker.align-left.selected::after {
+  top: -6px;
+  left: -6px;
+}
+
+/* Position crosshair for center alignment - top-center */
+.field-marker.align-center.selected::after {
+  top: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* Position crosshair for right alignment - top-right corner */
+.field-marker.align-right.selected::after {
+  top: -6px;
+  right: -6px;
 }
 
 /* Right Sidebar - Info */
