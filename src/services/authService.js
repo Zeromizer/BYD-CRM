@@ -102,7 +102,7 @@ class AuthService {
         this.tokenClient = window.google.accounts.oauth2.initTokenClient({
           client_id: CONFIG.CLIENT_ID,
           scope: CONFIG.SCOPES,
-          callback: (response) => {
+          callback: async (response) => {
             if (response.error) {
               console.error('Token response error:', response);
               this.notifyAuthChange(false);
@@ -111,7 +111,7 @@ class AuthService {
             }
 
             const expiresIn = response.expires_in || 3600;
-            this.setAccessToken(response.access_token, expiresIn);
+            await this.setAccessToken(response.access_token, expiresIn);
             this.notifyAuthChange(true);
           },
         });
@@ -205,15 +205,16 @@ class AuthService {
   /**
    * Set access token and schedule refresh
    */
-  setAccessToken(token, expiresIn) {
+  async setAccessToken(token, expiresIn) {
     this.accessToken = token;
     window.gapi.client.setToken({ access_token: token });
 
     // Save to localStorage (same keys as vanilla JS)
     this.saveTokenToStorage(token, expiresIn);
 
-    // Fetch and cache user email
-    this.fetchAndCacheUserEmail();
+    // Fetch and cache user email - awaited to ensure email is available
+    // before auth change is notified (critical for multi-user storage)
+    await this.fetchAndCacheUserEmail();
 
     // Schedule token refresh
     this.scheduleTokenRefresh(expiresIn);
@@ -261,11 +262,14 @@ class AuthService {
 
   /**
    * Clear token from localStorage
+   * Note: googleUserEmail is NOT cleared here - it should persist across token refreshes
+   * and only be cleared on explicit sign-out (in clearAllAppData)
    */
   clearTokenFromStorage() {
     localStorage.removeItem('googleAccessToken');
     localStorage.removeItem('googleTokenExpiry');
-    localStorage.removeItem('googleUserEmail');
+    // DO NOT clear googleUserEmail here - it's needed for multi-user storage
+    // and should only be cleared on explicit sign-out
   }
 
   /**
@@ -285,6 +289,14 @@ class AuthService {
       // Start periodic refresh and health checks
       this.startPeriodicRefresh();
       this.startHealthCheck();
+
+      // Ensure user email is cached (needed for multi-user storage)
+      // This is a safety measure in case the email was somehow cleared
+      const cachedEmail = localStorage.getItem('googleUserEmail');
+      if (!cachedEmail) {
+        console.log('User email not cached, fetching...');
+        this.fetchAndCacheUserEmail();
+      }
 
       this.notifyAuthChange(true);
       console.log('Session restored from storage');
