@@ -195,6 +195,27 @@ function FormEditor({ isOpen, onClose, template, onSave }) {
     onClose();
   };
 
+  // Handle zoom controls
+  const handleZoomIn = () => {
+    setScale((prev) => Math.min(prev + 0.25, 3)); // Max 300%
+  };
+
+  const handleZoomOut = () => {
+    setScale((prev) => Math.max(prev - 0.25, 0.25)); // Min 25%
+  };
+
+  const handleZoomReset = () => {
+    if (containerRef.current && imageDimensions.width > 0) {
+      const containerWidth = containerRef.current.clientWidth - 40;
+      const fitScale = containerWidth / imageDimensions.width;
+      setScale(Math.min(fitScale, 1)); // Fit to container
+    }
+  };
+
+  const handleZoom100 = () => {
+    setScale(1); // 100% actual size
+  };
+
   // Get field value for preview
   const getFieldValue = (field) => {
     if (field.customValue) {
@@ -457,6 +478,39 @@ function FormEditor({ isOpen, onClose, template, onSave }) {
           <div className="canvas-header">
             <h3>Form Template</h3>
             <div className="canvas-controls">
+              <div className="zoom-controls">
+                <button
+                  className="btn btn-small btn-secondary"
+                  onClick={handleZoomOut}
+                  title="Zoom Out"
+                  disabled={scale <= 0.25}
+                >
+                  −
+                </button>
+                <span className="zoom-display">{Math.round(scale * 100)}%</span>
+                <button
+                  className="btn btn-small btn-secondary"
+                  onClick={handleZoomIn}
+                  title="Zoom In"
+                  disabled={scale >= 3}
+                >
+                  +
+                </button>
+                <button
+                  className="btn btn-small btn-secondary"
+                  onClick={handleZoomReset}
+                  title="Fit to Screen"
+                >
+                  Fit
+                </button>
+                <button
+                  className="btn btn-small btn-secondary"
+                  onClick={handleZoom100}
+                  title="100%"
+                >
+                  100%
+                </button>
+              </div>
               <label className="checkbox-label">
                 <input
                   type="checkbox"
@@ -511,35 +565,12 @@ function FormEditor({ isOpen, onClose, template, onSave }) {
           </div>
         </div>
 
-        {/* Right Sidebar - Info */}
+        {/* Right Sidebar - Instructions */}
         <div className="form-editor-info">
-          <div className="info-section">
-            <h3>Document Info</h3>
-            <div className="info-grid">
-              <div className="info-item">
-                <label>Template:</label>
-                <span>{template?.name}</span>
-              </div>
-              <div className="info-item">
-                <label>Category:</label>
-                <span>{template?.category}</span>
-              </div>
-              <div className="info-item">
-                <label>DPI:</label>
-                <span>{template?.dpi || 300}</span>
-              </div>
-              <div className="info-item">
-                <label>Dimensions:</label>
-                <span>
-                  {imageDimensions.width} × {imageDimensions.height}px
-                </span>
-              </div>
-            </div>
-          </div>
-
           <div className="info-section">
             <h3>Instructions</h3>
             <ol className="instructions-list">
+              <li>Use zoom controls to adjust view size</li>
               <li>Select a field type from the left panel</li>
               <li>Configure font size, family, and color</li>
               <li>Click on the form to place the field</li>
@@ -553,6 +584,7 @@ function FormEditor({ isOpen, onClose, template, onSave }) {
           <div className="info-section">
             <h3>Tips</h3>
             <ul className="tips-list">
+              <li>Zoom in for precise field placement</li>
               <li>Font sizes are in points (pt) - standard for printing</li>
               <li>12pt = readable small text</li>
               <li>14pt = standard body text</li>
