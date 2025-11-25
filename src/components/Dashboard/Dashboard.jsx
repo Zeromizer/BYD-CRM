@@ -1,17 +1,28 @@
 import { useEffect } from 'react';
 import useCustomerStore from '../../stores/useCustomerStore';
+import useAuthStore from '../../stores/useAuthStore';
 import CustomerList from '../CustomerList/CustomerList';
 import CustomerDetails from '../CustomerDetails/CustomerDetails';
 import './Dashboard.css';
 
 function Dashboard() {
   const { loadFromLocalStorage, selectedCustomerId } = useCustomerStore();
+  const { isInitialized, canLoadData, isUserVerified } = useAuthStore();
 
   useEffect(() => {
-    // Load customer data from localStorage on mount
-    // Syncing with Drive is now handled centrally by syncCoordinator in Header
-    loadFromLocalStorage();
-  }, [loadFromLocalStorage]);
+    // Wait for auth to initialize before loading data
+    if (!isInitialized) {
+      return;
+    }
+
+    // Only load data if it's safe (user matches data owner or fresh start)
+    if (canLoadData()) {
+      console.log('Dashboard: Loading customer data from localStorage');
+      loadFromLocalStorage();
+    } else {
+      console.log('Dashboard: Waiting for user verification before loading data');
+    }
+  }, [isInitialized, isUserVerified, loadFromLocalStorage, canLoadData]);
 
   return (
     <div className="dashboard">

@@ -1,11 +1,12 @@
 import { create } from 'zustand';
 import driveService from '../services/driveService';
+import userStorage from '../services/userStorage';
 
 /**
  * Customer Store
  * Manages customer data, selection, and CRUD operations
  *
- * Compatible with vanilla JS app using 'bydCRM' localStorage key
+ * Multi-user support: Data is stored per-user using email-based keys
  * Syncs with Google Drive when signed in
  */
 const useCustomerStore = create((set, get) => ({
@@ -221,13 +222,29 @@ const useCustomerStore = create((set, get) => ({
     }) || null;
   },
 
+  /**
+   * Load customers from user-specific localStorage
+   * Falls back to legacy storage during migration
+   */
   loadFromLocalStorage: () => {
     try {
-      // Use 'bydCRM' key to match vanilla JS app
+      const userEmail = localStorage.getItem('googleUserEmail');
+
+      // Try to load from user-specific storage first
+      if (userEmail) {
+        const customers = userStorage.loadUserData(userEmail, 'customers');
+        if (customers && customers.length > 0) {
+          console.log(`Loaded ${customers.length} customers for user: ${userEmail}`);
+          set({ customers });
+          return;
+        }
+      }
+
+      // Fall back to legacy storage (for migration)
       const stored = localStorage.getItem('bydCRM');
       if (stored) {
         const customers = JSON.parse(stored);
-        console.log('Loaded customers from localStorage:', customers.length);
+        console.log('Loaded customers from legacy localStorage:', customers.length);
         set({ customers });
       } else {
         console.log('No customer data found in localStorage');
@@ -239,12 +256,25 @@ const useCustomerStore = create((set, get) => ({
     }
   },
 
+  /**
+   * Save customers to user-specific localStorage
+   * Falls back to legacy storage if no user is signed in
+   */
   saveToLocalStorage: () => {
     try {
       const { customers } = get();
-      // Use 'bydCRM' key to match vanilla JS app
-      localStorage.setItem('bydCRM', JSON.stringify(customers));
-      console.log('Saved customers to localStorage:', customers.length);
+      const userEmail = localStorage.getItem('googleUserEmail');
+
+      if (userEmail) {
+        // Save to user-specific storage
+        userStorage.saveUserData(userEmail, 'customers', customers);
+        userStorage.setCurrentDataOwner(userEmail);
+        console.log(`Saved ${customers.length} customers for user: ${userEmail}`);
+      } else {
+        // Fall back to legacy storage (offline mode)
+        localStorage.setItem('bydCRM', JSON.stringify(customers));
+        console.log('Saved customers to legacy localStorage:', customers.length);
+      }
     } catch (error) {
       console.error('Failed to save customers to localStorage:', error);
       set({ error: 'Failed to save customer data' });
@@ -315,9 +345,12 @@ const useCustomerStore = create((set, get) => ({
 
   /**
    * Clear all customer data (for sign out or account switching)
+   * Clears both user-specific and legacy storage
    */
   clearAllData: () => {
     console.log('Clearing all customer data');
+    const userEmail = localStorage.getItem('googleUserEmail');
+
     set({
       customers: [],
       selectedCustomerId: null,
@@ -325,7 +358,13 @@ const useCustomerStore = create((set, get) => ({
       isSyncing: false,
       error: null,
     });
-    // Clear from localStorage
+
+    // Clear from user-specific storage
+    if (userEmail) {
+      userStorage.clearUserData(userEmail, 'customers');
+    }
+
+    // Also clear legacy storage
     localStorage.removeItem('bydCRM');
   },
 
@@ -443,8 +482,8 @@ const useCustomerStore = create((set, get) => ({
         // Update state with migrated customers
         set({ customers: migrationResult.customers });
 
-        // Save to localStorage
-        localStorage.setItem('bydCRM', JSON.stringify(migrationResult.customers));
+        // Save to user-specific localStorage
+        get().saveToLocalStorage();
 
         set({ isSyncing: false });
 
@@ -490,7 +529,7 @@ const useCustomerStore = create((set, get) => ({
             console.log('✅ Auto-migration successful!');
             // Update customers with any folder IDs that were created/updated
             set({ customers: migrationResult.customers });
-            localStorage.setItem('bydCRM', JSON.stringify(migrationResult.customers));
+            get().saveToLocalStorage();
           } else {
             console.error('❌ Auto-migration failed:', migrationResult.error);
             throw new Error('Auto-migration failed');
@@ -508,8 +547,9 @@ const useCustomerStore = create((set, get) => ({
 
       // If index is empty, we're done
       if (driveIndex.length === 0) {
-        set({ customers: [], isSyncing: false });
-        localStorage.setItem('bydCRM', JSON.stringify([]));
+        set({ customers: [] });
+        get().saveToLocalStorage();
+        set({ isSyncing: false });
         console.log('No customers in index');
         return;
       }
@@ -536,7 +576,7 @@ const useCustomerStore = create((set, get) => ({
 
       // Update state with merged data (for instant display)
       set({ customers: mergedCustomers });
-      localStorage.setItem('bydCRM', JSON.stringify(mergedCustomers));
+      get().saveToLocalStorage();
 
       console.log(`✅ Loaded index with ${mergedCustomers.length} customers - Loading full data...`);
 
@@ -597,7 +637,7 @@ const useCustomerStore = create((set, get) => ({
 
     // Update state once with all loaded data
     set({ customers: currentCustomers });
-    localStorage.setItem('bydCRM', JSON.stringify(currentCustomers));
+    get().saveToLocalStorage();
     console.log(`✅ Full data loading complete`);
   },
 
