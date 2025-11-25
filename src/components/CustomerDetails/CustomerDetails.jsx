@@ -48,12 +48,11 @@ function CustomerDetails() {
   // Drag and drop state
   const [draggedFile, setDraggedFile] = useState(null);
   const [dropTargetFolder, setDropTargetFolder] = useState(null);
-  const [isDragMode, setIsDragMode] = useState(false);
 
-  // Touch drag state
+  // Mobile folder menu state
+  const [showFolderMenu, setShowFolderMenu] = useState(false);
+  const [selectedFileToMove, setSelectedFileToMove] = useState(null);
   const longPressTimerRef = useRef(null);
-  const autoScrollIntervalRef = useRef(null);
-  const touchStartYRef = useRef(0);
 
   // Load documents when Documents tab is active
   useEffect(() => {
@@ -194,7 +193,7 @@ function CustomerDetails() {
     }
   };
 
-  // Touch drag handlers
+  // Long press to show folder menu
   const handleTouchStart = (e, item) => {
     // Prevent dragging customer.json files
     if (item.name === 'customer.json') {
@@ -204,123 +203,60 @@ function CustomerDetails() {
     // Prevent default context menu
     e.preventDefault();
 
-    const touch = e.touches[0];
-    touchStartYRef.current = touch.clientY;
-
     // Start long press timer
     longPressTimerRef.current = setTimeout(() => {
-      setDraggedFile(item);
-      setIsDragMode(true);
-      // Start checking for auto-scroll
-      startAutoScrollCheck();
+      setSelectedFileToMove(item);
+      setShowFolderMenu(true);
     }, 500);
   };
 
-  const handleTouchMove = (e) => {
-    const touch = e.touches[0];
-    if (!touch) return;
-
-    // Check if we moved significantly - if so, cancel long press
-    const moveDistance = Math.abs(touch.clientY - touchStartYRef.current);
-    if (moveDistance > 10 && longPressTimerRef.current) {
+  const handleTouchMove = () => {
+    // Cancel long press if user moves finger
+    if (longPressTimerRef.current) {
       clearTimeout(longPressTimerRef.current);
       longPressTimerRef.current = null;
-      return;
-    }
-
-    // If in drag mode, update auto-scroll based on position
-    if (isDragMode) {
-      checkAndScroll(touch.clientY);
-      updateDropTarget(touch.clientX, touch.clientY);
     }
   };
 
-  const handleTouchEnd = async () => {
+  const handleTouchEnd = () => {
     // Clear long press timer
     if (longPressTimerRef.current) {
       clearTimeout(longPressTimerRef.current);
       longPressTimerRef.current = null;
     }
-
-    // Stop auto-scrolling
-    stopAutoScroll();
-
-    // If we were dragging and over a folder, perform the drop
-    if (isDragMode && draggedFile && dropTargetFolder) {
-      const targetFolder = documents.find(doc => doc.id === dropTargetFolder);
-      if (targetFolder && draggedFile.id !== targetFolder.id) {
-        try {
-          // Move the file using Google Drive API
-          await window.gapi.client.drive.files.update({
-            fileId: draggedFile.id,
-            addParents: targetFolder.id,
-            removeParents: currentFolderId,
-          });
-
-          // Refresh the current folder
-          await loadCustomerDocuments(currentFolderId);
-        } catch (error) {
-          console.error('Error moving file:', error);
-          alert(`Failed to move file: ${error.message}`);
-        }
-      }
-    }
-
-    // Reset drag state
-    setDraggedFile(null);
-    setIsDragMode(false);
-    setDropTargetFolder(null);
   };
 
-  // Auto-scroll logic
-  const startAutoScrollCheck = () => {
-    // Create interval that continuously checks position and scrolls
-    autoScrollIntervalRef.current = setInterval(() => {
-      // This will be updated by handleTouchMove
-    }, 50);
-  };
+  // Move file to selected folder
+  const handleMoveToFolder = async (targetFolder) => {
+    if (!selectedFileToMove || !targetFolder) return;
 
-  const checkAndScroll = (touchY) => {
-    const scrollZone = 100;
-    const scrollSpeed = 8;
-    const viewportHeight = window.innerHeight;
+    try {
+      await window.gapi.client.drive.files.update({
+        fileId: selectedFileToMove.id,
+        addParents: targetFolder.id,
+        removeParents: currentFolderId,
+      });
 
-    // Near top - scroll up
-    if (touchY < scrollZone) {
-      window.scrollBy(0, -scrollSpeed);
-    }
-    // Near bottom - scroll down
-    else if (touchY > viewportHeight - scrollZone) {
-      window.scrollBy(0, scrollSpeed);
+      await loadCustomerDocuments(currentFolderId);
+      setShowFolderMenu(false);
+      setSelectedFileToMove(null);
+    } catch (error) {
+      console.error('Error moving file:', error);
+      alert(`Failed to move file: ${error.message}`);
     }
   };
 
-  const updateDropTarget = (touchX, touchY) => {
-    // Get element at touch position
-    const element = document.elementFromPoint(touchX, touchY);
-    if (!element) return;
+  // Delete selected file
+  const handleDeleteFromMenu = async () => {
+    if (!selectedFileToMove) return;
 
-    // Find if it's a folder
-    const folderElement = element.closest('.folder-item');
-    if (folderElement) {
-      const folderId = folderElement.getAttribute('data-folder-id');
-      setDropTargetFolder(folderId);
-    } else {
-      setDropTargetFolder(null);
-    }
-  };
-
-  const stopAutoScroll = () => {
-    if (autoScrollIntervalRef.current) {
-      clearInterval(autoScrollIntervalRef.current);
-      autoScrollIntervalRef.current = null;
-    }
+    await handleDeleteDocument(selectedFileToMove);
+    setShowFolderMenu(false);
+    setSelectedFileToMove(null);
   };
 
   // Click to open/view
   const handleItemClick = (item) => {
-    if (isDragMode) return; // Don't open if in drag mode
-
     if (item.mimeType === 'application/vnd.google-apps.folder') {
       navigateToFolder(item);
     } else {
@@ -1281,26 +1217,33 @@ function CustomerDetails() {
                     </>
                   )}
 
-                  {/* Trash Bin - appears during drag mode */}
-                  {isDragMode && (
-                    <div
-                      className="trash-bin-zone"
-                      onDragOver={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                      }}
-                      onDrop={handleTrashDrop}
-                    >
-                      <div className="trash-bin-icon">
-                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                          <polyline points="3 6 5 6 21 6"></polyline>
-                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                          <line x1="10" y1="11" x2="10" y2="17"></line>
-                          <line x1="14" y1="11" x2="14" y2="17"></line>
-                        </svg>
+                  {/* Folder Selection Menu */}
+                  {showFolderMenu && (
+                    <>
+                      <div className="folder-menu-backdrop" onClick={() => setShowFolderMenu(false)}></div>
+                      <div className="folder-menu">
+                        <h3>Move "{selectedFileToMove?.name}" to:</h3>
+                        <div className="folder-menu-grid">
+                          {documents.filter(doc => isFolder(doc.mimeType) && doc.id !== selectedFileToMove?.id).map((folder) => (
+                            <button
+                              key={folder.id}
+                              className="folder-menu-item"
+                              onClick={() => handleMoveToFolder(folder)}
+                            >
+                              <span className="folder-menu-icon">📁</span>
+                              <span className="folder-menu-name">{folder.name}</span>
+                            </button>
+                          ))}
+                          <button
+                            className="folder-menu-item folder-menu-delete"
+                            onClick={handleDeleteFromMenu}
+                          >
+                            <span className="folder-menu-icon">🗑️</span>
+                            <span className="folder-menu-name">Delete</span>
+                          </button>
+                        </div>
                       </div>
-                      <p className="trash-bin-label">Drag here to delete</p>
-                    </div>
+                    </>
                   )}
                 </>
               )}

@@ -881,57 +881,97 @@
   }
 }
 
-/* Trash Bin Zone */
-.trash-bin-zone {
+/* Folder Selection Menu */
+.folder-menu-backdrop {
   position: fixed;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-  border: 3px dashed rgba(255, 255, 255, 0.5);
-  border-radius: 16px;
-  padding: 24px 40px;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.folder-menu {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--color-card-background);
+  border-radius: 20px 20px 0 0;
+  padding: 24px;
+  z-index: 1000;
+  max-height: 70vh;
+  overflow-y: auto;
+  animation: slideUp 0.3s ease;
+  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.15);
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+.folder-menu h3 {
+  margin: 0 0 20px 0;
+  font-size: 18px;
+  color: var(--color-text-primary);
+  text-align: center;
+}
+
+.folder-menu-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.folder-menu-item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
-  z-index: 1000;
-  box-shadow: 0 8px 24px rgba(239, 68, 68, 0.4);
-  animation: slideUpFade 0.3s ease;
+  gap: 8px;
+  padding: 20px 12px;
+  background: var(--color-background-tertiary);
+  border: 2px solid var(--color-border);
+  border-radius: 12px;
   cursor: pointer;
-  user-select: none;
+  transition: all 0.2s;
 }
 
-@keyframes slideUpFade {
-  from {
-    opacity: 0;
-    transform: translateX(-50%) translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
-  }
+.folder-menu-item:active {
+  transform: scale(0.95);
+  background: var(--color-background-secondary);
 }
 
-.trash-bin-zone:hover {
-  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
-  border-color: rgba(255, 255, 255, 0.8);
-  box-shadow: 0 12px 32px rgba(239, 68, 68, 0.5);
+.folder-menu-icon {
+  font-size: 32px;
 }
 
-.trash-bin-icon {
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.trash-bin-label {
-  color: white;
-  font-size: 14px;
-  font-weight: 600;
-  margin: 0;
+.folder-menu-name {
+  font-size: 13px;
+  font-weight: 500;
   text-align: center;
+  color: var(--color-text-primary);
+  word-break: break-word;
+}
+
+.folder-menu-delete {
+  background: #fee2e2;
+  border-color: #fca5a5;
+}
+
+.folder-menu-delete .folder-menu-name {
+  color: #dc2626;
 }
 
 /* Drag feedback */
@@ -959,19 +999,3 @@
   vertical-align: middle;
 }
 
-/* Mobile adjustments for trash bin */
-@media (max-width: 768px) {
-  .trash-bin-zone {
-    bottom: 80px;
-    padding: 20px 32px;
-  }
-
-  .trash-bin-icon svg {
-    width: 40px;
-    height: 40px;
-  }
-
-  .trash-bin-label {
-    font-size: 13px;
-  }
-}
