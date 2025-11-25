@@ -3,14 +3,79 @@ import useCustomerStore from '../../stores/useCustomerStore';
 import useAuthStore from '../../stores/useAuthStore';
 import driveService from '../../services/driveService';
 import Modal from '../Modal/Modal';
-import VsaDetailsModal from '../VsaDetailsModal/VsaDetailsModal';
-import ProposalDetailsModal from '../ProposalDetailsModal/ProposalDetailsModal';
 import ExcelPopulateModal from '../ExcelPopulateModal/ExcelPopulateModal';
 import FormPrintModal from '../FormPrintModal/FormPrintModal';
 import CombinePrintModal from '../CombinePrintModal/CombinePrintModal';
 import DocumentViewer from '../DocumentViewer/DocumentViewer';
 import DocumentScanner from '../DocumentScanner/DocumentScanner';
 import './CustomerDetails.css';
+
+const VEHICLE_MODELS = [
+  'BYD Atto3 Extended Range 100kw',
+  'BYD Atto3 Carbon Edge 100kw',
+  'BYD Seal Dynamic 100kw',
+  'BYD Seal Premium',
+  'BYD Seal Performance',
+  'BYD Seal 6 Premium',
+  'BYD Dolphin Premium',
+  'BYD E6 7-Seater',
+  'BYD M6 7-Seater',
+  'BYD M6 Carbon Edge',
+  'BYD Sealion 7 Premium',
+  'BYD Sealion 7 Performance',
+];
+
+const BODY_COLOURS = [
+  'Ski White',
+  'Surf Blue',
+  'Cosmos Black',
+  'Boulder Grey',
+  'Atlantis Grey',
+  'Arctic Blue',
+  'Aurora While',
+  'Maldive Purple',
+  'Coral Pink',
+  'Sand White',
+  'Urban Grey',
+  'Crystal White',
+  'Harbor Grey',
+  'Inkstone Blue',
+  'Shark Grey',
+  'Whale Sea Blue',
+  'Arctic White',
+];
+
+const BENEFITS_OPTIONS = [
+  '3M Solar Film',
+  'Additional 6 months Road Tax',
+  'ATTO3 Frunk',
+  'ATTO3 Rear Recording Cam',
+  'BYD Mic Set',
+  'BYD Thermo Flask',
+  'Ceramic Coating',
+  'Dark Interior Combination',
+  'F&R Recording Cam',
+  'Free Charger Capped $3000',
+  'Full Black Interior',
+  'Full Car PPF',
+  'Full Car Wrap',
+  '1x Grooming Package',
+  'Low Loan Surcharge',
+  'M6 Frunk',
+  'No Trade in Surcharge',
+  'Number Retention',
+  'Sunshade',
+  'Toscano Card wallet',
+  'Toscano Cardholder/ Lanyard',
+  'Toscano Luggage Tag',
+  'Toscano Notebook',
+  'Toscano Passport Sleeve',
+  'Trapo Eco Mat',
+  'Trapo Hex Mat',
+  'Upgrade Crystalline Solar Film',
+  '2x Paint Sealer Protection PKG',
+  '$1000 Service Credits',
+];
 
 function CustomerDetails() {
   const { customers, selectedCustomerId, selectCustomer, updateCustomer, deleteCustomer, deleteCustomerHybrid, syncToDrive, saveCustomerToFolder, saveToLocalStorage } = useCustomerStore();
@@ -42,8 +107,69 @@ function CustomerDetails() {
   });
   const [originalDetailsData, setOriginalDetailsData] = useState(null);
   const [detailsErrors, setDetailsErrors] = useState({});
-  const [isVsaModalOpen, setIsVsaModalOpen] = useState(false);
-  const [isProposalModalOpen, setIsProposalModalOpen] = useState(false);
+
+  // Inline editing state for Proposal tab
+  const [proposalFormData, setProposalFormData] = useState({
+    model: '',
+    bank: '',
+    sellingPrice: '',
+    interestRate: '',
+    downpayment: '',
+    loanTenure: '',
+    loanAmount: '',
+    adminFee: '',
+    referralFee: '',
+    tradeInModel: '',
+    lowLoanSurcharge: '',
+    tradeInCarPlate: '',
+    noLoanSurcharge: '',
+    quotedTradeInPrice: '',
+    benefit1: '',
+    benefit2: '',
+    benefit3: '',
+    benefit4: '',
+    benefit5: '',
+    benefitsGiven: '',
+    remarks: '',
+  });
+  const [originalProposalData, setOriginalProposalData] = useState(null);
+
+  // Inline editing state for VSA tab
+  const [vsaFormData, setVsaFormData] = useState({
+    makeModel: '',
+    yom: '',
+    bodyColour: '',
+    upholstery: '',
+    przType: '',
+    package: '',
+    sellingWithCOE: '',
+    sellingPriceList: '',
+    purchasePriceWithCOE: '',
+    coeRebateLevel: '',
+    deposit: '',
+    lessOthers: '',
+    addOthers: '',
+    deliveryDate: '',
+    tradeInCarNo: '',
+    tradeInCarModel: '',
+    tradeInAmount: '',
+    dateOfRegistration: '',
+    registrationNo: '',
+    chassisNo: '',
+    engineNo: '',
+    motorNo: '',
+    insuranceCompany: '',
+    insuranceFee: '',
+    remarks1: '',
+    remarks2: '',
+    loanAmount: '',
+    interest: '',
+    tenure: '',
+    adminFee: '',
+    insuranceSubsidy: '',
+    monthlyRepayment: '',
+  });
+  const [originalVsaData, setOriginalVsaData] = useState(null);
   const [isExcelModalOpen, setIsExcelModalOpen] = useState(false);
   const [isFormPrintModalOpen, setIsFormPrintModalOpen] = useState(false);
   const [isCombinePrintModalOpen, setIsCombinePrintModalOpen] = useState(false);
@@ -92,8 +218,87 @@ function CustomerDetails() {
     }
   }, [customer?.id]);
 
+  // Initialize proposal form data when customer changes
+  useEffect(() => {
+    if (customer) {
+      const formData = {
+        model: customer.proposal_model || '',
+        bank: customer.proposal_bank || '',
+        sellingPrice: customer.proposal_sellingPrice || '',
+        interestRate: customer.proposal_interestRate || '',
+        downpayment: customer.proposal_downpayment || '',
+        loanTenure: customer.proposal_loanTenure || '',
+        loanAmount: customer.proposal_loanAmount || '',
+        adminFee: customer.proposal_adminFee || '',
+        referralFee: customer.proposal_referralFee || '',
+        tradeInModel: customer.proposal_tradeInModel || '',
+        lowLoanSurcharge: customer.proposal_lowLoanSurcharge || '',
+        tradeInCarPlate: customer.proposal_tradeInCarPlate || '',
+        noLoanSurcharge: customer.proposal_noLoanSurcharge || '',
+        quotedTradeInPrice: customer.proposal_quotedTradeInPrice || '',
+        benefit1: customer.proposal_benefit1 || '',
+        benefit2: customer.proposal_benefit2 || '',
+        benefit3: customer.proposal_benefit3 || '',
+        benefit4: customer.proposal_benefit4 || '',
+        benefit5: customer.proposal_benefit5 || '',
+        benefitsGiven: customer.proposal_benefitsGiven || '',
+        remarks: customer.proposal_remarks || '',
+      };
+      setProposalFormData(formData);
+      setOriginalProposalData(formData);
+    }
+  }, [customer?.id]);
+
+  // Initialize VSA form data when customer changes
+  useEffect(() => {
+    if (customer) {
+      const formData = {
+        makeModel: customer.vsa_makeModel || '',
+        yom: customer.vsa_yom || '',
+        bodyColour: customer.vsa_bodyColour || '',
+        upholstery: customer.vsa_upholstery || '',
+        przType: customer.vsa_przType || '',
+        package: customer.vsa_package || '',
+        sellingWithCOE: customer.vsa_sellingWithCOE || '',
+        sellingPriceList: customer.vsa_sellingPriceList || '',
+        purchasePriceWithCOE: customer.vsa_purchasePriceWithCOE || '',
+        coeRebateLevel: customer.vsa_coeRebateLevel || '',
+        deposit: customer.vsa_deposit || '',
+        lessOthers: customer.vsa_lessOthers || '',
+        addOthers: customer.vsa_addOthers || '',
+        deliveryDate: customer.vsa_deliveryDate || '',
+        tradeInCarNo: customer.vsa_tradeInCarNo || '',
+        tradeInCarModel: customer.vsa_tradeInCarModel || '',
+        tradeInAmount: customer.vsa_tradeInAmount || '',
+        dateOfRegistration: customer.vsa_dateOfRegistration || '',
+        registrationNo: customer.vsa_registrationNo || '',
+        chassisNo: customer.vsa_chassisNo || '',
+        engineNo: customer.vsa_engineNo || '',
+        motorNo: customer.vsa_motorNo || '',
+        insuranceCompany: customer.vsa_insuranceCompany || '',
+        insuranceFee: customer.vsa_insuranceFee || '',
+        remarks1: customer.vsa_remarks1 || '',
+        remarks2: customer.vsa_remarks2 || '',
+        loanAmount: customer.vsa_loanAmount || '',
+        interest: customer.vsa_interest || '',
+        tenure: customer.vsa_tenure || '',
+        adminFee: customer.vsa_adminFee || '',
+        insuranceSubsidy: customer.vsa_insuranceSubsidy || '',
+        monthlyRepayment: customer.vsa_monthlyRepayment || '',
+      };
+      setVsaFormData(formData);
+      setOriginalVsaData(formData);
+    }
+  }, [customer?.id]);
+
   // Check if details form has changes
   const hasDetailsChanges = originalDetailsData && JSON.stringify(detailsFormData) !== JSON.stringify(originalDetailsData);
+
+  // Check if proposal form has changes
+  const hasProposalChanges = originalProposalData && JSON.stringify(proposalFormData) !== JSON.stringify(originalProposalData);
+
+  // Check if VSA form has changes
+  const hasVsaChanges = originalVsaData && JSON.stringify(vsaFormData) !== JSON.stringify(originalVsaData);
 
   // Handle details form field change
   const handleDetailsChange = (e) => {
@@ -102,6 +307,18 @@ function CustomerDetails() {
     if (detailsErrors[name]) {
       setDetailsErrors((prev) => ({ ...prev, [name]: '' }));
     }
+  };
+
+  // Handle proposal form field change
+  const handleProposalChange = (e) => {
+    const { name, value } = e.target;
+    setProposalFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  // Handle VSA form field change
+  const handleVsaChange = (e) => {
+    const { name, value } = e.target;
+    setVsaFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   // Validate details form
@@ -152,6 +369,86 @@ function CustomerDetails() {
     if (originalDetailsData) {
       setDetailsFormData(originalDetailsData);
       setDetailsErrors({});
+    }
+  };
+
+  // Save proposal changes
+  const handleProposalSave = async () => {
+    if (!customer) return;
+
+    setIsSubmitting(true);
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      // Convert proposalFormData to customer fields with proposal_ prefix
+      const updates = {};
+      Object.keys(proposalFormData).forEach((key) => {
+        updates[`proposal_${key}`] = proposalFormData[key];
+      });
+
+      updateCustomer(customer.id, updates);
+      saveToLocalStorage();
+
+      if (isSignedIn && customer.driveFolderId) {
+        const updatedCustomer = customers.find(c => c.id === customer.id);
+        if (updatedCustomer) {
+          await saveCustomerToFolder({ ...updatedCustomer, ...updates }, isSignedIn);
+        }
+      }
+
+      setOriginalProposalData(proposalFormData);
+    } catch (error) {
+      console.error('Error updating proposal:', error);
+      alert('Failed to update proposal. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Cancel proposal changes
+  const handleProposalCancel = () => {
+    if (originalProposalData) {
+      setProposalFormData(originalProposalData);
+    }
+  };
+
+  // Save VSA changes
+  const handleVsaSave = async () => {
+    if (!customer) return;
+
+    setIsSubmitting(true);
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      // Convert vsaFormData to customer fields with vsa_ prefix
+      const updates = {};
+      Object.keys(vsaFormData).forEach((key) => {
+        updates[`vsa_${key}`] = vsaFormData[key];
+      });
+
+      updateCustomer(customer.id, updates);
+      saveToLocalStorage();
+
+      if (isSignedIn && customer.driveFolderId) {
+        const updatedCustomer = customers.find(c => c.id === customer.id);
+        if (updatedCustomer) {
+          await saveCustomerToFolder({ ...updatedCustomer, ...updates }, isSignedIn);
+        }
+      }
+
+      setOriginalVsaData(vsaFormData);
+    } catch (error) {
+      console.error('Error updating VSA:', error);
+      alert('Failed to update VSA. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Cancel VSA changes
+  const handleVsaCancel = () => {
+    if (originalVsaData) {
+      setVsaFormData(originalVsaData);
     }
   };
 
@@ -512,10 +809,6 @@ function CustomerDetails() {
     setIsDeleteModalOpen(true);
   };
 
-  const handleVsaDetails = () => {
-    setIsVsaModalOpen(true);
-  };
-
   const handleExcelPopulate = () => {
     setIsExcelModalOpen(true);
   };
@@ -544,68 +837,6 @@ function CustomerDetails() {
     if (!isSubmitting) {
       setIsDeleteModalOpen(false);
       setDeleteFolderChecked(false); // Reset checkbox
-    }
-  };
-
-  const handleCloseVsaModal = () => {
-    if (!isSubmitting) {
-      setIsVsaModalOpen(false);
-    }
-  };
-
-  const handleVsaSave = async (vsaUpdates) => {
-    if (!customer) return;
-
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      updateCustomer(customer.id, vsaUpdates);
-
-      // Save to localStorage
-      saveToLocalStorage();
-
-      // Save only THIS customer to Drive (not all customers!)
-      if (isSignedIn && customer.driveFolderId) {
-        const updatedCustomer = customers.find(c => c.id === customer.id);
-        if (updatedCustomer) {
-          await saveCustomerToFolder({ ...updatedCustomer, ...vsaUpdates }, isSignedIn);
-        }
-      }
-    } catch (error) {
-      console.error('Error updating VSA details:', error);
-      throw error;
-    }
-  };
-
-  const handleProposalDetails = () => {
-    setIsProposalModalOpen(true);
-  };
-
-  const handleCloseProposalModal = () => {
-    if (!isSubmitting) {
-      setIsProposalModalOpen(false);
-    }
-  };
-
-  const handleProposalSave = async (proposalUpdates) => {
-    if (!customer) return;
-
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      updateCustomer(customer.id, proposalUpdates);
-
-      // Save to localStorage
-      saveToLocalStorage();
-
-      // Save only THIS customer to Drive (not all customers!)
-      if (isSignedIn && customer.driveFolderId) {
-        const updatedCustomer = customers.find(c => c.id === customer.id);
-        if (updatedCustomer) {
-          await saveCustomerToFolder({ ...updatedCustomer, ...proposalUpdates }, isSignedIn);
-        }
-      }
-    } catch (error) {
-      console.error('Error updating proposal details:', error);
-      throw error;
     }
   };
 
@@ -1026,302 +1257,780 @@ function CustomerDetails() {
               </div>
             </>
           ) : activeTab === 'proposal' ? (
-            /* Proposal Tab */
+            /* Proposal Tab - Inline Editing */
             <>
-              <div className="vsa-section">
-                <div className="vsa-section-header">
-                  <h3>Proposal Information</h3>
-                  <button className="btn btn-small btn-primary" onClick={handleProposalDetails}>
-                    Edit Proposal Details
-                  </button>
-                </div>
-                <div className="info-grid">
-                  <div className="info-item">
-                    <label>Model</label>
-                    <div className="info-value">{customer.proposal_model || 'N/A'}</div>
+              <div className="info-section">
+                <h3>Proposal Information</h3>
+                <div className="inline-edit-grid">
+                  <div className="inline-edit-item">
+                    <label htmlFor="proposal_model">Model</label>
+                    <select
+                      id="proposal_model"
+                      name="model"
+                      value={proposalFormData.model}
+                      onChange={handleProposalChange}
+                      disabled={isSubmitting}
+                    >
+                      <option value="">Select Model</option>
+                      {VEHICLE_MODELS.map((model) => (
+                        <option key={model} value={model}>{model}</option>
+                      ))}
+                    </select>
                   </div>
-                  <div className="info-item">
-                    <label>Bank</label>
-                    <div className="info-value">{customer.proposal_bank || 'N/A'}</div>
+                  <div className="inline-edit-item">
+                    <label htmlFor="proposal_bank">Bank</label>
+                    <input
+                      type="text"
+                      id="proposal_bank"
+                      name="bank"
+                      value={proposalFormData.bank}
+                      onChange={handleProposalChange}
+                      placeholder="e.g., DBS, OCBC, UOB"
+                      disabled={isSubmitting}
+                    />
                   </div>
-                  <div className="info-item">
-                    <label>Selling Price</label>
-                    <div className="info-value">{customer.proposal_sellingPrice || 'N/A'}</div>
+                  <div className="inline-edit-item">
+                    <label htmlFor="proposal_sellingPrice">Selling Price</label>
+                    <input
+                      type="text"
+                      id="proposal_sellingPrice"
+                      name="sellingPrice"
+                      value={proposalFormData.sellingPrice}
+                      onChange={handleProposalChange}
+                      placeholder="e.g., $200,000"
+                      disabled={isSubmitting}
+                    />
                   </div>
-                  <div className="info-item">
-                    <label>Interest Rate</label>
-                    <div className="info-value">{customer.proposal_interestRate || 'N/A'}</div>
+                  <div className="inline-edit-item">
+                    <label htmlFor="proposal_interestRate">Interest Rate</label>
+                    <input
+                      type="text"
+                      id="proposal_interestRate"
+                      name="interestRate"
+                      value={proposalFormData.interestRate}
+                      onChange={handleProposalChange}
+                      placeholder="e.g., 2.88%"
+                      disabled={isSubmitting}
+                    />
                   </div>
-                  <div className="info-item">
-                    <label>Downpayment</label>
-                    <div className="info-value">{customer.proposal_downpayment || 'N/A'}</div>
+                  <div className="inline-edit-item">
+                    <label htmlFor="proposal_downpayment">Downpayment</label>
+                    <input
+                      type="text"
+                      id="proposal_downpayment"
+                      name="downpayment"
+                      value={proposalFormData.downpayment}
+                      onChange={handleProposalChange}
+                      placeholder="e.g., $50,000"
+                      disabled={isSubmitting}
+                    />
                   </div>
-                  <div className="info-item">
-                    <label>Loan Tenure</label>
-                    <div className="info-value">{customer.proposal_loanTenure || 'N/A'}</div>
+                  <div className="inline-edit-item">
+                    <label htmlFor="proposal_loanTenure">Loan Tenure</label>
+                    <input
+                      type="text"
+                      id="proposal_loanTenure"
+                      name="loanTenure"
+                      value={proposalFormData.loanTenure}
+                      onChange={handleProposalChange}
+                      placeholder="e.g., 84 months"
+                      disabled={isSubmitting}
+                    />
                   </div>
                 </div>
               </div>
 
               <div className="info-section">
                 <h3>Loan & Fee Details</h3>
-                <div className="info-grid">
-                  <div className="info-item">
-                    <label>Loan Amount</label>
-                    <div className="info-value">{customer.proposal_loanAmount || 'N/A'}</div>
+                <div className="inline-edit-grid">
+                  <div className="inline-edit-item">
+                    <label htmlFor="proposal_loanAmount">Loan Amount</label>
+                    <input
+                      type="text"
+                      id="proposal_loanAmount"
+                      name="loanAmount"
+                      value={proposalFormData.loanAmount}
+                      onChange={handleProposalChange}
+                      placeholder="e.g., $150,000"
+                      disabled={isSubmitting}
+                    />
                   </div>
-                  <div className="info-item">
-                    <label>Admin Fee</label>
-                    <div className="info-value">{customer.proposal_adminFee || 'N/A'}</div>
+                  <div className="inline-edit-item">
+                    <label htmlFor="proposal_adminFee">Admin Fee</label>
+                    <input
+                      type="text"
+                      id="proposal_adminFee"
+                      name="adminFee"
+                      value={proposalFormData.adminFee}
+                      onChange={handleProposalChange}
+                      placeholder="e.g., $500"
+                      disabled={isSubmitting}
+                    />
                   </div>
-                  <div className="info-item">
-                    <label>Referral Fee</label>
-                    <div className="info-value">{customer.proposal_referralFee || 'N/A'}</div>
+                  <div className="inline-edit-item">
+                    <label htmlFor="proposal_referralFee">Referral Fee</label>
+                    <input
+                      type="text"
+                      id="proposal_referralFee"
+                      name="referralFee"
+                      value={proposalFormData.referralFee}
+                      onChange={handleProposalChange}
+                      placeholder="e.g., $1,000"
+                      disabled={isSubmitting}
+                    />
                   </div>
                 </div>
               </div>
 
               <div className="info-section">
                 <h3>Trade-In Details</h3>
-                <div className="info-grid">
-                  <div className="info-item">
-                    <label>Trade In Model</label>
-                    <div className="info-value">{customer.proposal_tradeInModel || 'N/A'}</div>
+                <div className="inline-edit-grid">
+                  <div className="inline-edit-item">
+                    <label htmlFor="proposal_tradeInModel">Trade In Model</label>
+                    <input
+                      type="text"
+                      id="proposal_tradeInModel"
+                      name="tradeInModel"
+                      value={proposalFormData.tradeInModel}
+                      onChange={handleProposalChange}
+                      placeholder="e.g., Toyota Camry"
+                      disabled={isSubmitting}
+                    />
                   </div>
-                  <div className="info-item">
-                    <label>Trade In Car Plate</label>
-                    <div className="info-value">{customer.proposal_tradeInCarPlate || 'N/A'}</div>
+                  <div className="inline-edit-item">
+                    <label htmlFor="proposal_tradeInCarPlate">Trade In Car Plate</label>
+                    <input
+                      type="text"
+                      id="proposal_tradeInCarPlate"
+                      name="tradeInCarPlate"
+                      value={proposalFormData.tradeInCarPlate}
+                      onChange={handleProposalChange}
+                      placeholder="e.g., SXX1234A"
+                      disabled={isSubmitting}
+                    />
                   </div>
-                  <div className="info-item">
-                    <label>Quoted Trade In Price</label>
-                    <div className="info-value">{customer.proposal_quotedTradeInPrice || 'N/A'}</div>
+                  <div className="inline-edit-item">
+                    <label htmlFor="proposal_quotedTradeInPrice">Quoted Trade In Price</label>
+                    <input
+                      type="text"
+                      id="proposal_quotedTradeInPrice"
+                      name="quotedTradeInPrice"
+                      value={proposalFormData.quotedTradeInPrice}
+                      onChange={handleProposalChange}
+                      placeholder="e.g., $30,000"
+                      disabled={isSubmitting}
+                    />
                   </div>
-                  <div className="info-item">
-                    <label>Low Loan Surcharge</label>
-                    <div className="info-value">{customer.proposal_lowLoanSurcharge || 'N/A'}</div>
+                  <div className="inline-edit-item">
+                    <label htmlFor="proposal_lowLoanSurcharge">Low Loan Surcharge</label>
+                    <input
+                      type="text"
+                      id="proposal_lowLoanSurcharge"
+                      name="lowLoanSurcharge"
+                      value={proposalFormData.lowLoanSurcharge}
+                      onChange={handleProposalChange}
+                      placeholder="e.g., $2,000"
+                      disabled={isSubmitting}
+                    />
                   </div>
-                  <div className="info-item">
-                    <label>No Loan Surcharge</label>
-                    <div className="info-value">{customer.proposal_noLoanSurcharge || 'N/A'}</div>
+                  <div className="inline-edit-item">
+                    <label htmlFor="proposal_noLoanSurcharge">No Loan Surcharge</label>
+                    <input
+                      type="text"
+                      id="proposal_noLoanSurcharge"
+                      name="noLoanSurcharge"
+                      value={proposalFormData.noLoanSurcharge}
+                      onChange={handleProposalChange}
+                      placeholder="e.g., $3,000"
+                      disabled={isSubmitting}
+                    />
                   </div>
                 </div>
               </div>
 
               <div className="info-section">
                 <h3>Benefits</h3>
-                <div className="info-grid">
-                  <div className="info-item">
-                    <label>Benefit 1</label>
-                    <div className="info-value">{customer.proposal_benefit1 || 'N/A'}</div>
+                <div className="inline-edit-grid">
+                  <div className="inline-edit-item">
+                    <label htmlFor="proposal_benefit1">Benefit 1</label>
+                    <select
+                      id="proposal_benefit1"
+                      name="benefit1"
+                      value={proposalFormData.benefit1}
+                      onChange={handleProposalChange}
+                      disabled={isSubmitting}
+                    >
+                      <option value="">Select Benefit</option>
+                      {BENEFITS_OPTIONS.map((benefit) => (
+                        <option key={benefit} value={benefit}>{benefit}</option>
+                      ))}
+                    </select>
                   </div>
-                  <div className="info-item">
-                    <label>Benefit 2</label>
-                    <div className="info-value">{customer.proposal_benefit2 || 'N/A'}</div>
+                  <div className="inline-edit-item">
+                    <label htmlFor="proposal_benefit2">Benefit 2</label>
+                    <select
+                      id="proposal_benefit2"
+                      name="benefit2"
+                      value={proposalFormData.benefit2}
+                      onChange={handleProposalChange}
+                      disabled={isSubmitting}
+                    >
+                      <option value="">Select Benefit</option>
+                      {BENEFITS_OPTIONS.map((benefit) => (
+                        <option key={benefit} value={benefit}>{benefit}</option>
+                      ))}
+                    </select>
                   </div>
-                  <div className="info-item">
-                    <label>Benefit 3</label>
-                    <div className="info-value">{customer.proposal_benefit3 || 'N/A'}</div>
+                  <div className="inline-edit-item">
+                    <label htmlFor="proposal_benefit3">Benefit 3</label>
+                    <select
+                      id="proposal_benefit3"
+                      name="benefit3"
+                      value={proposalFormData.benefit3}
+                      onChange={handleProposalChange}
+                      disabled={isSubmitting}
+                    >
+                      <option value="">Select Benefit</option>
+                      {BENEFITS_OPTIONS.map((benefit) => (
+                        <option key={benefit} value={benefit}>{benefit}</option>
+                      ))}
+                    </select>
                   </div>
-                  <div className="info-item">
-                    <label>Benefit 4</label>
-                    <div className="info-value">{customer.proposal_benefit4 || 'N/A'}</div>
+                  <div className="inline-edit-item">
+                    <label htmlFor="proposal_benefit4">Benefit 4</label>
+                    <select
+                      id="proposal_benefit4"
+                      name="benefit4"
+                      value={proposalFormData.benefit4}
+                      onChange={handleProposalChange}
+                      disabled={isSubmitting}
+                    >
+                      <option value="">Select Benefit</option>
+                      {BENEFITS_OPTIONS.map((benefit) => (
+                        <option key={benefit} value={benefit}>{benefit}</option>
+                      ))}
+                    </select>
                   </div>
-                  <div className="info-item">
-                    <label>Benefit 5</label>
-                    <div className="info-value">{customer.proposal_benefit5 || 'N/A'}</div>
+                  <div className="inline-edit-item">
+                    <label htmlFor="proposal_benefit5">Benefit 5</label>
+                    <select
+                      id="proposal_benefit5"
+                      name="benefit5"
+                      value={proposalFormData.benefit5}
+                      onChange={handleProposalChange}
+                      disabled={isSubmitting}
+                    >
+                      <option value="">Select Benefit</option>
+                      {BENEFITS_OPTIONS.map((benefit) => (
+                        <option key={benefit} value={benefit}>{benefit}</option>
+                      ))}
+                    </select>
                   </div>
                 </div>
               </div>
 
               <div className="info-section">
                 <h3>Additional Information</h3>
-                <div className="info-item">
-                  <label>Benefits Given (Notes)</label>
-                  <div className="info-value" style={{ whiteSpace: 'pre-wrap' }}>
-                    {customer.proposal_benefitsGiven || 'N/A'}
-                  </div>
+                <div className="inline-edit-full">
+                  <label htmlFor="proposal_benefitsGiven">Benefits Given (Notes)</label>
+                  <textarea
+                    id="proposal_benefitsGiven"
+                    name="benefitsGiven"
+                    value={proposalFormData.benefitsGiven}
+                    onChange={handleProposalChange}
+                    rows="3"
+                    disabled={isSubmitting}
+                    placeholder="List any additional benefits or promotions included in this proposal..."
+                  />
                 </div>
-                <div className="info-item">
-                  <label>Remarks</label>
-                  <div className="info-value" style={{ whiteSpace: 'pre-wrap' }}>
-                    {customer.proposal_remarks || 'N/A'}
-                  </div>
+                <div className="inline-edit-full" style={{ marginTop: '1rem' }}>
+                  <label htmlFor="proposal_remarks">Remarks</label>
+                  <textarea
+                    id="proposal_remarks"
+                    name="remarks"
+                    value={proposalFormData.remarks}
+                    onChange={handleProposalChange}
+                    rows="3"
+                    disabled={isSubmitting}
+                    placeholder="Additional notes or remarks about this proposal..."
+                  />
+                </div>
+              </div>
+
+              <div className="details-actions">
+                <div></div>
+                <div className="details-actions-right">
+                  {hasProposalChanges && (
+                    <button
+                      className="btn btn-secondary"
+                      onClick={handleProposalCancel}
+                      disabled={isSubmitting}
+                    >
+                      Cancel
+                    </button>
+                  )}
+                  <button
+                    className="btn btn-primary"
+                    onClick={handleProposalSave}
+                    disabled={isSubmitting || !hasProposalChanges}
+                  >
+                    {isSubmitting ? 'Saving...' : 'Save Changes'}
+                  </button>
                 </div>
               </div>
             </>
           ) : activeTab === 'vsa' ? (
-            /* VSA Tab */
+            /* VSA Tab - Inline Editing */
             <>
-              <div className="vsa-section">
-                <div className="vsa-section-header">
-                  <h3>BYD New Car Details</h3>
-                  <button className="btn btn-small btn-primary" onClick={handleVsaDetails}>
-                    Edit VSA Details
-                  </button>
-                </div>
-                <div className="info-grid">
-                  <div className="info-item">
-                    <label>Make & Model</label>
-                    <div className="info-value">{customer.vsa_makeModel || 'N/A'}</div>
+              <div className="info-section">
+                <h3>BYD New Car Details</h3>
+                <div className="inline-edit-grid">
+                  <div className="inline-edit-item">
+                    <label htmlFor="vsa_makeModel">Make & Model</label>
+                    <select
+                      id="vsa_makeModel"
+                      name="makeModel"
+                      value={vsaFormData.makeModel}
+                      onChange={handleVsaChange}
+                      disabled={isSubmitting}
+                    >
+                      <option value="">Select a model...</option>
+                      {VEHICLE_MODELS.map((model) => (
+                        <option key={model} value={model}>{model}</option>
+                      ))}
+                    </select>
                   </div>
-                  <div className="info-item">
-                    <label>Year of Manufacture</label>
-                    <div className="info-value">{customer.vsa_yom || 'N/A'}</div>
+                  <div className="inline-edit-item">
+                    <label htmlFor="vsa_yom">Year of Manufacture</label>
+                    <input
+                      type="text"
+                      id="vsa_yom"
+                      name="yom"
+                      value={vsaFormData.yom}
+                      onChange={handleVsaChange}
+                      placeholder="e.g., 2024"
+                      disabled={isSubmitting}
+                    />
                   </div>
-                  <div className="info-item">
-                    <label>Body Colour</label>
-                    <div className="info-value">{customer.vsa_bodyColour || 'N/A'}</div>
+                  <div className="inline-edit-item">
+                    <label htmlFor="vsa_bodyColour">Body Colour</label>
+                    <select
+                      id="vsa_bodyColour"
+                      name="bodyColour"
+                      value={vsaFormData.bodyColour}
+                      onChange={handleVsaChange}
+                      disabled={isSubmitting}
+                    >
+                      <option value="">Select a colour...</option>
+                      {BODY_COLOURS.map((colour) => (
+                        <option key={colour} value={colour}>{colour}</option>
+                      ))}
+                    </select>
                   </div>
-                  <div className="info-item">
-                    <label>Upholstery</label>
-                    <div className="info-value">{customer.vsa_upholstery || 'N/A'}</div>
+                  <div className="inline-edit-item">
+                    <label htmlFor="vsa_upholstery">Upholstery</label>
+                    <input
+                      type="text"
+                      id="vsa_upholstery"
+                      name="upholstery"
+                      value={vsaFormData.upholstery}
+                      onChange={handleVsaChange}
+                      placeholder="e.g., Black Leather"
+                      disabled={isSubmitting}
+                    />
                   </div>
-                  <div className="info-item">
-                    <label>P/R/Z Type</label>
-                    <div className="info-value">{customer.vsa_przType || 'N/A'}</div>
+                  <div className="inline-edit-item">
+                    <label htmlFor="vsa_przType">P/R/Z Type</label>
+                    <select
+                      id="vsa_przType"
+                      name="przType"
+                      value={vsaFormData.przType}
+                      onChange={handleVsaChange}
+                      disabled={isSubmitting}
+                    >
+                      <option value="">Select type...</option>
+                      <option value="P - Passenger Motor Car">P - Passenger Motor Car</option>
+                      <option value="R - Rental / Leasing">R - Rental / Leasing</option>
+                      <option value="Z - Private Hire">Z - Private Hire</option>
+                    </select>
                   </div>
                 </div>
               </div>
 
               <div className="info-section">
                 <h3>BYD New Car Package</h3>
-                <div className="info-grid">
-                  <div className="info-item">
-                    <label>Package</label>
-                    <div className="info-value">{customer.vsa_package || 'N/A'}</div>
+                <div className="inline-edit-grid">
+                  <div className="inline-edit-item">
+                    <label htmlFor="vsa_package">Package</label>
+                    <input
+                      type="text"
+                      id="vsa_package"
+                      name="package"
+                      value={vsaFormData.package}
+                      onChange={handleVsaChange}
+                      placeholder="e.g., Premium Package"
+                      disabled={isSubmitting}
+                    />
                   </div>
-                  <div className="info-item">
-                    <label>Selling with COE</label>
-                    <div className="info-value">{customer.vsa_sellingWithCOE || 'N/A'}</div>
+                  <div className="inline-edit-item">
+                    <label htmlFor="vsa_sellingWithCOE">Selling with COE</label>
+                    <select
+                      id="vsa_sellingWithCOE"
+                      name="sellingWithCOE"
+                      value={vsaFormData.sellingWithCOE}
+                      onChange={handleVsaChange}
+                      disabled={isSubmitting}
+                    >
+                      <option value="">Select...</option>
+                      <option value="WITH">WITH</option>
+                      <option value="WITHOUT">WITHOUT</option>
+                    </select>
                   </div>
-                  <div className="info-item">
-                    <label>Selling Price on Price List</label>
-                    <div className="info-value">{customer.vsa_sellingPriceList || 'N/A'}</div>
+                  <div className="inline-edit-item">
+                    <label htmlFor="vsa_sellingPriceList">Selling Price on Price List</label>
+                    <input
+                      type="text"
+                      id="vsa_sellingPriceList"
+                      name="sellingPriceList"
+                      value={vsaFormData.sellingPriceList}
+                      onChange={handleVsaChange}
+                      placeholder="e.g., $245,000"
+                      disabled={isSubmitting}
+                    />
                   </div>
-                  <div className="info-item">
-                    <label>Purchase Price with COE</label>
-                    <div className="info-value">{customer.vsa_purchasePriceWithCOE || 'N/A'}</div>
+                  <div className="inline-edit-item">
+                    <label htmlFor="vsa_purchasePriceWithCOE">Purchase Price with COE</label>
+                    <input
+                      type="text"
+                      id="vsa_purchasePriceWithCOE"
+                      name="purchasePriceWithCOE"
+                      value={vsaFormData.purchasePriceWithCOE}
+                      onChange={handleVsaChange}
+                      placeholder="e.g., $250,000"
+                      disabled={isSubmitting}
+                    />
                   </div>
-                  <div className="info-item">
-                    <label>COE Rebate Level</label>
-                    <div className="info-value">{customer.vsa_coeRebateLevel || 'N/A'}</div>
+                  <div className="inline-edit-item">
+                    <label htmlFor="vsa_coeRebateLevel">COE Rebate Level</label>
+                    <input
+                      type="text"
+                      id="vsa_coeRebateLevel"
+                      name="coeRebateLevel"
+                      value={vsaFormData.coeRebateLevel}
+                      onChange={handleVsaChange}
+                      placeholder="e.g., Level 1"
+                      disabled={isSubmitting}
+                    />
                   </div>
-                  <div className="info-item">
-                    <label>Deposit</label>
-                    <div className="info-value">{customer.vsa_deposit || 'N/A'}</div>
+                  <div className="inline-edit-item">
+                    <label htmlFor="vsa_deposit">Deposit</label>
+                    <input
+                      type="text"
+                      id="vsa_deposit"
+                      name="deposit"
+                      value={vsaFormData.deposit}
+                      onChange={handleVsaChange}
+                      placeholder="e.g., $25,000"
+                      disabled={isSubmitting}
+                    />
                   </div>
-                  <div className="info-item">
-                    <label>Less: Others</label>
-                    <div className="info-value">{customer.vsa_lessOthers || 'N/A'}</div>
+                  <div className="inline-edit-item">
+                    <label htmlFor="vsa_lessOthers">Less: Others</label>
+                    <input
+                      type="text"
+                      id="vsa_lessOthers"
+                      name="lessOthers"
+                      value={vsaFormData.lessOthers}
+                      onChange={handleVsaChange}
+                      placeholder="e.g., $5,000"
+                      disabled={isSubmitting}
+                    />
                   </div>
-                  <div className="info-item">
-                    <label>Add: Others</label>
-                    <div className="info-value">{customer.vsa_addOthers || 'N/A'}</div>
+                  <div className="inline-edit-item">
+                    <label htmlFor="vsa_addOthers">Add: Others</label>
+                    <input
+                      type="text"
+                      id="vsa_addOthers"
+                      name="addOthers"
+                      value={vsaFormData.addOthers}
+                      onChange={handleVsaChange}
+                      placeholder="e.g., $2,000"
+                      disabled={isSubmitting}
+                    />
                   </div>
-                  <div className="info-item">
-                    <label>Approximate Delivery Date</label>
-                    <div className="info-value">{formatCustomerDate(customer.vsa_deliveryDate)}</div>
+                  <div className="inline-edit-item">
+                    <label htmlFor="vsa_deliveryDate">Approximate Delivery Date</label>
+                    <input
+                      type="text"
+                      id="vsa_deliveryDate"
+                      name="deliveryDate"
+                      value={vsaFormData.deliveryDate}
+                      onChange={handleVsaChange}
+                      placeholder="e.g., NOV/DEC 2025"
+                      disabled={isSubmitting}
+                    />
                   </div>
                 </div>
               </div>
 
               <div className="info-section">
                 <h3>Trade In Car Details</h3>
-                <div className="info-grid">
-                  <div className="info-item">
-                    <label>Trade in Car No</label>
-                    <div className="info-value">{customer.vsa_tradeInCarNo || 'N/A'}</div>
+                <div className="inline-edit-grid">
+                  <div className="inline-edit-item">
+                    <label htmlFor="vsa_tradeInCarNo">Trade in Car No</label>
+                    <input
+                      type="text"
+                      id="vsa_tradeInCarNo"
+                      name="tradeInCarNo"
+                      value={vsaFormData.tradeInCarNo}
+                      onChange={handleVsaChange}
+                      placeholder="e.g., ABC1234X"
+                      disabled={isSubmitting}
+                    />
                   </div>
-                  <div className="info-item">
-                    <label>Trade in Car Model</label>
-                    <div className="info-value">{customer.vsa_tradeInCarModel || 'N/A'}</div>
+                  <div className="inline-edit-item">
+                    <label htmlFor="vsa_tradeInCarModel">Trade in Car Model</label>
+                    <input
+                      type="text"
+                      id="vsa_tradeInCarModel"
+                      name="tradeInCarModel"
+                      value={vsaFormData.tradeInCarModel}
+                      onChange={handleVsaChange}
+                      placeholder="e.g., Toyota Corolla"
+                      disabled={isSubmitting}
+                    />
                   </div>
-                  <div className="info-item">
-                    <label>Trade In Amount</label>
-                    <div className="info-value">{customer.vsa_tradeInAmount || 'N/A'}</div>
+                  <div className="inline-edit-item">
+                    <label htmlFor="vsa_tradeInAmount">Trade In Amount</label>
+                    <input
+                      type="text"
+                      id="vsa_tradeInAmount"
+                      name="tradeInAmount"
+                      value={vsaFormData.tradeInAmount}
+                      onChange={handleVsaChange}
+                      placeholder="e.g., $50,000"
+                      disabled={isSubmitting}
+                    />
                   </div>
                 </div>
               </div>
 
               <div className="info-section">
                 <h3>Delivery Details</h3>
-                <div className="info-grid">
-                  <div className="info-item">
-                    <label>Date of Registration</label>
-                    <div className="info-value">{formatCustomerDate(customer.vsa_dateOfRegistration)}</div>
+                <div className="inline-edit-grid">
+                  <div className="inline-edit-item">
+                    <label htmlFor="vsa_dateOfRegistration">Date of Registration</label>
+                    <input
+                      type="date"
+                      id="vsa_dateOfRegistration"
+                      name="dateOfRegistration"
+                      value={vsaFormData.dateOfRegistration}
+                      onChange={handleVsaChange}
+                      disabled={isSubmitting}
+                    />
                   </div>
-                  <div className="info-item">
-                    <label>Registration No</label>
-                    <div className="info-value">{customer.vsa_registrationNo || 'N/A'}</div>
+                  <div className="inline-edit-item">
+                    <label htmlFor="vsa_registrationNo">Registration No</label>
+                    <input
+                      type="text"
+                      id="vsa_registrationNo"
+                      name="registrationNo"
+                      value={vsaFormData.registrationNo}
+                      onChange={handleVsaChange}
+                      placeholder="e.g., ABC1234X"
+                      disabled={isSubmitting}
+                    />
                   </div>
-                  <div className="info-item">
-                    <label>Chassis No</label>
-                    <div className="info-value">{customer.vsa_chassisNo || 'N/A'}</div>
+                  <div className="inline-edit-item">
+                    <label htmlFor="vsa_chassisNo">Chassis No</label>
+                    <input
+                      type="text"
+                      id="vsa_chassisNo"
+                      name="chassisNo"
+                      value={vsaFormData.chassisNo}
+                      onChange={handleVsaChange}
+                      placeholder="e.g., LGXXX12345678"
+                      disabled={isSubmitting}
+                    />
                   </div>
-                  <div className="info-item">
-                    <label>Engine No</label>
-                    <div className="info-value">{customer.vsa_engineNo || 'N/A'}</div>
+                  <div className="inline-edit-item">
+                    <label htmlFor="vsa_engineNo">Engine No</label>
+                    <input
+                      type="text"
+                      id="vsa_engineNo"
+                      name="engineNo"
+                      value={vsaFormData.engineNo}
+                      onChange={handleVsaChange}
+                      placeholder="e.g., ENG123456"
+                      disabled={isSubmitting}
+                    />
                   </div>
-                  <div className="info-item">
-                    <label>Motor No</label>
-                    <div className="info-value">{customer.vsa_motorNo || 'N/A'}</div>
+                  <div className="inline-edit-item">
+                    <label htmlFor="vsa_motorNo">Motor No</label>
+                    <input
+                      type="text"
+                      id="vsa_motorNo"
+                      name="motorNo"
+                      value={vsaFormData.motorNo}
+                      onChange={handleVsaChange}
+                      placeholder="e.g., MOTOR123456"
+                      disabled={isSubmitting}
+                    />
                   </div>
                 </div>
               </div>
 
               <div className="info-section">
                 <h3>Insurance</h3>
-                <div className="info-grid">
-                  <div className="info-item">
-                    <label>Insurance Company</label>
-                    <div className="info-value">{customer.vsa_insuranceCompany || 'N/A'}</div>
+                <div className="inline-edit-grid">
+                  <div className="inline-edit-item">
+                    <label htmlFor="vsa_insuranceCompany">Insurance Company</label>
+                    <input
+                      type="text"
+                      id="vsa_insuranceCompany"
+                      name="insuranceCompany"
+                      value={vsaFormData.insuranceCompany}
+                      onChange={handleVsaChange}
+                      placeholder="e.g., AIG Insurance"
+                      disabled={isSubmitting}
+                    />
                   </div>
-                  <div className="info-item">
-                    <label>Insurance Fee</label>
-                    <div className="info-value">{customer.vsa_insuranceFee || 'N/A'}</div>
+                  <div className="inline-edit-item">
+                    <label htmlFor="vsa_insuranceFee">Insurance Fee</label>
+                    <input
+                      type="text"
+                      id="vsa_insuranceFee"
+                      name="insuranceFee"
+                      value={vsaFormData.insuranceFee}
+                      onChange={handleVsaChange}
+                      placeholder="e.g., $1,200"
+                      disabled={isSubmitting}
+                    />
                   </div>
                 </div>
               </div>
 
               <div className="info-section">
                 <h3>Remarks & Loan Details</h3>
-                {customer.vsa_remarks1 && (
-                  <div className="info-item" style={{ marginBottom: '1rem' }}>
-                    <label>Remarks 1</label>
-                    <div className="info-value">{customer.vsa_remarks1}</div>
+                <div className="inline-edit-full">
+                  <label htmlFor="vsa_remarks1">Remarks 1</label>
+                  <textarea
+                    id="vsa_remarks1"
+                    name="remarks1"
+                    value={vsaFormData.remarks1}
+                    onChange={handleVsaChange}
+                    rows="2"
+                    disabled={isSubmitting}
+                    placeholder="e.g., 4 BIDS GUARANTEED COE. $1000 INSURANCE SUBSIDY FOR THE FIRST YEAR."
+                  />
+                </div>
+                <div className="inline-edit-full" style={{ marginTop: '1rem' }}>
+                  <label htmlFor="vsa_remarks2">Remarks 2</label>
+                  <textarea
+                    id="vsa_remarks2"
+                    name="remarks2"
+                    value={vsaFormData.remarks2}
+                    onChange={handleVsaChange}
+                    rows="2"
+                    disabled={isSubmitting}
+                    placeholder="e.g., BALANCE DEPOSIT TO BE PAID UPON LOAN APPROVAL BEFORE COE BIDDING."
+                  />
+                </div>
+                <div className="inline-edit-grid" style={{ marginTop: '1rem' }}>
+                  <div className="inline-edit-item">
+                    <label htmlFor="vsa_loanAmount">Loan Amount</label>
+                    <input
+                      type="text"
+                      id="vsa_loanAmount"
+                      name="loanAmount"
+                      value={vsaFormData.loanAmount}
+                      onChange={handleVsaChange}
+                      placeholder="e.g., $200,000"
+                      disabled={isSubmitting}
+                    />
                   </div>
-                )}
-                {customer.vsa_remarks2 && (
-                  <div className="info-item" style={{ marginBottom: '1rem' }}>
-                    <label>Remarks 2</label>
-                    <div className="info-value">{customer.vsa_remarks2}</div>
+                  <div className="inline-edit-item">
+                    <label htmlFor="vsa_interest">Interest</label>
+                    <input
+                      type="text"
+                      id="vsa_interest"
+                      name="interest"
+                      value={vsaFormData.interest}
+                      onChange={handleVsaChange}
+                      placeholder="e.g., 2.88%"
+                      disabled={isSubmitting}
+                    />
                   </div>
-                )}
-                <div className="info-grid">
-                  <div className="info-item">
-                    <label>Loan Amount</label>
-                    <div className="info-value">{customer.vsa_loanAmount || 'N/A'}</div>
+                  <div className="inline-edit-item">
+                    <label htmlFor="vsa_tenure">Tenure</label>
+                    <input
+                      type="text"
+                      id="vsa_tenure"
+                      name="tenure"
+                      value={vsaFormData.tenure}
+                      onChange={handleVsaChange}
+                      placeholder="e.g., 84 months"
+                      disabled={isSubmitting}
+                    />
                   </div>
-                  <div className="info-item">
-                    <label>Interest</label>
-                    <div className="info-value">{customer.vsa_interest || 'N/A'}</div>
+                  <div className="inline-edit-item">
+                    <label htmlFor="vsa_adminFee">Admin Fee</label>
+                    <input
+                      type="text"
+                      id="vsa_adminFee"
+                      name="adminFee"
+                      value={vsaFormData.adminFee}
+                      onChange={handleVsaChange}
+                      placeholder="e.g., $500"
+                      disabled={isSubmitting}
+                    />
                   </div>
-                  <div className="info-item">
-                    <label>Tenure</label>
-                    <div className="info-value">{customer.vsa_tenure || 'N/A'}</div>
+                  <div className="inline-edit-item">
+                    <label htmlFor="vsa_insuranceSubsidy">Insurance Subsidy</label>
+                    <input
+                      type="text"
+                      id="vsa_insuranceSubsidy"
+                      name="insuranceSubsidy"
+                      value={vsaFormData.insuranceSubsidy}
+                      onChange={handleVsaChange}
+                      placeholder="e.g., $1000"
+                      disabled={isSubmitting}
+                    />
                   </div>
-                  <div className="info-item">
-                    <label>Admin Fee</label>
-                    <div className="info-value">{customer.vsa_adminFee || 'N/A'}</div>
+                  <div className="inline-edit-item">
+                    <label htmlFor="vsa_monthlyRepayment">Monthly Repayment</label>
+                    <input
+                      type="text"
+                      id="vsa_monthlyRepayment"
+                      name="monthlyRepayment"
+                      value={vsaFormData.monthlyRepayment}
+                      onChange={handleVsaChange}
+                      placeholder="e.g., $2,500"
+                      disabled={isSubmitting}
+                    />
                   </div>
-                  <div className="info-item">
-                    <label>Insurance Subsidy</label>
-                    <div className="info-value">{customer.vsa_insuranceSubsidy || 'N/A'}</div>
-                  </div>
-                  <div className="info-item">
-                    <label>Monthly Repayment</label>
-                    <div className="info-value">{customer.vsa_monthlyRepayment || 'N/A'}</div>
-                  </div>
+                </div>
+              </div>
+
+              <div className="details-actions">
+                <div></div>
+                <div className="details-actions-right">
+                  {hasVsaChanges && (
+                    <button
+                      className="btn btn-secondary"
+                      onClick={handleVsaCancel}
+                      disabled={isSubmitting}
+                    >
+                      Cancel
+                    </button>
+                  )}
+                  <button
+                    className="btn btn-primary"
+                    onClick={handleVsaSave}
+                    disabled={isSubmitting || !hasVsaChanges}
+                  >
+                    {isSubmitting ? 'Saving...' : 'Save Changes'}
+                  </button>
                 </div>
               </div>
             </>
@@ -1557,22 +2266,6 @@ function CustomerDetails() {
           )}
         </div>
       </div>
-
-      {/* VSA Details Modal */}
-      <VsaDetailsModal
-        isOpen={isVsaModalOpen}
-        onClose={handleCloseVsaModal}
-        customer={customer}
-        onSave={handleVsaSave}
-      />
-
-      {/* Proposal Details Modal */}
-      <ProposalDetailsModal
-        isOpen={isProposalModalOpen}
-        onClose={handleCloseProposalModal}
-        customer={customer}
-        onSave={handleProposalSave}
-      />
 
       {/* Delete Confirmation Modal */}
       <Modal
