@@ -228,7 +228,12 @@ function CustomerDetails() {
 
   // Move file to selected folder
   const handleMoveToFolder = async (targetFolder) => {
-    if (!selectedFileToMove || !targetFolder) return;
+    if (!selectedFileToMove || !targetFolder) {
+      console.log('Missing file or folder:', { selectedFileToMove, targetFolder });
+      return;
+    }
+
+    console.log('Moving file:', selectedFileToMove.name, 'to folder:', targetFolder.name);
 
     try {
       await window.gapi.client.drive.files.update({
@@ -240,6 +245,8 @@ function CustomerDetails() {
       await loadCustomerDocuments(currentFolderId);
       setShowFolderMenu(false);
       setSelectedFileToMove(null);
+
+      console.log('File moved successfully!');
     } catch (error) {
       console.error('Error moving file:', error);
       alert(`Failed to move file: ${error.message}`);
@@ -1222,18 +1229,43 @@ function CustomerDetails() {
                     <>
                       <div className="folder-menu-backdrop" onClick={() => setShowFolderMenu(false)}></div>
                       <div className="folder-menu">
-                        <h3>Move "{selectedFileToMove?.name}" to:</h3>
+                        <h3>Tap a folder to move "{selectedFileToMove?.name}"</h3>
                         <div className="folder-menu-grid">
+                          {/* Parent folder option when in subfolder */}
+                          {folderPath.length > 0 && (
+                            <button
+                              className="folder-menu-item folder-menu-parent"
+                              onClick={() => {
+                                const parentFolder = folderPath.length > 1
+                                  ? folderPath[folderPath.length - 2]
+                                  : { id: customer.driveFolderId, name: customer.name };
+                                console.log('Moving to parent folder:', parentFolder.name);
+                                handleMoveToFolder(parentFolder);
+                              }}
+                            >
+                              <span className="folder-menu-icon">⬆️</span>
+                              <span className="folder-menu-name">
+                                {folderPath.length > 1 ? folderPath[folderPath.length - 2].name : 'Main Folder'}
+                              </span>
+                            </button>
+                          )}
+
+                          {/* Sibling folders */}
                           {documents.filter(doc => isFolder(doc.mimeType) && doc.id !== selectedFileToMove?.id).map((folder) => (
                             <button
                               key={folder.id}
                               className="folder-menu-item"
-                              onClick={() => handleMoveToFolder(folder)}
+                              onClick={() => {
+                                console.log('Folder tapped:', folder.name);
+                                handleMoveToFolder(folder);
+                              }}
                             >
                               <span className="folder-menu-icon">📁</span>
                               <span className="folder-menu-name">{folder.name}</span>
                             </button>
                           ))}
+
+                          {/* Delete option */}
                           <button
                             className="folder-menu-item folder-menu-delete"
                             onClick={handleDeleteFromMenu}
