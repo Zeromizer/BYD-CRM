@@ -338,21 +338,39 @@ class DriveService {
    */
   async uploadFile(fileName, file, parentFolderId) {
     try {
-      // Determine MIME type
-      let mimeType = file.type;
-      if (!mimeType) {
-        // Default based on file extension
+      // Determine MIME type and prepare file content
+      let mimeType;
+      let fileContent = file;
+
+      // Handle string content (e.g., JSON data)
+      if (typeof file === 'string') {
         if (fileName.endsWith('.json')) {
           mimeType = 'application/json';
-        } else if (fileName.endsWith('.jpg') || fileName.endsWith('.jpeg')) {
-          mimeType = 'image/jpeg';
-        } else if (fileName.endsWith('.png')) {
-          mimeType = 'image/png';
-        } else if (fileName.endsWith('.pdf')) {
-          mimeType = 'application/pdf';
         } else {
-          mimeType = 'application/octet-stream';
+          mimeType = 'text/plain';
         }
+        // Convert string to Blob with correct MIME type
+        fileContent = new Blob([file], { type: mimeType });
+      } else if (file instanceof Blob || file instanceof File) {
+        // Handle Blob/File objects
+        mimeType = file.type;
+        if (!mimeType) {
+          // Default based on file extension
+          if (fileName.endsWith('.json')) {
+            mimeType = 'application/json';
+          } else if (fileName.endsWith('.jpg') || fileName.endsWith('.jpeg')) {
+            mimeType = 'image/jpeg';
+          } else if (fileName.endsWith('.png')) {
+            mimeType = 'image/png';
+          } else if (fileName.endsWith('.pdf')) {
+            mimeType = 'application/pdf';
+          } else {
+            mimeType = 'application/octet-stream';
+          }
+        }
+      } else {
+        // Unknown type - treat as binary
+        mimeType = 'application/octet-stream';
       }
 
       const fileMetadata = {
@@ -363,7 +381,7 @@ class DriveService {
 
       const form = new FormData();
       form.append('metadata', new Blob([JSON.stringify(fileMetadata)], { type: 'application/json' }));
-      form.append('file', file);
+      form.append('file', fileContent);
 
       const token = window.gapi.client.getToken().access_token;
       const uploadResponse = await fetch(
