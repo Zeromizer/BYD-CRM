@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import useAuthStore from '../../stores/useAuthStore';
 import syncCoordinator from '../../services/syncCoordinator';
 import SyncProgressModal from '../SyncProgressModal/SyncProgressModal';
+import SyncStatusIndicator from '../SyncStatusIndicator/SyncStatusIndicator';
 import './Header.css';
 
 function Header() {
@@ -118,6 +119,9 @@ function Header() {
         </div>
 
         <div className="header-actions">
+          {/* Sync Status Indicator - shows when there are pending/failed syncs */}
+          {isSignedIn && <SyncStatusIndicator />}
+
           <button
             className={`auth-button ${isSignedIn ? 'connected' : ''}`}
             onClick={handleAuth}

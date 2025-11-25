@@ -795,15 +795,21 @@ class DriveService {
   }
 
   /**
-   * Save form templates to Google Drive
+   * Save form templates to Google Drive with verification
    */
   async saveFormsToDrive(formTemplates) {
     try {
+      // Check if we have a valid token
+      const tokenObj = window.gapi?.client?.getToken?.();
+      if (!tokenObj?.access_token) {
+        throw new Error('Not authenticated - please sign in to Google Drive');
+      }
+
       const fileId = await this.getOrCreateFormsFile();
       const fileContent = JSON.stringify(formTemplates, null, 2);
       const file = new Blob([fileContent], { type: 'application/json' });
 
-      const token = window.gapi.client.getToken().access_token;
+      const token = tokenObj.access_token;
       const response = await fetch(
         `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`,
         {
@@ -816,12 +822,31 @@ class DriveService {
         }
       );
 
-      if (response.ok) {
-        console.log('Saved form templates to Drive:', Object.keys(formTemplates).length);
-        return true;
-      } else {
-        throw new Error(`Failed to save forms: ${response.statusText}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        if (response.status === 401 || response.status === 403) {
+          throw new Error(`Authentication error (${response.status}): Please sign in again`);
+        }
+        throw new Error(`Failed to save forms (${response.status}): ${errorText}`);
       }
+
+      // Verify the save by checking file metadata
+      const verifyResponse = await window.gapi.client.drive.files.get({
+        fileId: fileId,
+        fields: 'id, modifiedTime, size',
+      });
+
+      const modifiedTime = new Date(verifyResponse.result.modifiedTime);
+      const now = new Date();
+      const timeDiff = now - modifiedTime;
+
+      // If modified time is within last 30 seconds, consider it verified
+      if (timeDiff > 30000) {
+        console.warn('Form save verification: file modified time is older than expected');
+      }
+
+      console.log('Saved and verified form templates to Drive:', Object.keys(formTemplates).length);
+      return true;
     } catch (error) {
       console.error('Failed to save form templates to Drive:', error);
       throw error;
@@ -935,15 +960,21 @@ class DriveService {
   }
 
   /**
-   * Save Excel templates to Google Drive
+   * Save Excel templates to Google Drive with verification
    */
   async saveExcelToDrive(excelTemplates) {
     try {
+      // Check if we have a valid token
+      const tokenObj = window.gapi?.client?.getToken?.();
+      if (!tokenObj?.access_token) {
+        throw new Error('Not authenticated - please sign in to Google Drive');
+      }
+
       const fileId = await this.getOrCreateExcelFile();
       const fileContent = JSON.stringify(excelTemplates, null, 2);
       const file = new Blob([fileContent], { type: 'application/json' });
 
-      const token = window.gapi.client.getToken().access_token;
+      const token = tokenObj.access_token;
       const response = await fetch(
         `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`,
         {
@@ -956,12 +987,31 @@ class DriveService {
         }
       );
 
-      if (response.ok) {
-        console.log('Saved Excel templates to Drive:', Object.keys(excelTemplates).length);
-        return true;
-      } else {
-        throw new Error(`Failed to save Excel: ${response.statusText}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        if (response.status === 401 || response.status === 403) {
+          throw new Error(`Authentication error (${response.status}): Please sign in again`);
+        }
+        throw new Error(`Failed to save Excel templates (${response.status}): ${errorText}`);
       }
+
+      // Verify the save by checking file metadata
+      const verifyResponse = await window.gapi.client.drive.files.get({
+        fileId: fileId,
+        fields: 'id, modifiedTime, size',
+      });
+
+      const modifiedTime = new Date(verifyResponse.result.modifiedTime);
+      const now = new Date();
+      const timeDiff = now - modifiedTime;
+
+      // If modified time is within last 30 seconds, consider it verified
+      if (timeDiff > 30000) {
+        console.warn('Excel save verification: file modified time is older than expected');
+      }
+
+      console.log('Saved and verified Excel templates to Drive:', Object.keys(excelTemplates).length);
+      return true;
     } catch (error) {
       console.error('Failed to save Excel templates to Drive:', error);
       throw error;

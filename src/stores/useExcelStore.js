@@ -1,12 +1,15 @@
 import { create } from 'zustand';
 import driveService from '../services/driveService';
 import userStorage from '../services/userStorage';
+import syncQueueService, { SYNC_STATUS } from '../services/syncQueueService';
 
 const useExcelStore = create((set, get) => ({
   excelTemplates: {},
   isLoading: false,
   error: null,
   lastSyncTime: null,
+  syncStatus: SYNC_STATUS.SYNCED,
+  syncError: null,
 
   /**
    * Load Excel templates from user-specific localStorage
@@ -89,17 +92,65 @@ const useExcelStore = create((set, get) => ({
     }
   },
 
-  // Save to Drive (called after any template modification)
+  // Save to Drive with queue and retry support
   saveToDrive: async () => {
-    try {
-      const { excelTemplates } = get();
-      await driveService.saveExcelToDrive(excelTemplates);
-      set({ lastSyncTime: new Date().toISOString() });
+    const { excelTemplates } = get();
+
+    // Update status to syncing
+    set({ syncStatus: SYNC_STATUS.SYNCING, syncError: null });
+
+    // Queue the save operation with retry logic
+    const result = await syncQueueService.enqueue(
+      'excel',
+      async () => {
+        await driveService.saveExcelToDrive(excelTemplates);
+      },
+      { templateCount: Object.keys(excelTemplates).length }
+    );
+
+    if (result.success) {
+      set({
+        syncStatus: SYNC_STATUS.SYNCED,
+        syncError: null,
+        lastSyncTime: new Date().toISOString()
+      });
       console.log('Excel templates saved to Drive');
-    } catch (error) {
-      console.error('Failed to save Excel templates to Drive:', error);
-      // Don't throw - allow local changes to persist
+    } else if (result.offline) {
+      set({
+        syncStatus: SYNC_STATUS.OFFLINE,
+        syncError: 'Offline - will sync when connected'
+      });
+      console.log('Excel templates queued for later sync (offline)');
+    } else {
+      set({
+        syncStatus: SYNC_STATUS.FAILED,
+        syncError: result.error || 'Failed to sync'
+      });
+      console.error('Failed to save Excel templates to Drive:', result.error);
     }
+
+    return result;
+  },
+
+  // Force retry failed sync
+  retrySyncToDrive: async () => {
+    set({ syncStatus: SYNC_STATUS.SYNCING, syncError: null });
+    await syncQueueService.retryFailed();
+    const status = syncQueueService.getStatus('excel');
+    set({
+      syncStatus: status.status,
+      syncError: status.lastError,
+      lastSyncTime: status.lastSyncTime
+    });
+  },
+
+  // Get current sync status
+  getSyncStatus: () => {
+    return {
+      status: get().syncStatus,
+      error: get().syncError,
+      lastSyncTime: get().lastSyncTime
+    };
   },
 
   // Add or update an Excel template
@@ -193,6 +244,8 @@ const useExcelStore = create((set, get) => ({
       isLoading: false,
       error: null,
       lastSyncTime: null,
+      syncStatus: SYNC_STATUS.SYNCED,
+      syncError: null,
     });
 
     // Clear from user-specific storage
@@ -202,6 +255,19 @@ const useExcelStore = create((set, get) => ({
 
     // Also clear legacy storage
     localStorage.removeItem('excelTemplates');
+  },
+
+  /**
+   * Subscribe to sync status changes from the queue service
+   */
+  initSyncStatusListener: () => {
+    return syncQueueService.onStatusChange('excel', (status) => {
+      set({
+        syncStatus: status.status,
+        syncError: status.lastError,
+        lastSyncTime: status.lastSyncTime
+      });
+    });
   },
 }));
 
