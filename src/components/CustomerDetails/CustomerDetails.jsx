@@ -943,9 +943,35 @@ function CustomerDetails() {
               </div>
 
               <div className="info-section">
+                <h3>Benefits</h3>
+                <div className="info-grid">
+                  <div className="info-item">
+                    <label>Benefit 1</label>
+                    <div className="info-value">{customer.proposal_benefit1 || 'N/A'}</div>
+                  </div>
+                  <div className="info-item">
+                    <label>Benefit 2</label>
+                    <div className="info-value">{customer.proposal_benefit2 || 'N/A'}</div>
+                  </div>
+                  <div className="info-item">
+                    <label>Benefit 3</label>
+                    <div className="info-value">{customer.proposal_benefit3 || 'N/A'}</div>
+                  </div>
+                  <div className="info-item">
+                    <label>Benefit 4</label>
+                    <div className="info-value">{customer.proposal_benefit4 || 'N/A'}</div>
+                  </div>
+                  <div className="info-item">
+                    <label>Benefit 5</label>
+                    <div className="info-value">{customer.proposal_benefit5 || 'N/A'}</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="info-section">
                 <h3>Additional Information</h3>
                 <div className="info-item">
-                  <label>Benefits Given</label>
+                  <label>Benefits Given (Notes)</label>
                   <div className="info-value" style={{ whiteSpace: 'pre-wrap' }}>
                     {customer.proposal_benefitsGiven || 'N/A'}
                   </div>
