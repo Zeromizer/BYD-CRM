@@ -965,6 +965,16 @@
   word-break: break-word;
 }
 
+.folder-menu-parent {
+  background: #dbeafe;
+  border-color: #93c5fd;
+}
+
+.folder-menu-parent .folder-menu-name {
+  color: #1e40af;
+  font-weight: 600;
+}
+
 .folder-menu-delete {
   background: #fee2e2;
   border-color: #fca5a5;
