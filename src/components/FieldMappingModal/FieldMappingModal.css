@@ -2,8 +2,7 @@
   display: flex;
   flex-direction: column;
   gap: 15px;
-  height: 80vh;
-  max-height: 80vh;
+  max-height: 85vh;
 }
 
 /* Info Banner */
@@ -37,9 +36,8 @@
   display: grid;
   grid-template-columns: 1fr 350px;
   gap: 20px;
-  flex: 1;
-  min-height: 0;
   overflow: hidden;
+  min-height: 0;
 }
 
 /* Canvas Panel */
@@ -123,7 +121,7 @@
   display: flex;
   flex-direction: column;
   gap: 15px;
-  overflow-y: auto;
+  overflow: hidden;
   min-height: 0;
 }
 
@@ -164,29 +162,6 @@
   font-weight: 400;
   font-size: 11px;
   color: #7f8c8d;
-}
-
-/* Font Size Preview */
-.font-size-preview {
-  background: white;
-  border: 2px solid #cbd5e0;
-  border-radius: 6px;
-  padding: 12px;
-  margin-top: 8px;
-  text-align: center;
-}
-
-.font-size-preview-label {
-  font-size: 11px;
-  color: #7f8c8d;
-  margin-bottom: 6px;
-}
-
-.font-size-preview-text {
-  font-family: Arial, sans-serif;
-  color: #2c3e50;
-  line-height: 1.2;
-  word-break: break-word;
 }
 
 .form-group select,
@@ -285,7 +260,7 @@
 }
 
 .mapping-item {
-  background: white;
+  background: #f7fafc;
   border: 2px solid #e0e0e0;
   border-radius: 6px;
   padding: 10px 12px;
