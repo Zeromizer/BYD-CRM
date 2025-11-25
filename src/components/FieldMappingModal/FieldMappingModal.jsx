@@ -581,6 +581,20 @@ function FieldMappingModal({ isOpen, onClose, formType, template, onSave }) {
                     </option>
                   ))}
                 </select>
+                <div className="font-size-preview">
+                  <div className="font-size-preview-label">Preview at {fontSize}pt:</div>
+                  <div
+                    className="font-size-preview-text"
+                    style={{
+                      fontSize: `${fontSize}pt`,
+                      color: textColor,
+                    }}
+                  >
+                    {selectedField === 'custom' && customValue
+                      ? customValue
+                      : sampleData[selectedField] || 'Sample Text'}
+                  </div>
+                </div>
               </div>
 
               <div className="form-group">
