@@ -6,6 +6,7 @@
 import useCustomerStore from '../stores/useCustomerStore';
 import useFormsStore from '../stores/useFormsStore';
 import useExcelStore from '../stores/useExcelStore';
+import useDocumentStore from '../stores/useDocumentStore';
 
 class SyncCoordinator {
   constructor() {
@@ -44,6 +45,7 @@ class SyncCoordinator {
       customers: { status: 'pending', detail: '' },
       forms: { status: 'pending', detail: '' },
       excel: { status: 'pending', detail: '' },
+      documents: { status: 'pending', detail: '' },
       overall: 0,
     };
 
@@ -53,11 +55,11 @@ class SyncCoordinator {
     const updateProgress = (type, status, detail = '') => {
       progress[type] = { status, detail };
 
-      // Calculate overall progress
-      const statuses = [progress.customers.status, progress.forms.status, progress.excel.status];
+      // Calculate overall progress (4 types now)
+      const statuses = [progress.customers.status, progress.forms.status, progress.excel.status, progress.documents.status];
       const completed = statuses.filter(s => s === 'complete').length;
       const syncing = statuses.filter(s => s === 'syncing').length;
-      progress.overall = (completed * 100 + syncing * 33) / 3;
+      progress.overall = (completed * 100 + syncing * 25) / 4;
 
       this.notifyProgress({ ...progress });
     };
@@ -103,6 +105,20 @@ class SyncCoordinator {
           } catch (error) {
             console.error('Excel sync failed:', error);
             updateProgress('excel', 'error', 'Sync failed');
+            throw error;
+          }
+        })(),
+
+        // Sync Document Templates
+        (async () => {
+          try {
+            updateProgress('documents', 'syncing', 'Loading document templates...');
+            await useDocumentStore.getState().syncWithDrive();
+            const count = Object.keys(useDocumentStore.getState().templates).length;
+            updateProgress('documents', 'complete', `${count} document template${count !== 1 ? 's' : ''} synced`);
+          } catch (error) {
+            console.error('Document templates sync failed:', error);
+            updateProgress('documents', 'error', 'Sync failed');
             throw error;
           }
         })(),
