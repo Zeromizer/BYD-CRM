@@ -211,6 +211,125 @@ class DriveService {
   }
 
   /**
+   * Get or create a folder by name in a specific parent folder
+   * Returns the folder ID
+   */
+  async getOrCreateFolder(folderName, parentFolderId = null) {
+    try {
+      // Build search query
+      let query = `name='${folderName.replace(/'/g, "\\'")}' and mimeType='application/vnd.google-apps.folder' and trashed=false`;
+
+      if (parentFolderId) {
+        query += ` and '${parentFolderId}' in parents`;
+      }
+
+      // Search for existing folder
+      const response = await window.gapi.client.drive.files.list({
+        q: query,
+        fields: 'files(id, name, webViewLink)',
+        orderBy: 'createdTime',
+      });
+
+      if (response.result.files && response.result.files.length > 0) {
+        // Folder exists, return the first one
+        console.log(`Found existing folder "${folderName}":`, response.result.files[0].id);
+        return response.result.files[0].id;
+      }
+
+      // Folder doesn't exist, create it
+      const createResponse = await window.gapi.client.drive.files.create({
+        resource: {
+          name: folderName,
+          mimeType: 'application/vnd.google-apps.folder',
+          ...(parentFolderId && { parents: [parentFolderId] }),
+        },
+        fields: 'id, name, webViewLink',
+      });
+
+      console.log(`Created folder "${folderName}":`, createResponse.result.id);
+      return createResponse.result.id;
+    } catch (error) {
+      console.error(`Failed to get/create folder "${folderName}":`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * List files in a folder
+   */
+  async listFiles(folderId) {
+    try {
+      const response = await window.gapi.client.drive.files.list({
+        q: `'${folderId}' in parents and trashed=false`,
+        fields: 'files(id, name, mimeType, createdTime, modifiedTime)',
+        orderBy: 'name',
+      });
+
+      return response.result.files || [];
+    } catch (error) {
+      console.error('Failed to list files:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get file content as text
+   */
+  async getFileContent(fileId) {
+    try {
+      const response = await window.gapi.client.drive.files.get({
+        fileId: fileId,
+        alt: 'media',
+      });
+
+      return response.body;
+    } catch (error) {
+      console.error('Failed to get file content:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update file content
+   */
+  async updateFileContent(fileId, content) {
+    try {
+      const boundary = '-------314159265358979323846';
+      const delimiter = "\r\n--" + boundary + "\r\n";
+      const close_delim = "\r\n--" + boundary + "--";
+
+      const contentType = 'application/json';
+      const metadata = {
+        mimeType: contentType,
+      };
+
+      const multipartRequestBody =
+        delimiter +
+        'Content-Type: application/json\r\n\r\n' +
+        JSON.stringify(metadata) +
+        delimiter +
+        'Content-Type: ' + contentType + '\r\n\r\n' +
+        content +
+        close_delim;
+
+      const response = await window.gapi.client.request({
+        path: '/upload/drive/v3/files/' + fileId,
+        method: 'PATCH',
+        params: { uploadType: 'multipart' },
+        headers: {
+          'Content-Type': 'multipart/related; boundary="' + boundary + '"',
+        },
+        body: multipartRequestBody,
+      });
+
+      return response.result;
+    } catch (error) {
+      console.error('Failed to update file content:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Delete a folder from Google Drive
    */
   async deleteFolder(folderId) {
