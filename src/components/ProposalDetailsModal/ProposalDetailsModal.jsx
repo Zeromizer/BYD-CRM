@@ -17,6 +17,38 @@ const VEHICLE_MODELS = [
   'BYD Sealion 7 Performance',
 ];
 
+const BENEFITS_OPTIONS = [
+  '3M Solar Film',
+  'Additional 6 months Road Tax',
+  'ATTO3 Frunk',
+  'ATTO3 Rear Recording Cam',
+  'BYD Mic Set',
+  'BYD Thermo Flask',
+  'Ceramic Coating',
+  'Dark Interior Combination',
+  'F&R Recording Cam',
+  'Free Charger Capped $3000',
+  'Full Black Interior',
+  'Full Car PPF',
+  'Full Car Wrap',
+  '1x Grooming Package',
+  'Low Loan Surcharge',
+  'M6 Frunk',
+  'No Trade in Surcharge',
+  'Number Retention',
+  'Sunshade',
+  'Toscano Card wallet',
+  'Toscano Cardholder/ Lanyard',
+  'Toscano Luggage Tag',
+  'Toscano Notebook',
+  'Toscano Passport Sleeve',
+  'Trapo Eco Mat',
+  'Trapo Hex Mat',
+  'Upgrade Crystalline Solar Film',
+  '2x Paint Sealer Protection PKG',
+  '$1000 Service Credits',
+];
+
 function ProposalDetailsModal({ isOpen, onClose, customer, onSave }) {
   const [isSaving, setIsSaving] = useState(false);
   const [proposalData, setProposalData] = useState({
@@ -34,6 +66,11 @@ function ProposalDetailsModal({ isOpen, onClose, customer, onSave }) {
     tradeInCarPlate: '',
     noLoanSurcharge: '',
     quotedTradeInPrice: '',
+    benefit1: '',
+    benefit2: '',
+    benefit3: '',
+    benefit4: '',
+    benefit5: '',
     benefitsGiven: '',
     remarks: '',
   });
@@ -56,6 +93,11 @@ function ProposalDetailsModal({ isOpen, onClose, customer, onSave }) {
         tradeInCarPlate: customer.proposal_tradeInCarPlate || '',
         noLoanSurcharge: customer.proposal_noLoanSurcharge || '',
         quotedTradeInPrice: customer.proposal_quotedTradeInPrice || '',
+        benefit1: customer.proposal_benefit1 || '',
+        benefit2: customer.proposal_benefit2 || '',
+        benefit3: customer.proposal_benefit3 || '',
+        benefit4: customer.proposal_benefit4 || '',
+        benefit5: customer.proposal_benefit5 || '',
         benefitsGiven: customer.proposal_benefitsGiven || '',
         remarks: customer.proposal_remarks || '',
       });
@@ -252,14 +294,98 @@ function ProposalDetailsModal({ isOpen, onClose, customer, onSave }) {
               </div>
             </div>
 
+            {/* Benefits Dropdowns */}
+            <h4 style={{ marginTop: '20px', marginBottom: '10px' }}>Benefits</h4>
+            <div className="form-row">
+              <div className="form-group">
+                <label>Benefit 1</label>
+                <select
+                  value={proposalData.benefit1}
+                  onChange={(e) => handleChange('benefit1', e.target.value)}
+                >
+                  <option value="">Select Benefit</option>
+                  {BENEFITS_OPTIONS.map((benefit) => (
+                    <option key={benefit} value={benefit}>
+                      {benefit}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Benefit 2</label>
+                <select
+                  value={proposalData.benefit2}
+                  onChange={(e) => handleChange('benefit2', e.target.value)}
+                >
+                  <option value="">Select Benefit</option>
+                  {BENEFITS_OPTIONS.map((benefit) => (
+                    <option key={benefit} value={benefit}>
+                      {benefit}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label>Benefit 3</label>
+                <select
+                  value={proposalData.benefit3}
+                  onChange={(e) => handleChange('benefit3', e.target.value)}
+                >
+                  <option value="">Select Benefit</option>
+                  {BENEFITS_OPTIONS.map((benefit) => (
+                    <option key={benefit} value={benefit}>
+                      {benefit}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Benefit 4</label>
+                <select
+                  value={proposalData.benefit4}
+                  onChange={(e) => handleChange('benefit4', e.target.value)}
+                >
+                  <option value="">Select Benefit</option>
+                  {BENEFITS_OPTIONS.map((benefit) => (
+                    <option key={benefit} value={benefit}>
+                      {benefit}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label>Benefit 5</label>
+                <select
+                  value={proposalData.benefit5}
+                  onChange={(e) => handleChange('benefit5', e.target.value)}
+                >
+                  <option value="">Select Benefit</option>
+                  {BENEFITS_OPTIONS.map((benefit) => (
+                    <option key={benefit} value={benefit}>
+                      {benefit}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-group">
+                {/* Empty placeholder for alignment */}
+              </div>
+            </div>
+
             {/* Notes Fields */}
             <div className="form-group">
-              <label>Benefits Given</label>
+              <label>Benefits Given (Additional Notes)</label>
               <textarea
                 rows="3"
                 value={proposalData.benefitsGiven}
                 onChange={(e) => handleChange('benefitsGiven', e.target.value)}
-                placeholder="List any benefits or promotions included in this proposal..."
+                placeholder="List any additional benefits or promotions included in this proposal..."
               />
             </div>
 
