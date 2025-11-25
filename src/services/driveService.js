@@ -330,6 +330,67 @@ class DriveService {
   }
 
   /**
+   * Upload a file to Google Drive
+   * @param {string} fileName - Name of the file
+   * @param {Blob|File} file - File or Blob to upload
+   * @param {string} parentFolderId - Parent folder ID
+   * @returns {Promise<string>} - File ID
+   */
+  async uploadFile(fileName, file, parentFolderId) {
+    try {
+      // Determine MIME type
+      let mimeType = file.type;
+      if (!mimeType) {
+        // Default based on file extension
+        if (fileName.endsWith('.json')) {
+          mimeType = 'application/json';
+        } else if (fileName.endsWith('.jpg') || fileName.endsWith('.jpeg')) {
+          mimeType = 'image/jpeg';
+        } else if (fileName.endsWith('.png')) {
+          mimeType = 'image/png';
+        } else if (fileName.endsWith('.pdf')) {
+          mimeType = 'application/pdf';
+        } else {
+          mimeType = 'application/octet-stream';
+        }
+      }
+
+      const fileMetadata = {
+        name: fileName,
+        mimeType: mimeType,
+        parents: [parentFolderId],
+      };
+
+      const form = new FormData();
+      form.append('metadata', new Blob([JSON.stringify(fileMetadata)], { type: 'application/json' }));
+      form.append('file', file);
+
+      const token = window.gapi.client.getToken().access_token;
+      const uploadResponse = await fetch(
+        'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink',
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: form,
+        }
+      );
+
+      if (!uploadResponse.ok) {
+        throw new Error(`Upload failed: ${uploadResponse.statusText}`);
+      }
+
+      const result = await uploadResponse.json();
+      console.log(`Uploaded file "${fileName}":`, result.id);
+      return result.id;
+    } catch (error) {
+      console.error(`Failed to upload file "${fileName}":`, error);
+      throw error;
+    }
+  }
+
+  /**
    * Delete a folder from Google Drive
    */
   async deleteFolder(folderId) {
