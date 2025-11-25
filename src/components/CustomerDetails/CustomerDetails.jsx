@@ -50,6 +50,7 @@ function CustomerDetails() {
   const [dropTargetFolder, setDropTargetFolder] = useState(null);
   const [longPressTimer, setLongPressTimer] = useState(null);
   const [isDragMode, setIsDragMode] = useState(false);
+  const [autoScrollInterval, setAutoScrollInterval] = useState(null);
 
   // Load documents when Documents tab is active
   useEffect(() => {
@@ -209,12 +210,65 @@ function CustomerDetails() {
       clearTimeout(longPressTimer);
       setLongPressTimer(null);
     }
+    stopAutoScroll();
   };
 
   const handleLongPressCancel = () => {
     if (longPressTimer) {
       clearTimeout(longPressTimer);
       setLongPressTimer(null);
+    }
+  };
+
+  // Combined touch move handler
+  const handleTouchMove = (e) => {
+    if (isDragMode) {
+      // If already in drag mode, enable auto-scroll
+      handleDragScroll(e);
+    } else {
+      // If not in drag mode yet, cancel the long press
+      handleLongPressCancel();
+    }
+  };
+
+  // Auto-scroll when dragging near edges
+  const handleDragScroll = (e) => {
+    if (!isDragMode) return;
+
+    const touch = e.touches[0];
+    if (!touch) return;
+
+    const scrollZone = 100; // pixels from edge to trigger scroll
+    const scrollSpeed = 10; // pixels per frame
+    const viewportHeight = window.innerHeight;
+    const touchY = touch.clientY;
+
+    // Stop any existing scroll
+    if (autoScrollInterval) {
+      clearInterval(autoScrollInterval);
+      setAutoScrollInterval(null);
+    }
+
+    // Check if near top edge
+    if (touchY < scrollZone) {
+      const interval = setInterval(() => {
+        window.scrollBy(0, -scrollSpeed);
+      }, 16); // ~60fps
+      setAutoScrollInterval(interval);
+    }
+    // Check if near bottom edge
+    else if (touchY > viewportHeight - scrollZone) {
+      const interval = setInterval(() => {
+        window.scrollBy(0, scrollSpeed);
+      }, 16); // ~60fps
+      setAutoScrollInterval(interval);
+    }
+  };
+
+  const stopAutoScroll = () => {
+    if (autoScrollInterval) {
+      clearInterval(autoScrollInterval);
+      setAutoScrollInterval(null);
     }
   };
 
@@ -246,6 +300,7 @@ function CustomerDetails() {
     setDraggedFile(null);
     setDropTargetFolder(null);
     setIsDragMode(false);
+    stopAutoScroll();
   };
 
   const handleDragOver = (e, folder) => {
@@ -1116,7 +1171,7 @@ function CustomerDetails() {
                                 onClick={() => handleItemClick(folder)}
                                 onTouchStart={(e) => handleLongPressStart(e, folder)}
                                 onTouchEnd={handleLongPressEnd}
-                                onTouchMove={handleLongPressCancel}
+                                onTouchMove={handleTouchMove}
                                 onTouchCancel={handleLongPressCancel}
                                 onDragOver={(e) => handleDragOver(e, folder)}
                                 onDragLeave={handleDragLeave}
@@ -1151,7 +1206,7 @@ function CustomerDetails() {
                                 onClick={() => handleItemClick(doc)}
                                 onTouchStart={(e) => handleLongPressStart(e, doc)}
                                 onTouchEnd={handleLongPressEnd}
-                                onTouchMove={handleLongPressCancel}
+                                onTouchMove={handleTouchMove}
                                 onTouchCancel={handleLongPressCancel}
                               >
                                 <div className="document-icon">
