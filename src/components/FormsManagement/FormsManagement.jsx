@@ -30,7 +30,7 @@ function FormsManagement() {
     updateFieldMappings,
   } = useFormsStore();
 
-  const { isSignedIn } = useAuthStore();
+  const { isSignedIn, isInitialized, canLoadData, isUserVerified } = useAuthStore();
 
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -53,8 +53,15 @@ function FormsManagement() {
   const [changingMaster, setChangingMaster] = useState(false);
 
   useEffect(() => {
-    loadFromLocalStorage();
-  }, [loadFromLocalStorage]);
+    // Wait for auth to initialize and verify user before loading data
+    if (!isInitialized) {
+      return;
+    }
+
+    if (canLoadData()) {
+      loadFromLocalStorage();
+    }
+  }, [isInitialized, isUserVerified, loadFromLocalStorage, canLoadData]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {

@@ -94,7 +94,7 @@ function ExcelIntegration() {
     updateFieldMappings,
   } = useExcelStore();
 
-  const { isSignedIn } = useAuthStore();
+  const { isSignedIn, isInitialized, canLoadData, isUserVerified } = useAuthStore();
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showMappingModal, setShowMappingModal] = useState(false);
@@ -121,8 +121,15 @@ function ExcelIntegration() {
   const [openDropdown, setOpenDropdown] = useState(null);
 
   useEffect(() => {
-    loadFromLocalStorage();
-  }, [loadFromLocalStorage]);
+    // Wait for auth to initialize and verify user before loading data
+    if (!isInitialized) {
+      return;
+    }
+
+    if (canLoadData()) {
+      loadFromLocalStorage();
+    }
+  }, [isInitialized, isUserVerified, loadFromLocalStorage, canLoadData]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {

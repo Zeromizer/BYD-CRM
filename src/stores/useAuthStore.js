@@ -1,13 +1,14 @@
 import { create } from 'zustand';
 import authService from '../services/authService';
 import driveService from '../services/driveService';
+import userStorage from '../services/userStorage';
 import useCustomerStore from './useCustomerStore';
 import useFormsStore from './useFormsStore';
 import useExcelStore from './useExcelStore';
 
 /**
  * Authentication Store
- * Manages Google Drive authentication state
+ * Manages Google Drive authentication state and multi-user data isolation
  */
 const useAuthStore = create((set, get) => ({
   // State
@@ -16,6 +17,8 @@ const useAuthStore = create((set, get) => ({
   isInitializing: false,
   error: null,
   currentUserEmail: null,  // Track current Google account
+  isUserVerified: false,   // Track if current user has been verified against data owner
+  migrationPending: false, // Track if legacy data migration is pending
 
   // Drive Folder IDs (for future use)
   rootFolderId: null,
@@ -37,10 +40,19 @@ const useAuthStore = create((set, get) => ({
     set({ isInitializing: true, error: null });
 
     try {
+      // Check for legacy data before auth initialization
+      const hasLegacy = userStorage.hasLegacyData();
+      if (hasLegacy) {
+        const summary = userStorage.getLegacyDataSummary();
+        console.log('📦 Legacy data detected:', summary);
+        set({ migrationPending: true });
+      }
+
       // Subscribe to auth changes
       authService.onAuthChange(async (isSignedIn) => {
         const previousSignInState = get().isSignedIn;
         const previousUserEmail = get().currentUserEmail;
+        const currentDataOwner = userStorage.getCurrentDataOwner();
 
         // Get current user email if signed in (await to ensure we have it)
         let currentUserEmail = null;
@@ -56,20 +68,45 @@ const useAuthStore = create((set, get) => ({
         const isDifferentUser = previousUserEmail && currentUserEmail &&
                                 previousUserEmail !== currentUserEmail;
 
-        if (isDifferentUser) {
-          console.log(`👤 Account switched from ${previousUserEmail} to ${currentUserEmail} - clearing old data`);
+        // Check if current user doesn't match the data owner (multi-user scenario)
+        const isDataOwnerMismatch = currentUserEmail && currentDataOwner &&
+                                     userStorage.normalizeEmail(currentUserEmail) !== currentDataOwner;
+
+        if (isDifferentUser || isDataOwnerMismatch) {
+          const reason = isDifferentUser ? 'account switched' : 'data owner mismatch';
+          console.log(`👤 ${reason}: clearing old data for new user ${currentUserEmail}`);
+
           // Clear all existing data before loading new user's data
           useCustomerStore.getState().clearAllData();
           useFormsStore.getState().clearAllData();
           useExcelStore.getState().clearAllData();
           // Clear Drive service cache to prevent using old user's folder IDs
           driveService.clearCache();
+          // Clear the data owner since we're switching users
+          userStorage.setCurrentDataOwner(null);
         }
 
-        set({ isSignedIn, currentUserEmail });
+        // Handle legacy data migration for new user
+        if (isSignedIn && currentUserEmail && get().migrationPending) {
+          console.log(`🔄 Migrating legacy data to user: ${currentUserEmail}`);
+          const migrationResult = userStorage.migrateLegacyData(currentUserEmail);
+          if (migrationResult.success) {
+            console.log('✅ Legacy data migration successful:', migrationResult.migrated);
+          } else {
+            console.error('❌ Legacy data migration failed:', migrationResult.errors);
+          }
+          set({ migrationPending: false });
+        }
+
+        // Set current data owner when user signs in
+        if (isSignedIn && currentUserEmail) {
+          userStorage.setCurrentDataOwner(currentUserEmail);
+        }
+
+        set({ isSignedIn, currentUserEmail, isUserVerified: isSignedIn });
 
         // When user signs in and it's the same user
-        if (isSignedIn && !previousSignInState && !isDifferentUser && currentUserEmail) {
+        if (isSignedIn && !previousSignInState && !isDifferentUser && !isDataOwnerMismatch && currentUserEmail) {
           console.log(`✅ Same user signing in (${currentUserEmail}) - keeping local data, will merge with Drive`);
         }
 
@@ -141,12 +178,16 @@ const useAuthStore = create((set, get) => ({
       // Clear Drive service cache
       driveService.clearCache();
 
+      // Clear data owner tracking
+      userStorage.setCurrentDataOwner(null);
+
       // Sign out from auth service (clears localStorage and Drive cache)
       authService.signOut();
 
       // Clear auth state (including currentUserEmail for account switching detection)
       set({
         isSignedIn: false,
+        isUserVerified: false,
         currentUserEmail: null,
         rootFolderId: null,
         formsFolderId: null,
@@ -170,6 +211,43 @@ const useAuthStore = create((set, get) => ({
   setFolderIds: (folderIds) => set(folderIds),
 
   setError: (error) => set({ error }),
+
+  /**
+   * Check if it's safe to load data for the current session
+   * Returns true if:
+   * - User is signed in and verified, OR
+   * - No data owner is set (fresh start), OR
+   * - Data owner matches the cached googleUserEmail
+   */
+  canLoadData: () => {
+    const currentDataOwner = userStorage.getCurrentDataOwner();
+    const cachedEmail = localStorage.getItem('googleUserEmail');
+
+    // No data owner set - safe to load (fresh start or offline mode)
+    if (!currentDataOwner) {
+      return true;
+    }
+
+    // No cached email - can't verify, wait for sign-in
+    if (!cachedEmail) {
+      return false;
+    }
+
+    // Check if cached email matches data owner
+    return userStorage.normalizeEmail(cachedEmail) === currentDataOwner;
+  },
+
+  /**
+   * Get migration status for UI display
+   */
+  getMigrationInfo: () => {
+    const hasLegacy = userStorage.hasLegacyData();
+    const summary = hasLegacy ? userStorage.getLegacyDataSummary() : null;
+    return {
+      hasPendingMigration: hasLegacy,
+      summary,
+    };
+  },
 }));
 
 export default useAuthStore;

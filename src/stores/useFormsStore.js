@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import driveService from '../services/driveService';
+import userStorage from '../services/userStorage';
 
 const useFormsStore = create((set, get) => ({
   formTemplates: {},
@@ -7,13 +8,29 @@ const useFormsStore = create((set, get) => ({
   error: null,
   lastSyncTime: null,
 
-  // Load form templates from localStorage
+  /**
+   * Load form templates from user-specific localStorage
+   * Falls back to legacy storage during migration
+   */
   loadFromLocalStorage: () => {
     try {
+      const userEmail = localStorage.getItem('googleUserEmail');
+
+      // Try to load from user-specific storage first
+      if (userEmail) {
+        const templates = userStorage.loadUserData(userEmail, 'forms');
+        if (templates && Object.keys(templates).length > 0) {
+          console.log(`Loaded ${Object.keys(templates).length} form templates for user: ${userEmail}`);
+          set({ formTemplates: templates });
+          return;
+        }
+      }
+
+      // Fall back to legacy storage (for migration)
       const stored = localStorage.getItem('formTemplates');
       if (stored) {
         const templates = JSON.parse(stored);
-        console.log('Loaded form templates from localStorage:', Object.keys(templates).length);
+        console.log('Loaded form templates from legacy localStorage:', Object.keys(templates).length);
         set({ formTemplates: templates });
       }
     } catch (error) {
@@ -22,12 +39,24 @@ const useFormsStore = create((set, get) => ({
     }
   },
 
-  // Save form templates to localStorage
+  /**
+   * Save form templates to user-specific localStorage
+   * Falls back to legacy storage if no user is signed in
+   */
   saveToLocalStorage: () => {
     try {
       const { formTemplates } = get();
-      localStorage.setItem('formTemplates', JSON.stringify(formTemplates));
-      console.log('Saved form templates to localStorage');
+      const userEmail = localStorage.getItem('googleUserEmail');
+
+      if (userEmail) {
+        // Save to user-specific storage
+        userStorage.saveUserData(userEmail, 'forms', formTemplates);
+        console.log(`Saved ${Object.keys(formTemplates).length} form templates for user: ${userEmail}`);
+      } else {
+        // Fall back to legacy storage (offline mode)
+        localStorage.setItem('formTemplates', JSON.stringify(formTemplates));
+        console.log('Saved form templates to legacy localStorage');
+      }
     } catch (error) {
       console.error('Failed to save form templates:', error);
       set({ error: 'Failed to save form templates' });
@@ -43,13 +72,13 @@ const useFormsStore = create((set, get) => ({
       // Sync with Drive (Drive is source of truth)
       const synced = await driveService.syncForms(formTemplates);
 
-      // Update state and localStorage
+      // Update state and user-specific localStorage
       set({
         formTemplates: synced,
         isLoading: false,
         lastSyncTime: new Date().toISOString()
       });
-      localStorage.setItem('formTemplates', JSON.stringify(synced));
+      get().saveToLocalStorage();
 
       console.log('Form templates synced with Drive successfully');
       return synced;
@@ -136,15 +165,27 @@ const useFormsStore = create((set, get) => ({
     set({ error: null });
   },
 
-  // Clear all form templates (for sign out or account switching)
+  /**
+   * Clear all form templates (for sign out or account switching)
+   * Clears both user-specific and legacy storage
+   */
   clearAllData: () => {
     console.log('Clearing all form templates');
+    const userEmail = localStorage.getItem('googleUserEmail');
+
     set({
       formTemplates: {},
       isLoading: false,
       error: null,
       lastSyncTime: null,
     });
+
+    // Clear from user-specific storage
+    if (userEmail) {
+      userStorage.clearUserData(userEmail, 'forms');
+    }
+
+    // Also clear legacy storage
     localStorage.removeItem('formTemplates');
   },
 }));
