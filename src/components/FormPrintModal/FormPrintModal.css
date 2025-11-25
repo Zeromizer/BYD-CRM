@@ -4,6 +4,7 @@
   min-height: 500px;
 }
 
+/* Selection View */
 .form-selection {
   display: flex;
   flex-direction: column;
@@ -11,22 +12,21 @@
 }
 
 .customer-info {
-  background: #f7fafc;
-  padding: 15px 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 20px;
   border-radius: 8px;
-  border: 2px solid #e0e0e0;
+  color: white;
 }
 
 .customer-info h4 {
-  color: #2c3e50;
   margin: 0 0 5px 0;
-  font-size: 16px;
+  font-size: 18px;
 }
 
 .customer-info p {
-  color: #7f8c8d;
   margin: 0;
   font-size: 14px;
+  opacity: 0.9;
 }
 
 .warning-banner {
@@ -36,12 +36,16 @@
   padding: 15px 20px;
   border-radius: 8px;
   font-size: 14px;
+  font-weight: 500;
 }
 
 .empty-state {
   text-align: center;
   padding: 60px 20px;
   color: #7f8c8d;
+  background: #f7fafc;
+  border-radius: 8px;
+  border: 2px dashed #e0e0e0;
 }
 
 .empty-state p {
@@ -67,10 +71,11 @@
 }
 
 .form-group select {
-  padding: 10px;
+  padding: 12px;
   border: 2px solid #cbd5e0;
   border-radius: 6px;
   font-size: 14px;
+  transition: border-color 0.2s;
 }
 
 .form-group select:focus {
@@ -89,6 +94,12 @@
   color: #2c3e50;
   margin: 0 0 15px 0;
   font-size: 16px;
+}
+
+.form-info h5 {
+  color: #2c3e50;
+  margin: 15px 0 10px;
+  font-size: 14px;
 }
 
 .info-grid {
@@ -115,6 +126,27 @@
   font-size: 14px;
 }
 
+.field-preview {
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.field-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.field-tag {
+  background: #e8f4fd;
+  color: #3498db;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
 .modal-actions {
   display: flex;
   justify-content: flex-end;
@@ -127,7 +159,7 @@
 .form-preview {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 15px;
   height: 100%;
 }
 
@@ -151,39 +183,28 @@
   border-radius: 8px;
   padding: 20px;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
   overflow: auto;
-  min-height: 600px;
+  min-height: 500px;
 }
 
-/* SVG-based Form Rendering */
-.filled-form-wrapper {
-  position: relative;
-  display: inline-block;
-  max-width: 100%;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+.preview-canvas {
   background: white;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  border-radius: 4px;
 }
 
-.filled-form-wrapper .form-image {
-  display: block;
-  width: 100%;
-  height: auto;
-  background: white;
-}
-
-.form-text-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-}
-
-.form-text-overlay text {
-  user-select: none;
+.preview-info-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+  background: #f7fafc;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #7f8c8d;
 }
 
 .preview-actions {
@@ -194,38 +215,69 @@
   border-top: 2px solid #e0e0e0;
 }
 
+/* Button Styles */
+.btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-small {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+.btn-primary {
+  background: #3498db;
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #2980b9;
+}
+
+.btn-primary:disabled {
+  background: #bdc3c7;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background: #95a5a6;
+  color: white;
+}
+
+.btn-secondary:hover {
+  background: #7f8c8d;
+}
+
 /* Print Styles */
 @media print {
-  /* Hide everything except the form */
   body * {
     visibility: hidden;
   }
 
-  .filled-form-wrapper,
-  .filled-form-wrapper * {
+  .preview-canvas,
+  .preview-canvas * {
     visibility: visible;
   }
 
-  .filled-form-wrapper {
+  .preview-canvas {
     position: absolute;
     left: 0;
     top: 0;
     width: 100%;
     box-shadow: none;
-    page-break-inside: avoid;
+    border-radius: 0;
   }
 
-  .filled-form-wrapper .form-image {
-    width: 100%;
-    height: auto;
-  }
-
-  /* Hide UI elements */
   .no-print {
     display: none !important;
   }
 
-  /* Page settings */
   @page {
     size: A4;
     margin: 0;
@@ -254,5 +306,10 @@
 
   .info-grid {
     grid-template-columns: 1fr;
+  }
+
+  .preview-info-bar {
+    flex-wrap: wrap;
+    gap: 8px;
   }
 }
