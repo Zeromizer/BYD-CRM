@@ -198,7 +198,9 @@ function CustomerDetails() {
       return;
     }
 
+    console.log('Long press started for:', item.name);
     const timer = setTimeout(() => {
+      console.log('Long press completed, entering drag mode');
       setDraggedFile(item);
       setIsDragMode(true);
     }, 500); // 500ms long press
@@ -206,6 +208,7 @@ function CustomerDetails() {
   };
 
   const handleLongPressEnd = () => {
+    console.log('Long press ended');
     if (longPressTimer) {
       clearTimeout(longPressTimer);
       setLongPressTimer(null);
@@ -214,6 +217,7 @@ function CustomerDetails() {
   };
 
   const handleLongPressCancel = () => {
+    console.log('Long press cancelled');
     if (longPressTimer) {
       clearTimeout(longPressTimer);
       setLongPressTimer(null);
@@ -222,6 +226,7 @@ function CustomerDetails() {
 
   // Combined touch move handler
   const handleTouchMove = (e) => {
+    console.log('Touch move - isDragMode:', isDragMode);
     if (isDragMode) {
       // If already in drag mode, enable auto-scroll
       handleDragScroll(e);
@@ -238,6 +243,8 @@ function CustomerDetails() {
     const touch = e.touches[0];
     if (!touch) return;
 
+    console.log('Drag scroll check - Y position:', touch.clientY);
+
     const scrollZone = 100; // pixels from edge to trigger scroll
     const scrollSpeed = 10; // pixels per frame
     const viewportHeight = window.innerHeight;
@@ -251,6 +258,7 @@ function CustomerDetails() {
 
     // Check if near top edge
     if (touchY < scrollZone) {
+      console.log('Starting auto-scroll UP');
       const interval = setInterval(() => {
         window.scrollBy(0, -scrollSpeed);
       }, 16); // ~60fps
@@ -258,6 +266,7 @@ function CustomerDetails() {
     }
     // Check if near bottom edge
     else if (touchY > viewportHeight - scrollZone) {
+      console.log('Starting auto-scroll DOWN');
       const interval = setInterval(() => {
         window.scrollBy(0, scrollSpeed);
       }, 16); // ~60fps
@@ -266,6 +275,7 @@ function CustomerDetails() {
   };
 
   const stopAutoScroll = () => {
+    console.log('Stopping auto-scroll');
     if (autoScrollInterval) {
       clearInterval(autoScrollInterval);
       setAutoScrollInterval(null);
