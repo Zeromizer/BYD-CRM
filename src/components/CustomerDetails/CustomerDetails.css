@@ -1044,39 +1044,66 @@
 }
 
 .inline-edit-item input,
+.inline-edit-item select,
 .inline-edit-full textarea {
   width: 100%;
   padding: 10px 12px;
   font-size: 15px;
-  border: 1px solid #d1d5db;
+  border: 1px solid transparent;
   border-radius: var(--radius-md);
-  background: #ffffff;
+  background: transparent;
   color: var(--color-text-on-card);
   transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.inline-edit-item input:hover,
+.inline-edit-item select:hover,
+.inline-edit-full textarea:hover {
+  background: rgba(0, 0, 0, 0.03);
+  border-color: #e5e7eb;
 }
 
 .inline-edit-item input:focus,
+.inline-edit-item select:focus,
 .inline-edit-full textarea:focus {
   outline: none;
   border-color: var(--color-primary);
-  background: var(--color-card-background);
+  background: #ffffff;
   box-shadow: 0 0 0 3px var(--color-primary-light);
+  cursor: text;
+}
+
+.inline-edit-item select:focus {
+  cursor: pointer;
 }
 
 .inline-edit-item input:disabled,
+.inline-edit-item select:disabled,
 .inline-edit-full textarea:disabled {
   opacity: 0.7;
   cursor: not-allowed;
+  background: transparent;
 }
 
 .inline-edit-item input.error,
+.inline-edit-item select.error,
 .inline-edit-full textarea.error {
   border-color: var(--color-error);
+  background: rgba(239, 68, 68, 0.05);
 }
 
 .inline-edit-item input.error:focus,
+.inline-edit-item select.error:focus,
 .inline-edit-full textarea.error:focus {
   box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
+}
+
+.inline-edit-item input::placeholder,
+.inline-edit-full textarea::placeholder {
+  color: var(--color-text-tertiary);
+  opacity: 0.6;
+  font-style: italic;
 }
 
 .inline-edit-item .error-message {
@@ -1131,6 +1158,7 @@
   }
 
   .inline-edit-item input,
+  .inline-edit-item select,
   .inline-edit-full textarea {
     font-size: 16px; /* Prevent zoom on iOS */
     padding: 12px;
