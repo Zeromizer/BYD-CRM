@@ -69,6 +69,7 @@ const useDocumentStore = create((set, get) => ({
 
   /**
    * Sync template to Google Drive
+   * Uses the centralized driveService method for consistency
    */
   syncTemplateToDrive: async (templateId) => {
     const { templates } = get();
@@ -88,23 +89,8 @@ const useDocumentStore = create((set, get) => ({
         updatedAt: new Date().toISOString(),
       };
 
-      const fileName = `${templateId}.json`;
-      const fileContent = JSON.stringify(templateData, null, 2);
-
-      // Get or create templates folder
-      const folderId = await driveService.getOrCreateFolder('Document Templates');
-
-      // Check if file exists
-      const existingFiles = await driveService.listFiles(folderId);
-      const existingFile = existingFiles.find((f) => f.name === fileName);
-
-      if (existingFile) {
-        // Update existing file
-        await driveService.updateFileContent(existingFile.id, fileContent);
-      } else {
-        // Create new file
-        await driveService.uploadFile(fileName, fileContent, folderId);
-      }
+      // Use driveService method which ensures correct folder location
+      await driveService.saveDocumentTemplateToDrive(templateData);
     } catch (error) {
       console.error('Error syncing template to Drive:', error);
       throw error;
@@ -300,30 +286,14 @@ const useDocumentStore = create((set, get) => ({
 
   /**
    * Load templates from Google Drive
+   * Uses driveService for consistent folder location
    */
   loadFromDrive: async () => {
     try {
       set({ loading: true, error: null });
 
-      // Get templates folder
-      const folderId = await driveService.getOrCreateFolder('Document Templates');
-
-      // List all template files
-      const files = await driveService.listFiles(folderId);
-
-      // Load each template
-      const templates = {};
-      for (const file of files) {
-        if (file.name.endsWith('.json')) {
-          try {
-            const content = await driveService.getFileContent(file.id);
-            const template = JSON.parse(content);
-            templates[template.id] = template;
-          } catch (error) {
-            console.error(`Error loading template ${file.name}:`, error);
-          }
-        }
-      }
+      // Use driveService to load templates (ensures correct folder location)
+      const templates = await driveService.loadDocumentTemplatesFromDrive();
 
       set({ templates, loading: false });
       get().saveToLocalStorage(templates);
@@ -340,6 +310,7 @@ const useDocumentStore = create((set, get) => ({
    * Sync templates with Google Drive
    * IMPORTANT: Loads from localStorage first before syncing to prevent data loss
    * This is the primary sync function that should be called on app init
+   * Uses driveService.syncDocumentTemplates for consistent behavior with forms/excel
    */
   syncWithDrive: async () => {
     try {
@@ -351,47 +322,10 @@ const useDocumentStore = create((set, get) => ({
       get().loadFromLocalStorage();
 
       const localTemplates = get().templates;
-      console.log('[DocumentStore] Syncing document templates with Drive, local templates:', Object.keys(localTemplates).length);
+      console.log('Syncing document templates with Drive, local templates:', Object.keys(localTemplates).length);
 
-      // Get templates folder from Drive
-      const folderId = await driveService.getOrCreateFolder('Document Templates');
-      console.log('[DocumentStore] Document Templates folder ID:', folderId);
-
-      // List all template files from Drive
-      const files = await driveService.listFiles(folderId);
-      console.log('[DocumentStore] Files in Document Templates folder:', files.length, files.map(f => f.name));
-
-      // Load each template from Drive
-      const driveTemplates = {};
-      for (const file of files) {
-        if (file.name.endsWith('.json')) {
-          try {
-            console.log(`[DocumentStore] Loading template file: ${file.name} (${file.id})`);
-            const content = await driveService.getFileContent(file.id);
-            console.log(`[DocumentStore] File content (first 200 chars): ${String(content).substring(0, 200)}`);
-            const template = JSON.parse(content);
-            console.log(`[DocumentStore] Parsed template: ${template.id} - ${template.name}`);
-            driveTemplates[template.id] = template;
-          } catch (error) {
-            console.error(`[DocumentStore] Error loading template ${file.name}:`, error);
-          }
-        }
-      }
-
-      console.log('[DocumentStore] Loaded from Drive:', Object.keys(driveTemplates).length, 'templates');
-
-      // Merge: Drive is source of truth, but keep local-only templates
-      const mergedTemplates = { ...driveTemplates };
-
-      // Add local templates that don't exist in Drive (newly created offline)
-      for (const [id, template] of Object.entries(localTemplates)) {
-        if (!driveTemplates[id]) {
-          console.log(`[DocumentStore] Found local-only template: ${id}, will sync to Drive`);
-          mergedTemplates[id] = template;
-          // Queue sync for this template to Drive
-          get().queueSync(id);
-        }
-      }
+      // Use driveService for sync (ensures correct folder location in BYD_CRM_Data)
+      const mergedTemplates = await driveService.syncDocumentTemplates(localTemplates);
 
       // Update state and localStorage
       set({
@@ -401,12 +335,13 @@ const useDocumentStore = create((set, get) => ({
       });
       get().saveToLocalStorage(mergedTemplates);
 
-      console.log('[DocumentStore] Document templates synced with Drive successfully:', Object.keys(mergedTemplates).length);
+      console.log('Document templates synced with Drive successfully:', Object.keys(mergedTemplates).length);
       return mergedTemplates;
     } catch (error) {
-      console.error('[DocumentStore] Failed to sync document templates with Drive:', error);
+      console.error('Failed to sync document templates with Drive:', error);
       set({ error: 'Failed to sync with Google Drive', loading: false });
-      throw error;
+      // Don't throw - return local templates as fallback (same pattern as forms/excel)
+      return get().templates;
     }
   },
 
