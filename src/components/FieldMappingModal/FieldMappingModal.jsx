@@ -1,155 +1,129 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import useAuthStore from '../../stores/useAuthStore';
-import formRenderService, { FONT_SIZE_PRESETS, FIELD_NAMES } from '../../services/formRenderService';
+import authService from '../../services/authService';
 import Modal from '../Modal/Modal';
 import './FieldMappingModal.css';
 
-/**
- * Enhanced Field Mapping Modal
- *
- * Features:
- * - Canvas-based rendering for true WYSIWYG preview
- * - DPI-aware font sizing using typographic points
- * - Drag-to-reposition fields
- * - Click to select and edit fields
- * - Real-time preview of text rendering
- */
+const FIELD_NAMES = {
+  name: 'Customer Name',
+  phone: 'Phone Number',
+  email: 'Email',
+  nric: 'NRIC/FIN',
+  occupation: 'Occupation',
+  dob: 'Date of Birth',
+  address: 'Address',
+  addressContinue: 'Address Continue',
+  fullAddress: 'Full Address (Combined)',
+  salesConsultant: 'Sales Consultant',
+  vsaNo: 'VSA No',
+  date: "Today's Date",
+
+  // VSA Details - BYD New Car Details
+  makeModel: 'Make & Model',
+  yom: 'Year of Manufacture',
+  bodyColour: 'Body Colour',
+  upholstery: 'Upholstery',
+  przType: 'P/R/Z Type',
+
+  // VSA Details - BYD New Car Package
+  package: 'Package',
+  sellingWithCOE: 'Selling with COE',
+  sellingPriceList: 'Selling Price on Price List',
+  purchasePriceWithCOE: 'Purchase Price with COE',
+  coeRebateLevel: 'COE Rebate Level',
+  deposit: 'Deposit',
+  lessOthers: 'Less: Others',
+  addOthers: 'Add: Others',
+  deliveryDate: 'Approximate Delivery Date',
+
+  // VSA Details - Trade In Car Details
+  tradeInCarNo: 'Trade in Car No',
+  tradeInCarModel: 'Trade in Car Model',
+  tradeInAmount: 'Trade In Amount',
+
+  // VSA Details - Delivery Details
+  dateOfRegistration: 'Date of Registration',
+  registrationNo: 'Registration No',
+  chassisNo: 'Chassis No',
+  engineNo: 'Engine No',
+  motorNo: 'Motor No',
+
+  // VSA Details - Insurance
+  insuranceCompany: 'Insurance Company',
+  insuranceFee: 'Insurance Fee',
+  insuranceFeeNet: 'Net Insurance Fee',
+
+  // VSA Details - Remarks
+  remarks1: 'Remarks 1',
+  remarks2: 'Remarks 2',
+  loanAmount: 'Loan Amount',
+  interest: 'Interest',
+  tenure: 'Tenure',
+  adminFee: 'Admin Fee',
+  insuranceSubsidy: 'Insurance Subsidy',
+  monthlyRepayment: 'Monthly Repayment',
+
+  // Proposal Details
+  proposalModel: 'Proposal - Model',
+  proposalBank: 'Proposal - Bank',
+  proposalSellingPrice: 'Proposal - Selling Price',
+  proposalInterestRate: 'Proposal - Interest Rate',
+  proposalDownpayment: 'Proposal - Downpayment',
+  proposalLoanTenure: 'Proposal - Loan Tenure',
+  proposalLoanAmount: 'Proposal - Loan Amount',
+  proposalAdminFee: 'Proposal - Admin Fee',
+  proposalReferralFee: 'Proposal - Referral Fee',
+  proposalTradeInModel: 'Proposal - Trade In Model',
+  proposalLowLoanSurcharge: 'Proposal - Low Loan Surcharge',
+  proposalTradeInCarPlate: 'Proposal - Trade In Car Plate',
+  proposalNoLoanSurcharge: 'Proposal - No Loan Surcharge',
+  proposalQuotedTradeInPrice: 'Proposal - Quoted Trade In Price',
+  proposalBenefit1: 'Proposal - Benefit 1',
+  proposalBenefit2: 'Proposal - Benefit 2',
+  proposalBenefit3: 'Proposal - Benefit 3',
+  proposalBenefit4: 'Proposal - Benefit 4',
+  proposalBenefit5: 'Proposal - Benefit 5',
+  proposalBenefitsGiven: 'Proposal - Benefits Given',
+  proposalRemarks: 'Proposal - Remarks',
+
+  custom: 'Custom Value',
+};
+
 function FieldMappingModal({ isOpen, onClose, formType, template, onSave }) {
   const { isSignedIn } = useAuthStore();
-  const canvasRef = useRef(null);
-  const containerRef = useRef(null);
+  const svgRef = useRef(null);
 
-  // State
   const [mappings, setMappings] = useState({});
   const [selectedField, setSelectedField] = useState('name');
-  const [fontSize, setFontSize] = useState(12); // Points
+  const [fontSize, setFontSize] = useState(14);
   const [textColor, setTextColor] = useState('#000000');
   const [customValue, setCustomValue] = useState('');
-  const [selectedFieldId, setSelectedFieldId] = useState(null);
+  const [editingFieldId, setEditingFieldId] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [formImage, setFormImage] = useState(null);
+  const [imageUrl, setImageUrl] = useState(null);
   const [imageDimensions, setImageDimensions] = useState({ width: 0, height: 0 });
-  const [scale, setScale] = useState(1);
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragFieldId, setDragFieldId] = useState(null);
-  const [mode, setMode] = useState('add'); // 'add' or 'select'
-
-  // Sample data for preview
-  const sampleData = {
-    name: 'John Doe',
-    phone: '+65 9123 4567',
-    email: 'john.doe@email.com',
-    nric: 'S1234567A',
-    occupation: 'Engineer',
-    dob: '01/01/1990',
-    address: '123 Main Street',
-    addressContinue: 'Singapore 123456',
-    fullAddress: '123 Main Street, Singapore 123456',
-    salesConsultant: 'Jane Smith',
-    vsaNo: 'VSA-2024-001',
-    date: new Date().toLocaleDateString(),
-    makeModel: 'BYD Seal',
-    yom: '2024',
-    bodyColour: 'Aurora White',
-    upholstery: 'Black Leather',
-    przType: 'Premium',
-    package: 'Performance',
-    sellingWithCOE: '$168,888',
-    sellingPriceList: '$148,888',
-    purchasePriceWithCOE: '$168,888',
-    coeRebateLevel: '$20,000',
-    deposit: '$10,000',
-    lessOthers: '$0',
-    addOthers: '$5,000',
-    deliveryDate: '01/03/2024',
-    tradeInCarNo: 'SBA1234A',
-    tradeInCarModel: 'Honda Civic',
-    tradeInAmount: '$30,000',
-    dateOfRegistration: '01/02/2024',
-    registrationNo: 'SGA1234B',
-    chassisNo: 'CHASSIS123456',
-    engineNo: 'ENGINE123456',
-    motorNo: 'MOTOR123456',
-    insuranceCompany: 'NTUC Income',
-    insuranceFee: '$1,500',
-    insuranceFeeNet: '$1,200',
-    remarks1: 'Remark line 1',
-    remarks2: 'Remark line 2',
-    loanAmount: '$100,000',
-    interest: '2.78%',
-    tenure: '7 years',
-    adminFee: '$500',
-    insuranceSubsidy: '$300',
-    monthlyRepayment: '$1,388',
-  };
 
   // Load existing mappings and image when modal opens
   useEffect(() => {
     if (isOpen && template) {
-      // Migrate old pixel-based font sizes to points
-      const migratedMappings = {};
-      const oldMappings = template.fieldMappings || {};
-
-      for (const [id, field] of Object.entries(oldMappings)) {
-        migratedMappings[id] = {
-          ...field,
-          // If fontSize is larger than 72 (max points), it's likely in pixels
-          // Convert to points (pixels / 4.167)
-          fontSize: field.fontSize > 72
-            ? formRenderService.pixelsToPoints(field.fontSize)
-            : field.fontSize || 12,
-        };
-      }
-
-      setMappings(migratedMappings);
+      console.log('Loading template mappings:', template.fieldMappings);
+      setMappings({ ...(template.fieldMappings || {}) });
       loadFormImage();
     }
 
+    // Reset state when modal closes
     if (!isOpen) {
-      resetState();
+      setMappings({});
+      setEditingFieldId(null);
+      setCustomValue('');
+      setImageUrl(null);
+      setImageDimensions({ width: 0, height: 0 });
     }
   }, [isOpen, template?.fileId]);
 
-  // Redraw canvas when dependencies change
-  useEffect(() => {
-    if (formImage && canvasRef.current) {
-      drawCanvas();
-    }
-  }, [formImage, mappings, selectedFieldId, scale]);
-
-  // Calculate scale when image loads or container resizes
-  useEffect(() => {
-    const updateScale = () => {
-      if (containerRef.current && imageDimensions.width > 0) {
-        const containerWidth = containerRef.current.clientWidth - 40; // Padding
-        const maxHeight = window.innerHeight * 0.6;
-
-        const scaleX = containerWidth / imageDimensions.width;
-        const scaleY = maxHeight / imageDimensions.height;
-
-        setScale(Math.min(scaleX, scaleY, 1)); // Never upscale
-      }
-    };
-
-    updateScale();
-    window.addEventListener('resize', updateScale);
-    return () => window.removeEventListener('resize', updateScale);
-  }, [imageDimensions]);
-
-  const resetState = () => {
-    setMappings({});
-    setSelectedFieldId(null);
-    setCustomValue('');
-    setFormImage(null);
-    setImageDimensions({ width: 0, height: 0 });
-    setScale(1);
-    setIsDragging(false);
-    setDragFieldId(null);
-    setMode('add');
-  };
-
   const loadFormImage = async () => {
-    if (!template?.fileId) {
+    if (!template || !template.fileId) {
+      console.error('No template or file ID');
       alert('No form template found. Please upload a form first.');
       return;
     }
@@ -162,186 +136,123 @@ function FieldMappingModal({ isOpen, onClose, formType, template, onSave }) {
     setLoading(true);
 
     try {
-      const base64Data = await formRenderService.fetchFormImage(template.fileId);
-      const img = await formRenderService.loadImage(base64Data);
+      const token = authService.getAccessToken();
 
-      setFormImage(img);
-      setImageDimensions({ width: img.width, height: img.height });
+      if (!token) {
+        throw new Error('No access token available. Please sign in again.');
+      }
+
+      console.log('Loading form image from Drive:', template.fileId);
+
+      const response = await fetch(
+        `https://www.googleapis.com/drive/v3/files/${template.fileId}?alt=media`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Drive API error:', response.status, errorText);
+        throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      setImageUrl(url);
       setLoading(false);
-
-      // Show info about the image
-      const estimatedDPI = formRenderService.estimateImageDPI(img.width, img.height);
-      console.log(`Form image: ${img.width}x${img.height}px, estimated DPI: ${estimatedDPI}`);
+      console.log('Form image loaded successfully');
     } catch (error) {
       console.error('Error loading form image:', error);
-      alert('Failed to load form image: ' + error.message);
+      alert('Failed to load form image: ' + error.message + '\n\nPlease make sure you are signed in to Google Drive.');
       setLoading(false);
     }
   };
 
-  const drawCanvas = useCallback(() => {
-    if (!canvasRef.current || !formImage) return;
-
-    formRenderService.renderFormToCanvas(
-      canvasRef.current,
-      formImage,
-      mappings,
-      sampleData,
-      {
-        scale,
-        showMarkers: true,
-        selectedFieldId,
-        usePoints: true,
-      }
-    );
-  }, [formImage, mappings, scale, selectedFieldId]);
-
-  const getCanvasCoordinates = (e) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return null;
-
-    const rect = canvas.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / scale;
-    const y = (e.clientY - rect.top) / scale;
-
-    return { x, y };
+  const handleImageLoad = (e) => {
+    const img = e.target;
+    setImageDimensions({
+      width: img.naturalWidth,
+      height: img.naturalHeight,
+    });
+    console.log('Image dimensions:', img.naturalWidth, 'x', img.naturalHeight);
+    console.log('Current mappings count:', Object.keys(mappings).length);
   };
 
-  const findFieldAtPosition = (x, y) => {
-    const hitRadius = 20 / scale; // Account for scale
+  const handleSvgClick = (e) => {
+    if (!svgRef.current) return;
 
-    for (const [fieldId, field] of Object.entries(mappings)) {
-      const dx = field.x - x;
-      const dy = field.y - y;
-      if (Math.sqrt(dx * dx + dy * dy) < hitRadius) {
-        return fieldId;
-      }
+    // Check if custom value is required but empty
+    if (selectedField === 'custom' && !customValue.trim()) {
+      alert('Please enter a custom value');
+      return;
     }
-    return null;
-  };
 
-  const handleCanvasClick = (e) => {
-    const coords = getCanvasCoordinates(e);
-    if (!coords) return;
+    // Get click coordinates in SVG coordinate system
+    const svg = svgRef.current;
+    const pt = svg.createSVGPoint();
+    pt.x = e.clientX;
+    pt.y = e.clientY;
 
-    // Check if clicking on existing field
-    const clickedFieldId = findFieldAtPosition(coords.x, coords.y);
+    // Transform to SVG coordinates (automatically handles scaling)
+    const svgP = pt.matrixTransform(svg.getScreenCTM().inverse());
 
-    if (clickedFieldId) {
-      // Select the field
-      setSelectedFieldId(clickedFieldId);
-      const field = mappings[clickedFieldId];
-      setFontSize(field.fontSize || 12);
-      setTextColor(field.color || '#000000');
-      if (field.customValue) {
-        setSelectedField('custom');
-        setCustomValue(field.customValue);
-      } else {
-        setSelectedField(field.type);
-        setCustomValue('');
-      }
-      setMode('select');
-    } else if (mode === 'add') {
-      // Add new field at click position
-      if (selectedField === 'custom' && !customValue.trim()) {
-        alert('Please enter a custom value');
-        return;
-      }
+    // Add field mapping
+    const fieldId = 'field_' + Date.now();
+    const newMapping = {
+      type: selectedField,
+      x: svgP.x,
+      y: svgP.y,
+      fontSize: fontSize,
+      color: textColor,
+    };
 
-      const fieldId = 'field_' + Date.now();
-      const newMapping = {
-        type: selectedField,
-        x: coords.x,
-        y: coords.y,
-        fontSize: fontSize,
-        color: textColor,
-      };
+    if (selectedField === 'custom') {
+      newMapping.customValue = customValue.trim();
+    }
 
-      if (selectedField === 'custom') {
-        newMapping.customValue = customValue.trim();
-        setCustomValue('');
-      }
+    setMappings({
+      ...mappings,
+      [fieldId]: newMapping,
+    });
 
-      setMappings({ ...mappings, [fieldId]: newMapping });
-      setSelectedFieldId(fieldId);
-    } else {
-      // Deselect in select mode
-      setSelectedFieldId(null);
-      setMode('add');
+    // Clear custom value after adding
+    if (selectedField === 'custom') {
+      setCustomValue('');
     }
   };
 
-  const handleCanvasMouseDown = (e) => {
-    const coords = getCanvasCoordinates(e);
-    if (!coords) return;
-
-    const fieldId = findFieldAtPosition(coords.x, coords.y);
-    if (fieldId) {
-      setIsDragging(true);
-      setDragFieldId(fieldId);
-      setSelectedFieldId(fieldId);
-      setMode('select');
-    }
-  };
-
-  const handleCanvasMouseMove = (e) => {
-    if (!isDragging || !dragFieldId) return;
-
-    const coords = getCanvasCoordinates(e);
-    if (!coords) return;
-
-    setMappings(prev => ({
-      ...prev,
-      [dragFieldId]: {
-        ...prev[dragFieldId],
-        x: Math.max(0, Math.min(coords.x, imageDimensions.width)),
-        y: Math.max(0, Math.min(coords.y, imageDimensions.height)),
-      },
-    }));
-  };
-
-  const handleCanvasMouseUp = () => {
-    setIsDragging(false);
-    setDragFieldId(null);
-  };
-
-  const handleCanvasMouseLeave = () => {
-    if (isDragging) {
-      setIsDragging(false);
-      setDragFieldId(null);
-    }
-  };
-
-  const updateSelectedField = () => {
-    if (!selectedFieldId || !mappings[selectedFieldId]) return;
-
-    setMappings(prev => ({
-      ...prev,
-      [selectedFieldId]: {
-        ...prev[selectedFieldId],
-        type: selectedField,
-        fontSize: fontSize,
-        color: textColor,
-        customValue: selectedField === 'custom' ? customValue.trim() : undefined,
-      },
-    }));
-  };
-
-  const removeSelectedField = () => {
-    if (!selectedFieldId) return;
-
+  const removeMapping = (fieldId) => {
     const newMappings = { ...mappings };
-    delete newMappings[selectedFieldId];
+    delete newMappings[fieldId];
     setMappings(newMappings);
-    setSelectedFieldId(null);
-    setMode('add');
+  };
+
+  const startEditMapping = (fieldId) => {
+    setEditingFieldId(fieldId);
+  };
+
+  const saveEditMapping = (fieldId, newFontSize, newColor) => {
+    setMappings({
+      ...mappings,
+      [fieldId]: {
+        ...mappings[fieldId],
+        fontSize: parseInt(newFontSize),
+        color: newColor,
+      },
+    });
+    setEditingFieldId(null);
+  };
+
+  const cancelEditMapping = () => {
+    setEditingFieldId(null);
   };
 
   const clearAllMappings = () => {
     if (window.confirm('Remove all field mappings?')) {
       setMappings({});
-      setSelectedFieldId(null);
-      setMode('add');
     }
   };
 
@@ -351,104 +262,67 @@ function FieldMappingModal({ isOpen, onClose, formType, template, onSave }) {
   };
 
   const handleClose = () => {
-    resetState();
+    setMappings({});
+    setEditingFieldId(null);
+    setCustomValue('');
+    setImageUrl(null);
     onClose();
   };
-
-  // Calculate displayed dimensions
-  const displayWidth = imageDimensions.width * scale;
-  const displayHeight = imageDimensions.height * scale;
-
-  // Estimate DPI for info display
-  const estimatedDPI = imageDimensions.width > 0
-    ? formRenderService.estimateImageDPI(imageDimensions.width, imageDimensions.height)
-    : 0;
 
   if (!isOpen) return null;
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose} title="Configure Field Mappings" size="large">
       <div className="field-mapping-modal">
-        {/* Info Banner */}
-        <div className="mapping-info-banner">
-          <div className="info-item">
-            <span className="info-label">Image Size:</span>
-            <span className="info-value">{imageDimensions.width} x {imageDimensions.height}px</span>
-          </div>
-          <div className="info-item">
-            <span className="info-label">Est. DPI:</span>
-            <span className="info-value">{estimatedDPI}</span>
-          </div>
-          <div className="info-item">
-            <span className="info-label">Preview Scale:</span>
-            <span className="info-value">{Math.round(scale * 100)}%</span>
-          </div>
-          <div className="info-item">
-            <span className="info-label">Fields:</span>
-            <span className="info-value">{Object.keys(mappings).length}</span>
-          </div>
-        </div>
-
         <div className="field-mapping-content">
-          {/* Left Panel: Canvas */}
-          <div className="canvas-panel" ref={containerRef}>
+          {/* Left Panel: Image with SVG Overlay */}
+          <div className="canvas-panel">
             <div className="canvas-header">
-              <h4>
-                {mode === 'add' ? 'Click to place fields' : 'Click field to edit, drag to move'}
-              </h4>
-              <div className="canvas-header-buttons">
-                <button
-                  className={`btn btn-small ${mode === 'add' ? 'btn-primary' : 'btn-secondary'}`}
-                  onClick={() => { setMode('add'); setSelectedFieldId(null); }}
-                >
-                  Add Mode
-                </button>
-                <button
-                  className={`btn btn-small ${mode === 'select' ? 'btn-primary' : 'btn-secondary'}`}
-                  onClick={() => setMode('select')}
-                >
-                  Select Mode
-                </button>
-                <button className="btn btn-small btn-danger" onClick={clearAllMappings}>
-                  Clear All
-                </button>
-              </div>
+              <h4>Click on the form to place fields</h4>
+              <button className="btn btn-small btn-danger" onClick={clearAllMappings}>
+                Clear All
+              </button>
             </div>
-
-            <div className="canvas-container">
+            <div className="image-container">
               {loading ? (
                 <div className="canvas-loading">
-                  <div className="loading-spinner"></div>
+                  <div className="loading"></div>
                   <p>Loading form image...</p>
                 </div>
-              ) : formImage ? (
-                <canvas
-                  ref={canvasRef}
-                  width={displayWidth}
-                  height={displayHeight}
-                  className="mapping-canvas"
-                  onClick={handleCanvasClick}
-                  onMouseDown={handleCanvasMouseDown}
-                  onMouseMove={handleCanvasMouseMove}
-                  onMouseUp={handleCanvasMouseUp}
-                  onMouseLeave={handleCanvasMouseLeave}
-                  style={{
-                    cursor: isDragging ? 'grabbing' : (mode === 'add' ? 'crosshair' : 'pointer'),
-                  }}
-                />
-              ) : (
-                <div className="canvas-empty">
-                  <p>No form image loaded</p>
+              ) : imageUrl ? (
+                <div className="image-wrapper">
+                  <img
+                    src={imageUrl}
+                    alt="Form template"
+                    onLoad={handleImageLoad}
+                    className="form-image"
+                  />
+                  {imageDimensions.width > 0 && (
+                    <svg
+                      ref={svgRef}
+                      className="mapping-overlay"
+                      viewBox={`0 0 ${imageDimensions.width} ${imageDimensions.height}`}
+                      onClick={handleSvgClick}
+                    >
+                      {Object.entries(mappings).map(([fieldId, field]) => (
+                        <FieldMarker
+                          key={fieldId}
+                          fieldId={fieldId}
+                          field={field}
+                        />
+                      ))}
+                    </svg>
+                  )}
                 </div>
-              )}
+              ) : null}
             </div>
           </div>
 
-          {/* Right Panel: Controls */}
+          {/* Right Panel: Controls and List */}
           <div className="controls-panel">
             {/* Field Configuration */}
             <div className="field-config">
-              <h4>{selectedFieldId ? 'Edit Field' : 'Add New Field'}</h4>
+              <h4>Add Field</h4>
 
               <div className="form-group">
                 <label>Field Type</label>
@@ -456,7 +330,9 @@ function FieldMappingModal({ isOpen, onClose, formType, template, onSave }) {
                   value={selectedField}
                   onChange={(e) => {
                     setSelectedField(e.target.value);
-                    if (e.target.value !== 'custom') setCustomValue('');
+                    if (e.target.value !== 'custom') {
+                      setCustomValue('');
+                    }
                   }}
                 >
                   <optgroup label="Basic Customer Information">
@@ -475,7 +351,7 @@ function FieldMappingModal({ isOpen, onClose, formType, template, onSave }) {
                   </optgroup>
 
                   <optgroup label="VSA - New Car Details">
-                    <option value="makeModel">Make &amp; Model</option>
+                    <option value="makeModel">Make & Model</option>
                     <option value="yom">Year of Manufacture</option>
                     <option value="bodyColour">Body Colour</option>
                     <option value="upholstery">Upholstery</option>
@@ -485,13 +361,13 @@ function FieldMappingModal({ isOpen, onClose, formType, template, onSave }) {
                   <optgroup label="VSA - New Car Package">
                     <option value="package">Package</option>
                     <option value="sellingWithCOE">Selling with COE</option>
-                    <option value="sellingPriceList">Selling Price List</option>
+                    <option value="sellingPriceList">Selling Price on Price List</option>
                     <option value="purchasePriceWithCOE">Purchase Price with COE</option>
                     <option value="coeRebateLevel">COE Rebate Level</option>
                     <option value="deposit">Deposit</option>
                     <option value="lessOthers">Less: Others</option>
                     <option value="addOthers">Add: Others</option>
-                    <option value="deliveryDate">Delivery Date</option>
+                    <option value="deliveryDate">Approximate Delivery Date</option>
                   </optgroup>
 
                   <optgroup label="VSA - Trade In Details">
@@ -514,7 +390,7 @@ function FieldMappingModal({ isOpen, onClose, formType, template, onSave }) {
                     <option value="insuranceFeeNet">Net Insurance Fee</option>
                   </optgroup>
 
-                  <optgroup label="VSA - Remarks &amp; Loan">
+                  <optgroup label="VSA - Remarks & Loan">
                     <option value="remarks1">Remarks 1</option>
                     <option value="remarks2">Remarks 2</option>
                     <option value="loanAmount">Loan Amount</option>
@@ -568,16 +444,11 @@ function FieldMappingModal({ isOpen, onClose, formType, template, onSave }) {
               )}
 
               <div className="form-group">
-                <label>
-                  Font Size
-                  <span className="size-info">
-                    ({formRenderService.pointsToPixels(fontSize)}px at 300 DPI)
-                  </span>
-                </label>
+                <label>Font Size</label>
                 <select value={fontSize} onChange={(e) => setFontSize(parseInt(e.target.value))}>
-                  {FONT_SIZE_PRESETS.map((preset) => (
-                    <option key={preset.value} value={preset.value}>
-                      {preset.label}
+                  {Array.from({ length: 21 }, (_, i) => (i + 1) * 2 + 6).map((size) => (
+                    <option key={size} value={size}>
+                      {size}px
                     </option>
                   ))}
                 </select>
@@ -585,84 +456,37 @@ function FieldMappingModal({ isOpen, onClose, formType, template, onSave }) {
 
               <div className="form-group">
                 <label>Text Color</label>
-                <div className="color-input-wrapper">
-                  <input
-                    type="color"
-                    value={textColor}
-                    onChange={(e) => setTextColor(e.target.value)}
-                  />
-                  <span className="color-value">{textColor}</span>
-                </div>
+                <input
+                  type="color"
+                  value={textColor}
+                  onChange={(e) => setTextColor(e.target.value)}
+                />
               </div>
 
-              {selectedFieldId ? (
-                <div className="selected-field-actions">
-                  <button className="btn btn-success" onClick={updateSelectedField}>
-                    Update Field
-                  </button>
-                  <button className="btn btn-danger" onClick={removeSelectedField}>
-                    Remove Field
-                  </button>
-                  <button
-                    className="btn btn-secondary"
-                    onClick={() => { setSelectedFieldId(null); setMode('add'); }}
-                  >
-                    Deselect
-                  </button>
-                </div>
-              ) : (
-                <p className="field-hint">
-                  Click on the form image to place this field
-                </p>
-              )}
+              <p className="field-hint">Click on the form image to place this field</p>
             </div>
 
             {/* Mapped Fields List */}
             <div className="mapped-fields">
               <h4>Mapped Fields ({Object.keys(mappings).length})</h4>
               {Object.keys(mappings).length === 0 ? (
-                <p className="no-mappings">
-                  No fields mapped yet. Click on the form to add fields.
-                </p>
+                <p className="no-mappings">No fields mapped yet. Click on the form to add fields.</p>
               ) : (
                 <div className="mappings-list">
-                  {Object.entries(mappings).map(([fieldId, field]) => {
-                    const displayText = field.customValue
-                      ? `Custom: "${field.customValue.substring(0, 20)}${field.customValue.length > 20 ? '...' : ''}"`
-                      : (FIELD_NAMES[field.type] || field.type);
-
-                    const isSelected = fieldId === selectedFieldId;
-
-                    return (
-                      <div
-                        key={fieldId}
-                        className={`mapping-item ${isSelected ? 'selected' : ''}`}
-                        onClick={() => {
-                          setSelectedFieldId(fieldId);
-                          setFontSize(field.fontSize || 12);
-                          setTextColor(field.color || '#000000');
-                          if (field.customValue) {
-                            setSelectedField('custom');
-                            setCustomValue(field.customValue);
-                          } else {
-                            setSelectedField(field.type);
-                          }
-                          setMode('select');
-                        }}
-                      >
-                        <div className="mapping-info">
-                          <strong>{displayText}</strong>
-                          <span className="mapping-details">
-                            {field.fontSize}pt
-                            <span
-                              className="color-dot"
-                              style={{ backgroundColor: field.color || '#000' }}
-                            />
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })}
+                  {Object.entries(mappings).map(([fieldId, field]) => (
+                    <MappingItem
+                      key={fieldId}
+                      fieldId={fieldId}
+                      field={field}
+                      isEditing={editingFieldId === fieldId}
+                      onEdit={() => startEditMapping(fieldId)}
+                      onSave={(newFontSize, newColor) =>
+                        saveEditMapping(fieldId, newFontSize, newColor)
+                      }
+                      onCancel={cancelEditMapping}
+                      onRemove={() => removeMapping(fieldId)}
+                    />
+                  ))}
                 </div>
               )}
             </div>
@@ -680,6 +504,104 @@ function FieldMappingModal({ isOpen, onClose, formType, template, onSave }) {
         </div>
       </div>
     </Modal>
+  );
+}
+
+// SVG Marker Component
+function FieldMarker({ fieldId, field }) {
+  const displayText = field.customValue || FIELD_NAMES[field.type] || field.type;
+
+  return (
+    <g className="field-marker">
+      {/* Marker circle with fill */}
+      <circle
+        cx={field.x}
+        cy={field.y}
+        r="15"
+        fill="rgba(0, 188, 212, 0.3)"
+        stroke="#00bcd4"
+        strokeWidth="3"
+      />
+      {/* Label text */}
+      <text
+        x={field.x + 20}
+        y={field.y + 5}
+        fill="#00bcd4"
+        fontSize="12"
+        fontWeight="bold"
+        fontFamily="Arial"
+      >
+        {displayText}
+      </text>
+    </g>
+  );
+}
+
+// Individual Mapping Item Component
+function MappingItem({ fieldId, field, isEditing, onEdit, onSave, onCancel, onRemove }) {
+  const [editFontSize, setEditFontSize] = useState(field.fontSize);
+  const [editColor, setEditColor] = useState(field.color);
+
+  const displayText = field.customValue
+    ? `Custom: "${field.customValue}"`
+    : FIELD_NAMES[field.type] || field.type;
+
+  if (isEditing) {
+    return (
+      <div className="mapping-item editing">
+        <div className="mapping-info">
+          <strong>{displayText}</strong>
+        </div>
+        <div className="mapping-edit-controls">
+          <div className="form-group">
+            <label>Font Size</label>
+            <select value={editFontSize} onChange={(e) => setEditFontSize(e.target.value)}>
+              {Array.from({ length: 21 }, (_, i) => (i + 1) * 2 + 6).map((size) => (
+                <option key={size} value={size}>
+                  {size}px
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="form-group">
+            <label>Color</label>
+            <input type="color" value={editColor} onChange={(e) => setEditColor(e.target.value)} />
+          </div>
+          <div className="edit-actions">
+            <button className="btn btn-small btn-success" onClick={() => onSave(editFontSize, editColor)}>
+              Save
+            </button>
+            <button className="btn btn-small btn-secondary" onClick={onCancel}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mapping-item">
+      <div className="mapping-info">
+        <strong>{displayText}</strong>
+        <span className="mapping-details">
+          Size: {field.fontSize}px, Color:{' '}
+          <span
+            className="color-box"
+            style={{ backgroundColor: field.color }}
+            title={field.color}
+          ></span>
+        </span>
+      </div>
+      <div className="mapping-actions">
+        <button className="btn btn-small btn-primary" onClick={onEdit}>
+          Edit
+        </button>
+        <button className="btn btn-small btn-danger" onClick={onRemove}>
+          Remove
+        </button>
+      </div>
+    </div>
   );
 }
 

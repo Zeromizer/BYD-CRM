@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import useFormsStore from '../../stores/useFormsStore';
 import useAuthStore from '../../stores/useAuthStore';
-import formRenderService, { FIELD_NAMES } from '../../services/formRenderService';
+import authService from '../../services/authService';
 import Modal from '../Modal/Modal';
 import './FormPrintModal.css';
 
@@ -15,70 +15,133 @@ const FORM_TYPE_NAMES = {
   pdpa_consent_2: 'PDPA Consent 2',
   delivery_checklist_1: 'Delivery Checklist Form (1 of 2)',
   delivery_checklist_2: 'Delivery Checklist Form (2 of 2)',
-  proposal: 'Proposal Form',
   other: 'Other Form',
 };
 
 function FormPrintModal({ isOpen, onClose, customer }) {
   const { formTemplates, loadFromLocalStorage } = useFormsStore();
   const { isSignedIn } = useAuthStore();
-  const canvasRef = useRef(null);
-  const containerRef = useRef(null);
 
   const [selectedFormType, setSelectedFormType] = useState('');
   const [loading, setLoading] = useState(false);
-  const [formImage, setFormImage] = useState(null);
+  const [imageUrl, setImageUrl] = useState(null);
   const [imageDimensions, setImageDimensions] = useState({ width: 0, height: 0 });
-  const [scale, setScale] = useState(1);
   const [showPreview, setShowPreview] = useState(false);
-  const [renderedDataUrl, setRenderedDataUrl] = useState(null);
 
   useEffect(() => {
     if (isOpen) {
       loadFromLocalStorage();
-      resetState();
+      setSelectedFormType('');
+      setImageUrl(null);
+      setShowPreview(false);
+      setImageDimensions({ width: 0, height: 0 });
     }
   }, [isOpen, loadFromLocalStorage]);
 
-  // Calculate scale when container resizes
-  useEffect(() => {
-    const updateScale = () => {
-      if (containerRef.current && imageDimensions.width > 0) {
-        const containerWidth = containerRef.current.clientWidth - 60;
-        const containerHeight = containerRef.current.clientHeight - 40;
+  const getCustomerDataMapping = (customer) => {
+    const today = new Date().toLocaleDateString();
 
-        const scaleX = containerWidth / imageDimensions.width;
-        const scaleY = containerHeight / imageDimensions.height;
-
-        setScale(Math.min(scaleX, scaleY, 1));
-      }
+    // Helper function to parse currency strings to numbers
+    const parseCurrency = (value) => {
+      if (!value) return 0;
+      const numericValue = parseFloat(value.toString().replace(/[^0-9.-]/g, ''));
+      return isNaN(numericValue) ? 0 : numericValue;
     };
 
-    updateScale();
-    window.addEventListener('resize', updateScale);
-    return () => window.removeEventListener('resize', updateScale);
-  }, [imageDimensions, showPreview]);
+    // Calculate net insurance fee
+    const insuranceFee = parseCurrency(customer.vsa_insuranceFee);
+    const subsidy = parseCurrency(customer.vsa_insuranceSubsidy);
+    const netInsuranceFee = insuranceFee - subsidy;
 
-  // Redraw canvas when dependencies change
-  useEffect(() => {
-    if (showPreview && formImage && canvasRef.current) {
-      drawPreview();
-    }
-  }, [formImage, scale, showPreview]);
+    return {
+      name: customer.name || '',
+      phone: customer.phone || '',
+      email: customer.email || '',
+      nric: customer.nric || '',
+      occupation: customer.occupation || '',
+      dob: customer.dob || '',
+      address: customer.address || '',
+      addressContinue: customer.addressContinue || '',
+      fullAddress: ((customer.address || '') + (customer.addressContinue ? ', ' + customer.addressContinue : '')).trim(),
+      salesConsultant: customer.salesConsultant || '',
+      vsaNo: customer.vsaNo || '',
+      date: today,
 
-  const resetState = () => {
-    setSelectedFormType('');
-    setFormImage(null);
-    setImageDimensions({ width: 0, height: 0 });
-    setScale(1);
-    setShowPreview(false);
-    setRenderedDataUrl(null);
+      // VSA Details - BYD New Car Details
+      makeModel: customer.vsa_makeModel || '',
+      yom: customer.vsa_yom || '',
+      bodyColour: customer.vsa_bodyColour || '',
+      upholstery: customer.vsa_upholstery || '',
+      przType: customer.vsa_przType || '',
+
+      // VSA Details - BYD New Car Package
+      package: customer.vsa_package || '',
+      sellingWithCOE: customer.vsa_sellingWithCOE || '',
+      sellingPriceList: customer.vsa_sellingPriceList || '',
+      purchasePriceWithCOE: customer.vsa_purchasePriceWithCOE || '',
+      coeRebateLevel: customer.vsa_coeRebateLevel || '',
+      deposit: customer.vsa_deposit || '',
+      lessOthers: customer.vsa_lessOthers || '',
+      addOthers: customer.vsa_addOthers || '',
+      deliveryDate: customer.vsa_deliveryDate || '',
+
+      // VSA Details - Trade In Car Details
+      tradeInCarNo: customer.vsa_tradeInCarNo || '',
+      tradeInCarModel: customer.vsa_tradeInCarModel || '',
+      tradeInAmount: customer.vsa_tradeInAmount || '',
+
+      // VSA Details - Delivery Details
+      dateOfRegistration: customer.vsa_dateOfRegistration || '',
+      registrationNo: customer.vsa_registrationNo || '',
+      chassisNo: customer.vsa_chassisNo || '',
+      engineNo: customer.vsa_engineNo || '',
+      motorNo: customer.vsa_motorNo || '',
+
+      // VSA Details - Insurance
+      insuranceCompany: customer.vsa_insuranceCompany || '',
+      insuranceFee: customer.vsa_insuranceFee || '',
+      insuranceFeeNet: netInsuranceFee.toFixed(2),
+
+      // VSA Details - Remarks
+      remarks1: customer.vsa_remarks1 || '',
+      remarks2: customer.vsa_remarks2 || '',
+      loanAmount: customer.vsa_loanAmount || '',
+      interest: customer.vsa_interest || '',
+      tenure: customer.vsa_tenure || '',
+      adminFee: customer.vsa_adminFee || '',
+      insuranceSubsidy: customer.vsa_insuranceSubsidy || '',
+      monthlyRepayment: customer.vsa_monthlyRepayment || '',
+
+      // Proposal Details
+      proposalModel: customer.proposal_model || '',
+      proposalBank: customer.proposal_bank || '',
+      proposalSellingPrice: customer.proposal_sellingPrice || '',
+      proposalInterestRate: customer.proposal_interestRate || '',
+      proposalDownpayment: customer.proposal_downpayment || '',
+      proposalLoanTenure: customer.proposal_loanTenure || '',
+      proposalLoanAmount: customer.proposal_loanAmount || '',
+      proposalAdminFee: customer.proposal_adminFee || '',
+      proposalReferralFee: customer.proposal_referralFee || '',
+      proposalTradeInModel: customer.proposal_tradeInModel || '',
+      proposalLowLoanSurcharge: customer.proposal_lowLoanSurcharge || '',
+      proposalTradeInCarPlate: customer.proposal_tradeInCarPlate || '',
+      proposalNoLoanSurcharge: customer.proposal_noLoanSurcharge || '',
+      proposalQuotedTradeInPrice: customer.proposal_quotedTradeInPrice || '',
+      proposalBenefit1: customer.proposal_benefit1 || '',
+      proposalBenefit2: customer.proposal_benefit2 || '',
+      proposalBenefit3: customer.proposal_benefit3 || '',
+      proposalBenefit4: customer.proposal_benefit4 || '',
+      proposalBenefit5: customer.proposal_benefit5 || '',
+      proposalBenefitsGiven: customer.proposal_benefitsGiven || '',
+      proposalRemarks: customer.proposal_remarks || '',
+    };
   };
 
   const getAvailableForms = () => {
     const available = [];
 
     for (const [formType, template] of Object.entries(formTemplates)) {
+      // Allow all image forms, even without field mappings (for back pages, static forms, etc.)
       if (template.fileType === 'image') {
         available.push({
           formType,
@@ -92,6 +155,36 @@ function FormPrintModal({ isOpen, onClose, customer }) {
   };
 
   const availableForms = getAvailableForms();
+
+  const loadFormImage = async (fileId) => {
+    try {
+      const token = authService.getAccessToken();
+
+      if (!token) {
+        throw new Error('No access token available. Please sign in again.');
+      }
+
+      const response = await fetch(
+        `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      return url;
+    } catch (error) {
+      console.error('Error loading form image:', error);
+      throw error;
+    }
+  };
 
   const handleGeneratePreview = async () => {
     if (!selectedFormType) {
@@ -108,23 +201,8 @@ function FormPrintModal({ isOpen, onClose, customer }) {
 
     try {
       const template = formTemplates[selectedFormType];
-
-      // Load form image
-      const base64Data = await formRenderService.fetchFormImage(template.fileId);
-      const img = await formRenderService.loadImage(base64Data);
-
-      setFormImage(img);
-      setImageDimensions({ width: img.width, height: img.height });
-
-      // Generate full-resolution data URL for printing
-      const dataUrl = await formRenderService.renderFormToDataURL(
-        template.fileId,
-        template.fieldMappings,
-        customer,
-        { usePoints: true }
-      );
-      setRenderedDataUrl(dataUrl);
-
+      const url = await loadFormImage(template.fileId);
+      setImageUrl(url);
       setShowPreview(true);
     } catch (error) {
       console.error('Error generating preview:', error);
@@ -134,62 +212,28 @@ function FormPrintModal({ isOpen, onClose, customer }) {
     }
   };
 
-  const drawPreview = () => {
-    if (!canvasRef.current || !formImage) return;
-
-    const template = formTemplates[selectedFormType];
-    const customerData = formRenderService.getCustomerDataMapping(customer);
-
-    formRenderService.renderFormToCanvas(
-      canvasRef.current,
-      formImage,
-      template.fieldMappings,
-      customerData,
-      {
-        scale,
-        showMarkers: false,
-        usePoints: true,
-      }
-    );
+  const handleImageLoad = (e) => {
+    const img = e.target;
+    setImageDimensions({
+      width: img.naturalWidth,
+      height: img.naturalHeight,
+    });
   };
 
   const handlePrint = () => {
-    if (!renderedDataUrl) return;
-
-    const template = formTemplates[selectedFormType];
-    const formName = FORM_TYPE_NAMES[selectedFormType] || selectedFormType;
-
-    formRenderService.openPrintWindow(
-      [{ dataUrl: renderedDataUrl, name: formName }],
-      customer.name,
-      { title: formName }
-    );
-  };
-
-  const handleDownload = () => {
-    if (!renderedDataUrl) return;
-
-    const formName = FORM_TYPE_NAMES[selectedFormType] || selectedFormType;
-    const fileName = `${customer.name.replace(/\s+/g, '_')}_${formName.replace(/\s+/g, '_')}.jpg`;
-
-    const link = document.createElement('a');
-    link.href = renderedDataUrl;
-    link.download = fileName;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    window.print();
   };
 
   const handleBackToSelection = () => {
     setShowPreview(false);
-    setFormImage(null);
+    setImageUrl(null);
     setImageDimensions({ width: 0, height: 0 });
-    setRenderedDataUrl(null);
   };
 
   if (!isOpen) return null;
 
   const template = selectedFormType ? formTemplates[selectedFormType] : null;
+  const customerData = getCustomerDataMapping(customer);
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Print Form with Customer Data" size="large">
@@ -204,7 +248,7 @@ function FormPrintModal({ isOpen, onClose, customer }) {
 
             {!isSignedIn && (
               <div className="warning-banner">
-                Please sign in to Google Drive to access form templates
+                ⚠️ Please sign in to Google Drive to access form templates
               </div>
             )}
 
@@ -237,7 +281,7 @@ function FormPrintModal({ isOpen, onClose, customer }) {
                   </select>
                 </div>
 
-                {selectedFormType && template && (
+                {selectedFormType && (
                   <div className="form-info">
                     <h4>Form Details</h4>
                     <div className="info-grid">
@@ -248,7 +292,7 @@ function FormPrintModal({ isOpen, onClose, customer }) {
                       <div className="info-item">
                         <label>Fields Mapped:</label>
                         <span>
-                          {Object.keys(template.fieldMappings || {}).length}
+                          {Object.keys(formTemplates[selectedFormType].fieldMappings || {}).length}
                         </span>
                       </div>
                       <div className="info-item">
@@ -256,24 +300,6 @@ function FormPrintModal({ isOpen, onClose, customer }) {
                         <span>Image Form</span>
                       </div>
                     </div>
-
-                    {Object.keys(template.fieldMappings || {}).length > 0 && (
-                      <div className="field-preview">
-                        <h5>Fields that will be populated:</h5>
-                        <div className="field-list">
-                          {Object.values(template.fieldMappings).map((field, index) => {
-                            const fieldName = field.customValue
-                              ? `Custom: "${field.customValue}"`
-                              : (FIELD_NAMES[field.type] || field.type);
-                            return (
-                              <span key={index} className="field-tag">
-                                {fieldName}
-                              </span>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
                   </div>
                 )}
               </>
@@ -298,41 +324,57 @@ function FormPrintModal({ isOpen, onClose, customer }) {
             <div className="preview-header no-print">
               <h4>{FORM_TYPE_NAMES[selectedFormType] || selectedFormType}</h4>
               <button className="btn btn-small btn-secondary" onClick={handleBackToSelection}>
-                Back to Selection
+                ← Back to Selection
               </button>
             </div>
 
-            <div className="preview-container" ref={containerRef}>
-              {formImage && (
-                <canvas
-                  ref={canvasRef}
-                  width={imageDimensions.width * scale}
-                  height={imageDimensions.height * scale}
-                  className="preview-canvas"
-                />
+            <div className="preview-container">
+              {imageUrl && (
+                <div className="filled-form-wrapper">
+                  <img
+                    src={imageUrl}
+                    alt="Form template"
+                    onLoad={handleImageLoad}
+                    className="form-image"
+                  />
+                  {imageDimensions.width > 0 && template?.fieldMappings && (
+                    <svg
+                      className="form-text-overlay"
+                      viewBox={`0 0 ${imageDimensions.width} ${imageDimensions.height}`}
+                    >
+                      {Object.entries(template.fieldMappings).map(([fieldId, field]) => {
+                        // Get the text value for this field
+                        let text = '';
+                        if (field.customValue) {
+                          text = field.customValue;
+                        } else {
+                          text = customerData[field.type] || '';
+                        }
+
+                        if (!text) return null;
+
+                        return (
+                          <text
+                            key={fieldId}
+                            x={field.x}
+                            y={field.y}
+                            fill={field.color || '#000000'}
+                            fontSize={field.fontSize || 14}
+                            fontFamily="Arial"
+                          >
+                            {text}
+                          </text>
+                        );
+                      })}
+                    </svg>
+                  )}
+                </div>
               )}
             </div>
 
-            <div className="preview-info-bar">
-              <span>
-                Original: {imageDimensions.width} x {imageDimensions.height}px
-              </span>
-              <span>|</span>
-              <span>
-                Preview: {Math.round(scale * 100)}%
-              </span>
-              <span>|</span>
-              <span>
-                {Object.keys(template?.fieldMappings || {}).length} fields populated
-              </span>
-            </div>
-
             <div className="preview-actions no-print">
-              <button className="btn btn-secondary" onClick={handleDownload}>
-                Download Image
-              </button>
               <button className="btn btn-primary" onClick={handlePrint}>
-                Print Form
+                🖨️ Print Form
               </button>
             </div>
           </div>
