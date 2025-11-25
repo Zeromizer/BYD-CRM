@@ -74,6 +74,7 @@
   cursor: pointer;
   transition: all 0.2s;
   margin-bottom: var(--spacing-sm);
+  background: white;
 }
 
 .customer-item:hover {
