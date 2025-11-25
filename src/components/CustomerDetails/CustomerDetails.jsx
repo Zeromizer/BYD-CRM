@@ -48,6 +48,7 @@ function CustomerDetails() {
   // Drag and drop state
   const [draggedFile, setDraggedFile] = useState(null);
   const [dropTargetFolder, setDropTargetFolder] = useState(null);
+  const [dropTargetBreadcrumb, setDropTargetBreadcrumb] = useState(null);
 
   // Mobile folder menu state
   const [showFolderMenu, setShowFolderMenu] = useState(false);
@@ -287,6 +288,7 @@ function CustomerDetails() {
   const handleDragEnd = () => {
     setDraggedFile(null);
     setDropTargetFolder(null);
+    setDropTargetBreadcrumb(null);
     setIsDragMode(false);
     stopAutoScroll();
   };
@@ -301,6 +303,59 @@ function CustomerDetails() {
 
   const handleDragLeave = () => {
     setDropTargetFolder(null);
+  };
+
+  // Breadcrumb drag handlers (for moving files to parent/ancestor folders)
+  const handleBreadcrumbDragOver = (e, folder, index) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Don't allow drop on current folder (last breadcrumb)
+    if (index === folderPath.length - 1) return;
+    e.dataTransfer.dropEffect = 'move';
+    setDropTargetBreadcrumb(folder.id);
+  };
+
+  const handleBreadcrumbDragLeave = (e) => {
+    e.preventDefault();
+    setDropTargetBreadcrumb(null);
+  };
+
+  const handleBreadcrumbDrop = async (e, targetFolder, index) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    // Don't allow drop on current folder
+    if (index === folderPath.length - 1) {
+      setDropTargetBreadcrumb(null);
+      return;
+    }
+
+    if (!draggedFile || !targetFolder) {
+      setDropTargetBreadcrumb(null);
+      return;
+    }
+
+    try {
+      // Move the file using Google Drive API
+      await window.gapi.client.drive.files.update({
+        fileId: draggedFile.id,
+        addParents: targetFolder.id,
+        removeParents: currentFolderId,
+      });
+
+      // Refresh the current folder to show updated file list
+      await loadCustomerDocuments(currentFolderId);
+
+      console.log(`Moved ${draggedFile.name} to ${targetFolder.name}`);
+    } catch (error) {
+      console.error('Error moving file:', error);
+      alert(`Failed to move file: ${error.message}`);
+    } finally {
+      setDraggedFile(null);
+      setDropTargetFolder(null);
+      setDropTargetBreadcrumb(null);
+      setIsDragMode(false);
+    }
   };
 
   const handleDrop = async (e, targetFolder) => {
@@ -329,6 +384,7 @@ function CustomerDetails() {
     } finally {
       setDraggedFile(null);
       setDropTargetFolder(null);
+      setDropTargetBreadcrumb(null);
       setIsDragMode(false);
     }
   };
@@ -1101,9 +1157,12 @@ function CustomerDetails() {
                           <span key={folder.id}>
                             {index > 0 && <span className="breadcrumb-separator">/</span>}
                             <button
-                              className={`breadcrumb-item ${index === folderPath.length - 1 ? 'active' : ''}`}
+                              className={`breadcrumb-item ${index === folderPath.length - 1 ? 'active' : ''} ${dropTargetBreadcrumb === folder.id ? 'drop-target' : ''}`}
                               onClick={() => navigateToBreadcrumb(index)}
                               disabled={index === folderPath.length - 1}
+                              onDragOver={(e) => handleBreadcrumbDragOver(e, folder, index)}
+                              onDragLeave={handleBreadcrumbDragLeave}
+                              onDrop={(e) => handleBreadcrumbDrop(e, folder, index)}
                             >
                               {folder.name}
                             </button>
