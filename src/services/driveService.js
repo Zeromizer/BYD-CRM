@@ -1442,6 +1442,130 @@ class DriveService {
     }
   }
 
+  // ==================== DOCUMENT TEMPLATE METHODS ====================
+
+  /**
+   * Get or create Document Templates folder inside BYD CRM root folder
+   */
+  async getOrCreateDocumentTemplatesFolder() {
+    try {
+      // First get the root BYD CRM folder
+      const rootFolderId = await this.getOrCreateRootFolder();
+
+      // Then get or create Document Templates folder inside it
+      const folderId = await this.getOrCreateFolder('Document Templates', rootFolderId);
+      console.log('[DriveService] Document Templates folder:', folderId);
+      return folderId;
+    } catch (error) {
+      console.error('Failed to get/create Document Templates folder:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Load document templates from Google Drive
+   * Returns an object with template IDs as keys
+   */
+  async loadDocumentTemplatesFromDrive() {
+    try {
+      const folderId = await this.getOrCreateDocumentTemplatesFolder();
+
+      // List all template files in the folder
+      const files = await this.listFiles(folderId);
+
+      // Load each template file
+      const templates = {};
+      for (const file of files) {
+        if (file.name.endsWith('.json')) {
+          try {
+            const content = await this.getFileContent(file.id);
+            const template = JSON.parse(content);
+            if (template && template.id) {
+              templates[template.id] = template;
+            }
+          } catch (error) {
+            console.error(`Failed to load document template ${file.name}:`, error);
+          }
+        }
+      }
+
+      console.log('Loaded document templates from Drive:', Object.keys(templates).length);
+      return templates;
+    } catch (error) {
+      console.error('Failed to load document templates from Drive:', error);
+      return {};
+    }
+  }
+
+  /**
+   * Save a single document template to Google Drive
+   */
+  async saveDocumentTemplateToDrive(template) {
+    try {
+      const folderId = await this.getOrCreateDocumentTemplatesFolder();
+      const fileName = `${template.id}.json`;
+      const fileContent = JSON.stringify(template, null, 2);
+
+      // Check if file exists
+      const files = await this.listFiles(folderId);
+      const existingFile = files.find(f => f.name === fileName);
+
+      if (existingFile) {
+        // Update existing file
+        await this.updateFileContent(existingFile.id, fileContent);
+        console.log(`Updated document template in Drive: ${template.id}`);
+      } else {
+        // Create new file
+        await this.uploadFile(fileName, fileContent, folderId);
+        console.log(`Created document template in Drive: ${template.id}`);
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Failed to save document template to Drive:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Sync document templates: merge localStorage and Drive data
+   * Drive is source of truth, but local-only templates are uploaded
+   */
+  async syncDocumentTemplates(localTemplates) {
+    try {
+      const driveTemplates = await this.loadDocumentTemplatesFromDrive();
+
+      // Merge: Drive is source of truth, add any local-only templates
+      const merged = { ...driveTemplates };
+
+      // Add local templates that don't exist in Drive and queue them for sync
+      const localOnlyTemplates = [];
+      Object.entries(localTemplates).forEach(([id, template]) => {
+        if (!driveTemplates[id]) {
+          merged[id] = template;
+          localOnlyTemplates.push(template);
+        }
+      });
+
+      // Upload local-only templates to Drive
+      for (const template of localOnlyTemplates) {
+        try {
+          await this.saveDocumentTemplateToDrive(template);
+          console.log(`Synced local document template to Drive: ${template.id}`);
+        } catch (error) {
+          console.error(`Failed to sync local template ${template.id} to Drive:`, error);
+        }
+      }
+
+      console.log('Document templates synced successfully');
+      return merged;
+    } catch (error) {
+      console.error('Failed to sync document templates:', error);
+      // Return local templates as fallback (same pattern as forms/excel)
+      return localTemplates;
+    }
+  }
+
   /**
    * Validate if a folder ID still exists in Google Drive and is in the correct location
    */
