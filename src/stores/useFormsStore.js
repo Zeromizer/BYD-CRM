@@ -1,12 +1,15 @@
 import { create } from 'zustand';
 import driveService from '../services/driveService';
 import userStorage from '../services/userStorage';
+import syncQueueService, { SYNC_STATUS } from '../services/syncQueueService';
 
 const useFormsStore = create((set, get) => ({
   formTemplates: {},
   isLoading: false,
   error: null,
   lastSyncTime: null,
+  syncStatus: SYNC_STATUS.SYNCED,
+  syncError: null,
 
   /**
    * Load form templates from user-specific localStorage
@@ -89,17 +92,65 @@ const useFormsStore = create((set, get) => ({
     }
   },
 
-  // Save to Drive (called after any template modification)
+  // Save to Drive with queue and retry support
   saveToDrive: async () => {
-    try {
-      const { formTemplates } = get();
-      await driveService.saveFormsToDrive(formTemplates);
-      set({ lastSyncTime: new Date().toISOString() });
+    const { formTemplates } = get();
+
+    // Update status to syncing
+    set({ syncStatus: SYNC_STATUS.SYNCING, syncError: null });
+
+    // Queue the save operation with retry logic
+    const result = await syncQueueService.enqueue(
+      'forms',
+      async () => {
+        await driveService.saveFormsToDrive(formTemplates);
+      },
+      { templateCount: Object.keys(formTemplates).length }
+    );
+
+    if (result.success) {
+      set({
+        syncStatus: SYNC_STATUS.SYNCED,
+        syncError: null,
+        lastSyncTime: new Date().toISOString()
+      });
       console.log('Form templates saved to Drive');
-    } catch (error) {
-      console.error('Failed to save form templates to Drive:', error);
-      // Don't throw - allow local changes to persist
+    } else if (result.offline) {
+      set({
+        syncStatus: SYNC_STATUS.OFFLINE,
+        syncError: 'Offline - will sync when connected'
+      });
+      console.log('Form templates queued for later sync (offline)');
+    } else {
+      set({
+        syncStatus: SYNC_STATUS.FAILED,
+        syncError: result.error || 'Failed to sync'
+      });
+      console.error('Failed to save form templates to Drive:', result.error);
     }
+
+    return result;
+  },
+
+  // Force retry failed sync
+  retrySyncToDrive: async () => {
+    set({ syncStatus: SYNC_STATUS.SYNCING, syncError: null });
+    await syncQueueService.retryFailed();
+    const status = syncQueueService.getStatus('forms');
+    set({
+      syncStatus: status.status,
+      syncError: status.lastError,
+      lastSyncTime: status.lastSyncTime
+    });
+  },
+
+  // Get current sync status
+  getSyncStatus: () => {
+    return {
+      status: get().syncStatus,
+      error: get().syncError,
+      lastSyncTime: get().lastSyncTime
+    };
   },
 
   // Add or update a form template
@@ -178,6 +229,8 @@ const useFormsStore = create((set, get) => ({
       isLoading: false,
       error: null,
       lastSyncTime: null,
+      syncStatus: SYNC_STATUS.SYNCED,
+      syncError: null,
     });
 
     // Clear from user-specific storage
@@ -187,6 +240,19 @@ const useFormsStore = create((set, get) => ({
 
     // Also clear legacy storage
     localStorage.removeItem('formTemplates');
+  },
+
+  /**
+   * Subscribe to sync status changes from the queue service
+   */
+  initSyncStatusListener: () => {
+    return syncQueueService.onStatusChange('forms', (status) => {
+      set({
+        syncStatus: status.status,
+        syncError: status.lastError,
+        lastSyncTime: status.lastSyncTime
+      });
+    });
   },
 }));
 
