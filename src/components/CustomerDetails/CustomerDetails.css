@@ -1048,9 +1048,9 @@
   width: 100%;
   padding: 10px 12px;
   font-size: 15px;
-  border: 2px solid var(--color-border-light);
+  border: 1px solid #d1d5db;
   border-radius: var(--radius-md);
-  background: var(--color-background-tertiary);
+  background: #ffffff;
   color: var(--color-text-on-card);
   transition: all 0.2s ease;
 }
