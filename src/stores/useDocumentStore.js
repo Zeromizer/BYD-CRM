@@ -18,20 +18,26 @@ const useDocumentStore = create((set, get) => ({
   error: null,
   syncQueue: [],
   isSyncing: false,
+  lastSyncTime: null,
 
   /**
    * Load templates from localStorage
+   * Uses googleUserEmail key for consistency with rest of app
    */
   loadFromLocalStorage: () => {
     try {
-      const userEmail = localStorage.getItem('userEmail');
-      if (!userEmail) return;
+      const userEmail = localStorage.getItem('googleUserEmail');
+      if (!userEmail) {
+        console.log('No googleUserEmail found, skipping document templates load');
+        return;
+      }
 
-      const storageKey = `byd_crm_documents_${userEmail}`;
+      const storageKey = `byd_crm_documents_${userEmail.toLowerCase().trim()}`;
       const stored = localStorage.getItem(storageKey);
 
       if (stored) {
         const templates = JSON.parse(stored);
+        console.log(`Loaded ${Object.keys(templates).length} document templates for user: ${userEmail}`);
         set({ templates });
       }
     } catch (error) {
@@ -42,14 +48,19 @@ const useDocumentStore = create((set, get) => ({
 
   /**
    * Save templates to localStorage
+   * Uses googleUserEmail key for consistency with rest of app
    */
   saveToLocalStorage: (templates) => {
     try {
-      const userEmail = localStorage.getItem('userEmail');
-      if (!userEmail) return;
+      const userEmail = localStorage.getItem('googleUserEmail');
+      if (!userEmail) {
+        console.warn('Cannot save document templates: no googleUserEmail');
+        return;
+      }
 
-      const storageKey = `byd_crm_documents_${userEmail}`;
+      const storageKey = `byd_crm_documents_${userEmail.toLowerCase().trim()}`;
       localStorage.setItem(storageKey, JSON.stringify(templates));
+      console.log(`Saved ${Object.keys(templates).length} document templates for user: ${userEmail}`);
     } catch (error) {
       console.error('Error saving templates to localStorage:', error);
       set({ error: error.message });
@@ -321,6 +332,73 @@ const useDocumentStore = create((set, get) => ({
     } catch (error) {
       console.error('Error loading templates from Drive:', error);
       set({ error: error.message, loading: false });
+      throw error;
+    }
+  },
+
+  /**
+   * Sync templates with Google Drive
+   * IMPORTANT: Loads from localStorage first before syncing to prevent data loss
+   * This is the primary sync function that should be called on app init
+   */
+  syncWithDrive: async () => {
+    try {
+      set({ loading: true, error: null });
+
+      // IMPORTANT: Load from localStorage first before syncing
+      // This ensures we don't lose locally-created templates when sync runs
+      // before the component has mounted and called loadFromLocalStorage
+      get().loadFromLocalStorage();
+
+      const localTemplates = get().templates;
+      console.log('Syncing document templates with Drive, local templates:', Object.keys(localTemplates).length);
+
+      // Get templates folder from Drive
+      const folderId = await driveService.getOrCreateFolder('Document Templates');
+
+      // List all template files from Drive
+      const files = await driveService.listFiles(folderId);
+
+      // Load each template from Drive
+      const driveTemplates = {};
+      for (const file of files) {
+        if (file.name.endsWith('.json')) {
+          try {
+            const content = await driveService.getFileContent(file.id);
+            const template = JSON.parse(content);
+            driveTemplates[template.id] = template;
+          } catch (error) {
+            console.error(`Error loading template ${file.name}:`, error);
+          }
+        }
+      }
+
+      // Merge: Drive is source of truth, but keep local-only templates
+      const mergedTemplates = { ...driveTemplates };
+
+      // Add local templates that don't exist in Drive (newly created offline)
+      for (const [id, template] of Object.entries(localTemplates)) {
+        if (!driveTemplates[id]) {
+          console.log(`Found local-only template: ${id}, will sync to Drive`);
+          mergedTemplates[id] = template;
+          // Queue sync for this template to Drive
+          get().queueSync(id);
+        }
+      }
+
+      // Update state and localStorage
+      set({
+        templates: mergedTemplates,
+        loading: false,
+        lastSyncTime: new Date().toISOString()
+      });
+      get().saveToLocalStorage(mergedTemplates);
+
+      console.log('Document templates synced with Drive successfully:', Object.keys(mergedTemplates).length);
+      return mergedTemplates;
+    } catch (error) {
+      console.error('Failed to sync document templates with Drive:', error);
+      set({ error: 'Failed to sync with Google Drive', loading: false });
       throw error;
     }
   },

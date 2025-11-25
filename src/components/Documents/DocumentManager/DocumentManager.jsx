@@ -27,7 +27,7 @@ function DocumentManager() {
     clearError,
   } = useDocumentStore();
 
-  const { isSignedIn } = useAuthStore();
+  const { isSignedIn, isInitialized, canLoadData, isUserVerified } = useAuthStore();
 
   const [uploadingFile, setUploadingFile] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -38,8 +38,15 @@ function DocumentManager() {
   const [filterCategory, setFilterCategory] = useState('all');
 
   useEffect(() => {
-    loadFromLocalStorage();
-  }, [loadFromLocalStorage]);
+    // Wait for auth to initialize and verify user before loading data
+    if (!isInitialized) {
+      return;
+    }
+
+    if (canLoadData()) {
+      loadFromLocalStorage();
+    }
+  }, [isInitialized, isUserVerified, loadFromLocalStorage, canLoadData]);
 
   // Get templates as array
   const templatesArray = Object.values(templates);
