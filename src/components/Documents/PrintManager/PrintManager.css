@@ -1,0 +1,376 @@
+/* PrintManager - Document Printing Interface */
+
+.print-manager {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-height: 400px;
+}
+
+/* Customer Info */
+.print-customer-info {
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.print-customer-info h3 {
+  margin: 0 0 8px 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.print-customer-info p {
+  margin: 4px 0;
+  font-size: 14px;
+  opacity: 0.95;
+}
+
+/* Banners */
+.warning-banner {
+  padding: 12px 16px;
+  background: #fff3cd;
+  border-left: 4px solid #ff9800;
+  border-radius: 4px;
+  color: #856404;
+  font-size: 14px;
+}
+
+.error-banner {
+  padding: 12px 16px;
+  background: #f8d7da;
+  border-left: 4px solid #f44336;
+  border-radius: 4px;
+  color: #721c24;
+  font-size: 14px;
+}
+
+/* Select Step */
+.print-select-step h4 {
+  margin: 0 0 16px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.template-selection-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.template-card {
+  background: white;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.template-card:hover {
+  border-color: #00bcd4;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.template-card.selected {
+  border-color: #4caf50;
+  background: #f1f8f4;
+  box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.2);
+}
+
+.template-card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.template-card-header input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+}
+
+.template-card-header h4 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #2c3e50;
+  flex: 1;
+}
+
+.template-card-body {
+  padding-left: 32px;
+}
+
+.template-meta {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.meta-badge {
+  padding: 4px 10px;
+  background: #e3f2fd;
+  color: #0277bd;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 12px;
+}
+
+.selection-summary {
+  padding: 16px;
+  background: #e8f5e9;
+  border-radius: 8px;
+  border-left: 4px solid #4caf50;
+}
+
+.selection-summary p {
+  margin: 0;
+  font-size: 15px;
+  color: #2e7d32;
+}
+
+.selection-summary strong {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.multi-page-note {
+  font-size: 13px;
+  color: #555;
+  font-style: italic;
+}
+
+/* Processing Step */
+.print-processing-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+}
+
+.loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 5px solid #e0e0e0;
+  border-top-color: #00bcd4;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 20px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.print-processing-step p {
+  margin: 8px 0;
+  font-size: 16px;
+  color: #2c3e50;
+  font-weight: 500;
+}
+
+.processing-hint {
+  font-size: 14px;
+  color: #999;
+  font-weight: normal;
+}
+
+/* Preview Step */
+.print-preview-step {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.preview-header h4 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.preview-pages {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  max-height: 600px;
+  overflow-y: auto;
+  padding: 20px;
+  background: #f5f5f5;
+  border-radius: 8px;
+}
+
+.preview-page {
+  background: white;
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.preview-page-label {
+  margin-bottom: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #555;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.preview-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+}
+
+.pdf-info {
+  padding: 12px 16px;
+  background: #e3f2fd;
+  border-radius: 6px;
+  text-align: center;
+}
+
+.pdf-info p {
+  margin: 0;
+  font-size: 14px;
+  color: #0277bd;
+  font-weight: 500;
+}
+
+/* Empty State */
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: #999;
+}
+
+.empty-state p {
+  margin: 8px 0;
+  font-size: 16px;
+}
+
+.empty-state-hint {
+  font-size: 14px;
+  color: #bbb;
+}
+
+/* Footer Actions */
+.print-manager-footer {
+  padding-top: 20px;
+  border-top: 2px solid #e0e0e0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* Buttons */
+.btn {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: #00bcd4;
+  color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #0097a7;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.btn-secondary {
+  background: #f5f5f5;
+  color: #555;
+  border: 1px solid #ddd;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: #e0e0e0;
+}
+
+.btn-success {
+  background: #4caf50;
+  color: white;
+}
+
+.btn-success:hover:not(:disabled) {
+  background: #388e3c;
+}
+
+.btn-info {
+  background: #2196f3;
+  color: white;
+}
+
+.btn-info:hover:not(:disabled) {
+  background: #1976d2;
+}
+
+.btn-small {
+  padding: 6px 14px;
+  font-size: 13px;
+}
+
+/* Scrollbar */
+.preview-pages::-webkit-scrollbar {
+  width: 10px;
+}
+
+.preview-pages::-webkit-scrollbar-track {
+  background: #e0e0e0;
+  border-radius: 5px;
+}
+
+.preview-pages::-webkit-scrollbar-thumb {
+  background: #aaa;
+  border-radius: 5px;
+}
+
+.preview-pages::-webkit-scrollbar-thumb:hover {
+  background: #888;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .template-selection-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .print-manager-footer {
+    flex-direction: column;
+  }
+
+  .btn {
+    width: 100%;
+  }
+}
