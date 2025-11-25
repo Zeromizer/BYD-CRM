@@ -534,6 +534,15 @@
   font-weight: 500;
 }
 
+/* Breadcrumb drop target (when dragging files) */
+.breadcrumb-item.drop-target {
+  background: rgba(65, 105, 225, 0.2);
+  border: 2px dashed var(--color-primary);
+  color: var(--color-primary);
+  transform: scale(1.05);
+  font-weight: 500;
+}
+
 .breadcrumb-separator {
   color: var(--color-text-tertiary);
   margin: 0 4px;
