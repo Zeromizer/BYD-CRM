@@ -3,6 +3,9 @@ import { CONFIG } from '../config/config.js';
 /**
  * Google Drive Service
  * Handles syncing customer data between localStorage and Google Drive
+ *
+ * IMPORTANT: Folder IDs are persisted to localStorage per user to prevent
+ * duplicate folders from being created when cache is lost.
  */
 class DriveService {
   constructor() {
@@ -10,6 +13,90 @@ class DriveService {
     this.formsFileId = null;
     this.excelFileId = null;
     this.rootFolderId = null;
+    this.customersFolderId = null;
+    this.customersDataFolderId = null;
+
+    // Load persisted folder IDs on construction
+    this._loadPersistedIds();
+  }
+
+  /**
+   * Get the current user's email for per-user storage
+   */
+  _getUserEmail() {
+    return localStorage.getItem('googleUserEmail')?.toLowerCase() || null;
+  }
+
+  /**
+   * Get the storage key for persisted folder IDs
+   */
+  _getStorageKey() {
+    const email = this._getUserEmail();
+    return email ? `driveFolderIds_${email}` : null;
+  }
+
+  /**
+   * Load persisted folder IDs from localStorage
+   */
+  _loadPersistedIds() {
+    const key = this._getStorageKey();
+    if (!key) return;
+
+    try {
+      const stored = localStorage.getItem(key);
+      if (stored) {
+        const ids = JSON.parse(stored);
+        this.rootFolderId = ids.rootFolderId || null;
+        this.customersDataFolderId = ids.customersDataFolderId || null;
+        this.customersFileId = ids.customersFileId || null;
+        this.formsFileId = ids.formsFileId || null;
+        this.excelFileId = ids.excelFileId || null;
+        console.log('[DriveService] Loaded persisted folder IDs for user');
+      }
+    } catch (error) {
+      console.warn('[DriveService] Failed to load persisted IDs:', error);
+    }
+  }
+
+  /**
+   * Save folder IDs to localStorage for persistence
+   */
+  _persistIds() {
+    const key = this._getStorageKey();
+    if (!key) return;
+
+    try {
+      const ids = {
+        rootFolderId: this.rootFolderId,
+        customersDataFolderId: this.customersDataFolderId,
+        customersFileId: this.customersFileId,
+        formsFileId: this.formsFileId,
+        excelFileId: this.excelFileId,
+        savedAt: new Date().toISOString(),
+      };
+      localStorage.setItem(key, JSON.stringify(ids));
+      console.log('[DriveService] Persisted folder IDs');
+    } catch (error) {
+      console.warn('[DriveService] Failed to persist IDs:', error);
+    }
+  }
+
+  /**
+   * Validate if a folder/file ID still exists and is accessible
+   */
+  async _validateId(fileId) {
+    if (!fileId) return false;
+
+    try {
+      const response = await window.gapi.client.drive.files.get({
+        fileId: fileId,
+        fields: 'id, trashed',
+      });
+      return response.result && !response.result.trashed;
+    } catch (error) {
+      console.log(`[DriveService] ID ${fileId} is invalid:`, error.message);
+      return false;
+    }
   }
 
   /**
@@ -23,6 +110,13 @@ class DriveService {
     this.rootFolderId = null;
     this.customersFolderId = null;
     this.customersDataFolderId = null;
+
+    // Also clear persisted IDs for current user
+    const key = this._getStorageKey();
+    if (key) {
+      localStorage.removeItem(key);
+      console.log('[DriveService] Cleared persisted folder IDs');
+    }
   }
 
   /**
@@ -30,23 +124,39 @@ class DriveService {
    * This folder contains both customer folders AND the index file
    */
   async getOrCreateCustomersDataFolder() {
+    // Check if we have a cached ID and validate it
     if (this.customersDataFolderId) {
-      return this.customersDataFolderId;
+      const isValid = await this._validateId(this.customersDataFolderId);
+      if (isValid) {
+        return this.customersDataFolderId;
+      }
+      console.log('[DriveService] Cached customersDataFolderId is invalid, searching...');
+      this.customersDataFolderId = null;
     }
 
     try {
       const folderName = CONFIG.FOLDER_NAMES.CUSTOMERS_DATA || 'BYD Customers Data';
 
-      // Search for existing folder in Drive root
+      // Search for existing folder in Drive root - get ALL matches to handle duplicates
       const response = await window.gapi.client.drive.files.list({
         q: `name='${folderName}' and mimeType='application/vnd.google-apps.folder' and trashed=false`,
-        fields: 'files(id, name)',
+        fields: 'files(id, name, createdTime)',
         spaces: 'drive',
+        orderBy: 'createdTime', // Oldest first - most likely to have data
       });
 
       if (response.result.files && response.result.files.length > 0) {
+        // Use the oldest folder (first in sorted results) - most likely to have data
         this.customersDataFolderId = response.result.files[0].id;
-        console.log(`Found existing Customers Data folder "${folderName}":`, this.customersDataFolderId);
+
+        if (response.result.files.length > 1) {
+          console.warn(`[DriveService] Found ${response.result.files.length} "${folderName}" folders! Using oldest one: ${this.customersDataFolderId}`);
+          console.warn('[DriveService] Duplicate folder IDs:', response.result.files.map(f => f.id));
+        } else {
+          console.log(`[DriveService] Found existing Customers Data folder: ${this.customersDataFolderId}`);
+        }
+
+        this._persistIds();
         return this.customersDataFolderId;
       }
 
@@ -60,7 +170,8 @@ class DriveService {
       });
 
       this.customersDataFolderId = createResponse.result.id;
-      console.log(`Created Customers Data folder "${folderName}":`, this.customersDataFolderId);
+      console.log(`[DriveService] Created Customers Data folder: ${this.customersDataFolderId}`);
+      this._persistIds();
       return this.customersDataFolderId;
     } catch (error) {
       console.error('Failed to get/create Customers Data folder:', error);
@@ -382,25 +493,42 @@ class DriveService {
 
   /**
    * Get or create the root BYD CRM folder
+   * This folder stores forms.json, excel.json, and customers.json
    */
   async getOrCreateRootFolder() {
+    // Check if we have a cached ID and validate it
     if (this.rootFolderId) {
-      return this.rootFolderId;
+      const isValid = await this._validateId(this.rootFolderId);
+      if (isValid) {
+        return this.rootFolderId;
+      }
+      console.log('[DriveService] Cached rootFolderId is invalid, searching...');
+      this.rootFolderId = null;
     }
 
     try {
       const folderName = CONFIG.FOLDER_NAMES.ROOT || 'BYD CRM';
 
-      // Search for existing folder
+      // Search for existing folder - get ALL matches to handle duplicates
       const response = await window.gapi.client.drive.files.list({
         q: `name='${folderName}' and mimeType='application/vnd.google-apps.folder' and trashed=false`,
-        fields: 'files(id, name)',
+        fields: 'files(id, name, createdTime)',
         spaces: 'drive',
+        orderBy: 'createdTime', // Oldest first - most likely to have data
       });
 
       if (response.result.files && response.result.files.length > 0) {
+        // Use the oldest folder (first in sorted results) - most likely to have data
         this.rootFolderId = response.result.files[0].id;
-        console.log('Found existing root folder:', this.rootFolderId);
+
+        if (response.result.files.length > 1) {
+          console.warn(`[DriveService] Found ${response.result.files.length} "${folderName}" folders! Using oldest one: ${this.rootFolderId}`);
+          console.warn('[DriveService] Duplicate folder IDs:', response.result.files.map(f => f.id));
+        } else {
+          console.log(`[DriveService] Found existing root folder: ${this.rootFolderId}`);
+        }
+
+        this._persistIds();
         return this.rootFolderId;
       }
 
@@ -414,7 +542,8 @@ class DriveService {
       });
 
       this.rootFolderId = createResponse.result.id;
-      console.log('Created root folder:', this.rootFolderId);
+      console.log(`[DriveService] Created root folder: ${this.rootFolderId}`);
+      this._persistIds();
       return this.rootFolderId;
     } catch (error) {
       console.error('Failed to get/create root folder:', error);
@@ -720,6 +849,16 @@ class DriveService {
    * Get or create forms.json file in Google Drive
    */
   async getOrCreateFormsFile() {
+    // Check if we have a cached ID and validate it
+    if (this.formsFileId) {
+      const isValid = await this._validateId(this.formsFileId);
+      if (isValid) {
+        return this.formsFileId;
+      }
+      console.log('[DriveService] Cached formsFileId is invalid, searching...');
+      this.formsFileId = null;
+    }
+
     try {
       const folderId = await this.getOrCreateRootFolder();
       const fileName = CONFIG.DATA_FILE_NAMES.FORMS || 'forms.json';
@@ -733,7 +872,8 @@ class DriveService {
 
       if (response.result.files && response.result.files.length > 0) {
         this.formsFileId = response.result.files[0].id;
-        console.log('Found existing forms file:', this.formsFileId);
+        console.log('[DriveService] Found existing forms file:', this.formsFileId);
+        this._persistIds();
         return this.formsFileId;
       }
 
@@ -765,7 +905,8 @@ class DriveService {
 
       const result = await uploadResponse.json();
       this.formsFileId = result.id;
-      console.log('Created forms file:', this.formsFileId);
+      console.log('[DriveService] Created forms file:', this.formsFileId);
+      this._persistIds();
       return this.formsFileId;
     } catch (error) {
       console.error('Failed to get/create forms file:', error);
@@ -885,6 +1026,16 @@ class DriveService {
    * Get or create excel.json file in Google Drive
    */
   async getOrCreateExcelFile() {
+    // Check if we have a cached ID and validate it
+    if (this.excelFileId) {
+      const isValid = await this._validateId(this.excelFileId);
+      if (isValid) {
+        return this.excelFileId;
+      }
+      console.log('[DriveService] Cached excelFileId is invalid, searching...');
+      this.excelFileId = null;
+    }
+
     try {
       const folderId = await this.getOrCreateRootFolder();
       const fileName = CONFIG.DATA_FILE_NAMES.EXCEL || 'excel.json';
@@ -898,7 +1049,8 @@ class DriveService {
 
       if (response.result.files && response.result.files.length > 0) {
         this.excelFileId = response.result.files[0].id;
-        console.log('Found existing excel file:', this.excelFileId);
+        console.log('[DriveService] Found existing excel file:', this.excelFileId);
+        this._persistIds();
         return this.excelFileId;
       }
 
@@ -930,7 +1082,8 @@ class DriveService {
 
       const result = await uploadResponse.json();
       this.excelFileId = result.id;
-      console.log('Created excel file:', this.excelFileId);
+      console.log('[DriveService] Created excel file:', this.excelFileId);
+      this._persistIds();
       return this.excelFileId;
     } catch (error) {
       console.error('Failed to get/create excel file:', error);
