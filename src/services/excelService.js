@@ -69,6 +69,29 @@ class ExcelService {
       adminFee: customer.vsa_adminFee || '',
       insuranceSubsidy: customer.vsa_insuranceSubsidy || '',
       monthlyRepayment: customer.vsa_monthlyRepayment || '',
+
+      // Proposal Details
+      proposalModel: customer.proposal_model || '',
+      proposalBank: customer.proposal_bank || '',
+      proposalSellingPrice: customer.proposal_sellingPrice || '',
+      proposalInterestRate: customer.proposal_interestRate || '',
+      proposalDownpayment: customer.proposal_downpayment || '',
+      proposalLoanTenure: customer.proposal_loanTenure || '',
+      proposalLoanAmount: customer.proposal_loanAmount || '',
+      proposalAdminFee: customer.proposal_adminFee || '',
+      proposalReferralFee: customer.proposal_referralFee || '',
+      proposalTradeInModel: customer.proposal_tradeInModel || '',
+      proposalLowLoanSurcharge: customer.proposal_lowLoanSurcharge || '',
+      proposalTradeInCarPlate: customer.proposal_tradeInCarPlate || '',
+      proposalNoLoanSurcharge: customer.proposal_noLoanSurcharge || '',
+      proposalQuotedTradeInPrice: customer.proposal_quotedTradeInPrice || '',
+      proposalBenefit1: customer.proposal_benefit1 || '',
+      proposalBenefit2: customer.proposal_benefit2 || '',
+      proposalBenefit3: customer.proposal_benefit3 || '',
+      proposalBenefit4: customer.proposal_benefit4 || '',
+      proposalBenefit5: customer.proposal_benefit5 || '',
+      proposalBenefitsGiven: customer.proposal_benefitsGiven || '',
+      proposalRemarks: customer.proposal_remarks || '',
     };
 
     return dataMapping;

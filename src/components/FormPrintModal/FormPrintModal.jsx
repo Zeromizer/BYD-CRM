@@ -41,6 +41,18 @@ function FormPrintModal({ isOpen, onClose, customer }) {
   const getCustomerDataMapping = (customer) => {
     const today = new Date().toLocaleDateString();
 
+    // Helper function to parse currency strings to numbers
+    const parseCurrency = (value) => {
+      if (!value) return 0;
+      const numericValue = parseFloat(value.toString().replace(/[^0-9.-]/g, ''));
+      return isNaN(numericValue) ? 0 : numericValue;
+    };
+
+    // Calculate net insurance fee
+    const insuranceFee = parseCurrency(customer.vsa_insuranceFee);
+    const subsidy = parseCurrency(customer.vsa_insuranceSubsidy);
+    const netInsuranceFee = insuranceFee - subsidy;
+
     return {
       name: customer.name || '',
       phone: customer.phone || '',
@@ -54,6 +66,74 @@ function FormPrintModal({ isOpen, onClose, customer }) {
       salesConsultant: customer.salesConsultant || '',
       vsaNo: customer.vsaNo || '',
       date: today,
+
+      // VSA Details - BYD New Car Details
+      makeModel: customer.vsa_makeModel || '',
+      yom: customer.vsa_yom || '',
+      bodyColour: customer.vsa_bodyColour || '',
+      upholstery: customer.vsa_upholstery || '',
+      przType: customer.vsa_przType || '',
+
+      // VSA Details - BYD New Car Package
+      package: customer.vsa_package || '',
+      sellingWithCOE: customer.vsa_sellingWithCOE || '',
+      sellingPriceList: customer.vsa_sellingPriceList || '',
+      purchasePriceWithCOE: customer.vsa_purchasePriceWithCOE || '',
+      coeRebateLevel: customer.vsa_coeRebateLevel || '',
+      deposit: customer.vsa_deposit || '',
+      lessOthers: customer.vsa_lessOthers || '',
+      addOthers: customer.vsa_addOthers || '',
+      deliveryDate: customer.vsa_deliveryDate || '',
+
+      // VSA Details - Trade In Car Details
+      tradeInCarNo: customer.vsa_tradeInCarNo || '',
+      tradeInCarModel: customer.vsa_tradeInCarModel || '',
+      tradeInAmount: customer.vsa_tradeInAmount || '',
+
+      // VSA Details - Delivery Details
+      dateOfRegistration: customer.vsa_dateOfRegistration || '',
+      registrationNo: customer.vsa_registrationNo || '',
+      chassisNo: customer.vsa_chassisNo || '',
+      engineNo: customer.vsa_engineNo || '',
+      motorNo: customer.vsa_motorNo || '',
+
+      // VSA Details - Insurance
+      insuranceCompany: customer.vsa_insuranceCompany || '',
+      insuranceFee: customer.vsa_insuranceFee || '',
+      insuranceFeeNet: netInsuranceFee.toFixed(2),
+
+      // VSA Details - Remarks
+      remarks1: customer.vsa_remarks1 || '',
+      remarks2: customer.vsa_remarks2 || '',
+      loanAmount: customer.vsa_loanAmount || '',
+      interest: customer.vsa_interest || '',
+      tenure: customer.vsa_tenure || '',
+      adminFee: customer.vsa_adminFee || '',
+      insuranceSubsidy: customer.vsa_insuranceSubsidy || '',
+      monthlyRepayment: customer.vsa_monthlyRepayment || '',
+
+      // Proposal Details
+      proposalModel: customer.proposal_model || '',
+      proposalBank: customer.proposal_bank || '',
+      proposalSellingPrice: customer.proposal_sellingPrice || '',
+      proposalInterestRate: customer.proposal_interestRate || '',
+      proposalDownpayment: customer.proposal_downpayment || '',
+      proposalLoanTenure: customer.proposal_loanTenure || '',
+      proposalLoanAmount: customer.proposal_loanAmount || '',
+      proposalAdminFee: customer.proposal_adminFee || '',
+      proposalReferralFee: customer.proposal_referralFee || '',
+      proposalTradeInModel: customer.proposal_tradeInModel || '',
+      proposalLowLoanSurcharge: customer.proposal_lowLoanSurcharge || '',
+      proposalTradeInCarPlate: customer.proposal_tradeInCarPlate || '',
+      proposalNoLoanSurcharge: customer.proposal_noLoanSurcharge || '',
+      proposalQuotedTradeInPrice: customer.proposal_quotedTradeInPrice || '',
+      proposalBenefit1: customer.proposal_benefit1 || '',
+      proposalBenefit2: customer.proposal_benefit2 || '',
+      proposalBenefit3: customer.proposal_benefit3 || '',
+      proposalBenefit4: customer.proposal_benefit4 || '',
+      proposalBenefit5: customer.proposal_benefit5 || '',
+      proposalBenefitsGiven: customer.proposal_benefitsGiven || '',
+      proposalRemarks: customer.proposal_remarks || '',
     };
   };
 

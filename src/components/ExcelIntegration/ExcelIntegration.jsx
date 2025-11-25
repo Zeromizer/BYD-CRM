@@ -80,6 +80,11 @@ const FIELD_NAMES = {
   proposalTradeInCarPlate: 'Proposal - Trade In Car Plate',
   proposalNoLoanSurcharge: 'Proposal - No Loan Surcharge',
   proposalQuotedTradeInPrice: 'Proposal - Quoted Trade In Price',
+  proposalBenefit1: 'Proposal - Benefit 1',
+  proposalBenefit2: 'Proposal - Benefit 2',
+  proposalBenefit3: 'Proposal - Benefit 3',
+  proposalBenefit4: 'Proposal - Benefit 4',
+  proposalBenefit5: 'Proposal - Benefit 5',
   proposalBenefitsGiven: 'Proposal - Benefits Given',
   proposalRemarks: 'Proposal - Remarks',
 };
@@ -1048,6 +1053,11 @@ function ExcelIntegration() {
                     <option value="proposalTradeInCarPlate">Trade In Car Plate</option>
                     <option value="proposalNoLoanSurcharge">No Loan Surcharge</option>
                     <option value="proposalQuotedTradeInPrice">Quoted Trade In Price</option>
+                    <option value="proposalBenefit1">Benefit 1</option>
+                    <option value="proposalBenefit2">Benefit 2</option>
+                    <option value="proposalBenefit3">Benefit 3</option>
+                    <option value="proposalBenefit4">Benefit 4</option>
+                    <option value="proposalBenefit5">Benefit 5</option>
                     <option value="proposalBenefitsGiven">Benefits Given</option>
                     <option value="proposalRemarks">Remarks</option>
                   </optgroup>
