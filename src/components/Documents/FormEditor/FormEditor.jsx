@@ -590,6 +590,10 @@ function FormEditor({ isOpen, onClose, template, onSave }) {
               <li>14pt = standard body text</li>
               <li>18pt-24pt = headings</li>
               <li>The preview shows exactly how it will print</li>
+              <li>Green circle shows anchor point when selected</li>
+              <li>Left align: click where text starts</li>
+              <li>Center align: click where text centers</li>
+              <li>Right align: click where text ends</li>
             </ul>
           </div>
         </div>
@@ -653,10 +657,13 @@ function FieldMarker({ field, value, isSelected, scale, dpi, onClick, onDrag }) 
   // Convert font size from points to pixels at display scale
   const fontSizePx = documentRenderer.pointsToPixels(field.fontSize, dpi) * scale;
 
+  // Get alignment class for CSS transform-based positioning
+  const alignmentClass = `align-${field.alignment || 'left'}`;
+
   return (
     <div
       ref={markerRef}
-      className={`field-marker ${isSelected ? 'selected' : ''} ${
+      className={`field-marker ${alignmentClass} ${isSelected ? 'selected' : ''} ${
         isDragging ? 'dragging' : ''
       }`}
       style={{
@@ -666,7 +673,6 @@ function FieldMarker({ field, value, isSelected, scale, dpi, onClick, onDrag }) 
         fontSize: fontSizePx,
         fontFamily: field.fontFamily,
         fontWeight: field.fontWeight,
-        textAlign: field.alignment,
         cursor: isDragging ? 'grabbing' : 'grab',
       }}
       onClick={onClick}
