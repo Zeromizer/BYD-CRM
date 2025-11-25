@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import useFormsStore from '../../stores/useFormsStore';
 import useAuthStore from '../../stores/useAuthStore';
 import authService from '../../services/authService';
+import driveService from '../../services/driveService';
 import Modal from '../Modal/Modal';
 import FieldMappingModal from '../FieldMappingModal/FieldMappingModal';
 import JSZip from 'jszip';
@@ -107,8 +108,8 @@ function FormsManagement() {
       const isPDF = selectedFile.type.includes('pdf');
       const isImage = selectedFile.type.includes('image');
 
-      // Get or create forms folder
-      const formsFolderId = await getOrCreateFormsFolder();
+      // Get or create form files folder in the main BYD CRM folder
+      const formsFolderId = await driveService.getOrCreateFormFilesFolder();
       if (!formsFolderId) {
         alert('Failed to create forms folder. Please try again.');
         setUploading(false);
@@ -166,44 +167,6 @@ function FormsManagement() {
       alert('Failed to upload form: ' + error.message);
     } finally {
       setUploading(false);
-    }
-  };
-
-  const getOrCreateFormsFolder = async () => {
-    try {
-      // Check if forms folder ID is stored
-      let formsFolderId = localStorage.getItem('formsFolderId');
-
-      if (formsFolderId) {
-        // Verify folder still exists
-        try {
-          await window.gapi.client.drive.files.get({ fileId: formsFolderId });
-          return formsFolderId;
-        } catch {
-          // Folder doesn't exist, create new one
-          formsFolderId = null;
-        }
-      }
-
-      // Create new forms folder
-      const metadata = {
-        name: 'BYD CRM - Form Templates',
-        mimeType: 'application/vnd.google-apps.folder',
-      };
-
-      const response = await window.gapi.client.drive.files.create({
-        resource: metadata,
-        fields: 'id',
-      });
-
-      formsFolderId = response.result.id;
-      localStorage.setItem('formsFolderId', formsFolderId);
-      console.log('Created forms folder:', formsFolderId);
-
-      return formsFolderId;
-    } catch (error) {
-      console.error('Error getting/creating forms folder:', error);
-      return null;
     }
   };
 
@@ -302,8 +265,8 @@ function FormsManagement() {
         }
       }
 
-      // Get or create forms folder
-      const formsFolderId = await getOrCreateFormsFolder();
+      // Get or create form files folder in the main BYD CRM folder
+      const formsFolderId = await driveService.getOrCreateFormFilesFolder();
       if (!formsFolderId) {
         alert('Failed to create forms folder. Please try again.');
         setChangingMaster(false);
@@ -647,7 +610,8 @@ function FormsManagement() {
     setImporting(true);
 
     try {
-      const formsFolderId = await getOrCreateFormsFolder();
+      // Get or create form files folder in the main BYD CRM folder
+      const formsFolderId = await driveService.getOrCreateFormFilesFolder();
       if (!formsFolderId) {
         alert('Failed to create forms folder. Please try again.');
         setImporting(false);

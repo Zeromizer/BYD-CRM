@@ -70,7 +70,14 @@ const useFormsStore = create((set, get) => ({
   syncWithDrive: async () => {
     try {
       set({ isLoading: true, error: null });
+
+      // IMPORTANT: Load from localStorage first before syncing
+      // This ensures we don't lose locally-created templates when sync runs
+      // before the component has mounted and called loadFromLocalStorage
+      get().loadFromLocalStorage();
+
       const { formTemplates } = get();
+      console.log('Syncing forms with Drive, local templates:', Object.keys(formTemplates).length);
 
       // Sync with Drive (Drive is source of truth)
       const synced = await driveService.syncForms(formTemplates);
