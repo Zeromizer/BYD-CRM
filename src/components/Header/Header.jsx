@@ -21,12 +21,14 @@ function Header() {
   // Set up sync coordinator callback
   useEffect(() => {
     const syncAllData = async () => {
-      console.log('Starting parallel sync of all data...');
+      // Get the current isSignedIn state from the store (not the stale closure value)
+      const currentIsSignedIn = useAuthStore.getState().isSignedIn;
+      console.log('Starting parallel sync of all data...', { currentIsSignedIn });
       setShowSyncProgress(true);
       setSyncing(true);
 
       try {
-        await syncCoordinator.syncAll(isSignedIn);
+        await syncCoordinator.syncAll(currentIsSignedIn);
         console.log('Parallel sync complete');
 
         // Keep modal visible for 1.5 seconds to show success
@@ -44,7 +46,7 @@ function Header() {
     };
 
     setOnSignInCallback(syncAllData);
-  }, [setOnSignInCallback, isSignedIn]);
+  }, [setOnSignInCallback]);
 
   // Subscribe to progress updates
   useEffect(() => {
