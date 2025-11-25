@@ -351,27 +351,34 @@ const useDocumentStore = create((set, get) => ({
       get().loadFromLocalStorage();
 
       const localTemplates = get().templates;
-      console.log('Syncing document templates with Drive, local templates:', Object.keys(localTemplates).length);
+      console.log('[DocumentStore] Syncing document templates with Drive, local templates:', Object.keys(localTemplates).length);
 
       // Get templates folder from Drive
       const folderId = await driveService.getOrCreateFolder('Document Templates');
+      console.log('[DocumentStore] Document Templates folder ID:', folderId);
 
       // List all template files from Drive
       const files = await driveService.listFiles(folderId);
+      console.log('[DocumentStore] Files in Document Templates folder:', files.length, files.map(f => f.name));
 
       // Load each template from Drive
       const driveTemplates = {};
       for (const file of files) {
         if (file.name.endsWith('.json')) {
           try {
+            console.log(`[DocumentStore] Loading template file: ${file.name} (${file.id})`);
             const content = await driveService.getFileContent(file.id);
+            console.log(`[DocumentStore] File content (first 200 chars): ${String(content).substring(0, 200)}`);
             const template = JSON.parse(content);
+            console.log(`[DocumentStore] Parsed template: ${template.id} - ${template.name}`);
             driveTemplates[template.id] = template;
           } catch (error) {
-            console.error(`Error loading template ${file.name}:`, error);
+            console.error(`[DocumentStore] Error loading template ${file.name}:`, error);
           }
         }
       }
+
+      console.log('[DocumentStore] Loaded from Drive:', Object.keys(driveTemplates).length, 'templates');
 
       // Merge: Drive is source of truth, but keep local-only templates
       const mergedTemplates = { ...driveTemplates };
@@ -379,7 +386,7 @@ const useDocumentStore = create((set, get) => ({
       // Add local templates that don't exist in Drive (newly created offline)
       for (const [id, template] of Object.entries(localTemplates)) {
         if (!driveTemplates[id]) {
-          console.log(`Found local-only template: ${id}, will sync to Drive`);
+          console.log(`[DocumentStore] Found local-only template: ${id}, will sync to Drive`);
           mergedTemplates[id] = template;
           // Queue sync for this template to Drive
           get().queueSync(id);
@@ -394,10 +401,10 @@ const useDocumentStore = create((set, get) => ({
       });
       get().saveToLocalStorage(mergedTemplates);
 
-      console.log('Document templates synced with Drive successfully:', Object.keys(mergedTemplates).length);
+      console.log('[DocumentStore] Document templates synced with Drive successfully:', Object.keys(mergedTemplates).length);
       return mergedTemplates;
     } catch (error) {
-      console.error('Failed to sync document templates with Drive:', error);
+      console.error('[DocumentStore] Failed to sync document templates with Drive:', error);
       set({ error: 'Failed to sync with Google Drive', loading: false });
       throw error;
     }

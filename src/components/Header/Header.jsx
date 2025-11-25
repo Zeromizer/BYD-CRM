@@ -16,6 +16,7 @@ function Header() {
     customers: { status: 'pending', detail: '' },
     forms: { status: 'pending', detail: '' },
     excel: { status: 'pending', detail: '' },
+    documents: { status: 'pending', detail: '' },
     overall: 0,
   });
 
