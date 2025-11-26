@@ -476,6 +476,142 @@
   pointer-events: all;
 }
 
+/* Desktop Ellipsis Menu */
+.ellipsis-menu-button {
+  background: none;
+  border: none;
+  color: var(--color-text-tertiary);
+  font-size: 24px;
+  font-weight: bold;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.2s;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
+}
+
+.ellipsis-menu-button:hover {
+  background: rgba(0, 0, 0, 0.1);
+  color: var(--color-text-on-card);
+}
+
+/* Menu backdrop to close on click outside */
+.menu-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: transparent;
+  z-index: 998;
+}
+
+/* Context menu dropdown */
+.context-menu {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  margin-top: 4px;
+  background: white;
+  border: 2px solid var(--color-border-light);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 999;
+  min-width: 160px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.context-menu-item {
+  background: none;
+  border: none;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--color-text-on-card);
+  transition: background 0.2s;
+  border-bottom: 1px solid var(--color-border-light);
+  text-align: left;
+}
+
+.context-menu-item:last-child {
+  border-bottom: none;
+}
+
+.context-menu-item:hover {
+  background: #f3f4f6;
+}
+
+.context-menu-item.context-menu-delete {
+  color: var(--color-error);
+}
+
+.context-menu-item.context-menu-delete:hover {
+  background: #fee2e2;
+}
+
+.menu-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+/* Rename Modal */
+.rename-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 8px;
+}
+
+.rename-input-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rename-input-container label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-on-card);
+}
+
+.rename-input-container input {
+  padding: 10px 12px;
+  border: 2px solid var(--color-border-light);
+  border-radius: 6px;
+  font-size: 14px;
+  transition: border-color 0.2s;
+}
+
+.rename-input-container input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.rename-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.rename-modal-actions .btn {
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
 .btn-danger {
   background: var(--color-error);
   color: white;
@@ -867,6 +1003,11 @@
     padding: 10px 12px;
     min-height: auto;
     cursor: pointer;
+  }
+
+  /* Hide desktop ellipsis menu on mobile (use long-press instead) */
+  .ellipsis-menu-button {
+    display: none !important;
   }
 
   /* Compact section headers on mobile */
