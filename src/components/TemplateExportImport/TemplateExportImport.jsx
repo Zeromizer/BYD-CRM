@@ -6,8 +6,7 @@ import templateExportService from '../../services/templateExportService';
 import './TemplateExportImport.css';
 
 function TemplateExportImport({ isOpen, onClose }) {
-  const documentStore = useDocumentStore();
-  const { templates: documentTemplates, saveToLocalStorage: saveDocTemplates } = documentStore;
+  const { templates: documentTemplates, saveToLocalStorage: saveDocTemplates, loadFromLocalStorage: loadDocTemplates } = useDocumentStore();
   const excelStore = useExcelStore();
   const { excelTemplates } = excelStore;
 
@@ -65,9 +64,9 @@ function TemplateExportImport({ isOpen, onClose }) {
       if (data.type === 'document_templates' || data.type === 'all_templates') {
         const docResult = templateExportService.importDocumentTemplates(data, documentTemplates);
 
-        // Save merged templates - update both state and localStorage
-        documentStore.setState({ templates: docResult.merged });
+        // Save merged templates to localStorage and reload
         saveDocTemplates(docResult.merged);
+        loadDocTemplates();
 
         results.push({
           type: 'Document Templates',
