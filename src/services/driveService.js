@@ -269,6 +269,39 @@ class DriveService {
   }
 
   /**
+   * Recursively list all image files from a folder and its subfolders
+   * Returns all images with their folder path for context
+   */
+  async listAllImagesRecursively(folderId, folderPath = '') {
+    try {
+      const allImages = [];
+
+      // Get all files and folders in current folder
+      const items = await this.listFiles(folderId);
+
+      for (const item of items) {
+        if (item.mimeType === 'application/vnd.google-apps.folder') {
+          // Recursively search subfolder
+          const subfolderPath = folderPath ? `${folderPath}/${item.name}` : item.name;
+          const subImages = await this.listAllImagesRecursively(item.id, subfolderPath);
+          allImages.push(...subImages);
+        } else if (item.mimeType && item.mimeType.startsWith('image/')) {
+          // Add image with folder path
+          allImages.push({
+            ...item,
+            folderPath: folderPath || 'Root'
+          });
+        }
+      }
+
+      return allImages;
+    } catch (error) {
+      console.error('Failed to list images recursively:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Get file content as text
    */
   async getFileContent(fileId) {
