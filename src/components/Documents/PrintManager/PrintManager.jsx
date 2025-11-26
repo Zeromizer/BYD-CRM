@@ -6,6 +6,7 @@ import documentRenderer from '../../../services/documentRenderer';
 import pdfGenerator from '../../../services/pdfGenerator';
 import { getCustomerDataMapping } from '../../../services/fieldMapper';
 import driveService from '../../../services/driveService';
+import ImageSelector from '../ImageSelector/ImageSelector';
 import './PrintManager.css';
 
 /**
@@ -13,6 +14,7 @@ import './PrintManager.css';
  *
  * Features:
  * - Single or multi-page document printing
+ * - Double-sided printing with back page images (4 quarters)
  * - PDF generation with perfect quality
  * - Preview before printing
  * - Save to Google Drive
@@ -23,7 +25,8 @@ function PrintManager({ isOpen, onClose, customer }) {
   const { isSignedIn } = useAuthStore();
 
   const [selectedTemplateIds, setSelectedTemplateIds] = useState([]);
-  const [step, setStep] = useState('select'); // 'select' | 'preview' | 'processing'
+  const [doubleSidedTemplates, setDoubleSidedTemplates] = useState({}); // templateId -> { enabled, images: [] }
+  const [step, setStep] = useState('select'); // 'select' | 'images' | 'preview' | 'processing'
   const [renders, setRenders] = useState([]);
   const [pdf, setPdf] = useState(null);
   const [error, setError] = useState(null);
@@ -32,6 +35,7 @@ function PrintManager({ isOpen, onClose, customer }) {
     if (isOpen) {
       loadFromLocalStorage();
       setSelectedTemplateIds([]);
+      setDoubleSidedTemplates({});
       setStep('select');
       setRenders([]);
       setPdf(null);
@@ -46,9 +50,59 @@ function PrintManager({ isOpen, onClose, customer }) {
   const handleTemplateToggle = (templateId) => {
     if (selectedTemplateIds.includes(templateId)) {
       setSelectedTemplateIds(selectedTemplateIds.filter((id) => id !== templateId));
+      // Remove from double-sided config when deselected
+      const newDoubleSided = { ...doubleSidedTemplates };
+      delete newDoubleSided[templateId];
+      setDoubleSidedTemplates(newDoubleSided);
     } else {
       setSelectedTemplateIds([...selectedTemplateIds, templateId]);
     }
+  };
+
+  const handleToggleDoubleSided = (templateId) => {
+    setDoubleSidedTemplates(prev => ({
+      ...prev,
+      [templateId]: {
+        enabled: !prev[templateId]?.enabled,
+        images: prev[templateId]?.images || []
+      }
+    }));
+  };
+
+  const handleImagesSelected = (templateId, images) => {
+    setDoubleSidedTemplates(prev => ({
+      ...prev,
+      [templateId]: {
+        ...prev[templateId],
+        images: images.map(img => img.id) // Store only file IDs
+      }
+    }));
+  };
+
+  const hasDoubleSidedTemplates = () => {
+    return selectedTemplateIds.some(id => doubleSidedTemplates[id]?.enabled);
+  };
+
+  const needsImageSelection = () => {
+    return selectedTemplateIds.some(id => {
+      const ds = doubleSidedTemplates[id];
+      return ds?.enabled && (!ds.images || ds.images.length === 0);
+    });
+  };
+
+  const handleProceedToImages = () => {
+    if (!customer.driveFolderId) {
+      alert('Customer does not have a Google Drive folder. Cannot select images.');
+      return;
+    }
+
+    if (!hasDoubleSidedTemplates()) {
+      // Skip image selection if no double-sided templates
+      handleGeneratePreview();
+      return;
+    }
+
+    setStep('images');
   };
 
   const handleGeneratePreview = async () => {
@@ -69,17 +123,45 @@ function PrintManager({ isOpen, onClose, customer }) {
       // Get customer data mapping
       const customerData = getCustomerDataMapping(customer);
 
-      // Render all selected templates
-      const selectedTemplates = selectedTemplateIds.map((id) => templates[id]);
-      const renderResults = await documentRenderer.renderMultipleDocuments(
-        selectedTemplates,
-        customerData
-      );
+      // Render all pages (front pages and back pages for double-sided templates)
+      const allRenders = [];
 
-      setRenders(renderResults);
+      for (const templateId of selectedTemplateIds) {
+        const template = templates[templateId];
+
+        // Render front page
+        const frontPageRender = await documentRenderer.renderDocument(template, customerData);
+        allRenders.push({
+          ...frontPageRender,
+          templateId,
+          pageType: 'front',
+          templateName: template.name
+        });
+
+        // Render back page if double-sided
+        const dsConfig = doubleSidedTemplates[templateId];
+        if (dsConfig?.enabled && dsConfig.images && dsConfig.images.length > 0) {
+          const backPageRender = await documentRenderer.renderBackPageWithImages(
+            dsConfig.images,
+            {
+              width: frontPageRender.width,
+              height: frontPageRender.height,
+              dpi: frontPageRender.dpi
+            }
+          );
+          allRenders.push({
+            ...backPageRender,
+            templateId,
+            pageType: 'back',
+            templateName: template.name
+          });
+        }
+      }
+
+      setRenders(allRenders);
 
       // Generate PDF
-      const generatedPdf = await pdfGenerator.generatePDFFromRenders(renderResults, {
+      const generatedPdf = await pdfGenerator.generatePDFFromRenders(allRenders, {
         title: `${customer.name} - Documents`,
         filename: `${customer.name}_documents.pdf`,
       });
@@ -182,33 +264,51 @@ function PrintManager({ isOpen, onClose, customer }) {
               </div>
             ) : (
               <div className="template-selection-grid">
-                {templateArray.map((template) => (
-                  <div
-                    key={template.id}
-                    className={`template-card ${
-                      selectedTemplateIds.includes(template.id) ? 'selected' : ''
-                    }`}
-                    onClick={() => handleTemplateToggle(template.id)}
-                  >
-                    <div className="template-card-header">
-                      <input
-                        type="checkbox"
-                        checked={selectedTemplateIds.includes(template.id)}
-                        onChange={() => {}}
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                      <h4>{template.name}</h4>
-                    </div>
-                    <div className="template-card-body">
-                      <div className="template-meta">
-                        <span className="meta-badge">{template.category}</span>
-                        <span className="meta-badge">
-                          {Object.keys(template.fields || {}).length} fields
-                        </span>
+                {templateArray.map((template) => {
+                  const isSelected = selectedTemplateIds.includes(template.id);
+                  const isDoubleSided = doubleSidedTemplates[template.id]?.enabled;
+
+                  return (
+                    <div
+                      key={template.id}
+                      className={`template-card ${isSelected ? 'selected' : ''}`}
+                    >
+                      <div
+                        className="template-card-header"
+                        onClick={() => handleTemplateToggle(template.id)}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => {}}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                        <h4>{template.name}</h4>
+                      </div>
+                      <div className="template-card-body">
+                        <div className="template-meta">
+                          <span className="meta-badge">{template.category}</span>
+                          <span className="meta-badge">
+                            {Object.keys(template.fields || {}).length} fields
+                          </span>
+                        </div>
+
+                        {isSelected && (
+                          <div className="template-options">
+                            <label className="double-sided-option">
+                              <input
+                                type="checkbox"
+                                checked={isDoubleSided}
+                                onChange={() => handleToggleDoubleSided(template.id)}
+                              />
+                              <span>Double-sided (add 4 ID images on back)</span>
+                            </label>
+                          </div>
+                        )}
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
 
@@ -229,7 +329,36 @@ function PrintManager({ isOpen, onClose, customer }) {
           </div>
         )}
 
-        {/* Step 2: Processing */}
+        {/* Step 2: Image Selection (for double-sided templates) */}
+        {step === 'images' && (
+          <div className="print-images-step">
+            <h4>Select Customer ID Images for Back Pages</h4>
+            <p className="step-hint">
+              Choose up to 4 images from the customer's folder for each double-sided form
+            </p>
+
+            {selectedTemplateIds
+              .filter(id => doubleSidedTemplates[id]?.enabled)
+              .map(templateId => {
+                const template = templates[templateId];
+                const currentImages = doubleSidedTemplates[templateId]?.images || [];
+
+                return (
+                  <div key={templateId} className="image-selection-section">
+                    <h5>{template.name} - Back Page</h5>
+                    <ImageSelector
+                      customerFolderId={customer.driveFolderId}
+                      selectedImages={currentImages.map(id => ({ id }))}
+                      onSelectionChange={(images) => handleImagesSelected(templateId, images)}
+                      maxImages={4}
+                    />
+                  </div>
+                );
+              })}
+          </div>
+        )}
+
+        {/* Step 3: Processing */}
         {step === 'processing' && (
           <div className="print-processing-step">
             <div className="loading-spinner"></div>
@@ -238,7 +367,7 @@ function PrintManager({ isOpen, onClose, customer }) {
           </div>
         )}
 
-        {/* Step 3: Preview */}
+        {/* Step 4: Preview */}
         {step === 'preview' && renders.length > 0 && (
           <div className="print-preview-step">
             <div className="preview-header">
@@ -255,7 +384,12 @@ function PrintManager({ isOpen, onClose, customer }) {
               {renders.map((render, index) => (
                 <div key={index} className="preview-page">
                   <div className="preview-page-label">
-                    Page {index + 1} - {selectedTemplateIds[index] && templates[selectedTemplateIds[index]]?.name}
+                    Page {index + 1} - {render.templateName}
+                    {render.pageType && (
+                      <span className={`page-type-badge ${render.pageType}`}>
+                        {render.pageType === 'front' ? '(Front)' : '(Back - ID Images)'}
+                      </span>
+                    )}
                   </div>
                   <img
                     src={render.dataUrl}
@@ -290,8 +424,26 @@ function PrintManager({ isOpen, onClose, customer }) {
               </button>
               <button
                 className="btn btn-primary"
-                onClick={handleGeneratePreview}
+                onClick={handleProceedToImages}
                 disabled={selectedTemplateIds.length === 0 || !isSignedIn}
+              >
+                {hasDoubleSidedTemplates() ? 'Next: Select Images →' : 'Generate Preview'}
+              </button>
+            </>
+          )}
+
+          {step === 'images' && (
+            <>
+              <button
+                className="btn btn-secondary"
+                onClick={() => setStep('select')}
+              >
+                ← Back
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={handleGeneratePreview}
+                disabled={needsImageSelection()}
               >
                 Generate Preview
               </button>

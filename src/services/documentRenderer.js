@@ -190,7 +190,145 @@ class DocumentRenderer {
   }
 
   /**
-   * Draw multi-line text with word wrapping
+   * Render back page with 4 images in quarters (for double-sided forms)
+   *
+   * @param {Array} imageFileIds - Array of up to 4 Google Drive file IDs for images
+   * @param {Object} options - Rendering options (width, height, dpi)
+   * @returns {Object} - Rendered canvas and data URL
+   */
+  async renderBackPageWithImages(imageFileIds, options = {}) {
+    try {
+      // Use standard paper size or custom dimensions
+      const dpi = options.dpi || this.defaultDPI;
+      const width = options.width || this.pointsToPixels(595.28, dpi); // A4 width in points (8.27 inches)
+      const height = options.height || this.pointsToPixels(841.89, dpi); // A4 height in points (11.69 inches)
+
+      // Create canvas
+      const canvas = this.createCanvas(width, height);
+      const ctx = canvas.getContext('2d');
+
+      // Fill white background
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, width, height);
+
+      // Add margin (0.5 inch on each side)
+      const margin = this.pointsToPixels(36, dpi); // 0.5 inch = 36 points
+      const contentWidth = width - (margin * 2);
+      const contentHeight = height - (margin * 2);
+
+      // Calculate quarter dimensions
+      const quarterWidth = contentWidth / 2;
+      const quarterHeight = contentHeight / 2;
+
+      // Add subtle borders between quarters
+      ctx.strokeStyle = '#e0e0e0';
+      ctx.lineWidth = 2;
+
+      // Vertical center line
+      ctx.beginPath();
+      ctx.moveTo(width / 2, margin);
+      ctx.lineTo(width / 2, height - margin);
+      ctx.stroke();
+
+      // Horizontal center line
+      ctx.beginPath();
+      ctx.moveTo(margin, height / 2);
+      ctx.lineTo(width - margin, height / 2);
+      ctx.stroke();
+
+      // Load and draw images in quarters
+      const positions = [
+        { x: margin, y: margin },                              // Top-left
+        { x: margin + quarterWidth, y: margin },               // Top-right
+        { x: margin, y: margin + quarterHeight },              // Bottom-left
+        { x: margin + quarterWidth, y: margin + quarterHeight } // Bottom-right
+      ];
+
+      for (let i = 0; i < Math.min(imageFileIds.length, 4); i++) {
+        const fileId = imageFileIds[i];
+        if (!fileId) continue;
+
+        try {
+          // Fetch and load image
+          const imageBlob = await this.fetchImageFromDrive(fileId);
+          const image = await this.loadImage(imageBlob);
+
+          // Calculate scaling to fit in quarter with padding
+          const padding = this.pointsToPixels(18, dpi); // 0.25 inch padding
+          const maxImgWidth = quarterWidth - (padding * 2);
+          const maxImgHeight = quarterHeight - (padding * 2);
+
+          const scaleX = maxImgWidth / image.width;
+          const scaleY = maxImgHeight / image.height;
+          const scale = Math.min(scaleX, scaleY);
+
+          const scaledWidth = image.width * scale;
+          const scaledHeight = image.height * scale;
+
+          // Center image in quarter
+          const imgX = positions[i].x + padding + (maxImgWidth - scaledWidth) / 2;
+          const imgY = positions[i].y + padding + (maxImgHeight - scaledHeight) / 2;
+
+          // Draw image
+          ctx.drawImage(image, imgX, imgY, scaledWidth, scaledHeight);
+
+          // Add label
+          ctx.font = `${this.pointsToPixels(10, dpi)}px Arial`;
+          ctx.fillStyle = '#666666';
+          ctx.textAlign = 'center';
+          ctx.fillText(
+            `Image ${i + 1}`,
+            positions[i].x + quarterWidth / 2,
+            positions[i].y + padding / 2
+          );
+        } catch (error) {
+          console.error(`Error loading image ${i + 1}:`, error);
+
+          // Draw placeholder for failed image
+          ctx.fillStyle = '#f5f5f5';
+          ctx.fillRect(
+            positions[i].x + this.pointsToPixels(18, dpi),
+            positions[i].y + this.pointsToPixels(18, dpi),
+            quarterWidth - this.pointsToPixels(36, dpi),
+            quarterHeight - this.pointsToPixels(36, dpi)
+          );
+
+          ctx.fillStyle = '#999999';
+          ctx.textAlign = 'center';
+          ctx.font = `${this.pointsToPixels(14, dpi)}px Arial`;
+          ctx.fillText(
+            'Image not available',
+            positions[i].x + quarterWidth / 2,
+            positions[i].y + quarterHeight / 2
+          );
+        }
+      }
+
+      // Add "Customer ID - Back Page" label at bottom
+      ctx.font = `${this.pointsToPixels(12, dpi)}px Arial`;
+      ctx.fillStyle = '#333333';
+      ctx.textAlign = 'center';
+      ctx.fillText(
+        'Customer ID Images',
+        width / 2,
+        height - margin / 2
+      );
+
+      return {
+        canvas,
+        dataUrl: canvas.toDataURL('image/jpeg', 0.95),
+        width,
+        height,
+        dpi,
+      };
+    } catch (error) {
+      console.error('Error rendering back page:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Render multi-line text with word wrapping
    */
   drawMultilineText(ctx, text, x, y, maxWidth, lineHeight) {
     if (!maxWidth) {
