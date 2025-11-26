@@ -197,23 +197,64 @@ function PrintManager({ isOpen, onClose, customer }) {
 
     try {
       setStep('processing');
+      console.log('📁 Getting/creating customer folder for PDF save...');
 
-      // Get or create customer folder
-      const customerFolder = await driveService.getOrCreateCustomerFolder(customer.name);
+      // Check if customer already has a folder ID stored
+      let customerFolderId = customer.driveFolderId;
+
+      // If customer has a folder ID, verify it still exists
+      if (customerFolderId) {
+        console.log('🔍 Verifying existing folder ID:', customerFolderId);
+        try {
+          await window.gapi.client.drive.files.get({ fileId: customerFolderId });
+          console.log('✅ Customer folder exists:', customerFolderId);
+        } catch {
+          console.warn('⚠️ Stored folder ID no longer exists, will search/create');
+          customerFolderId = null;
+        }
+      }
+
+      // If no valid folder ID, search for existing folder or create new one
+      if (!customerFolderId) {
+        console.log('🔍 Searching for existing customer folder...');
+        try {
+          const existingFolder = await driveService.findCustomerFolderByName(customer.name);
+          if (existingFolder) {
+            console.log('✅ Found existing customer folder:', existingFolder.folderId);
+            customerFolderId = existingFolder.folderId;
+
+            // Update customer record with found folder ID
+            // Note: This is done in the customer store, not here
+          } else {
+            // Create new folder structure
+            console.log('🆕 Creating new customer folder structure...');
+            const folderInfo = await driveService.createCustomerFolderStructure(customer.name, customer.id);
+            console.log('✅ Customer folder created:', folderInfo.folderId);
+            customerFolderId = folderInfo.folderId;
+          }
+        } catch (searchError) {
+          console.error('❌ Error with folder operations:', searchError);
+          throw searchError;
+        }
+      }
 
       // Generate filename
       const filename = `${customer.name}_Documents_${new Date().toISOString().split('T')[0]}.pdf`;
+      console.log('📄 Generated filename:', filename);
 
       // Get PDF blob
       const blob = pdfGenerator.getPDFBlob(pdf);
+      console.log('📊 PDF blob size:', blob.size);
 
-      // Upload to Drive
-      await driveService.uploadFile(filename, blob, customerFolder.id);
+      // Upload to customer's main folder
+      console.log('📤 Uploading PDF to Drive...');
+      await driveService.uploadFile(filename, blob, customerFolderId);
+      console.log('✅ PDF uploaded successfully');
 
-      alert(`PDF saved to Google Drive successfully!\nFolder: ${customer.name}`);
+      alert(`PDF saved to Google Drive successfully!\n\nYou can find it in the customer's main folder: ${customer.name}`);
       onClose();
     } catch (err) {
-      console.error('Error saving to Drive:', err);
+      console.error('❌ Error saving to Drive:', err);
       alert('Failed to save to Drive: ' + err.message);
       setStep('preview');
     }
