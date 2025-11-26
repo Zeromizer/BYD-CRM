@@ -4,6 +4,7 @@ import useAuthStore from '../../stores/useAuthStore';
 import syncCoordinator from '../../services/syncCoordinator';
 import SyncProgressModal from '../SyncProgressModal/SyncProgressModal';
 import SyncStatusIndicator from '../SyncStatusIndicator/SyncStatusIndicator';
+import TemplateExportImport from '../TemplateExportImport/TemplateExportImport';
 import './Header.css';
 
 function Header() {
@@ -12,6 +13,7 @@ function Header() {
   const [showDropdown, setShowDropdown] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [showSyncProgress, setShowSyncProgress] = useState(false);
+  const [showExportImport, setShowExportImport] = useState(false);
   const [syncProgress, setSyncProgress] = useState({
     customers: { status: 'pending', detail: '' },
     excel: { status: 'pending', detail: '' },
@@ -218,6 +220,21 @@ function Header() {
 
                 <a
                   className="mobile-menu-item"
+                  onClick={() => { setShowExportImport(true); setShowDropdown(false); }}
+                >
+                  <svg className="menu-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                  </svg>
+                  <span>Export/Import Templates</span>
+                  <svg className="menu-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                  </svg>
+                </a>
+
+                <a
+                  className="mobile-menu-item"
                   onClick={() => { handleForceSync(); setShowDropdown(false); }}
                   style={{ opacity: syncing ? 0.6 : 1 }}
                 >
@@ -239,6 +256,12 @@ function Header() {
 
       {/* Sync Progress Modal */}
       <SyncProgressModal isOpen={showSyncProgress} progress={syncProgress} />
+
+      {/* Template Export/Import Modal */}
+      <TemplateExportImport
+        isOpen={showExportImport}
+        onClose={() => setShowExportImport(false)}
+      />
     </header>
   );
 }
