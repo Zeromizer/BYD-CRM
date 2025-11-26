@@ -194,6 +194,15 @@ function CustomerDetails() {
   const [selectedFileToMove, setSelectedFileToMove] = useState(null);
   const longPressTimerRef = useRef(null);
 
+  // Desktop context menu state
+  const [openMenuId, setOpenMenuId] = useState(null);
+  const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
+
+  // Rename state
+  const [renamingItem, setRenamingItem] = useState(null);
+  const [renameValue, setRenameValue] = useState('');
+  const [showRenameModal, setShowRenameModal] = useState(false);
+
   // Initialize details form data when customer changes
   useEffect(() => {
     if (customer) {
@@ -656,6 +665,75 @@ function CustomerDetails() {
     await handleDeleteDocument(selectedFileToMove);
     setShowFolderMenu(false);
     setSelectedFileToMove(null);
+  };
+
+  // Desktop menu handlers
+  const handleMenuToggle = (e, item) => {
+    e.stopPropagation();
+    if (openMenuId === item.id) {
+      setOpenMenuId(null);
+    } else {
+      setOpenMenuId(item.id);
+    }
+  };
+
+  const handleCloseMenu = () => {
+    setOpenMenuId(null);
+  };
+
+  const handleMenuMove = (item) => {
+    setSelectedFileToMove(item);
+    setShowFolderMenu(true);
+    setOpenMenuId(null);
+  };
+
+  const handleMenuRename = (item) => {
+    setRenamingItem(item);
+    setRenameValue(item.name);
+    setShowRenameModal(true);
+    setOpenMenuId(null);
+  };
+
+  const handleMenuDelete = async (item) => {
+    setOpenMenuId(null);
+    await handleDeleteDocument(item);
+  };
+
+  const handleRenameSubmit = async () => {
+    if (!renamingItem || !renameValue.trim()) return;
+
+    try {
+      console.log('Renaming file:', renamingItem.name, '→', renameValue);
+
+      // Rename via Google Drive API
+      await window.gapi.client.drive.files.update({
+        fileId: renamingItem.id,
+        resource: {
+          name: renameValue.trim()
+        }
+      });
+
+      // Reload documents
+      const currentFolderId = folderPath.length > 0
+        ? folderPath[folderPath.length - 1].id
+        : customer.driveFolderId;
+      await loadCustomerDocuments(currentFolderId);
+
+      setShowRenameModal(false);
+      setRenamingItem(null);
+      setRenameValue('');
+
+      console.log('File renamed successfully!');
+    } catch (error) {
+      console.error('Error renaming file:', error);
+      alert(`Failed to rename: ${error.message}`);
+    }
+  };
+
+  const handleRenameCancelModal = () => {
+    setShowRenameModal(false);
+    setRenamingItem(null);
+    setRenameValue('');
   };
 
   // Click to open/view
@@ -2108,6 +2186,43 @@ function CustomerDetails() {
                                   <h4>{folder.name}</h4>
                                   <p>{formatDate(folder.createdTime)}</p>
                                 </div>
+                                <div className="document-actions">
+                                  <button
+                                    className="ellipsis-menu-button"
+                                    onClick={(e) => handleMenuToggle(e, folder)}
+                                    title="More actions"
+                                  >
+                                    ⋮
+                                  </button>
+                                  {openMenuId === folder.id && (
+                                    <>
+                                      <div className="menu-backdrop" onClick={handleCloseMenu}></div>
+                                      <div className="context-menu">
+                                        <button
+                                          className="context-menu-item"
+                                          onClick={() => handleMenuMove(folder)}
+                                        >
+                                          <span className="menu-icon">📁</span>
+                                          <span>Move</span>
+                                        </button>
+                                        <button
+                                          className="context-menu-item"
+                                          onClick={() => handleMenuRename(folder)}
+                                        >
+                                          <span className="menu-icon">✏️</span>
+                                          <span>Rename</span>
+                                        </button>
+                                        <button
+                                          className="context-menu-item context-menu-delete"
+                                          onClick={() => handleMenuDelete(folder)}
+                                        >
+                                          <span className="menu-icon">🗑️</span>
+                                          <span>Delete</span>
+                                        </button>
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
                                 <span className="chevron">›</span>
                               </div>
                             ))}
@@ -2152,6 +2267,45 @@ function CustomerDetails() {
                                     {formatFileSize(doc.size)} • {formatDate(doc.createdTime)}
                                   </p>
                                 </div>
+                                {doc.name !== 'customer.json' && (
+                                  <div className="document-actions">
+                                    <button
+                                      className="ellipsis-menu-button"
+                                      onClick={(e) => handleMenuToggle(e, doc)}
+                                      title="More actions"
+                                    >
+                                      ⋮
+                                    </button>
+                                    {openMenuId === doc.id && (
+                                      <>
+                                        <div className="menu-backdrop" onClick={handleCloseMenu}></div>
+                                        <div className="context-menu">
+                                          <button
+                                            className="context-menu-item"
+                                            onClick={() => handleMenuMove(doc)}
+                                          >
+                                            <span className="menu-icon">📁</span>
+                                            <span>Move</span>
+                                          </button>
+                                          <button
+                                            className="context-menu-item"
+                                            onClick={() => handleMenuRename(doc)}
+                                          >
+                                            <span className="menu-icon">✏️</span>
+                                            <span>Rename</span>
+                                          </button>
+                                          <button
+                                            className="context-menu-item context-menu-delete"
+                                            onClick={() => handleMenuDelete(doc)}
+                                          >
+                                            <span className="menu-icon">🗑️</span>
+                                            <span>Delete</span>
+                                          </button>
+                                        </div>
+                                      </>
+                                    )}
+                                  </div>
+                                )}
                               </div>
                             ))}
                           </div>
@@ -2212,6 +2366,43 @@ function CustomerDetails() {
                         </div>
                       </div>
                     </>
+                  )}
+
+                  {/* Rename Modal */}
+                  {showRenameModal && (
+                    <Modal isOpen={showRenameModal} onClose={handleRenameCancelModal} title="Rename">
+                      <div className="rename-modal">
+                        <div className="rename-input-container">
+                          <label htmlFor="rename-input">New name:</label>
+                          <input
+                            id="rename-input"
+                            type="text"
+                            value={renameValue}
+                            onChange={(e) => setRenameValue(e.target.value)}
+                            onKeyPress={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                handleRenameSubmit();
+                              }
+                            }}
+                            placeholder="Enter new name"
+                            autoFocus
+                          />
+                        </div>
+                        <div className="rename-modal-actions">
+                          <button className="btn btn-secondary" onClick={handleRenameCancelModal}>
+                            Cancel
+                          </button>
+                          <button
+                            className="btn btn-primary"
+                            onClick={handleRenameSubmit}
+                            disabled={!renameValue.trim()}
+                          >
+                            Rename
+                          </button>
+                        </div>
+                      </div>
+                    </Modal>
                   )}
                 </>
               )}
