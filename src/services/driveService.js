@@ -1347,6 +1347,34 @@ class DriveService {
   }
 
   /**
+   * Delete a document template from Google Drive
+   */
+  async deleteDocumentTemplateFromDrive(templateId) {
+    try {
+      const folderId = await this.getOrCreateDocumentTemplatesFolder();
+      const fileName = `${templateId}.json`;
+
+      // Find the file to delete
+      const files = await this.listFiles(folderId);
+      const fileToDelete = files.find(f => f.name === fileName);
+
+      if (fileToDelete) {
+        await window.gapi.client.drive.files.delete({
+          fileId: fileToDelete.id,
+        });
+        console.log(`Deleted document template from Drive: ${templateId}`);
+        return true;
+      } else {
+        console.log(`Document template not found in Drive: ${templateId}`);
+        return false;
+      }
+    } catch (error) {
+      console.error('Failed to delete document template from Drive:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Sync document templates: merge localStorage and Drive data
    * Drive is source of truth, but local-only templates are uploaded
    */
