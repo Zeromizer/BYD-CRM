@@ -770,13 +770,6 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
 
   return (
     <div className="document-scanner">
-      <div className="scanner-header">
-        <h3>Document Scanner</h3>
-        <p className="scanner-hint">
-          Scan documents and save them directly to {customerName}'s folder
-        </p>
-      </div>
-
       {error && (
         <div className="error-banner">
           <p>⚠️ {error}</p>
@@ -786,10 +779,14 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
       <div className="scanner-body">
         {!cameraActive && capturedImages.length === 0 && !cameraLoading && (
           <div className="scanner-start">
-            <button className="btn btn-large btn-primary" onClick={startCamera}>
-              📷 Start Camera
-            </button>
-            <p className="scanner-info">Take up to {MAX_PHOTOS} photos</p>
+            <div className="start-content">
+              <div className="camera-icon">📷</div>
+              <h3>Document Scanner</h3>
+              <p>Take up to {MAX_PHOTOS} photos</p>
+              <button className="btn btn-large btn-primary" onClick={startCamera}>
+                Start Camera
+              </button>
+            </div>
           </div>
         )}
 
@@ -811,76 +808,97 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
             />
             <canvas ref={canvasRef} style={{ display: 'none' }} />
 
-            {/* Show photo counter */}
-            <div className="photo-counter">
-              {capturedImages.length} / {MAX_PHOTOS} photos
+            {/* Top bar with counter and close */}
+            <div className="camera-top-bar">
+              <button className="btn-close" onClick={resetScanner} title="Close">
+                ✕
+              </button>
+              <div className="photo-counter">
+                {capturedImages.length}/{MAX_PHOTOS}
+              </div>
             </div>
 
-            {/* Show thumbnail previews while camera is active */}
-            {capturedImages.length > 0 && (
-              <div className="thumbnail-preview-bar">
-                {capturedImages.map((image, index) => (
-                  <div key={image.id} className="thumbnail-item">
-                    <img src={image.data} alt={`Photo ${index + 1}`} />
-                    <button
-                      className="thumbnail-delete"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        deletePhoto(image.id);
-                      }}
-                      title="Delete this photo"
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <div className="camera-controls">
-              <button className="btn btn-secondary" onClick={resetScanner}>
-                Cancel
-              </button>
-              <button
-                className="btn btn-primary btn-capture"
-                onClick={capturePhoto}
-                disabled={capturedImages.length >= MAX_PHOTOS}
-              >
-                📸 Capture {capturedImages.length > 0 && `(${capturedImages.length}/${MAX_PHOTOS})`}
-              </button>
+            {/* Bottom area with thumbnails and controls */}
+            <div className="camera-bottom">
+              {/* Show thumbnail carousel while camera is active */}
               {capturedImages.length > 0 && (
-                <button className="btn btn-success" onClick={finishCapturing}>
-                  Done
-                </button>
+                <div className="thumbnail-carousel">
+                  {capturedImages.map((image, index) => (
+                    <div key={image.id} className="thumbnail-item">
+                      <img src={image.data} alt={`${index + 1}`} />
+                      <button
+                        className="thumbnail-delete"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deletePhoto(image.id);
+                        }}
+                        title="Delete"
+                      >
+                        ✕
+                      </button>
+                      <span className="thumbnail-number">{index + 1}</span>
+                    </div>
+                  ))}
+                </div>
               )}
+
+              {/* Camera controls */}
+              <div className="camera-controls">
+                {capturedImages.length > 0 && (
+                  <button className="btn-done" onClick={finishCapturing}>
+                    Done ({capturedImages.length})
+                  </button>
+                )}
+                <button
+                  className="btn-capture"
+                  onClick={capturePhoto}
+                  disabled={capturedImages.length >= MAX_PHOTOS}
+                >
+                  <div className="capture-ring">
+                    <div className="capture-button"></div>
+                  </div>
+                </button>
+                <div className="spacer"></div>
+              </div>
             </div>
           </div>
         )}
 
         {!cameraActive && capturedImages.length > 0 && (
           <div className="preview-view">
-            <div className="preview-grid">
+            {/* Preview header */}
+            <div className="preview-header">
+              <h3>{capturedImages.length} Photo{capturedImages.length !== 1 ? 's' : ''} Ready</h3>
+              {capturedImages.length < MAX_PHOTOS && (
+                <button className="btn-text" onClick={startCamera}>
+                  + Add More
+                </button>
+              )}
+            </div>
+
+            {/* Scrollable preview list */}
+            <div className="preview-list">
               {capturedImages.map((image, index) => (
                 <div key={image.id} className="preview-item">
-                  <img src={image.data} alt={`Captured document ${index + 1}`} />
-                  <button
-                    className="preview-delete"
-                    onClick={() => deletePhoto(image.id)}
-                    title="Delete this photo"
-                  >
-                    🗑️ Delete
-                  </button>
-                  <span className="preview-number">{index + 1}</span>
+                  <div className="preview-image-container">
+                    <img src={image.data} alt={`Document ${index + 1}`} />
+                    <span className="preview-number">{index + 1}</span>
+                    <button
+                      className="preview-delete-btn"
+                      onClick={() => deletePhoto(image.id)}
+                      title="Delete"
+                    >
+                      <span>🗑️</span>
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
 
+            {/* Fixed bottom controls */}
             <div className="preview-controls">
-              <button className="btn btn-secondary" onClick={startCamera}>
-                Add More {capturedImages.length < MAX_PHOTOS && `(${MAX_PHOTOS - capturedImages.length} left)`}
-              </button>
               <button
-                className="btn btn-primary"
+                className="btn btn-primary btn-save"
                 onClick={uploadToGoogleDrive}
                 disabled={isUploading}
               >
