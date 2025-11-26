@@ -1153,15 +1153,37 @@
     gap: var(--spacing-md);
   }
 
+  /* Side-by-side labels and inputs on mobile to save space */
+  .inline-edit-item {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+  }
+
   .inline-edit-item label {
+    min-width: 110px;
+    max-width: 110px;
+    flex-shrink: 0;
+    margin-bottom: 0;
     font-size: 11px;
   }
 
   .inline-edit-item input,
-  .inline-edit-item select,
+  .inline-edit-item select {
+    flex: 1;
+    font-size: 16px; /* Prevent zoom on iOS */
+    padding: 12px;
+    min-height: 48px;
+  }
+
+  .inline-edit-full {
+    flex-direction: column;
+  }
+
   .inline-edit-full textarea {
     font-size: 16px; /* Prevent zoom on iOS */
     padding: 12px;
+    min-height: 80px;
   }
 
   .details-actions {

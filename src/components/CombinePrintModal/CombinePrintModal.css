@@ -241,6 +241,31 @@
 
 /* Responsive */
 @media (max-width: 768px) {
+  /* Side-by-side labels and inputs on mobile to save space */
+  .form-group,
+  .image-slot {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .form-group label,
+  .image-slot label {
+    min-width: 110px;
+    max-width: 110px;
+    flex-shrink: 0;
+    margin-bottom: 0;
+    font-size: 12px;
+  }
+
+  .form-group select,
+  .image-slot select {
+    flex: 1;
+    font-size: 16px; /* Prevent zoom on iOS */
+    padding: 12px;
+    min-height: 48px;
+  }
+
   .preview-grid {
     grid-template-columns: 1fr;
   }
@@ -250,7 +275,7 @@
   }
 
   .modal-actions {
-    flex-direction: column;
+    flex-direction: column-reverse;
   }
 
   .modal-actions button {
