@@ -4,12 +4,11 @@
  *
  * Storage Keys:
  * - bydCRM_${email} - Customer data for specific user
- * - formTemplates_${email} - Form templates for specific user
  * - excelTemplates_${email} - Excel templates for specific user
  * - currentDataOwner - Email of user who owns currently loaded data
  *
  * Migration:
- * - Detects old non-user-specific data (bydCRM, formTemplates, excelTemplates)
+ * - Detects old non-user-specific data (bydCRM, excelTemplates)
  * - Migrates to user-specific keys when user signs in
  * - Preserves old data as backup until migration confirmed
  */
@@ -18,7 +17,6 @@
 const STORAGE_KEYS = {
   // Old non-user-specific keys (for migration)
   OLD_CUSTOMERS: 'bydCRM',
-  OLD_FORMS: 'formTemplates',
   OLD_EXCEL: 'excelTemplates',
 
   // User tracking
@@ -27,7 +25,6 @@ const STORAGE_KEYS = {
 
   // Prefixes for user-specific keys
   CUSTOMERS_PREFIX: 'bydCRM_',
-  FORMS_PREFIX: 'formTemplates_',
   EXCEL_PREFIX: 'excelTemplates_',
 
   // Migration tracking
@@ -76,11 +73,10 @@ function setCurrentDataOwner(email) {
  */
 function hasLegacyData() {
   const hasOldCustomers = localStorage.getItem(STORAGE_KEYS.OLD_CUSTOMERS) !== null;
-  const hasOldForms = localStorage.getItem(STORAGE_KEYS.OLD_FORMS) !== null;
   const hasOldExcel = localStorage.getItem(STORAGE_KEYS.OLD_EXCEL) !== null;
   const migrationDone = localStorage.getItem(STORAGE_KEYS.MIGRATION_COMPLETED) === 'true';
 
-  return (hasOldCustomers || hasOldForms || hasOldExcel) && !migrationDone;
+  return (hasOldCustomers || hasOldExcel) && !migrationDone;
 }
 
 /**
@@ -90,7 +86,6 @@ function getLegacyDataSummary() {
   const summary = {
     hasData: false,
     customers: 0,
-    forms: 0,
     excel: 0,
   };
 
@@ -100,13 +95,6 @@ function getLegacyDataSummary() {
       const parsed = JSON.parse(oldCustomers);
       summary.customers = Array.isArray(parsed) ? parsed.length : 0;
       summary.hasData = summary.customers > 0;
-    }
-
-    const oldForms = localStorage.getItem(STORAGE_KEYS.OLD_FORMS);
-    if (oldForms) {
-      const parsed = JSON.parse(oldForms);
-      summary.forms = Object.keys(parsed).length;
-      summary.hasData = summary.hasData || summary.forms > 0;
     }
 
     const oldExcel = localStorage.getItem(STORAGE_KEYS.OLD_EXCEL);
@@ -136,7 +124,6 @@ function migrateLegacyData(userEmail) {
     success: true,
     migrated: {
       customers: 0,
-      forms: 0,
       excel: 0,
     },
     errors: [],
@@ -150,7 +137,6 @@ function migrateLegacyData(userEmail) {
       timestamp: new Date().toISOString(),
       userEmail: normalizedEmail,
       customers: localStorage.getItem(STORAGE_KEYS.OLD_CUSTOMERS),
-      forms: localStorage.getItem(STORAGE_KEYS.OLD_FORMS),
       excel: localStorage.getItem(STORAGE_KEYS.OLD_EXCEL),
     };
     localStorage.setItem(STORAGE_KEYS.MIGRATION_BACKUP, JSON.stringify(backup));
@@ -174,24 +160,6 @@ function migrateLegacyData(userEmail) {
   } catch (error) {
     result.errors.push(`Customers: ${error.message}`);
     console.error('❌ Failed to migrate customers:', error);
-  }
-
-  // Migrate form templates
-  try {
-    const oldForms = localStorage.getItem(STORAGE_KEYS.OLD_FORMS);
-    if (oldForms) {
-      const forms = JSON.parse(oldForms);
-      const formCount = Object.keys(forms).length;
-      if (formCount > 0) {
-        const userKey = getUserKey(STORAGE_KEYS.FORMS_PREFIX, normalizedEmail);
-        localStorage.setItem(userKey, oldForms);
-        result.migrated.forms = formCount;
-        console.log(`✅ Migrated ${formCount} form templates to ${userKey}`);
-      }
-    }
-  } catch (error) {
-    result.errors.push(`Forms: ${error.message}`);
-    console.error('❌ Failed to migrate form templates:', error);
   }
 
   // Migrate Excel templates
@@ -218,7 +186,6 @@ function migrateLegacyData(userEmail) {
 
     // Remove old non-user-specific keys
     localStorage.removeItem(STORAGE_KEYS.OLD_CUSTOMERS);
-    localStorage.removeItem(STORAGE_KEYS.OLD_FORMS);
     localStorage.removeItem(STORAGE_KEYS.OLD_EXCEL);
 
     // Set current data owner
@@ -244,9 +211,6 @@ function loadUserData(userEmail, dataType) {
   switch (dataType) {
     case 'customers':
       prefix = STORAGE_KEYS.CUSTOMERS_PREFIX;
-      break;
-    case 'forms':
-      prefix = STORAGE_KEYS.FORMS_PREFIX;
       break;
     case 'excel':
       prefix = STORAGE_KEYS.EXCEL_PREFIX;
@@ -286,9 +250,6 @@ function saveUserData(userEmail, dataType, data) {
     case 'customers':
       prefix = STORAGE_KEYS.CUSTOMERS_PREFIX;
       break;
-    case 'forms':
-      prefix = STORAGE_KEYS.FORMS_PREFIX;
-      break;
     case 'excel':
       prefix = STORAGE_KEYS.EXCEL_PREFIX;
       break;
@@ -320,16 +281,12 @@ function clearUserData(userEmail, dataType) {
     case 'customers':
       prefix = STORAGE_KEYS.CUSTOMERS_PREFIX;
       break;
-    case 'forms':
-      prefix = STORAGE_KEYS.FORMS_PREFIX;
-      break;
     case 'excel':
       prefix = STORAGE_KEYS.EXCEL_PREFIX;
       break;
     case 'all':
       // Clear all data types for this user
       clearUserData(userEmail, 'customers');
-      clearUserData(userEmail, 'forms');
       clearUserData(userEmail, 'excel');
       return;
     default:
@@ -349,12 +306,10 @@ function hasUserData(userEmail) {
   if (!normalizedEmail) return false;
 
   const customersKey = getUserKey(STORAGE_KEYS.CUSTOMERS_PREFIX, normalizedEmail);
-  const formsKey = getUserKey(STORAGE_KEYS.FORMS_PREFIX, normalizedEmail);
   const excelKey = getUserKey(STORAGE_KEYS.EXCEL_PREFIX, normalizedEmail);
 
   return (
     localStorage.getItem(customersKey) !== null ||
-    localStorage.getItem(formsKey) !== null ||
     localStorage.getItem(excelKey) !== null
   );
 }
@@ -376,8 +331,9 @@ function isDataOwnerMatch(userEmail) {
  */
 function clearLegacyData() {
   localStorage.removeItem(STORAGE_KEYS.OLD_CUSTOMERS);
-  localStorage.removeItem(STORAGE_KEYS.OLD_FORMS);
   localStorage.removeItem(STORAGE_KEYS.OLD_EXCEL);
+  // Also remove old forms data if it exists (legacy cleanup)
+  localStorage.removeItem('formTemplates');
   console.log('Cleared legacy data');
 }
 
