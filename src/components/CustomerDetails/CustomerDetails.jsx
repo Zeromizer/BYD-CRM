@@ -5,8 +5,6 @@ import driveService from '../../services/driveService';
 import Modal from '../Modal/Modal';
 import ExcelPopulateModal from '../ExcelPopulateModal/ExcelPopulateModal';
 import PrintManager from '../Documents/PrintManager/PrintManager';
-import FormPrintModal from '../FormPrintModal/FormPrintModal';
-import CombinePrintModal from '../CombinePrintModal/CombinePrintModal';
 import DocumentViewer from '../DocumentViewer/DocumentViewer';
 import DocumentScanner from '../DocumentScanner/DocumentScanner';
 import './CustomerDetails.css';
@@ -173,8 +171,6 @@ function CustomerDetails() {
   const [originalVsaData, setOriginalVsaData] = useState(null);
   const [isExcelModalOpen, setIsExcelModalOpen] = useState(false);
   const [isPrintManagerOpen, setIsPrintManagerOpen] = useState(false);
-  const [isFormPrintModalOpen, setIsFormPrintModalOpen] = useState(false);
-  const [isCombinePrintModalOpen, setIsCombinePrintModalOpen] = useState(false);
   const [isDocumentViewerOpen, setIsDocumentViewerOpen] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -827,21 +823,6 @@ function CustomerDetails() {
     setIsPrintManagerOpen(false);
   };
 
-  const handleFormPrint = () => {
-    setIsFormPrintModalOpen(true);
-  };
-
-  const handleCloseFormPrintModal = () => {
-    setIsFormPrintModalOpen(false);
-  };
-
-  const handleCombinePrint = () => {
-    setIsCombinePrintModalOpen(true);
-  };
-
-  const handleCloseCombinePrintModal = () => {
-    setIsCombinePrintModalOpen(false);
-  };
 
   const handleCloseDeleteModal = () => {
     if (!isSubmitting) {
@@ -1013,35 +994,6 @@ function CustomerDetails() {
                       <rect x="6" y="14" width="12" height="8"></rect>
                     </svg>
                     <span>Print Documents ⭐</span>
-                  </button>
-                  <button
-                    className="action-menu-item"
-                    onClick={() => {
-                      setShowActionsMenu(false);
-                      handleFormPrint();
-                    }}
-                  >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <polyline points="6 9 6 2 18 2 18 9"></polyline>
-                      <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
-                      <rect x="6" y="14" width="12" height="8"></rect>
-                    </svg>
-                    <span>Print Form (Legacy)</span>
-                  </button>
-                  <button
-                    className="action-menu-item"
-                    onClick={() => {
-                      setShowActionsMenu(false);
-                      handleCombinePrint();
-                    }}
-                  >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                      <polyline points="14 2 14 8 20 8"></polyline>
-                      <line x1="16" y1="13" x2="8" y2="13"></line>
-                      <line x1="16" y1="17" x2="8" y2="17"></line>
-                    </svg>
-                    <span>Combine & Print</span>
                   </button>
                   <button
                     className="action-menu-item"
@@ -2368,20 +2320,6 @@ function CustomerDetails() {
       <PrintManager
         isOpen={isPrintManagerOpen}
         onClose={handleClosePrintManager}
-        customer={customer}
-      />
-
-      {/* Form Print Modal (Legacy) */}
-      <FormPrintModal
-        isOpen={isFormPrintModalOpen}
-        onClose={handleCloseFormPrintModal}
-        customer={customer}
-      />
-
-      {/* Combine Print Modal (Legacy) */}
-      <CombinePrintModal
-        isOpen={isCombinePrintModalOpen}
-        onClose={handleCloseCombinePrintModal}
         customer={customer}
       />
 
