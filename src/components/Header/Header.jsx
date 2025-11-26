@@ -87,7 +87,8 @@ function Header() {
 
     try {
       console.log('Force syncing all data...');
-      await syncCoordinator.syncAll(isSignedIn);
+      // Use force=true to bypass cooldown for manual sync
+      await syncCoordinator.syncAll(isSignedIn, true);
 
       // Keep modal visible for 1.5 seconds to show success
       setTimeout(() => {

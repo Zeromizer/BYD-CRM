@@ -43,8 +43,9 @@ function PrintManager({ isOpen, onClose, customer }) {
     }
   }, [isOpen, loadFromLocalStorage]);
 
-  const templateArray = Object.values(templates).filter(
-    (t) => Object.keys(t.fields || {}).length > 0
+  // Get all templates, sorted by most recently updated
+  const templateArray = Object.values(templates).sort(
+    (a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0)
   );
 
   const handleTemplateToggle = (templateId) => {
@@ -288,9 +289,15 @@ function PrintManager({ isOpen, onClose, customer }) {
                       <div className="template-card-body">
                         <div className="template-meta">
                           <span className="meta-badge">{template.category}</span>
-                          <span className="meta-badge">
-                            {Object.keys(template.fields || {}).length} fields
-                          </span>
+                          {Object.keys(template.fields || {}).length > 0 ? (
+                            <span className="meta-badge">
+                              {Object.keys(template.fields || {}).length} fields
+                            </span>
+                          ) : (
+                            <span className="meta-badge meta-badge-warning">
+                              No fields configured
+                            </span>
+                          )}
                         </div>
 
                         {isSelected && (

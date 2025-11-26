@@ -10,6 +10,8 @@ import useDocumentStore from '../stores/useDocumentStore';
 class SyncCoordinator {
   constructor() {
     this.progressCallbacks = [];
+    this.lastSyncTime = null;
+    this.syncCooldownMs = 60000; // 1 minute cooldown between syncs
   }
 
   /**
@@ -33,12 +35,26 @@ class SyncCoordinator {
 
   /**
    * Sync all data in parallel with progress tracking
+   * @param {boolean} isSignedIn - Whether user is signed in
+   * @param {boolean} force - Force sync even if within cooldown period
    */
-  async syncAll(isSignedIn) {
+  async syncAll(isSignedIn, force = false) {
     if (!isSignedIn) {
       console.log('Not signed in, skipping sync');
       return;
     }
+
+    // Check cooldown period (skip if synced recently, unless forced)
+    if (!force && this.lastSyncTime) {
+      const timeSinceLastSync = Date.now() - this.lastSyncTime;
+      if (timeSinceLastSync < this.syncCooldownMs) {
+        const remainingCooldown = Math.ceil((this.syncCooldownMs - timeSinceLastSync) / 1000);
+        console.log(`⏳ Sync cooldown active - last sync was ${Math.ceil(timeSinceLastSync / 1000)}s ago. Wait ${remainingCooldown}s or use force sync.`);
+        return;
+      }
+    }
+
+    console.log(force ? '🔄 Force syncing all data...' : '🔄 Syncing all data...');
 
     const progress = {
       customers: { status: 'pending', detail: '' },
@@ -111,13 +127,35 @@ class SyncCoordinator {
       // Wait for all syncs to complete
       await Promise.all(syncPromises);
 
-      console.log('All data synced successfully');
+      // Update last sync time on successful completion
+      this.lastSyncTime = Date.now();
+      console.log('✅ All data synced successfully');
       return true;
     } catch (error) {
       console.error('Sync coordinator error:', error);
       // Don't throw - some syncs may have succeeded
       return false;
     }
+  }
+
+  /**
+   * Get time since last sync in seconds
+   */
+  getTimeSinceLastSync() {
+    if (!this.lastSyncTime) return null;
+    return Math.floor((Date.now() - this.lastSyncTime) / 1000);
+  }
+
+  /**
+   * Get formatted last sync time
+   */
+  getLastSyncTimeFormatted() {
+    if (!this.lastSyncTime) return 'Never';
+
+    const secondsAgo = this.getTimeSinceLastSync();
+    if (secondsAgo < 60) return `${secondsAgo}s ago`;
+    if (secondsAgo < 3600) return `${Math.floor(secondsAgo / 60)}m ago`;
+    return `${Math.floor(secondsAgo / 3600)}h ago`;
   }
 }
 
