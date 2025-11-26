@@ -127,15 +127,6 @@ const useAuthStore = create((set, get) => ({
         isInitializing: false,
       });
 
-      // If already signed in, trigger sync
-      if (isSignedIn && get().onSignInCallback) {
-        try {
-          await get().onSignInCallback();
-        } catch (error) {
-          console.error('Initial template sync failed:', error);
-        }
-      }
-
       console.log('Auth store initialized');
     } catch (error) {
       console.error('Auth initialization failed:', error);
