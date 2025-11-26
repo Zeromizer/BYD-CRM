@@ -4,13 +4,15 @@ import './DocumentScanner.css';
 function DocumentScanner({ customerId, customerName, customerFolderId, onScanComplete }) {
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraLoading, setCameraLoading] = useState(false);
-  const [capturedImage, setCapturedImage] = useState(null);
+  const [capturedImages, setCapturedImages] = useState([]); // Changed to array for multiple photos
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState(null);
 
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
+
+  const MAX_PHOTOS = 5; // Maximum number of photos allowed
 
   // Start camera
   const startCamera = async () => {
@@ -133,6 +135,12 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
   const capturePhoto = () => {
     if (!videoRef.current || !canvasRef.current) return;
 
+    // Check if max photos reached
+    if (capturedImages.length >= MAX_PHOTOS) {
+      setError(`Maximum ${MAX_PHOTOS} photos allowed`);
+      return;
+    }
+
     const video = videoRef.current;
     const canvas = canvasRef.current;
     canvas.width = video.videoWidth;
@@ -142,8 +150,15 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
     const imageDataUrl = canvas.toDataURL('image/jpeg', 0.95);
-    setCapturedImage(imageDataUrl);
-    stopCamera();
+
+    // Add to captured images array instead of replacing
+    setCapturedImages(prev => [...prev, {
+      id: Date.now(),
+      data: imageDataUrl
+    }]);
+
+    // Keep camera active for more photos
+    setError(null);
   };
 
   // Detect document edges and crop
@@ -649,69 +664,86 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
     ctx.putImageData(output, 0, 0);
   };
 
-  // Upload to Google Drive
+  // Delete a specific photo
+  const deletePhoto = (photoId) => {
+    setCapturedImages(prev => prev.filter(img => img.id !== photoId));
+    setError(null);
+  };
+
+  // Upload all photos to Google Drive
   const uploadToGoogleDrive = async () => {
-    if (!capturedImage) return;
+    if (capturedImages.length === 0) return;
 
     setIsUploading(true);
     setError(null);
 
     try {
-      // Convert data URL to base64 (remove data:image/jpeg;base64, prefix)
-      const base64Data = capturedImage.split(',')[1];
+      console.log(`Uploading ${capturedImages.length} document(s) to Google Drive`);
 
-      // Create a unique filename
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const filename = `Scan_${timestamp}.jpg`;
+      const uploadedFiles = [];
 
-      console.log('Uploading document to Google Drive:', filename);
+      // Upload each photo
+      for (let i = 0; i < capturedImages.length; i++) {
+        const image = capturedImages[i];
+        // Convert data URL to base64 (remove data:image/jpeg;base64, prefix)
+        const base64Data = image.data.split(',')[1];
 
-      // Upload using Google Drive API
-      const boundary = '-------314159265358979323846';
-      const delimiter = "\r\n--" + boundary + "\r\n";
-      const close_delim = "\r\n--" + boundary + "--";
+        // Create a unique filename with index
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const filename = capturedImages.length > 1
+          ? `Scan_${timestamp}_${i + 1}.jpg`
+          : `Scan_${timestamp}.jpg`;
 
-      const metadata = {
-        name: filename,
-        mimeType: 'image/jpeg',
-        parents: [customerFolderId]
-      };
+        console.log(`Uploading document ${i + 1}/${capturedImages.length}:`, filename);
 
-      const multipartRequestBody =
-        delimiter +
-        'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
-        JSON.stringify(metadata) +
-        delimiter +
-        'Content-Type: image/jpeg\r\n' +
-        'Content-Transfer-Encoding: base64\r\n\r\n' +
-        base64Data +
-        close_delim;
+        // Upload using Google Drive API
+        const boundary = '-------314159265358979323846';
+        const delimiter = "\r\n--" + boundary + "\r\n";
+        const close_delim = "\r\n--" + boundary + "--";
 
-      const request = window.gapi.client.request({
-        path: '/upload/drive/v3/files',
-        method: 'POST',
-        params: { uploadType: 'multipart' },
-        headers: {
-          'Content-Type': 'multipart/related; boundary="' + boundary + '"'
-        },
-        body: multipartRequestBody
-      });
+        const metadata = {
+          name: filename,
+          mimeType: 'image/jpeg',
+          parents: [customerFolderId]
+        };
 
-      const response = await request;
-      console.log('Document uploaded successfully:', response.result);
+        const multipartRequestBody =
+          delimiter +
+          'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
+          JSON.stringify(metadata) +
+          delimiter +
+          'Content-Type: image/jpeg\r\n' +
+          'Content-Transfer-Encoding: base64\r\n\r\n' +
+          base64Data +
+          close_delim;
+
+        const request = window.gapi.client.request({
+          path: '/upload/drive/v3/files',
+          method: 'POST',
+          params: { uploadType: 'multipart' },
+          headers: {
+            'Content-Type': 'multipart/related; boundary="' + boundary + '"'
+          },
+          body: multipartRequestBody
+        });
+
+        const response = await request;
+        console.log(`Document ${i + 1} uploaded successfully:`, response.result);
+        uploadedFiles.push(response.result);
+      }
 
       // Reset scanner
       resetScanner();
 
       // Notify parent component
       if (onScanComplete) {
-        onScanComplete(response.result);
+        onScanComplete(uploadedFiles);
       }
 
-      alert('Document scanned and saved successfully!');
+      alert(`${capturedImages.length} document(s) scanned and saved successfully!`);
     } catch (err) {
       console.error('Error uploading to Google Drive:', err);
-      setError('Failed to upload document. Please try again.');
+      setError('Failed to upload documents. Please try again.');
     } finally {
       setIsUploading(false);
     }
@@ -719,14 +751,14 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
 
   // Reset scanner
   const resetScanner = () => {
-    setCapturedImage(null);
+    setCapturedImages([]);
     setError(null);
+    stopCamera();
   };
 
-  // Retake photo
-  const retakePhoto = () => {
-    resetScanner();
-    startCamera();
+  // Done capturing (close camera, keep photos)
+  const finishCapturing = () => {
+    stopCamera();
   };
 
   // Cleanup on unmount
@@ -752,11 +784,12 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
       )}
 
       <div className="scanner-body">
-        {!cameraActive && !capturedImage && !cameraLoading && (
+        {!cameraActive && capturedImages.length === 0 && !cameraLoading && (
           <div className="scanner-start">
             <button className="btn btn-large btn-primary" onClick={startCamera}>
               📷 Start Camera
             </button>
+            <p className="scanner-info">Take up to {MAX_PHOTOS} photos</p>
           </div>
         )}
 
@@ -777,33 +810,81 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
               className="camera-video"
             />
             <canvas ref={canvasRef} style={{ display: 'none' }} />
+
+            {/* Show photo counter */}
+            <div className="photo-counter">
+              {capturedImages.length} / {MAX_PHOTOS} photos
+            </div>
+
+            {/* Show thumbnail previews while camera is active */}
+            {capturedImages.length > 0 && (
+              <div className="thumbnail-preview-bar">
+                {capturedImages.map((image, index) => (
+                  <div key={image.id} className="thumbnail-item">
+                    <img src={image.data} alt={`Photo ${index + 1}`} />
+                    <button
+                      className="thumbnail-delete"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deletePhoto(image.id);
+                      }}
+                      title="Delete this photo"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
             <div className="camera-controls">
-              <button className="btn btn-secondary" onClick={stopCamera}>
+              <button className="btn btn-secondary" onClick={resetScanner}>
                 Cancel
               </button>
-              <button className="btn btn-primary btn-capture" onClick={capturePhoto}>
-                📸 Capture
+              <button
+                className="btn btn-primary btn-capture"
+                onClick={capturePhoto}
+                disabled={capturedImages.length >= MAX_PHOTOS}
+              >
+                📸 Capture {capturedImages.length > 0 && `(${capturedImages.length}/${MAX_PHOTOS})`}
               </button>
+              {capturedImages.length > 0 && (
+                <button className="btn btn-success" onClick={finishCapturing}>
+                  Done
+                </button>
+              )}
             </div>
           </div>
         )}
 
-        {capturedImage && (
+        {!cameraActive && capturedImages.length > 0 && (
           <div className="preview-view">
-            <div className="preview-image-single">
-              <img src={capturedImage} alt="Captured document" />
+            <div className="preview-grid">
+              {capturedImages.map((image, index) => (
+                <div key={image.id} className="preview-item">
+                  <img src={image.data} alt={`Captured document ${index + 1}`} />
+                  <button
+                    className="preview-delete"
+                    onClick={() => deletePhoto(image.id)}
+                    title="Delete this photo"
+                  >
+                    🗑️ Delete
+                  </button>
+                  <span className="preview-number">{index + 1}</span>
+                </div>
+              ))}
             </div>
 
             <div className="preview-controls">
-              <button className="btn btn-secondary" onClick={retakePhoto}>
-                Retake
+              <button className="btn btn-secondary" onClick={startCamera}>
+                Add More {capturedImages.length < MAX_PHOTOS && `(${MAX_PHOTOS - capturedImages.length} left)`}
               </button>
               <button
                 className="btn btn-primary"
                 onClick={uploadToGoogleDrive}
                 disabled={isUploading}
               >
-                {isUploading ? 'Uploading...' : 'Save to Drive'}
+                {isUploading ? 'Uploading...' : `Save All (${capturedImages.length})`}
               </button>
             </div>
           </div>
