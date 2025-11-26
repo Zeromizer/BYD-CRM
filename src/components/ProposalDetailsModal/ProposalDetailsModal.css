@@ -64,3 +64,46 @@
   border-top: 1px solid #e5e7eb;
   background: #f9fafb;
 }
+
+/* Responsive */
+@media (max-width: 768px) {
+  .vsa-details-form .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  /* Side-by-side labels and inputs on mobile to save space */
+  .vsa-details-form .form-group {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .vsa-details-form .form-group label {
+    min-width: 110px;
+    max-width: 110px;
+    flex-shrink: 0;
+    margin-bottom: 0;
+    font-size: 12px;
+  }
+
+  .vsa-details-form .form-group input,
+  .vsa-details-form .form-group textarea,
+  .vsa-details-form .form-group select {
+    flex: 1;
+    font-size: 16px; /* Prevent zoom on iOS */
+    padding: 12px;
+    min-height: 48px;
+  }
+
+  .vsa-details-form .form-group textarea {
+    min-height: 80px;
+  }
+
+  .vsa-details-form .modal-actions {
+    flex-direction: column-reverse;
+  }
+
+  .vsa-details-form .modal-actions button {
+    width: 100%;
+  }
+}
