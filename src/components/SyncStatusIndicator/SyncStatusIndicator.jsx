@@ -1,12 +1,9 @@
 import { useState, useEffect } from 'react';
-import useFormsStore from '../../stores/useFormsStore';
 import useExcelStore from '../../stores/useExcelStore';
 import syncQueueService, { SYNC_STATUS } from '../../services/syncQueueService';
 import './SyncStatusIndicator.css';
 
 function SyncStatusIndicator() {
-  const formsSyncStatus = useFormsStore((state) => state.syncStatus);
-  const formsSyncError = useFormsStore((state) => state.syncError);
   const excelSyncStatus = useExcelStore((state) => state.syncStatus);
   const excelSyncError = useExcelStore((state) => state.syncError);
 
@@ -15,7 +12,7 @@ function SyncStatusIndicator() {
 
   // Calculate overall status
   useEffect(() => {
-    const statuses = [formsSyncStatus, excelSyncStatus];
+    const statuses = [excelSyncStatus];
 
     if (statuses.includes(SYNC_STATUS.FAILED)) {
       setOverallStatus(SYNC_STATUS.FAILED);
@@ -28,15 +25,12 @@ function SyncStatusIndicator() {
     } else {
       setOverallStatus(SYNC_STATUS.SYNCED);
     }
-  }, [formsSyncStatus, excelSyncStatus]);
+  }, [excelSyncStatus]);
 
   // Handle retry
   const handleRetry = async () => {
     setShowTooltip(false);
 
-    if (formsSyncStatus === SYNC_STATUS.FAILED) {
-      await useFormsStore.getState().retrySyncToDrive();
-    }
     if (excelSyncStatus === SYNC_STATUS.FAILED) {
       await useExcelStore.getState().retrySyncToDrive();
     }
@@ -134,11 +128,6 @@ function SyncStatusIndicator() {
         <div className="sync-status-tooltip">
           <div className="tooltip-header">{getStatusText()}</div>
           <div className="tooltip-details">
-            <div className={`detail-row ${formsSyncStatus}`}>
-              <span className="detail-label">Forms:</span>
-              <span className="detail-status">{formsSyncStatus}</span>
-              {formsSyncError && <span className="detail-error">{formsSyncError}</span>}
-            </div>
             <div className={`detail-row ${excelSyncStatus}`}>
               <span className="detail-label">Excel:</span>
               <span className="detail-status">{excelSyncStatus}</span>

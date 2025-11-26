@@ -4,7 +4,6 @@
  */
 
 import useCustomerStore from '../stores/useCustomerStore';
-import useFormsStore from '../stores/useFormsStore';
 import useExcelStore from '../stores/useExcelStore';
 import useDocumentStore from '../stores/useDocumentStore';
 
@@ -43,7 +42,6 @@ class SyncCoordinator {
 
     const progress = {
       customers: { status: 'pending', detail: '' },
-      forms: { status: 'pending', detail: '' },
       excel: { status: 'pending', detail: '' },
       documents: { status: 'pending', detail: '' },
       overall: 0,
@@ -55,11 +53,11 @@ class SyncCoordinator {
     const updateProgress = (type, status, detail = '') => {
       progress[type] = { status, detail };
 
-      // Calculate overall progress (4 types now)
-      const statuses = [progress.customers.status, progress.forms.status, progress.excel.status, progress.documents.status];
+      // Calculate overall progress (3 types)
+      const statuses = [progress.customers.status, progress.excel.status, progress.documents.status];
       const completed = statuses.filter(s => s === 'complete').length;
       const syncing = statuses.filter(s => s === 'syncing').length;
-      progress.overall = (completed * 100 + syncing * 25) / 4;
+      progress.overall = (completed * 100 + syncing * 25) / 3;
 
       this.notifyProgress({ ...progress });
     };
@@ -77,20 +75,6 @@ class SyncCoordinator {
           } catch (error) {
             console.error('Customer sync failed:', error);
             updateProgress('customers', 'error', 'Sync failed');
-            throw error;
-          }
-        })(),
-
-        // Sync forms
-        (async () => {
-          try {
-            updateProgress('forms', 'syncing', 'Loading templates...');
-            await useFormsStore.getState().syncWithDrive();
-            const count = Object.keys(useFormsStore.getState().formTemplates).length;
-            updateProgress('forms', 'complete', `${count} template${count !== 1 ? 's' : ''} synced`);
-          } catch (error) {
-            console.error('Forms sync failed:', error);
-            updateProgress('forms', 'error', 'Sync failed');
             throw error;
           }
         })(),
