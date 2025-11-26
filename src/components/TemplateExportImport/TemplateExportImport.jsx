@@ -7,7 +7,7 @@ import './TemplateExportImport.css';
 
 function TemplateExportImport({ isOpen, onClose }) {
   const { templates: documentTemplates, saveToLocalStorage: saveDocTemplates, loadFromLocalStorage: loadDocTemplates } = useDocumentStore();
-  const { excelTemplates, saveToLocalStorage: saveExcelTemplates, loadFromLocalStorage: loadExcelTemplates } = useExcelStore();
+  const { excelTemplates, addTemplate: addExcelTemplate, loadFromLocalStorage: loadExcelTemplates } = useExcelStore();
 
   const [activeTab, setActiveTab] = useState('export'); // 'export' | 'import'
   const [importFile, setImportFile] = useState(null);
@@ -77,10 +77,12 @@ function TemplateExportImport({ isOpen, onClose }) {
       if (data.type === 'excel_templates' || data.type === 'all_templates') {
         const excelResult = templateExportService.importExcelTemplates(data, excelTemplates);
 
-        // Update state, save to localStorage, and reload
-        useExcelStore.setState({ excelTemplates: excelResult.merged });
-        saveExcelTemplates();
-        loadExcelTemplates();
+        // Add each imported template using the store's addTemplate method
+        Object.entries(excelResult.merged).forEach(([templateId, template]) => {
+          if (template.importedAt) {
+            addExcelTemplate(templateId, template);
+          }
+        });
 
         results.push({
           type: 'Excel Templates',
