@@ -25,15 +25,10 @@ function ImageSelector({ customerFolderId, selectedImages = [], onSelectionChang
     setError(null);
 
     try {
-      // List all files in customer folder (including subfolders)
-      const files = await driveService.listFiles(customerFolderId);
+      // Recursively list all images from customer folder and all subfolders
+      const imageFiles = await driveService.listAllImagesRecursively(customerFolderId);
 
-      // Filter for image files (PNG, JPG, JPEG)
-      const imageFiles = files.filter(file => {
-        const mimeType = file.mimeType || '';
-        return mimeType.startsWith('image/');
-      });
-
+      console.log(`Found ${imageFiles.length} images in customer folder (including subfolders)`);
       setImages(imageFiles);
     } catch (err) {
       console.error('Error loading images from folder:', err);
@@ -142,6 +137,11 @@ function ImageSelector({ customerFolderId, selectedImages = [], onSelectionChang
                 <span className="image-name" title={image.name}>
                   {image.name.length > 20 ? image.name.substring(0, 20) + '...' : image.name}
                 </span>
+                {image.folderPath && image.folderPath !== 'Root' && (
+                  <span className="image-location" title={image.folderPath}>
+                    📁 {image.folderPath}
+                  </span>
+                )}
               </div>
             </div>
           );
