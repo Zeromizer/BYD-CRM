@@ -360,6 +360,89 @@
   background: #888;
 }
 
+/* Double-sided options */
+.template-options {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.double-sided-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #555;
+}
+
+.double-sided-option input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.double-sided-option:hover {
+  color: #00bcd4;
+}
+
+/* Image Selection Step */
+.print-images-step {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.print-images-step h4 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.step-hint {
+  margin: 0;
+  font-size: 14px;
+  color: #666;
+  font-style: italic;
+}
+
+.image-selection-section {
+  padding: 20px;
+  background: white;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+}
+
+.image-selection-section h5 {
+  margin: 0 0 16px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #2c3e50;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+/* Page Type Badges */
+.page-type-badge {
+  margin-left: 8px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 12px;
+  text-transform: uppercase;
+}
+
+.page-type-badge.front {
+  background: #e3f2fd;
+  color: #0277bd;
+}
+
+.page-type-badge.back {
+  background: #fff3e0;
+  color: #e65100;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .template-selection-grid {
@@ -372,5 +455,11 @@
 
   .btn {
     width: 100%;
+  }
+
+  .preview-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
   }
 }
