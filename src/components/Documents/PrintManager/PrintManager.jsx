@@ -43,10 +43,13 @@ function PrintManager({ isOpen, onClose, customer }) {
     }
   }, [isOpen, loadFromLocalStorage]);
 
-  // Get all templates, sorted by most recently updated
-  const templateArray = Object.values(templates).sort(
-    (a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0)
-  );
+  // Get all templates, sorted alphabetically/numerically
+  const templateArray = Object.values(templates).sort((a, b) => {
+    return a.name.localeCompare(b.name, undefined, {
+      numeric: true,
+      sensitivity: 'base'
+    });
+  });
 
   const handleTemplateToggle = (templateId) => {
     if (selectedTemplateIds.includes(templateId)) {
