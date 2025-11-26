@@ -66,7 +66,7 @@ function TemplateExportImport({ isOpen, onClose }) {
         const docResult = templateExportService.importDocumentTemplates(data, documentTemplates);
 
         // Save merged templates - update both state and localStorage
-        useDocumentStore.setState({ templates: docResult.merged });
+        documentStore.setState({ templates: docResult.merged });
         saveDocTemplates(docResult.merged);
 
         results.push({
