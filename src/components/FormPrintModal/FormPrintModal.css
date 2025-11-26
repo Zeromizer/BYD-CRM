@@ -234,6 +234,28 @@
 
 /* Responsive */
 @media (max-width: 768px) {
+  /* Side-by-side labels and inputs on mobile to save space */
+  .form-group {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .form-group label {
+    min-width: 110px;
+    max-width: 110px;
+    flex-shrink: 0;
+    margin-bottom: 0;
+    font-size: 12px;
+  }
+
+  .form-group select {
+    flex: 1;
+    font-size: 16px; /* Prevent zoom on iOS */
+    padding: 12px;
+    min-height: 48px;
+  }
+
   .preview-container {
     min-height: 400px;
   }
@@ -244,11 +266,13 @@
     gap: 10px;
   }
 
-  .preview-actions {
-    flex-direction: column;
+  .preview-actions,
+  .modal-actions {
+    flex-direction: column-reverse;
   }
 
-  .preview-actions button {
+  .preview-actions button,
+  .modal-actions button {
     width: 100%;
   }
 

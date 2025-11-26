@@ -274,6 +274,34 @@
 }
 
 @media (max-width: 768px) {
+  /* Side-by-side labels and inputs on mobile to save space */
+  .form-group {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .form-group label {
+    min-width: 110px;
+    max-width: 110px;
+    flex-shrink: 0;
+    margin-bottom: 0;
+    font-size: 11px;
+  }
+
+  .form-group select,
+  .form-group input[type="text"] {
+    flex: 1;
+    font-size: 16px; /* Prevent zoom on iOS */
+    padding: 12px;
+    min-height: 48px;
+  }
+
+  .form-group input[type="color"] {
+    flex: 1;
+    height: 48px;
+  }
+
   .image-container {
     min-height: 300px;
   }
