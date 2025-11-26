@@ -123,6 +123,11 @@
   border-radius: 12px;
 }
 
+.meta-badge-warning {
+  background: #fff3e0;
+  color: #e65100;
+}
+
 .selection-summary {
   padding: 16px;
   background: #e8f5e9;
