@@ -104,54 +104,78 @@ function ExcelPopulateModal({ isOpen, onClose, customer }) {
       return;
     }
 
+    console.log('🚀 Starting Excel generation process:', {
+      customer: customer.name,
+      template: selectedTemplate.name,
+      saveToDrive,
+      isSignedIn
+    });
+
     setProcessing(true);
 
     try {
       // Generate populated Excel
+      console.log('📝 Calling populateExcelTemplate...');
       const blob = await excelService.populateExcelTemplate(
         selectedTemplate,
         customer,
         uploadedFile
       );
+      console.log('✅ Excel template populated, blob size:', blob.size);
 
       // Create filename
       const timestamp = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
       const fileName = `${customer.name.replace(/\s+/g, '_')}_${selectedTemplate.name.replace(/\s+/g, '_')}_${timestamp}.xlsx`;
+      console.log('📄 Generated filename:', fileName);
 
       // Save to Google Drive if requested and signed in
       if (saveToDrive && isSignedIn) {
+        console.log('☁️ Saving to Google Drive...');
         try {
           // Get or create customer folder
+          console.log('📁 Getting customer folder...');
           const customerFolderId = await excelService.getOrCreateCustomerFolder(
             customer.name,
             customer.id
           );
+          console.log('✅ Customer folder ID:', customerFolderId);
 
           // Save directly to customer's main folder (no subfolders)
           // Convert blob to File
+          console.log('🔄 Converting blob to File object...');
           const file = new File([blob], fileName, {
             type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
           });
+          console.log('✅ File object created:', {
+            name: file.name,
+            size: file.size,
+            type: file.type
+          });
 
           // Upload to Drive
-          await excelService.uploadFileToDrive(file, customerFolderId, fileName);
+          console.log('📤 Uploading to Drive...');
+          const uploadResult = await excelService.uploadFileToDrive(file, customerFolderId, fileName);
+          console.log('✅ Upload complete! File ID:', uploadResult.id);
 
           alert('Excel file generated and saved to Google Drive successfully!\n\nYou can find it in the customer\'s main folder.');
         } catch (error) {
-          console.error('Error saving to Drive:', error);
+          console.error('❌ Error saving to Drive:', error);
           // Download if Drive save failed
+          console.log('⬇️ Falling back to download...');
           excelService.downloadExcelFile(blob, fileName);
           alert('Excel file generated!\n\nCould not save to Google Drive: ' + error.message);
         }
       } else {
         // Just download
+        console.log('⬇️ Downloading file (not saving to Drive)...');
         excelService.downloadExcelFile(blob, fileName);
         alert('Excel file generated and downloaded successfully!');
       }
 
+      console.log('✅ Excel generation process complete');
       onClose();
     } catch (error) {
-      console.error('Error generating Excel file:', error);
+      console.error('❌ Error generating Excel file:', error);
       alert('Failed to generate Excel file: ' + error.message);
     } finally {
       setProcessing(false);

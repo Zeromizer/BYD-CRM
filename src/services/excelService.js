@@ -137,6 +137,13 @@ class ExcelService {
    */
   async uploadFileToDrive(file, folderId, fileName) {
     try {
+      console.log('📤 Starting file upload to Drive:', {
+        fileName,
+        folderId,
+        fileSize: file.size,
+        fileType: file.type
+      });
+
       const metadata = {
         name: fileName,
         parents: [folderId],
@@ -159,12 +166,22 @@ class ExcelService {
       );
 
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ Drive upload failed with status:', response.status, errorText);
         throw new Error(`Upload failed: ${response.statusText}`);
       }
 
-      return await response.json();
+      const result = await response.json();
+      console.log('✅ File uploaded successfully to Drive:', {
+        fileId: result.id,
+        fileName: result.name,
+        size: result.size,
+        createdTime: result.createdTime
+      });
+
+      return result;
     } catch (error) {
-      console.error('Error uploading file to Drive:', error);
+      console.error('❌ Error uploading file to Drive:', error);
       throw error;
     }
   }
@@ -174,42 +191,64 @@ class ExcelService {
    */
   async populateExcelTemplate(template, customer, uploadedFile = null) {
     try {
+      console.log('📝 Starting Excel template population:', {
+        templateName: template.name,
+        customerName: customer.name,
+        hasUploadedFile: !!uploadedFile,
+        hasDriveFile: !!template.driveFileId
+      });
+
       let arrayBuffer;
 
       // Get Excel file - either from Drive or uploaded file
       if (uploadedFile) {
+        console.log('📂 Using uploaded file:', uploadedFile.name);
         arrayBuffer = await uploadedFile.arrayBuffer();
       } else if (template.driveFileId) {
+        console.log('☁️ Fetching template from Drive:', template.driveFileId);
         arrayBuffer = await this.fetchFileFromDrive(template.driveFileId);
       } else {
         throw new Error('No Excel file available. Please upload a file or configure a master template.');
       }
 
+      console.log('📊 Loading workbook with xlsx-populate...');
       // Load with xlsx-populate
       const workbook = await XlsxPopulate.fromDataAsync(arrayBuffer);
 
       // Get first sheet
       const sheet = workbook.sheet(0);
+      console.log('✅ Workbook loaded, sheet name:', sheet.name());
 
       // Get customer data mapping
       const dataMapping = this.getCustomerDataMapping(customer);
 
       // Apply field mappings
       const fieldMappings = template.fieldMappings || {};
+      const mappingCount = Object.keys(fieldMappings).length;
+      console.log(`🔄 Applying ${mappingCount} field mappings...`);
+
+      let appliedCount = 0;
       for (const mapping of Object.values(fieldMappings)) {
         const value = dataMapping[mapping.fieldType];
         if (value !== undefined && value !== null && value !== '') {
           // Set cell value - all formatting is automatically preserved
           sheet.cell(mapping.cellRef).value(value);
+          appliedCount++;
         }
       }
+      console.log(`✅ Applied ${appliedCount}/${mappingCount} field values`);
 
       // Generate Excel file as blob
+      console.log('🔨 Generating Excel blob...');
       const blob = await workbook.outputAsync();
+      console.log('✅ Excel blob generated:', {
+        size: blob.size,
+        type: blob.type
+      });
 
       return blob;
     } catch (error) {
-      console.error('Error populating Excel template:', error);
+      console.error('❌ Error populating Excel template:', error);
       throw error;
     }
   }
@@ -233,22 +272,28 @@ class ExcelService {
    */
   async getOrCreateCustomerFolder(customerName, customerId) {
     try {
+      console.log('📁 Getting/creating customer folder:', { customerName, customerId });
+
       // Check if customer already has a folder ID stored
       const customers = JSON.parse(localStorage.getItem('bydCRM') || '[]');
       const customer = customers.find(c => c.id === customerId);
 
       if (customer && customer.driveFolderId) {
+        console.log('🔍 Found existing folder ID, verifying:', customer.driveFolderId);
         // Verify folder still exists
         try {
           await window.gapi.client.drive.files.get({ fileId: customer.driveFolderId });
+          console.log('✅ Customer folder exists:', customer.driveFolderId);
           return customer.driveFolderId;
         } catch {
+          console.warn('⚠️ Stored folder ID no longer exists, will create new one');
           // Folder doesn't exist, will create new one
         }
       }
 
       // Get or create main BYD CRM folder
       const mainFolderId = await this.getOrCreateMainFolder();
+      console.log('📂 Main BYD CRM folder ID:', mainFolderId);
 
       // Create customer folder
       const metadata = {
@@ -257,22 +302,25 @@ class ExcelService {
         parents: [mainFolderId],
       };
 
+      console.log('🆕 Creating new customer folder:', customerName);
       const response = await window.gapi.client.drive.files.create({
         resource: metadata,
         fields: 'id',
       });
 
       const folderId = response.result.id;
+      console.log('✅ Customer folder created:', folderId);
 
       // Update customer record with folder ID
       const updatedCustomers = customers.map(c =>
         c.id === customerId ? { ...c, driveFolderId: folderId } : c
       );
       localStorage.setItem('bydCRM', JSON.stringify(updatedCustomers));
+      console.log('💾 Updated customer record with folder ID');
 
       return folderId;
     } catch (error) {
-      console.error('Error getting/creating customer folder:', error);
+      console.error('❌ Error getting/creating customer folder:', error);
       throw error;
     }
   }
