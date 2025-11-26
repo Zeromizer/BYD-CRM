@@ -2200,21 +2200,30 @@ function CustomerDetails() {
                                       <div className="context-menu">
                                         <button
                                           className="context-menu-item"
-                                          onClick={() => handleMenuMove(folder)}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleMenuMove(folder);
+                                          }}
                                         >
                                           <span className="menu-icon">📁</span>
                                           <span>Move</span>
                                         </button>
                                         <button
                                           className="context-menu-item"
-                                          onClick={() => handleMenuRename(folder)}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleMenuRename(folder);
+                                          }}
                                         >
                                           <span className="menu-icon">✏️</span>
                                           <span>Rename</span>
                                         </button>
                                         <button
                                           className="context-menu-item context-menu-delete"
-                                          onClick={() => handleMenuDelete(folder)}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleMenuDelete(folder);
+                                          }}
                                         >
                                           <span className="menu-icon">🗑️</span>
                                           <span>Delete</span>
@@ -2282,21 +2291,30 @@ function CustomerDetails() {
                                         <div className="context-menu">
                                           <button
                                             className="context-menu-item"
-                                            onClick={() => handleMenuMove(doc)}
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleMenuMove(doc);
+                                            }}
                                           >
                                             <span className="menu-icon">📁</span>
                                             <span>Move</span>
                                           </button>
                                           <button
                                             className="context-menu-item"
-                                            onClick={() => handleMenuRename(doc)}
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleMenuRename(doc);
+                                            }}
                                           >
                                             <span className="menu-icon">✏️</span>
                                             <span>Rename</span>
                                           </button>
                                           <button
                                             className="context-menu-item context-menu-delete"
-                                            onClick={() => handleMenuDelete(doc)}
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleMenuDelete(doc);
+                                            }}
                                           >
                                             <span className="menu-icon">🗑️</span>
                                             <span>Delete</span>
