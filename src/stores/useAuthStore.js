@@ -3,7 +3,6 @@ import authService from '../services/authService';
 import driveService from '../services/driveService';
 import userStorage from '../services/userStorage';
 import useCustomerStore from './useCustomerStore';
-import useFormsStore from './useFormsStore';
 import useExcelStore from './useExcelStore';
 
 /**
@@ -22,10 +21,8 @@ const useAuthStore = create((set, get) => ({
 
   // Drive Folder IDs (for future use)
   rootFolderId: null,
-  formsFolderId: null,
   excelTemplatesFolderId: null,
   dataFileId: null,
-  formsDataFileId: null,
   excelDataFileId: null,
 
   // Callback for when templates need to sync
@@ -78,7 +75,6 @@ const useAuthStore = create((set, get) => ({
 
           // Clear all existing data before loading new user's data
           useCustomerStore.getState().clearAllData();
-          useFormsStore.getState().clearAllData();
           useExcelStore.getState().clearAllData();
           // Clear Drive service cache to prevent using old user's folder IDs
           driveService.clearCache();
@@ -131,15 +127,6 @@ const useAuthStore = create((set, get) => ({
         isInitializing: false,
       });
 
-      // If already signed in, trigger sync
-      if (isSignedIn && get().onSignInCallback) {
-        try {
-          await get().onSignInCallback();
-        } catch (error) {
-          console.error('Initial template sync failed:', error);
-        }
-      }
-
       console.log('Auth store initialized');
     } catch (error) {
       console.error('Auth initialization failed:', error);
@@ -172,7 +159,6 @@ const useAuthStore = create((set, get) => ({
 
       // Clear all application data
       useCustomerStore.getState().clearAllData();
-      useFormsStore.getState().clearAllData();
       useExcelStore.getState().clearAllData();
 
       // Clear Drive service cache
@@ -190,10 +176,8 @@ const useAuthStore = create((set, get) => ({
         isUserVerified: false,
         currentUserEmail: null,
         rootFolderId: null,
-        formsFolderId: null,
         excelTemplatesFolderId: null,
         dataFileId: null,
-        formsDataFileId: null,
         excelDataFileId: null,
       });
 

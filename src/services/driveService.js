@@ -10,7 +10,6 @@ import { CONFIG } from '../config/config.js';
 class DriveService {
   constructor() {
     this.customersFileId = null;
-    this.formsFileId = null;
     this.excelFileId = null;
     this.rootFolderId = null;
     this.customersFolderId = null;
@@ -49,7 +48,6 @@ class DriveService {
         this.rootFolderId = ids.rootFolderId || null;
         this.customersDataFolderId = ids.customersDataFolderId || null;
         this.customersFileId = ids.customersFileId || null;
-        this.formsFileId = ids.formsFileId || null;
         this.excelFileId = ids.excelFileId || null;
         console.log('[DriveService] Loaded persisted folder IDs for user');
       }
@@ -70,7 +68,6 @@ class DriveService {
         rootFolderId: this.rootFolderId,
         customersDataFolderId: this.customersDataFolderId,
         customersFileId: this.customersFileId,
-        formsFileId: this.formsFileId,
         excelFileId: this.excelFileId,
         savedAt: new Date().toISOString(),
       };
@@ -105,7 +102,6 @@ class DriveService {
   clearCache() {
     console.log('Clearing Drive service cache');
     this.customersFileId = null;
-    this.formsFileId = null;
     this.excelFileId = null;
     this.rootFolderId = null;
     this.customersFolderId = null;
@@ -1089,183 +1085,6 @@ class DriveService {
   }
 
   /**
-   * Get or create forms.json file in Google Drive
-   */
-  async getOrCreateFormsFile() {
-    // Check if we have a cached ID and validate it
-    if (this.formsFileId) {
-      const isValid = await this._validateId(this.formsFileId);
-      if (isValid) {
-        return this.formsFileId;
-      }
-      console.log('[DriveService] Cached formsFileId is invalid, searching...');
-      this.formsFileId = null;
-    }
-
-    try {
-      const folderId = await this.getOrCreateRootFolder();
-      const fileName = CONFIG.DATA_FILE_NAMES.FORMS || 'forms.json';
-
-      // Search for existing file
-      const response = await window.gapi.client.drive.files.list({
-        q: `name='${fileName}' and '${folderId}' in parents and trashed=false`,
-        fields: 'files(id, name)',
-        spaces: 'drive',
-      });
-
-      if (response.result.files && response.result.files.length > 0) {
-        this.formsFileId = response.result.files[0].id;
-        console.log('[DriveService] Found existing forms file:', this.formsFileId);
-        this._persistIds();
-        return this.formsFileId;
-      }
-
-      // Create new file with empty object
-      const fileMetadata = {
-        name: fileName,
-        mimeType: 'application/json',
-        parents: [folderId],
-      };
-
-      const fileContent = JSON.stringify({});
-      const file = new Blob([fileContent], { type: 'application/json' });
-
-      const form = new FormData();
-      form.append('metadata', new Blob([JSON.stringify(fileMetadata)], { type: 'application/json' }));
-      form.append('file', file);
-
-      const token = window.gapi.client.getToken().access_token;
-      const uploadResponse = await fetch(
-        'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          body: form,
-        }
-      );
-
-      const result = await uploadResponse.json();
-      this.formsFileId = result.id;
-      console.log('[DriveService] Created forms file:', this.formsFileId);
-      this._persistIds();
-      return this.formsFileId;
-    } catch (error) {
-      console.error('Failed to get/create forms file:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Load form templates from Google Drive
-   */
-  async loadFormsFromDrive() {
-    try {
-      const fileId = await this.getOrCreateFormsFile();
-
-      const response = await window.gapi.client.drive.files.get({
-        fileId: fileId,
-        alt: 'media',
-      });
-
-      const formTemplates = response.result || {};
-      console.log('Loaded form templates from Drive:', Object.keys(formTemplates).length);
-      return formTemplates;
-    } catch (error) {
-      console.error('Failed to load form templates from Drive:', error);
-      return {};
-    }
-  }
-
-  /**
-   * Save form templates to Google Drive with verification
-   */
-  async saveFormsToDrive(formTemplates) {
-    try {
-      // Check if we have a valid token
-      const tokenObj = window.gapi?.client?.getToken?.();
-      if (!tokenObj?.access_token) {
-        throw new Error('Not authenticated - please sign in to Google Drive');
-      }
-
-      const fileId = await this.getOrCreateFormsFile();
-      const fileContent = JSON.stringify(formTemplates, null, 2);
-      const file = new Blob([fileContent], { type: 'application/json' });
-
-      const token = tokenObj.access_token;
-      const response = await fetch(
-        `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`,
-        {
-          method: 'PATCH',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          body: file,
-        }
-      );
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        if (response.status === 401 || response.status === 403) {
-          throw new Error(`Authentication error (${response.status}): Please sign in again`);
-        }
-        throw new Error(`Failed to save forms (${response.status}): ${errorText}`);
-      }
-
-      // Verify the save by checking file metadata
-      const verifyResponse = await window.gapi.client.drive.files.get({
-        fileId: fileId,
-        fields: 'id, modifiedTime, size',
-      });
-
-      const modifiedTime = new Date(verifyResponse.result.modifiedTime);
-      const now = new Date();
-      const timeDiff = now - modifiedTime;
-
-      // If modified time is within last 30 seconds, consider it verified
-      if (timeDiff > 30000) {
-        console.warn('Form save verification: file modified time is older than expected');
-      }
-
-      console.log('Saved and verified form templates to Drive:', Object.keys(formTemplates).length);
-      return true;
-    } catch (error) {
-      console.error('Failed to save form templates to Drive:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Sync form templates: merge localStorage and Drive data
-   */
-  async syncForms(localForms) {
-    try {
-      const driveForms = await this.loadFormsFromDrive();
-
-      // Merge: Drive is source of truth, add any local-only templates
-      const merged = { ...driveForms };
-
-      // Add local templates that don't exist in drive
-      Object.keys(localForms).forEach(formType => {
-        if (!merged[formType]) {
-          merged[formType] = localForms[formType];
-        }
-      });
-
-      // Save merged data back to Drive
-      await this.saveFormsToDrive(merged);
-
-      console.log('Form templates synced successfully');
-      return merged;
-    } catch (error) {
-      console.error('Failed to sync form templates:', error);
-      return localForms;
-    }
-  }
-
-  /**
    * Get or create excel.json file in Google Drive
    */
   async getOrCreateExcelFile() {
@@ -1523,6 +1342,34 @@ class DriveService {
       return true;
     } catch (error) {
       console.error('Failed to save document template to Drive:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete a document template from Google Drive
+   */
+  async deleteDocumentTemplateFromDrive(templateId) {
+    try {
+      const folderId = await this.getOrCreateDocumentTemplatesFolder();
+      const fileName = `${templateId}.json`;
+
+      // Find the file to delete
+      const files = await this.listFiles(folderId);
+      const fileToDelete = files.find(f => f.name === fileName);
+
+      if (fileToDelete) {
+        await window.gapi.client.drive.files.delete({
+          fileId: fileToDelete.id,
+        });
+        console.log(`Deleted document template from Drive: ${templateId}`);
+        return true;
+      } else {
+        console.log(`Document template not found in Drive: ${templateId}`);
+        return false;
+      }
+    } catch (error) {
+      console.error('Failed to delete document template from Drive:', error);
       throw error;
     }
   }

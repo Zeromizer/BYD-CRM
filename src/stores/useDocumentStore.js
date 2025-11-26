@@ -215,7 +215,7 @@ const useDocumentStore = create((set, get) => ({
   },
 
   /**
-   * Delete template
+   * Delete template from both localStorage and Google Drive
    */
   deleteTemplate: async (templateId) => {
     try {
@@ -225,11 +225,18 @@ const useDocumentStore = create((set, get) => ({
       const updatedTemplates = { ...templates };
       delete updatedTemplates[templateId];
 
+      // Update local state and localStorage first
       set({ templates: updatedTemplates, loading: false });
       get().saveToLocalStorage(updatedTemplates);
 
-      // TODO: Delete from Drive as well
-      // For now, we'll just remove from localStorage
+      // Delete from Google Drive
+      try {
+        await driveService.deleteDocumentTemplateFromDrive(templateId);
+        console.log(`Successfully deleted template ${templateId} from Drive`);
+      } catch (driveError) {
+        console.error('Failed to delete from Drive (template already deleted locally):', driveError);
+        // Don't throw - local deletion succeeded, Drive deletion is best-effort
+      }
 
       return true;
     } catch (error) {
