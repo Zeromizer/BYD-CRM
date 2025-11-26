@@ -3,7 +3,7 @@ import './SyncProgressModal.css';
 function SyncProgressModal({ isOpen, progress }) {
   if (!isOpen) return null;
 
-  const { customers, forms, excel, overall } = progress;
+  const { customers, excel, documents, overall } = progress;
 
   const getStatusIcon = (status) => {
     switch (status) {
@@ -56,19 +56,6 @@ function SyncProgressModal({ isOpen, progress }) {
           </div>
 
           <div className="sync-item">
-            <div className="sync-item-icon">{getStatusIcon(forms.status)}</div>
-            <div className="sync-item-details">
-              <div className="sync-item-title">Form Templates</div>
-              <div className="sync-item-subtitle">
-                {getStatusText(forms.status, forms.detail)}
-              </div>
-            </div>
-            {forms.status === 'syncing' && (
-              <div className="sync-spinner"></div>
-            )}
-          </div>
-
-          <div className="sync-item">
             <div className="sync-item-icon">{getStatusIcon(excel.status)}</div>
             <div className="sync-item-details">
               <div className="sync-item-title">Excel Templates</div>
@@ -77,6 +64,19 @@ function SyncProgressModal({ isOpen, progress }) {
               </div>
             </div>
             {excel.status === 'syncing' && (
+              <div className="sync-spinner"></div>
+            )}
+          </div>
+
+          <div className="sync-item">
+            <div className="sync-item-icon">{getStatusIcon(documents.status)}</div>
+            <div className="sync-item-details">
+              <div className="sync-item-title">Document Templates</div>
+              <div className="sync-item-subtitle">
+                {getStatusText(documents.status, documents.detail)}
+              </div>
+            </div>
+            {documents.status === 'syncing' && (
               <div className="sync-spinner"></div>
             )}
           </div>
