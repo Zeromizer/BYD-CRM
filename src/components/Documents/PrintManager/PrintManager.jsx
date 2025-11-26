@@ -188,7 +188,18 @@ function PrintManager({ isOpen, onClose, customer }) {
   const handleDownload = () => {
     if (!pdf) return;
 
-    const filename = `${customer.name}_${new Date().toISOString().split('T')[0]}.pdf`;
+    // Generate filename based on selected template(s)
+    let filenamePart;
+    if (selectedTemplateIds.length === 1) {
+      // Single template - use template name
+      const template = templates[selectedTemplateIds[0]];
+      filenamePart = template.name.replace(/\s+/g, '_');
+    } else {
+      // Multiple templates - use descriptive name
+      filenamePart = 'Multiple_Documents';
+    }
+
+    const filename = `${customer.name.replace(/\s+/g, '_')}_${filenamePart}_${new Date().toISOString().split('T')[0]}.pdf`;
     pdfGenerator.downloadPDF(pdf, filename);
   };
 
@@ -238,8 +249,18 @@ function PrintManager({ isOpen, onClose, customer }) {
         }
       }
 
-      // Generate filename
-      const filename = `${customer.name}_Documents_${new Date().toISOString().split('T')[0]}.pdf`;
+      // Generate filename based on selected template(s)
+      let filenamePart;
+      if (selectedTemplateIds.length === 1) {
+        // Single template - use template name
+        const template = templates[selectedTemplateIds[0]];
+        filenamePart = template.name.replace(/\s+/g, '_');
+      } else {
+        // Multiple templates - use descriptive name
+        filenamePart = 'Multiple_Documents';
+      }
+
+      const filename = `${customer.name.replace(/\s+/g, '_')}_${filenamePart}_${new Date().toISOString().split('T')[0]}.pdf`;
       console.log('📄 Generated filename:', filename);
 
       // Get PDF blob
