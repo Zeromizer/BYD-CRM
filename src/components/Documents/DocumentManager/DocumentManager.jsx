@@ -3,6 +3,7 @@ import useDocumentStore from '../../../stores/useDocumentStore';
 import useAuthStore from '../../../stores/useAuthStore';
 import driveService from '../../../services/driveService';
 import FormEditor from '../FormEditor/FormEditor';
+import Modal from '../../Modal/Modal';
 import './DocumentManager.css';
 
 /**
@@ -36,6 +37,10 @@ function DocumentManager() {
   const [editingTemplate, setEditingTemplate] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
+  const [showUploadMasterModal, setShowUploadMasterModal] = useState(false);
+  const [currentTemplateId, setCurrentTemplateId] = useState(null);
+  const [masterFileToUpload, setMasterFileToUpload] = useState(null);
+  const [uploadingMaster, setUploadingMaster] = useState(false);
 
   useEffect(() => {
     // Wait for auth to initialize and verify user before loading data
@@ -166,6 +171,72 @@ function DocumentManager() {
     }
   };
 
+  // Handle change master file button click
+  const handleChangeMasterFile = (template) => {
+    setCurrentTemplateId(template.id);
+    setShowUploadMasterModal(true);
+  };
+
+  // Handle upload master file
+  const handleUploadMaster = async () => {
+    if (!masterFileToUpload) {
+      alert('Please select a file to upload');
+      return;
+    }
+
+    if (!isSignedIn) {
+      alert('Please sign in to Google Drive first');
+      return;
+    }
+
+    setUploadingMaster(true);
+
+    try {
+      const template = templates[currentTemplateId];
+      const folderId = await driveService.getOrCreateFolder('Document Templates');
+
+      // Delete old file if exists
+      if (template.fileId) {
+        try {
+          await window.gapi.client.drive.files.delete({
+            fileId: template.fileId,
+          });
+        } catch (error) {
+          console.error('Error deleting old file:', error);
+        }
+      }
+
+      // Generate unique filename
+      const timestamp = Date.now();
+      const filename = `${template.name.replace(/[^a-z0-9]/gi, '_')}_${timestamp}.${
+        masterFileToUpload.name.split('.').pop()
+      }`;
+
+      // Upload new file
+      const fileId = await driveService.uploadFile(
+        filename,
+        masterFileToUpload,
+        folderId
+      );
+
+      // Update template with new file info
+      updateTemplate(currentTemplateId, {
+        fileId,
+        fileName: filename,
+      });
+
+      alert(`Master file uploaded successfully!\n\n✓ ${masterFileToUpload.name}\n\nThe template is now using the new master file.`);
+      setShowUploadMasterModal(false);
+      setCurrentTemplateId(null);
+      setMasterFileToUpload(null);
+    } catch (error) {
+      console.error('Error uploading master file:', error);
+      alert('Error uploading file to Google Drive: ' + error.message);
+    } finally {
+      setUploadingMaster(false);
+    }
+  };
+
   return (
     <div className="document-manager">
       <div className="document-manager-header">
@@ -255,6 +326,7 @@ function DocumentManager() {
                 template={template}
                 onEditFields={handleEditFields}
                 onDelete={handleDelete}
+                onChangeMasterFile={handleChangeMasterFile}
               />
             ))}
           </div>
@@ -273,6 +345,72 @@ function DocumentManager() {
           onSave={handleSaveFields}
         />
       )}
+
+      {/* Upload Master File Modal */}
+      <Modal
+        isOpen={showUploadMasterModal}
+        onClose={() => {
+          setShowUploadMasterModal(false);
+          setCurrentTemplateId(null);
+          setMasterFileToUpload(null);
+        }}
+        title="Change Master File"
+      >
+        <div className="upload-master-form">
+          {currentTemplateId && templates[currentTemplateId] && (
+            <div className="current-master-info">
+              {templates[currentTemplateId].fileId ? (
+                <div className="has-master">
+                  <h4>Current Master File</h4>
+                  <p>📄 {templates[currentTemplateId].fileName}</p>
+                  <p className="hint">Uploading a new file will replace this one.</p>
+                </div>
+              ) : (
+                <div className="no-master">
+                  <p>⚠️ No master file found</p>
+                  <p className="hint">
+                    Upload a master file for this template.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="form-group">
+            <label htmlFor="masterFileUpload">Select Document File</label>
+            <input
+              type="file"
+              id="masterFileUpload"
+              accept="image/*,application/pdf"
+              onChange={(e) => setMasterFileToUpload(e.target.files[0])}
+            />
+            {masterFileToUpload && (
+              <p className="file-selected">Selected: {masterFileToUpload.name}</p>
+            )}
+          </div>
+
+          <div className="modal-actions">
+            <button
+              className="btn btn-secondary"
+              onClick={() => {
+                setShowUploadMasterModal(false);
+                setCurrentTemplateId(null);
+                setMasterFileToUpload(null);
+              }}
+              disabled={uploadingMaster}
+            >
+              Cancel
+            </button>
+            <button
+              className="btn btn-primary"
+              onClick={handleUploadMaster}
+              disabled={!masterFileToUpload || uploadingMaster}
+            >
+              {uploadingMaster ? 'Uploading...' : 'Upload to Google Drive'}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
@@ -404,9 +542,10 @@ function UploadForm({
 /**
  * TemplateCard - Display card for a single template
  */
-function TemplateCard({ template, onEditFields, onDelete }) {
+function TemplateCard({ template, onEditFields, onDelete, onChangeMasterFile }) {
   const fieldCount = Object.keys(template.fields || {}).length;
   const hasFields = fieldCount > 0;
+  const hasMasterFile = !!template.fileId;
 
   return (
     <div className="template-card">
@@ -417,6 +556,12 @@ function TemplateCard({ template, onEditFields, onDelete }) {
 
       <div className="template-card-body">
         <div className="template-info">
+          <div className="info-row">
+            <span className="info-label">Master File:</span>
+            <span className={`info-value ${hasMasterFile ? 'has-fields' : 'no-fields'}`}>
+              {hasMasterFile ? '✓ Uploaded' : '✗ Missing'}
+            </span>
+          </div>
           <div className="info-row">
             <span className="info-label">Fields Configured:</span>
             <span className={`info-value ${hasFields ? 'has-fields' : 'no-fields'}`}>
@@ -438,6 +583,12 @@ function TemplateCard({ template, onEditFields, onDelete }) {
           onClick={() => onEditFields(template)}
         >
           {hasFields ? 'Edit Fields' : 'Configure Fields'}
+        </button>
+        <button
+          className="btn btn-secondary btn-small"
+          onClick={() => onChangeMasterFile(template)}
+        >
+          {hasMasterFile ? 'Change File' : 'Add File'}
         </button>
         <button
           className="btn btn-danger btn-small"
