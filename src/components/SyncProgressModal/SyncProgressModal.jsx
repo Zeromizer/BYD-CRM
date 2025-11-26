@@ -1,7 +1,11 @@
+import { useState } from 'react';
 import './SyncProgressModal.css';
 
 function SyncProgressModal({ isOpen, progress }) {
-  if (!isOpen) return null;
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [isDismissed, setIsDismissed] = useState(false);
+
+  if (!isOpen || isDismissed) return null;
 
   const { customers, excel, documents, overall } = progress;
 
@@ -25,68 +29,100 @@ function SyncProgressModal({ isOpen, progress }) {
     }
   };
 
-  return (
-    <div className="sync-modal-overlay">
-      <div className="sync-modal">
-        <div className="sync-modal-header">
-          <h3>Syncing with Google Drive</h3>
-          <div className="sync-overall-progress">
-            <div className="progress-bar">
-              <div
-                className="progress-fill"
-                style={{ width: `${overall}%` }}
-              ></div>
-            </div>
-            <div className="progress-text">{Math.round(overall)}%</div>
-          </div>
-        </div>
+  const handleDismiss = () => {
+    setIsDismissed(true);
+  };
 
-        <div className="sync-modal-content">
-          <div className="sync-item">
-            <div className="sync-item-icon">{getStatusIcon(customers.status)}</div>
-            <div className="sync-item-details">
-              <div className="sync-item-title">Customer Data</div>
-              <div className="sync-item-subtitle">
+  const toggleExpand = () => {
+    setIsExpanded(!isExpanded);
+  };
+
+  // Check if any syncing is in progress
+  const isSyncing = customers.status === 'syncing' || excel.status === 'syncing' || documents.status === 'syncing';
+
+  return (
+    <div className={`sync-notification ${isExpanded ? 'expanded' : 'minimized'}`}>
+      {/* Minimized Header - Always visible */}
+      <div className="sync-notification-header" onClick={toggleExpand}>
+        <div className="sync-notification-icon">
+          {isSyncing ? '🔄' : overall === 100 ? '✅' : '⏳'}
+        </div>
+        <div className="sync-notification-title">
+          <div className="sync-notification-title-text">
+            {overall === 100 ? 'Sync Complete' : 'Syncing Data'}
+          </div>
+          <div className="sync-notification-progress-text">{Math.round(overall)}%</div>
+        </div>
+        <button
+          className="sync-notification-close"
+          onClick={(e) => { e.stopPropagation(); handleDismiss(); }}
+          title="Dismiss"
+        >
+          ×
+        </button>
+      </div>
+
+      {/* Progress Bar - Always visible */}
+      <div className="sync-notification-progress-bar">
+        <div
+          className="sync-notification-progress-fill"
+          style={{ width: `${overall}%` }}
+        ></div>
+      </div>
+
+      {/* Expanded Details - Shown when expanded */}
+      {isExpanded && (
+        <div className="sync-notification-details">
+          <div className="sync-detail-item">
+            <div className="sync-detail-icon">{getStatusIcon(customers.status)}</div>
+            <div className="sync-detail-content">
+              <div className="sync-detail-title">Customer Data</div>
+              <div className="sync-detail-subtitle">
                 {getStatusText(customers.status, customers.detail)}
               </div>
             </div>
             {customers.status === 'syncing' && (
-              <div className="sync-spinner"></div>
+              <div className="sync-detail-spinner"></div>
             )}
           </div>
 
-          <div className="sync-item">
-            <div className="sync-item-icon">{getStatusIcon(excel.status)}</div>
-            <div className="sync-item-details">
-              <div className="sync-item-title">Excel Templates</div>
-              <div className="sync-item-subtitle">
+          <div className="sync-detail-item">
+            <div className="sync-detail-icon">{getStatusIcon(excel.status)}</div>
+            <div className="sync-detail-content">
+              <div className="sync-detail-title">Excel Templates</div>
+              <div className="sync-detail-subtitle">
                 {getStatusText(excel.status, excel.detail)}
               </div>
             </div>
             {excel.status === 'syncing' && (
-              <div className="sync-spinner"></div>
+              <div className="sync-detail-spinner"></div>
             )}
           </div>
 
-          <div className="sync-item">
-            <div className="sync-item-icon">{getStatusIcon(documents.status)}</div>
-            <div className="sync-item-details">
-              <div className="sync-item-title">Document Templates</div>
-              <div className="sync-item-subtitle">
+          <div className="sync-detail-item">
+            <div className="sync-detail-icon">{getStatusIcon(documents.status)}</div>
+            <div className="sync-detail-content">
+              <div className="sync-detail-title">Document Templates</div>
+              <div className="sync-detail-subtitle">
                 {getStatusText(documents.status, documents.detail)}
               </div>
             </div>
             {documents.status === 'syncing' && (
-              <div className="sync-spinner"></div>
+              <div className="sync-detail-spinner"></div>
             )}
           </div>
-        </div>
 
-        {overall === 100 && (
-          <div className="sync-modal-footer">
-            <p className="sync-complete-message">✨ All data synced successfully!</p>
-          </div>
-        )}
+          {overall === 100 && (
+            <div className="sync-notification-footer">
+              <p className="sync-complete-message">✨ All data synced successfully!</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Expand/Collapse indicator */}
+      <div className="sync-notification-expand-hint" onClick={toggleExpand}>
+        {isExpanded ? '▼ Click to minimize' : '▲ Click for details'}
       </div>
     </div>
   );
