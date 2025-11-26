@@ -106,13 +106,17 @@ const useAuthStore = create((set, get) => ({
           console.log(`✅ Same user signing in (${currentUserEmail}) - keeping local data, will merge with Drive`);
         }
 
-        // Trigger template sync when user signs in
-        if (isSignedIn && get().onSignInCallback) {
+        // CRITICAL FIX: Only trigger sync when transitioning from signed-out → signed-in
+        // NOT on token refreshes or when already signed in
+        if (isSignedIn && !previousSignInState && get().onSignInCallback) {
+          console.log('🔄 Triggering sync on fresh sign-in');
           try {
             await get().onSignInCallback();
           } catch (error) {
             console.error('Template sync on sign-in failed:', error);
           }
+        } else if (isSignedIn && previousSignInState) {
+          console.log('⏭️ Already signed in - skipping resync (token refresh or state update)');
         }
       });
 
