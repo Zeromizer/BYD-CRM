@@ -270,7 +270,7 @@ class ExcelService {
 
   /**
    * Get or create customer folder in Google Drive
-   * Uses driveService to ensure consistent folder structure
+   * Uses driveService to ensure consistent folder structure and prevent duplicates
    */
   async getOrCreateCustomerFolder(customerName, customerId) {
     try {
@@ -288,12 +288,36 @@ class ExcelService {
           console.log('✅ Customer folder exists:', customer.driveFolderId);
           return customer.driveFolderId;
         } catch {
-          console.warn('⚠️ Stored folder ID no longer exists, will create new one using driveService');
+          console.warn('⚠️ Stored folder ID no longer exists, will search for existing folder');
         }
       }
 
-      // Use driveService to create proper folder structure in "BYD Customers Data"
-      console.log('🆕 Creating customer folder structure using driveService...');
+      // Search for existing folder in Drive before creating a new one
+      console.log('🔍 Searching for existing customer folder in Drive...');
+      try {
+        const existingFolder = await driveService.findCustomerFolderByName(customerName);
+        if (existingFolder) {
+          console.log('✅ Found existing customer folder:', existingFolder.folderId);
+
+          // Update customer record with found folder ID
+          const updatedCustomers = customers.map(c =>
+            c.id === customerId ? {
+              ...c,
+              driveFolderId: existingFolder.folderId,
+              driveFolderLink: existingFolder.folderUrl
+            } : c
+          );
+          localStorage.setItem('bydCRM', JSON.stringify(updatedCustomers));
+          console.log('💾 Updated customer record with existing folder ID');
+
+          return existingFolder.folderId;
+        }
+      } catch (searchError) {
+        console.warn('⚠️ Error searching for existing folder:', searchError);
+      }
+
+      // No folder found, create new one using driveService
+      console.log('🆕 Creating new customer folder structure using driveService...');
       const folderInfo = await driveService.createCustomerFolderStructure(customerName, customerId);
       console.log('✅ Customer folder structure created:', folderInfo.folderId);
 
@@ -306,7 +330,7 @@ class ExcelService {
         } : c
       );
       localStorage.setItem('bydCRM', JSON.stringify(updatedCustomers));
-      console.log('💾 Updated customer record with folder ID');
+      console.log('💾 Updated customer record with new folder ID');
 
       return folderInfo.folderId;
     } catch (error) {
