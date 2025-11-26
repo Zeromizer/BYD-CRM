@@ -1,5 +1,6 @@
 import XlsxPopulate from 'xlsx-populate';
 import authService from './authService';
+import driveService from './driveService';
 
 class ExcelService {
   /**
@@ -269,6 +270,7 @@ class ExcelService {
 
   /**
    * Get or create customer folder in Google Drive
+   * Uses driveService to ensure consistent folder structure
    */
   async getOrCreateCustomerFolder(customerName, customerId) {
     try {
@@ -279,136 +281,36 @@ class ExcelService {
       const customer = customers.find(c => c.id === customerId);
 
       if (customer && customer.driveFolderId) {
-        console.log('🔍 Found existing folder ID, verifying:', customer.driveFolderId);
+        console.log('🔍 Found existing folder ID from customer record:', customer.driveFolderId);
         // Verify folder still exists
         try {
           await window.gapi.client.drive.files.get({ fileId: customer.driveFolderId });
           console.log('✅ Customer folder exists:', customer.driveFolderId);
           return customer.driveFolderId;
         } catch {
-          console.warn('⚠️ Stored folder ID no longer exists, will create new one');
-          // Folder doesn't exist, will create new one
+          console.warn('⚠️ Stored folder ID no longer exists, will create new one using driveService');
         }
       }
 
-      // Get or create main BYD CRM folder
-      const mainFolderId = await this.getOrCreateMainFolder();
-      console.log('📂 Main BYD CRM folder ID:', mainFolderId);
+      // Use driveService to create proper folder structure in "BYD Customers Data"
+      console.log('🆕 Creating customer folder structure using driveService...');
+      const folderInfo = await driveService.createCustomerFolderStructure(customerName, customerId);
+      console.log('✅ Customer folder structure created:', folderInfo.folderId);
 
-      // Create customer folder
-      const metadata = {
-        name: customerName,
-        mimeType: 'application/vnd.google-apps.folder',
-        parents: [mainFolderId],
-      };
-
-      console.log('🆕 Creating new customer folder:', customerName);
-      const response = await window.gapi.client.drive.files.create({
-        resource: metadata,
-        fields: 'id',
-      });
-
-      const folderId = response.result.id;
-      console.log('✅ Customer folder created:', folderId);
-
-      // Update customer record with folder ID
+      // Update customer record with folder ID (driveService should already do this, but ensure it's saved)
       const updatedCustomers = customers.map(c =>
-        c.id === customerId ? { ...c, driveFolderId: folderId } : c
+        c.id === customerId ? {
+          ...c,
+          driveFolderId: folderInfo.folderId,
+          driveFolderLink: folderInfo.folderUrl
+        } : c
       );
       localStorage.setItem('bydCRM', JSON.stringify(updatedCustomers));
       console.log('💾 Updated customer record with folder ID');
 
-      return folderId;
+      return folderInfo.folderId;
     } catch (error) {
       console.error('❌ Error getting/creating customer folder:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get or create main BYD CRM folder
-   */
-  async getOrCreateMainFolder() {
-    try {
-      let mainFolderId = localStorage.getItem('bydCrmMainFolderId');
-
-      if (mainFolderId) {
-        try {
-          await window.gapi.client.drive.files.get({ fileId: mainFolderId });
-          return mainFolderId;
-        } catch {
-          mainFolderId = null;
-        }
-      }
-
-      // Create main folder
-      const metadata = {
-        name: 'BYD CRM',
-        mimeType: 'application/vnd.google-apps.folder',
-      };
-
-      const response = await window.gapi.client.drive.files.create({
-        resource: metadata,
-        fields: 'id',
-      });
-
-      mainFolderId = response.result.id;
-      localStorage.setItem('bydCrmMainFolderId', mainFolderId);
-
-      return mainFolderId;
-    } catch (error) {
-      console.error('Error getting/creating main folder:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Get or create document subfolders
-   */
-  async getOrCreateDocumentSubfolders(customerFolderId, customerId) {
-    try {
-      const customers = JSON.parse(localStorage.getItem('bydCRM') || '[]');
-      const customer = customers.find(c => c.id === customerId);
-
-      if (customer && customer.documentFolders) {
-        return customer.documentFolders;
-      }
-
-      // Create subfolders
-      const folderNames = {
-        vsa: 'VSA',
-        trade_in: 'Trade In',
-        test_drive: 'Test Drive',
-        pdpa_coe: 'PDPA & COE',
-        other: 'Other',
-      };
-
-      const documentFolders = {};
-
-      for (const [key, name] of Object.entries(folderNames)) {
-        const metadata = {
-          name: name,
-          mimeType: 'application/vnd.google-apps.folder',
-          parents: [customerFolderId],
-        };
-
-        const response = await window.gapi.client.drive.files.create({
-          resource: metadata,
-          fields: 'id',
-        });
-
-        documentFolders[key] = response.result.id;
-      }
-
-      // Update customer record
-      const updatedCustomers = customers.map(c =>
-        c.id === customerId ? { ...c, documentFolders } : c
-      );
-      localStorage.setItem('bydCRM', JSON.stringify(updatedCustomers));
-
-      return documentFolders;
-    } catch (error) {
-      console.error('Error creating document subfolders:', error);
       throw error;
     }
   }
