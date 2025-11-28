@@ -152,6 +152,11 @@ function CustomerDetails() {
     tradeInCarNo: '',
     tradeInCarModel: '',
     tradeInAmount: '',
+    tradeInOwnerNotCustomer: false,
+    tradeInOwnerName: '',
+    tradeInOwnerNric: '',
+    tradeInInsuranceCompany: '',
+    tradeInPolicyNumber: '',
     dateOfRegistration: '',
     registrationNo: '',
     chassisNo: '',
@@ -277,6 +282,11 @@ function CustomerDetails() {
         tradeInCarNo: customer.vsa_tradeInCarNo || '',
         tradeInCarModel: customer.vsa_tradeInCarModel || '',
         tradeInAmount: customer.vsa_tradeInAmount || '',
+        tradeInOwnerNotCustomer: customer.vsa_tradeInOwnerNotCustomer || false,
+        tradeInOwnerName: customer.vsa_tradeInOwnerName || '',
+        tradeInOwnerNric: customer.vsa_tradeInOwnerNric || '',
+        tradeInInsuranceCompany: customer.vsa_tradeInInsuranceCompany || '',
+        tradeInPolicyNumber: customer.vsa_tradeInPolicyNumber || '',
         dateOfRegistration: customer.vsa_dateOfRegistration || '',
         registrationNo: customer.vsa_registrationNo || '',
         chassisNo: customer.vsa_chassisNo || '',
@@ -1880,6 +1890,70 @@ function CustomerDetails() {
                     />
                   </div>
                 </div>
+                <div className="checkbox-row" style={{ marginTop: '16px', marginBottom: '16px' }}>
+                  <label className="checkbox-label">
+                    <input
+                      type="checkbox"
+                      name="tradeInOwnerNotCustomer"
+                      checked={vsaFormData.tradeInOwnerNotCustomer}
+                      onChange={(e) => setVsaFormData(prev => ({ ...prev, tradeInOwnerNotCustomer: e.target.checked }))}
+                      disabled={isSubmitting}
+                    />
+                    <span>Trade In Owner is not Customer</span>
+                  </label>
+                </div>
+                {vsaFormData.tradeInOwnerNotCustomer && (
+                  <div className="inline-edit-grid">
+                    <div className="inline-edit-item">
+                      <label htmlFor="vsa_tradeInOwnerName">Trade In Owner Name</label>
+                      <input
+                        type="text"
+                        id="vsa_tradeInOwnerName"
+                        name="tradeInOwnerName"
+                        value={vsaFormData.tradeInOwnerName}
+                        onChange={handleVsaChange}
+                        placeholder="e.g., John Doe"
+                        disabled={isSubmitting}
+                      />
+                    </div>
+                    <div className="inline-edit-item">
+                      <label htmlFor="vsa_tradeInOwnerNric">Trade In Owner NRIC</label>
+                      <input
+                        type="text"
+                        id="vsa_tradeInOwnerNric"
+                        name="tradeInOwnerNric"
+                        value={vsaFormData.tradeInOwnerNric}
+                        onChange={handleVsaChange}
+                        placeholder="e.g., S1234567A"
+                        disabled={isSubmitting}
+                      />
+                    </div>
+                    <div className="inline-edit-item">
+                      <label htmlFor="vsa_tradeInInsuranceCompany">Trade In Insurance Company</label>
+                      <input
+                        type="text"
+                        id="vsa_tradeInInsuranceCompany"
+                        name="tradeInInsuranceCompany"
+                        value={vsaFormData.tradeInInsuranceCompany}
+                        onChange={handleVsaChange}
+                        placeholder="e.g., AXA, NTUC Income"
+                        disabled={isSubmitting}
+                      />
+                    </div>
+                    <div className="inline-edit-item">
+                      <label htmlFor="vsa_tradeInPolicyNumber">Trade In Policy Number</label>
+                      <input
+                        type="text"
+                        id="vsa_tradeInPolicyNumber"
+                        name="tradeInPolicyNumber"
+                        value={vsaFormData.tradeInPolicyNumber}
+                        onChange={handleVsaChange}
+                        placeholder="e.g., POL-123456"
+                        disabled={isSubmitting}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="info-section">
