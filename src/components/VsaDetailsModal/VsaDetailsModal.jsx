@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import Modal from '../Modal/Modal';
+import { useToast } from '../Toast/Toast';
 import './VsaDetailsModal.css';
 
 const VEHICLE_MODELS = [
@@ -38,6 +39,7 @@ const BODY_COLOURS = [
 ];
 
 function VsaDetailsModal({ isOpen, onClose, customer, onSave }) {
+  const toast = useToast();
   const [activeTab, setActiveTab] = useState('newCarDetails');
   const [isSaving, setIsSaving] = useState(false);
   const [vsaData, setVsaData] = useState({
@@ -149,7 +151,7 @@ function VsaDetailsModal({ isOpen, onClose, customer, onSave }) {
       onClose();
     } catch (error) {
       console.error('Error saving VSA details:', error);
-      alert('Failed to save VSA details');
+      toast.error('Failed to save VSA details');
     } finally {
       setIsSaving(false);
     }

@@ -7,6 +7,7 @@ import ExcelPopulateModal from '../ExcelPopulateModal/ExcelPopulateModal';
 import PrintManager from '../Documents/PrintManager/PrintManager';
 import DocumentViewer from '../DocumentViewer/DocumentViewer';
 import DocumentScanner from '../DocumentScanner/DocumentScanner';
+import { useToast } from '../Toast/Toast';
 import './CustomerDetails.css';
 
 const VEHICLE_MODELS = [
@@ -79,6 +80,7 @@ const BENEFITS_OPTIONS = [
 function CustomerDetails() {
   const { customers, selectedCustomerId, selectCustomer, updateCustomer, deleteCustomer, deleteCustomerHybrid, syncToDrive, saveCustomerToFolder, saveToLocalStorage } = useCustomerStore();
   const { isSignedIn } = useAuthStore();
+  const toast = useToast();
 
   // Derive customer from store state (this makes it reactive to changes)
   const customer = customers.find((c) => {
@@ -435,7 +437,7 @@ function CustomerDetails() {
       setOriginalGuarantors(JSON.parse(JSON.stringify(guarantors)));
     } catch (error) {
       console.error('Error updating customer:', error);
-      alert('Failed to update customer. Please try again.');
+      toast.error('Failed to update customer. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -478,7 +480,7 @@ function CustomerDetails() {
       setOriginalProposalData(proposalFormData);
     } catch (error) {
       console.error('Error updating proposal:', error);
-      alert('Failed to update proposal. Please try again.');
+      toast.error('Failed to update proposal. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -518,7 +520,7 @@ function CustomerDetails() {
       setOriginalVsaData(vsaFormData);
     } catch (error) {
       console.error('Error updating VSA:', error);
-      alert('Failed to update VSA. Please try again.');
+      toast.error('Failed to update VSA. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -643,7 +645,7 @@ function CustomerDetails() {
   const handleDeleteDocument = async (doc) => {
     // Protect customer.json files from deletion
     if (doc.name === 'customer.json') {
-      alert('⚠️ Cannot delete customer.json\n\nThis file is protected and contains important customer data.');
+      toast.warning('Cannot delete customer.json - this file is protected');
       return;
     }
 
@@ -663,10 +665,10 @@ function CustomerDetails() {
       // Refresh the current folder
       await loadCustomerDocuments(currentFolderId);
 
-      alert('Document deleted successfully');
+      toast.success('Document deleted successfully');
     } catch (error) {
       console.error('Error deleting document:', error);
-      alert('Failed to delete document. Please try again.');
+      toast.error('Failed to delete document. Please try again.');
     }
   };
 
@@ -726,7 +728,7 @@ function CustomerDetails() {
       console.log('File moved successfully!');
     } catch (error) {
       console.error('Error moving file:', error);
-      alert(`Failed to move file: ${error.message}`);
+      toast.error(`Failed to move file: ${error.message}`);
     }
   };
 
@@ -798,7 +800,7 @@ function CustomerDetails() {
       console.log('File renamed successfully!');
     } catch (error) {
       console.error('Error renaming file:', error);
-      alert(`Failed to rename: ${error.message}`);
+      toast.error(`Failed to rename: ${error.message}`);
     }
   };
 
@@ -894,7 +896,7 @@ function CustomerDetails() {
       console.log(`Moved ${draggedFile.name} to ${targetFolder.name}`);
     } catch (error) {
       console.error('Error moving file:', error);
-      alert(`Failed to move file: ${error.message}`);
+      toast.error(`Failed to move file: ${error.message}`);
     } finally {
       setDraggedFile(null);
       setDropTargetFolder(null);
@@ -925,7 +927,7 @@ function CustomerDetails() {
       console.log(`Moved ${draggedFile.name} to ${targetFolder.name}`);
     } catch (error) {
       console.error('Error moving file:', error);
-      alert(`Failed to move file: ${error.message}`);
+      toast.error(`Failed to move file: ${error.message}`);
     } finally {
       setDraggedFile(null);
       setDropTargetFolder(null);
@@ -1036,9 +1038,10 @@ function CustomerDetails() {
       await deleteCustomerHybrid(customer.id, isSignedIn);
       setIsDeleteModalOpen(false);
       setDeleteFolderChecked(false); // Reset checkbox
+      toast.success('Customer deleted successfully');
     } catch (error) {
       console.error('Error deleting customer:', error);
-      alert('Failed to delete customer. Please try again.');
+      toast.error('Failed to delete customer. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
