@@ -15,9 +15,13 @@ class DriveService {
     this.customersFolderId = null;
     this.customersDataFolderId = null;
 
-    // OPTIMIZATION: Session-level validation cache to avoid re-validating folder IDs
-    // This tracks folder IDs that have been validated in the current session
-    this._validatedIds = new Set();
+    // OPTIMIZATION Phase 2: TTL-based validation cache (5 minutes)
+    // Maps folder ID -> timestamp when validated
+    this._validatedIds = new Map();
+    this._validationTTL = 5 * 60 * 1000; // 5 minutes in milliseconds
+
+    // Track if warmup has been done this session
+    this._warmedUp = false;
 
     // Load persisted folder IDs on construction
     this._loadPersistedIds();
@@ -83,15 +87,27 @@ class DriveService {
   }
 
   /**
+   * Check if a cached validation is still valid (within TTL)
+   */
+  _isValidationCacheValid(fileId) {
+    const cachedTime = this._validatedIds.get(fileId);
+    if (!cachedTime) return false;
+
+    const elapsed = Date.now() - cachedTime;
+    return elapsed < this._validationTTL;
+  }
+
+  /**
    * Validate if a folder/file ID still exists and is accessible
-   * OPTIMIZED: Uses session-level cache to avoid redundant API calls
+   * OPTIMIZED Phase 2: Uses TTL-based cache (5 min) to avoid redundant API calls
    */
   async _validateId(fileId) {
     if (!fileId) return false;
 
-    // OPTIMIZATION: Check session cache first to avoid redundant API calls
-    if (this._validatedIds.has(fileId)) {
-      console.log(`[DriveService] ID ${fileId} already validated this session (cached)`);
+    // OPTIMIZATION: Check TTL-based cache first
+    if (this._isValidationCacheValid(fileId)) {
+      const remainingTTL = Math.round((this._validationTTL - (Date.now() - this._validatedIds.get(fileId))) / 1000);
+      console.log(`[DriveService] ID ${fileId.substring(0, 12)}... valid (TTL: ${remainingTTL}s remaining)`);
       return true;
     }
 
@@ -102,10 +118,10 @@ class DriveService {
       });
       const isValid = response.result && !response.result.trashed;
 
-      // Add to session cache if valid
+      // Add to cache with current timestamp if valid
       if (isValid) {
-        this._validatedIds.add(fileId);
-        console.log(`[DriveService] ID ${fileId} validated and cached`);
+        this._validatedIds.set(fileId, Date.now());
+        console.log(`[DriveService] ID ${fileId.substring(0, 12)}... validated (TTL: 5min)`);
       }
 
       return isValid;
@@ -130,6 +146,7 @@ class DriveService {
 
     // Clear session validation cache
     this._validatedIds.clear();
+    this._warmedUp = false;
     console.log('[DriveService] Cleared session validation cache');
 
     // Also clear persisted IDs for current user
@@ -138,6 +155,51 @@ class DriveService {
       localStorage.removeItem(key);
       console.log('[DriveService] Cleared persisted folder IDs');
     }
+  }
+
+  /**
+   * OPTIMIZATION Phase 2: Warmup/preload all folder IDs in parallel
+   * Call this before sync operations to resolve all folder structures upfront
+   * This prevents sequential folder resolution during sync
+   */
+  async warmup() {
+    // Skip if already warmed up this session
+    if (this._warmedUp) {
+      console.log('[DriveService] ⚡ Already warmed up, skipping');
+      return true;
+    }
+
+    console.log('[DriveService] 🔥 Warming up - preloading all folder IDs in parallel...');
+    const startTime = Date.now();
+
+    try {
+      // Resolve all folder IDs in parallel
+      const [rootFolderId, customersDataFolderId, excelFileId] = await Promise.all([
+        this.getOrCreateRootFolder(),
+        this.getOrCreateCustomersDataFolder(),
+        this.getOrCreateExcelFile(),
+      ]);
+
+      // Also preload document templates folder (nested inside root)
+      await this.getOrCreateDocumentTemplatesFolder();
+
+      const elapsed = Date.now() - startTime;
+      this._warmedUp = true;
+      console.log(`[DriveService] ⚡ Warmup complete in ${elapsed}ms - all folder IDs cached`);
+
+      return true;
+    } catch (error) {
+      console.error('[DriveService] Warmup failed:', error);
+      // Don't throw - warmup is optional optimization
+      return false;
+    }
+  }
+
+  /**
+   * Check if service is warmed up
+   */
+  isWarmedUp() {
+    return this._warmedUp;
   }
 
   /**
