@@ -247,8 +247,8 @@ class TemplateExportService {
             }
 
             const blob = await this.downloadFileFromDrive(template.driveFileId);
-            // Use template ID in filename to ensure uniqueness
-            const safeFileName = `${template.id}_${template.driveFileName}`;
+            // Use double underscore as separator to avoid conflicts with template IDs that contain single underscores
+            const safeFileName = `${template.id}__${template.driveFileName}`;
             excelFilesFolder.file(safeFileName, blob);
             masterFilesIncluded++;
           } catch (error) {
@@ -275,8 +275,8 @@ class TemplateExportService {
             }
 
             const blob = await this.downloadFileFromDrive(template.fileId);
-            // Use template ID in filename to ensure uniqueness
-            const safeFileName = `${template.id}_${template.fileName}`;
+            // Use double underscore as separator to avoid conflicts with template IDs that contain single underscores
+            const safeFileName = `${template.id}__${template.fileName}`;
             documentFilesFolder.file(safeFileName, blob);
             masterFilesIncluded++;
           } catch (error) {
@@ -386,14 +386,15 @@ class TemplateExportService {
 
       for (const filepath of excelFiles) {
         const filename = filepath.replace('excel_master_files/', '');
-        // Extract template ID from filename (format: templateId_originalFileName)
-        const underscoreIndex = filename.indexOf('_');
-        if (underscoreIndex > 0) {
-          const templateId = filename.substring(0, underscoreIndex);
+        // Extract template ID from filename (format: templateId__originalFileName)
+        // Use double underscore as separator since template IDs contain single underscores
+        const separatorIndex = filename.indexOf('__');
+        if (separatorIndex > 0) {
+          const templateId = filename.substring(0, separatorIndex);
           const blob = await zipContent.files[filepath].async('blob');
           masterFiles.excel[templateId] = {
             blob,
-            filename: filename.substring(underscoreIndex + 1)
+            filename: filename.substring(separatorIndex + 2)
           };
         }
       }
@@ -408,14 +409,15 @@ class TemplateExportService {
 
       for (const filepath of docFiles) {
         const filename = filepath.replace('document_background_files/', '');
-        // Extract template ID from filename (format: templateId_originalFileName)
-        const underscoreIndex = filename.indexOf('_');
-        if (underscoreIndex > 0) {
-          const templateId = filename.substring(0, underscoreIndex);
+        // Extract template ID from filename (format: templateId__originalFileName)
+        // Use double underscore as separator since template IDs contain single underscores
+        const separatorIndex = filename.indexOf('__');
+        if (separatorIndex > 0) {
+          const templateId = filename.substring(0, separatorIndex);
           const blob = await zipContent.files[filepath].async('blob');
           masterFiles.document[templateId] = {
             blob,
-            filename: filename.substring(underscoreIndex + 1)
+            filename: filename.substring(separatorIndex + 2)
           };
         }
       }
