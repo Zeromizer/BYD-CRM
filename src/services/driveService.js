@@ -15,6 +15,10 @@ class DriveService {
     this.customersFolderId = null;
     this.customersDataFolderId = null;
 
+    // OPTIMIZATION: Session-level validation cache to avoid re-validating folder IDs
+    // This tracks folder IDs that have been validated in the current session
+    this._validatedIds = new Set();
+
     // Load persisted folder IDs on construction
     this._loadPersistedIds();
   }
@@ -80,18 +84,35 @@ class DriveService {
 
   /**
    * Validate if a folder/file ID still exists and is accessible
+   * OPTIMIZED: Uses session-level cache to avoid redundant API calls
    */
   async _validateId(fileId) {
     if (!fileId) return false;
+
+    // OPTIMIZATION: Check session cache first to avoid redundant API calls
+    if (this._validatedIds.has(fileId)) {
+      console.log(`[DriveService] ID ${fileId} already validated this session (cached)`);
+      return true;
+    }
 
     try {
       const response = await window.gapi.client.drive.files.get({
         fileId: fileId,
         fields: 'id, trashed',
       });
-      return response.result && !response.result.trashed;
+      const isValid = response.result && !response.result.trashed;
+
+      // Add to session cache if valid
+      if (isValid) {
+        this._validatedIds.add(fileId);
+        console.log(`[DriveService] ID ${fileId} validated and cached`);
+      }
+
+      return isValid;
     } catch (error) {
       console.log(`[DriveService] ID ${fileId} is invalid:`, error.message);
+      // Remove from cache if it was there
+      this._validatedIds.delete(fileId);
       return false;
     }
   }
@@ -106,6 +127,10 @@ class DriveService {
     this.rootFolderId = null;
     this.customersFolderId = null;
     this.customersDataFolderId = null;
+
+    // Clear session validation cache
+    this._validatedIds.clear();
+    console.log('[DriveService] Cleared session validation cache');
 
     // Also clear persisted IDs for current user
     const key = this._getStorageKey();
@@ -1317,6 +1342,7 @@ class DriveService {
   /**
    * Load document templates from Google Drive
    * Returns an object with template IDs as keys
+   * OPTIMIZED: Loads all templates in parallel for better performance
    */
   async loadDocumentTemplatesFromDrive() {
     try {
@@ -1325,19 +1351,39 @@ class DriveService {
       // List all template files in the folder
       const files = await this.listFiles(folderId);
 
-      // Load each template file
-      const templates = {};
-      for (const file of files) {
-        if (file.name.endsWith('.json')) {
-          try {
-            const content = await this.getFileContent(file.id);
-            const template = JSON.parse(content);
-            if (template && template.id) {
-              templates[template.id] = template;
-            }
-          } catch (error) {
-            console.error(`Failed to load document template ${file.name}:`, error);
+      // Filter JSON files
+      const jsonFiles = files.filter(file => file.name.endsWith('.json'));
+
+      if (jsonFiles.length === 0) {
+        console.log('No document templates found in Drive');
+        return {};
+      }
+
+      console.log(`Loading ${jsonFiles.length} document templates in parallel...`);
+
+      // OPTIMIZATION: Load all templates in parallel instead of sequentially
+      const loadPromises = jsonFiles.map(async (file) => {
+        try {
+          const content = await this.getFileContent(file.id);
+          const template = JSON.parse(content);
+          if (template && template.id) {
+            return { id: template.id, template };
           }
+          return null;
+        } catch (error) {
+          console.error(`Failed to load document template ${file.name}:`, error);
+          return null;
+        }
+      });
+
+      // Wait for all templates to load in parallel
+      const results = await Promise.all(loadPromises);
+
+      // Build templates object from results
+      const templates = {};
+      for (const result of results) {
+        if (result) {
+          templates[result.id] = result.template;
         }
       }
 

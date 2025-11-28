@@ -42,10 +42,11 @@ class AuthService {
         const hasPersistentSession = this.hasPersistentSession();
         if (hasPersistentSession) {
           console.log('Attempting silent sign-in for persistent session...');
-          // Use setTimeout to avoid blocking initialization
-          setTimeout(() => {
+          // OPTIMIZED: Use microtask instead of 1-second delay for faster startup
+          // This still allows initialization to complete but triggers sign-in immediately after
+          Promise.resolve().then(() => {
             this.attemptSilentSignIn();
-          }, 1000);
+          });
         }
       }
 

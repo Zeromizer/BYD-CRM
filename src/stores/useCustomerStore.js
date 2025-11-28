@@ -595,12 +595,14 @@ const useCustomerStore = create((set, get) => ({
   /**
    * Load missing customer data immediately
    * Loads full customer.json for customers that only have index data
+   * OPTIMIZED: Loads all customers in parallel for better performance
    */
   loadMissingCustomerData: async (indexEntries) => {
     let currentCustomers = get().customers;
 
-    for (const indexEntry of indexEntries) {
-      if (!indexEntry.driveFolderId) continue;
+    // Identify customers that need full data loading
+    const customersToLoad = indexEntries.filter(indexEntry => {
+      if (!indexEntry.driveFolderId) return false;
 
       const customer = currentCustomers.find(c => c.id === indexEntry.id);
 
@@ -610,35 +612,58 @@ const useCustomerStore = create((set, get) => ({
         customer.vsa_makeModel || customer.proposal_model
       );
 
-      if (!hasFullData) {
-        try {
-          console.log(`📥 Loading full data for: ${indexEntry.name || indexEntry.id}`);
-          const fullData = await driveService.loadCustomerData(
-            indexEntry.id,
-            indexEntry.driveFolderId
-          );
-
-          if (fullData) {
-            // Update this customer in the current array
-            currentCustomers = currentCustomers.map(c =>
-              c.id === indexEntry.id ? fullData : c
-            );
-            console.log(`✅ Loaded: ${fullData.name}`);
-          } else {
-            console.log(`⚠️ No customer.json found for ${indexEntry.name || indexEntry.id}, using index data`);
-          }
-        } catch (error) {
-          console.error(`❌ Failed to load ${indexEntry.name}:`, error);
-        }
-      } else {
+      if (hasFullData) {
         console.log(`✓ ${customer.name} already has full data`);
+        return false;
+      }
+
+      return true;
+    });
+
+    if (customersToLoad.length === 0) {
+      console.log('✅ All customers already have full data');
+      return;
+    }
+
+    console.log(`📥 Loading full data for ${customersToLoad.length} customers in parallel...`);
+
+    // OPTIMIZATION: Load all customers in parallel instead of sequentially
+    const loadPromises = customersToLoad.map(async (indexEntry) => {
+      try {
+        const fullData = await driveService.loadCustomerData(
+          indexEntry.id,
+          indexEntry.driveFolderId
+        );
+
+        if (fullData) {
+          console.log(`✅ Loaded: ${fullData.name}`);
+          return { id: indexEntry.id, data: fullData };
+        } else {
+          console.log(`⚠️ No customer.json found for ${indexEntry.name || indexEntry.id}, using index data`);
+          return null;
+        }
+      } catch (error) {
+        console.error(`❌ Failed to load ${indexEntry.name}:`, error);
+        return null;
+      }
+    });
+
+    // Wait for all customers to load in parallel
+    const results = await Promise.all(loadPromises);
+
+    // Apply all loaded data to customers array
+    for (const result of results) {
+      if (result) {
+        currentCustomers = currentCustomers.map(c =>
+          c.id === result.id ? result.data : c
+        );
       }
     }
 
     // Update state once with all loaded data
     set({ customers: currentCustomers });
     get().saveToLocalStorage();
-    console.log(`✅ Full data loading complete`);
+    console.log(`✅ Full data loading complete (${results.filter(r => r).length} loaded)`);
   },
 
   /**
