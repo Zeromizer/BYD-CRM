@@ -185,6 +185,16 @@ function PrintManager({ isOpen, onClose, customer }) {
     pdfGenerator.openPDFInPrintWindow(pdf, `${customer.name} - Documents`);
   };
 
+  const handleSaveAndPrint = async () => {
+    if (!pdf) return;
+
+    // First save to drive
+    await handleSaveToDrive();
+
+    // Then print (handleSaveToDrive sets step back to 'preview' on success)
+    pdfGenerator.openPDFInPrintWindow(pdf, `${customer.name} - Documents`);
+  };
+
   const handleDownload = () => {
     if (!pdf) return;
 
@@ -528,13 +538,16 @@ function PrintManager({ isOpen, onClose, customer }) {
                 Close
               </button>
               <button className="btn btn-success" onClick={handleSaveToDrive}>
-                💾 Save to Drive
+                💾 Save
               </button>
               <button className="btn btn-info" onClick={handleDownload}>
-                ⬇️ Download PDF
+                ⬇️ Download
               </button>
               <button className="btn btn-primary" onClick={handlePrint}>
                 🖨️ Print
+              </button>
+              <button className="btn btn-save-print" onClick={handleSaveAndPrint}>
+                💾🖨️ Save & Print
               </button>
             </>
           )}
