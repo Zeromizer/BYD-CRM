@@ -42,7 +42,6 @@ class SyncCoordinator {
    */
   async syncAll(isSignedIn, force = false) {
     if (!isSignedIn) {
-      console.log('Not signed in, skipping sync');
       return;
     }
 
@@ -50,13 +49,9 @@ class SyncCoordinator {
     if (!force && this.lastSyncTime) {
       const timeSinceLastSync = Date.now() - this.lastSyncTime;
       if (timeSinceLastSync < this.syncCooldownMs) {
-        const remainingCooldown = Math.ceil((this.syncCooldownMs - timeSinceLastSync) / 1000);
-        console.log(`⏳ Sync cooldown active - last sync was ${Math.ceil(timeSinceLastSync / 1000)}s ago. Wait ${remainingCooldown}s or use force sync.`);
         return;
       }
     }
-
-    console.log(force ? '🔄 Force syncing all data...' : '🔄 Syncing all data...');
 
     const progress = {
       customers: { status: 'pending', detail: '' },
@@ -95,7 +90,6 @@ class SyncCoordinator {
             const count = useCustomerStore.getState().customers.length;
             updateProgress('customers', 'complete', `${count} customer${count !== 1 ? 's' : ''} synced`);
           } catch (error) {
-            console.error('Customer sync failed:', error);
             updateProgress('customers', 'error', 'Sync failed');
             throw error;
           }
@@ -109,7 +103,6 @@ class SyncCoordinator {
             const count = Object.keys(useExcelStore.getState().excelTemplates).length;
             updateProgress('excel', 'complete', `${count} template${count !== 1 ? 's' : ''} synced`);
           } catch (error) {
-            console.error('Excel sync failed:', error);
             updateProgress('excel', 'error', 'Sync failed');
             throw error;
           }
@@ -123,7 +116,6 @@ class SyncCoordinator {
             const count = Object.keys(useDocumentStore.getState().templates).length;
             updateProgress('documents', 'complete', `${count} document template${count !== 1 ? 's' : ''} synced`);
           } catch (error) {
-            console.error('Document templates sync failed:', error);
             updateProgress('documents', 'error', 'Sync failed');
             throw error;
           }
@@ -135,10 +127,8 @@ class SyncCoordinator {
 
       // Update last sync time on successful completion
       this.lastSyncTime = Date.now();
-      console.log('✅ All data synced successfully');
       return true;
-    } catch (error) {
-      console.error('Sync coordinator error:', error);
+    } catch {
       // Don't throw - some syncs may have succeeded
       return false;
     }

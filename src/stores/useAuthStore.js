@@ -40,8 +40,6 @@ const useAuthStore = create((set, get) => ({
       // Check for legacy data before auth initialization
       const hasLegacy = userStorage.hasLegacyData();
       if (hasLegacy) {
-        const summary = userStorage.getLegacyDataSummary();
-        console.log('📦 Legacy data detected:', summary);
         set({ migrationPending: true });
       }
 
@@ -70,9 +68,6 @@ const useAuthStore = create((set, get) => ({
                                      userStorage.normalizeEmail(currentUserEmail) !== currentDataOwner;
 
         if (isDifferentUser || isDataOwnerMismatch) {
-          const reason = isDifferentUser ? 'account switched' : 'data owner mismatch';
-          console.log(`👤 ${reason}: clearing old data for new user ${currentUserEmail}`);
-
           // Clear all existing data before loading new user's data
           useCustomerStore.getState().clearAllData();
           useExcelStore.getState().clearAllData();
@@ -84,13 +79,7 @@ const useAuthStore = create((set, get) => ({
 
         // Handle legacy data migration for new user
         if (isSignedIn && currentUserEmail && get().migrationPending) {
-          console.log(`🔄 Migrating legacy data to user: ${currentUserEmail}`);
-          const migrationResult = userStorage.migrateLegacyData(currentUserEmail);
-          if (migrationResult.success) {
-            console.log('✅ Legacy data migration successful:', migrationResult.migrated);
-          } else {
-            console.error('❌ Legacy data migration failed:', migrationResult.errors);
-          }
+          userStorage.migrateLegacyData(currentUserEmail);
           set({ migrationPending: false });
         }
 
@@ -101,22 +90,14 @@ const useAuthStore = create((set, get) => ({
 
         set({ isSignedIn, currentUserEmail, isUserVerified: isSignedIn });
 
-        // When user signs in and it's the same user
-        if (isSignedIn && !previousSignInState && !isDifferentUser && !isDataOwnerMismatch && currentUserEmail) {
-          console.log(`✅ Same user signing in (${currentUserEmail}) - keeping local data, will merge with Drive`);
-        }
-
         // CRITICAL FIX: Only trigger sync when transitioning from signed-out → signed-in
         // NOT on token refreshes or when already signed in
         if (isSignedIn && !previousSignInState && get().onSignInCallback) {
-          console.log('🔄 Triggering sync on fresh sign-in');
           try {
             await get().onSignInCallback();
-          } catch (error) {
-            console.error('Template sync on sign-in failed:', error);
+          } catch {
+            // Template sync failed, but continue initialization
           }
-        } else if (isSignedIn && previousSignInState) {
-          console.log('⏭️ Already signed in - skipping resync (token refresh or state update)');
         }
       });
 
@@ -130,10 +111,7 @@ const useAuthStore = create((set, get) => ({
         isInitialized: true,
         isInitializing: false,
       });
-
-      console.log('Auth store initialized');
     } catch (error) {
-      console.error('Auth initialization failed:', error);
       set({
         error: error.message,
         isInitialized: false,
@@ -152,7 +130,6 @@ const useAuthStore = create((set, get) => ({
       set({ error: null });
       authService.signIn();
     } catch (error) {
-      console.error('Sign in failed:', error);
       set({ error: error.message });
     }
   },
@@ -184,10 +161,7 @@ const useAuthStore = create((set, get) => ({
         dataFileId: null,
         excelDataFileId: null,
       });
-
-      console.log('Signed out successfully - all data cleared');
     } catch (error) {
-      console.error('Sign out failed:', error);
       set({ error: error.message });
     }
   },

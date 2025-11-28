@@ -28,7 +28,7 @@ function DocumentManager() {
     clearError,
   } = useDocumentStore();
 
-  const { isSignedIn, isInitialized, canLoadData, isUserVerified } = useAuthStore();
+  const { isSignedIn, isInitialized, canLoadData } = useAuthStore();
 
   const [uploadingFile, setUploadingFile] = useState(null);
   const [uploading, setUploading] = useState(false);
@@ -51,7 +51,7 @@ function DocumentManager() {
     if (canLoadData()) {
       loadFromLocalStorage();
     }
-  }, [isInitialized, isUserVerified, loadFromLocalStorage, canLoadData]);
+  }, [isInitialized, loadFromLocalStorage, canLoadData]);
 
   // Get templates as array
   const templatesArray = Object.values(templates);

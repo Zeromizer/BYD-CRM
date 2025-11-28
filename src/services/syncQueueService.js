@@ -61,11 +61,8 @@ class SyncQueueService {
             this.status[item.dataType].status = SYNC_STATUS.PENDING;
           }
         });
-
-        console.log(`[SyncQueue] Loaded ${this.queue.length} pending operations from storage`);
       }
-    } catch (error) {
-      console.error('[SyncQueue] Failed to load queue:', error);
+    } catch {
       this.queue = [];
     }
   }
@@ -79,8 +76,8 @@ class SyncQueueService {
         queue: this.queue,
         savedAt: new Date().toISOString(),
       }));
-    } catch (error) {
-      console.error('[SyncQueue] Failed to save queue:', error);
+    } catch {
+      // Failed to save queue
     }
   }
 
@@ -166,7 +163,6 @@ class SyncQueueService {
 
     // Check if online
     if (!navigator.onLine) {
-      console.log(`[SyncQueue] Offline - queuing ${dataType} operation for later`);
       this.queue.push(item);
       this.saveQueue();
       this.updateStatus(dataType, SYNC_STATUS.OFFLINE, null);
@@ -200,21 +196,17 @@ class SyncQueueService {
         if (attempt > 0) {
           // Exponential backoff
           const delay = BASE_DELAY_MS * Math.pow(2, attempt - 1);
-          console.log(`[SyncQueue] Retry ${attempt}/${MAX_RETRIES} for ${item.dataType} after ${delay}ms`);
           await this.sleep(delay);
         }
 
         await item.operation();
-        console.log(`[SyncQueue] Successfully synced ${item.dataType}`);
         return true;
       } catch (error) {
         lastError = error;
-        console.error(`[SyncQueue] Attempt ${attempt + 1} failed for ${item.dataType}:`, error.message);
 
         // Don't retry on auth errors
         if (error.message?.includes('401') || error.message?.includes('403') ||
             error.message?.includes('auth') || error.message?.includes('token')) {
-          console.log(`[SyncQueue] Auth error - not retrying`);
           break;
         }
       }
@@ -251,12 +243,10 @@ class SyncQueueService {
     }
 
     if (!navigator.onLine) {
-      console.log('[SyncQueue] Offline - cannot process queue');
       return;
     }
 
     this.isProcessing = true;
-    console.log(`[SyncQueue] Processing ${this.queue.length} queued operations`);
 
     const failedItems = [];
 
@@ -268,7 +258,6 @@ class SyncQueueService {
         await this.executeWithRetry(item);
         this.updateStatus(item.dataType, SYNC_STATUS.SYNCED, null);
       } catch (error) {
-        console.error(`[SyncQueue] Failed to process ${item.dataType}:`, error);
         item.retries++;
         item.lastError = error.message;
 
@@ -287,7 +276,6 @@ class SyncQueueService {
     this.saveQueue();
 
     this.isProcessing = false;
-    console.log(`[SyncQueue] Queue processing complete. ${failedItems.length} items remaining`);
   }
 
   /**
@@ -319,16 +307,12 @@ class SyncQueueService {
     Object.keys(this.status).forEach(dataType => {
       this.updateStatus(dataType, SYNC_STATUS.SYNCED, null);
     });
-
-    console.log('[SyncQueue] Queue cleared');
   }
 
   /**
    * Handle coming online
    */
   onOnline() {
-    console.log('[SyncQueue] Back online - processing queue');
-
     // Update offline statuses to pending
     Object.keys(this.status).forEach(dataType => {
       if (this.status[dataType].status === SYNC_STATUS.OFFLINE) {
@@ -343,8 +327,6 @@ class SyncQueueService {
    * Handle going offline
    */
   onOffline() {
-    console.log('[SyncQueue] Gone offline');
-
     Object.keys(this.status).forEach(dataType => {
       if (this.status[dataType].status === SYNC_STATUS.SYNCING ||
           this.status[dataType].status === SYNC_STATUS.PENDING) {

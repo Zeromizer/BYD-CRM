@@ -159,7 +159,7 @@ function ExcelIntegration() {
     updateFieldMappings,
   } = useExcelStore();
 
-  const { isSignedIn, isInitialized, canLoadData, isUserVerified } = useAuthStore();
+  const { isSignedIn, isInitialized, canLoadData } = useAuthStore();
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showMappingModal, setShowMappingModal] = useState(false);
@@ -194,7 +194,7 @@ function ExcelIntegration() {
     if (canLoadData()) {
       loadFromLocalStorage();
     }
-  }, [isInitialized, isUserVerified, loadFromLocalStorage, canLoadData]);
+  }, [isInitialized, loadFromLocalStorage, canLoadData]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {

@@ -28,7 +28,6 @@ const useDocumentStore = create((set, get) => ({
     try {
       const userEmail = localStorage.getItem('googleUserEmail');
       if (!userEmail) {
-        console.log('No googleUserEmail found, skipping document templates load');
         return;
       }
 
@@ -37,11 +36,9 @@ const useDocumentStore = create((set, get) => ({
 
       if (stored) {
         const templates = JSON.parse(stored);
-        console.log(`Loaded ${Object.keys(templates).length} document templates for user: ${userEmail}`);
         set({ templates });
       }
     } catch (error) {
-      console.error('Error loading templates from localStorage:', error);
       set({ error: error.message });
     }
   },
@@ -54,15 +51,12 @@ const useDocumentStore = create((set, get) => ({
     try {
       const userEmail = localStorage.getItem('googleUserEmail');
       if (!userEmail) {
-        console.warn('Cannot save document templates: no googleUserEmail');
         return;
       }
 
       const storageKey = `byd_crm_documents_${userEmail.toLowerCase().trim()}`;
       localStorage.setItem(storageKey, JSON.stringify(templates));
-      console.log(`Saved ${Object.keys(templates).length} document templates for user: ${userEmail}`);
     } catch (error) {
-      console.error('Error saving templates to localStorage:', error);
       set({ error: error.message });
     }
   },
@@ -92,7 +86,6 @@ const useDocumentStore = create((set, get) => ({
       // Use driveService method which ensures correct folder location
       await driveService.saveDocumentTemplateToDrive(templateData);
     } catch (error) {
-      console.error('Error syncing template to Drive:', error);
       throw error;
     }
   },
@@ -124,8 +117,7 @@ const useDocumentStore = create((set, get) => ({
       try {
         await get().syncTemplateToDrive(templateId);
         set({ syncQueue: get().syncQueue.slice(1) });
-      } catch (error) {
-        console.error('Error processing sync queue:', error);
+      } catch {
         // Remove failed item and continue
         set({ syncQueue: get().syncQueue.slice(1) });
       }
@@ -166,7 +158,6 @@ const useDocumentStore = create((set, get) => ({
 
       return templateId;
     } catch (error) {
-      console.error('Error creating template:', error);
       set({ error: error.message, loading: false });
       throw error;
     }
@@ -201,7 +192,6 @@ const useDocumentStore = create((set, get) => ({
 
       return updatedTemplate;
     } catch (error) {
-      console.error('Error updating template:', error);
       set({ error: error.message });
       throw error;
     }
@@ -232,15 +222,12 @@ const useDocumentStore = create((set, get) => ({
       // Delete from Google Drive
       try {
         await driveService.deleteDocumentTemplateFromDrive(templateId);
-        console.log(`Successfully deleted template ${templateId} from Drive`);
-      } catch (driveError) {
-        console.error('Failed to delete from Drive (template already deleted locally):', driveError);
+      } catch {
         // Don't throw - local deletion succeeded, Drive deletion is best-effort
       }
 
       return true;
     } catch (error) {
-      console.error('Error deleting template:', error);
       set({ error: error.message, loading: false });
       throw error;
     }
@@ -307,7 +294,6 @@ const useDocumentStore = create((set, get) => ({
 
       return templates;
     } catch (error) {
-      console.error('Error loading templates from Drive:', error);
       set({ error: error.message, loading: false });
       throw error;
     }
@@ -329,7 +315,6 @@ const useDocumentStore = create((set, get) => ({
       get().loadFromLocalStorage();
 
       const localTemplates = get().templates;
-      console.log('Syncing document templates with Drive, local templates:', Object.keys(localTemplates).length);
 
       // Use driveService for sync (ensures correct folder location in BYD_CRM_Data)
       const mergedTemplates = await driveService.syncDocumentTemplates(localTemplates);
@@ -342,10 +327,8 @@ const useDocumentStore = create((set, get) => ({
       });
       get().saveToLocalStorage(mergedTemplates);
 
-      console.log('Document templates synced with Drive successfully:', Object.keys(mergedTemplates).length);
       return mergedTemplates;
-    } catch (error) {
-      console.error('Failed to sync document templates with Drive:', error);
+    } catch {
       set({ error: 'Failed to sync with Google Drive', loading: false });
       // Don't throw - return local templates as fallback (same pattern as forms/excel)
       return get().templates;
