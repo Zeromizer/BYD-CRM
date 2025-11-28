@@ -70,6 +70,7 @@ class ExcelService {
       adminFee: customer.vsa_adminFee || '',
       insuranceSubsidy: customer.vsa_insuranceSubsidy || '',
       monthlyRepayment: customer.vsa_monthlyRepayment || '',
+      loanSummary: this.formatLoanSummary(customer.vsa_loanAmount, customer.vsa_interest, customer.vsa_tenure),
 
       // Proposal Details
       proposalModel: customer.proposal_model || '',
@@ -105,6 +106,23 @@ class ExcelService {
     if (!value) return 0;
     const numericValue = parseFloat(value.toString().replace(/[^0-9.-]/g, ''));
     return isNaN(numericValue) ? 0 : numericValue;
+  }
+
+  /**
+   * Format loan summary as "LOAN AMOUNT $X x Y% x Z MONTHS"
+   */
+  formatLoanSummary(loanAmount, interest, tenure) {
+    if (!loanAmount && !interest && !tenure) return '';
+
+    const loanStr = loanAmount ? `$${loanAmount}` : '';
+    const interestStr = interest ? `${interest}%` : '';
+    const tenureStr = tenure ? `${tenure} MONTHS` : '';
+
+    // Build the string with parts that exist
+    const parts = [loanStr, interestStr, tenureStr].filter(p => p);
+    if (parts.length === 0) return '';
+
+    return `LOAN AMOUNT ${parts.join(' x ')}`;
   }
 
   /**
