@@ -435,6 +435,7 @@ function CustomerDetails() {
 
       setOriginalDetailsData(detailsFormData);
       setOriginalGuarantors(JSON.parse(JSON.stringify(guarantors)));
+      toast.success('Customer details saved successfully');
     } catch (error) {
       console.error('Error updating customer:', error);
       toast.error('Failed to update customer. Please try again.');
@@ -478,6 +479,7 @@ function CustomerDetails() {
       }
 
       setOriginalProposalData(proposalFormData);
+      toast.success('Proposal details saved successfully');
     } catch (error) {
       console.error('Error updating proposal:', error);
       toast.error('Failed to update proposal. Please try again.');
@@ -518,6 +520,7 @@ function CustomerDetails() {
       }
 
       setOriginalVsaData(vsaFormData);
+      toast.success('VSA details saved successfully');
     } catch (error) {
       console.error('Error updating VSA:', error);
       toast.error('Failed to update VSA. Please try again.');
