@@ -7,7 +7,7 @@ import templateExportService from '../../services/templateExportService';
 import './TemplateExportImport.css';
 
 function TemplateExportImport({ isOpen, onClose }) {
-  const { templates: documentTemplates, saveToLocalStorage: saveDocTemplates, loadFromLocalStorage: loadDocTemplates, queueSyncBatch } = useDocumentStore();
+  const { templates: documentTemplates, saveToLocalStorage: saveDocTemplates, loadFromLocalStorage: loadDocTemplates, syncWithDrive: syncDocWithDrive } = useDocumentStore();
   const { excelTemplates, addTemplate: addExcelTemplate } = useExcelStore();
   const { isSignedIn } = useAuthStore();
 
@@ -121,12 +121,6 @@ function TemplateExportImport({ isOpen, onClose }) {
           saveDocTemplates(importResults.documentTemplates.merged);
           loadDocTemplates();
 
-          // Batch sync all imported document templates to Google Drive
-          const templateIds = importResults.documentTemplates.imported.map(item => item.templateId);
-          if (templateIds.length > 0) {
-            queueSyncBatch(templateIds);
-          }
-
           results.push({
             type: 'Document Templates',
             imported: importResults.documentTemplates.imported
@@ -161,12 +155,6 @@ function TemplateExportImport({ isOpen, onClose }) {
           saveDocTemplates(docResult.merged);
           loadDocTemplates();
 
-          // Batch sync all imported document templates to Google Drive
-          const templateIds = docResult.imported.map(item => item.templateId);
-          if (templateIds.length > 0) {
-            queueSyncBatch(templateIds);
-          }
-
           results.push({
             type: 'Document Templates',
             imported: docResult.imported
@@ -188,6 +176,18 @@ function TemplateExportImport({ isOpen, onClose }) {
             type: 'Excel Templates',
             imported: excelResult.imported
           });
+        }
+      }
+
+      // Trigger a single sync to Google Drive for document templates
+      // This avoids multiple simultaneous sync operations
+      if (results.some(r => r.type === 'Document Templates') && isSignedIn) {
+        setImportProgress({ type: 'syncing' });
+        try {
+          await syncDocWithDrive();
+        } catch (syncError) {
+          console.error('Failed to sync document templates to Drive:', syncError);
+          // Don't fail the import, just log the error
         }
       }
 
@@ -257,6 +257,14 @@ function TemplateExportImport({ isOpen, onClose }) {
           <div className="progress-indicator">
             <div className="progress-spinner"></div>
             <p>Reading import file...</p>
+          </div>
+        );
+      }
+      if (importProgress.type === 'syncing') {
+        return (
+          <div className="progress-indicator">
+            <div className="progress-spinner"></div>
+            <p>Syncing templates to Google Drive...</p>
           </div>
         );
       }
