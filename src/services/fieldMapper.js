@@ -47,6 +47,7 @@ export const FIELD_TYPES = {
   tradeInOwnerNotCustomer: { label: 'Trade In Owner Not Customer', category: 'Trade-In' },
   tradeInOwnerName: { label: 'Trade In Owner Name', category: 'Trade-In' },
   tradeInOwnerNric: { label: 'Trade In Owner NRIC', category: 'Trade-In' },
+  tradeInOwnerMobile: { label: 'Trade In Owner Mobile', category: 'Trade-In' },
   tradeInInsuranceCompany: { label: 'Trade In Insurance Company', category: 'Trade-In' },
   tradeInPolicyNumber: { label: 'Trade In Policy Number', category: 'Trade-In' },
 

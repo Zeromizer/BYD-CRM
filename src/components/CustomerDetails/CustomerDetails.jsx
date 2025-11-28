@@ -155,6 +155,7 @@ function CustomerDetails() {
     tradeInOwnerNotCustomer: false,
     tradeInOwnerName: '',
     tradeInOwnerNric: '',
+    tradeInOwnerMobile: '',
     tradeInInsuranceCompany: '',
     tradeInPolicyNumber: '',
     dateOfRegistration: '',
@@ -285,6 +286,7 @@ function CustomerDetails() {
         tradeInOwnerNotCustomer: customer.vsa_tradeInOwnerNotCustomer || false,
         tradeInOwnerName: customer.vsa_tradeInOwnerName || '',
         tradeInOwnerNric: customer.vsa_tradeInOwnerNric || '',
+        tradeInOwnerMobile: customer.vsa_tradeInOwnerMobile || '',
         tradeInInsuranceCompany: customer.vsa_tradeInInsuranceCompany || '',
         tradeInPolicyNumber: customer.vsa_tradeInPolicyNumber || '',
         dateOfRegistration: customer.vsa_dateOfRegistration || '',
@@ -1925,6 +1927,18 @@ function CustomerDetails() {
                         value={vsaFormData.tradeInOwnerNric}
                         onChange={handleVsaChange}
                         placeholder="e.g., S1234567A"
+                        disabled={isSubmitting}
+                      />
+                    </div>
+                    <div className="inline-edit-item">
+                      <label htmlFor="vsa_tradeInOwnerMobile">Trade In Owner Mobile</label>
+                      <input
+                        type="text"
+                        id="vsa_tradeInOwnerMobile"
+                        name="tradeInOwnerMobile"
+                        value={vsaFormData.tradeInOwnerMobile}
+                        onChange={handleVsaChange}
+                        placeholder="e.g., 91234567"
                         disabled={isSubmitting}
                       />
                     </div>
