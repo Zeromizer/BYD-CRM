@@ -452,6 +452,15 @@ function VsaDetailsModal({ isOpen, onClose, customer, onSave }) {
                   </div>
                   <div className="form-row">
                     <div className="form-group">
+                      <label>Trade In Owner Mobile</label>
+                      <input
+                        type="text"
+                        value={vsaData.tradeInOwnerMobile || ''}
+                        onChange={(e) => handleChange('tradeInOwnerMobile', e.target.value)}
+                        placeholder="e.g., 91234567"
+                      />
+                    </div>
+                    <div className="form-group">
                       <label>Trade In Insurance Company</label>
                       <input
                         type="text"
