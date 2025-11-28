@@ -1,11 +1,13 @@
 /**
  * Sync Coordinator
  * Manages parallel syncing of all data types with progress tracking
+ * OPTIMIZED Phase 2: Includes warmup for parallel folder ID resolution
  */
 
 import useCustomerStore from '../stores/useCustomerStore';
 import useExcelStore from '../stores/useExcelStore';
 import useDocumentStore from '../stores/useDocumentStore';
+import driveService from './driveService';
 
 class SyncCoordinator {
   constructor() {
@@ -79,6 +81,10 @@ class SyncCoordinator {
     };
 
     try {
+      // OPTIMIZATION Phase 2: Warmup - preload all folder IDs in parallel before sync
+      // This prevents sequential folder resolution during individual sync operations
+      await driveService.warmup();
+
       // Start all syncs in parallel
       const syncPromises = [
         // Sync customers
