@@ -148,6 +148,7 @@ function VsaDetailsModal({ isOpen, onClose, customer, onSave }) {
       });
 
       await onSave(updates);
+      toast.success('VSA details saved successfully');
       onClose();
     } catch (error) {
       console.error('Error saving VSA details:', error);

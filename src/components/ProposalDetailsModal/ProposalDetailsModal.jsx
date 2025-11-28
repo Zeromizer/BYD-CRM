@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import Modal from '../Modal/Modal';
+import { useToast } from '../Toast/Toast';
 import './ProposalDetailsModal.css';
 
 const VEHICLE_MODELS = [
@@ -50,6 +51,7 @@ const BENEFITS_OPTIONS = [
 ];
 
 function ProposalDetailsModal({ isOpen, onClose, customer, onSave }) {
+  const toast = useToast();
   const [isSaving, setIsSaving] = useState(false);
   const [proposalData, setProposalData] = useState({
     model: '',
@@ -123,10 +125,11 @@ function ProposalDetailsModal({ isOpen, onClose, customer, onSave }) {
       });
 
       await onSave(updates);
+      toast.success('Proposal details saved successfully');
       onClose();
     } catch (error) {
       console.error('Error saving proposal details:', error);
-      alert('Failed to save proposal details');
+      toast.error('Failed to save proposal details');
     } finally {
       setIsSaving(false);
     }
