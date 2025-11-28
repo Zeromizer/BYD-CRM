@@ -107,6 +107,11 @@ function CustomerDetails() {
   const [originalDetailsData, setOriginalDetailsData] = useState(null);
   const [detailsErrors, setDetailsErrors] = useState({});
 
+  // Guarantors state (max 5)
+  const [guarantors, setGuarantors] = useState([]);
+  const [originalGuarantors, setOriginalGuarantors] = useState([]);
+  const [expandedGuarantors, setExpandedGuarantors] = useState({});
+
   // Inline editing state for Proposal tab
   const [proposalFormData, setProposalFormData] = useState({
     model: '',
@@ -228,6 +233,12 @@ function CustomerDetails() {
       setDetailsFormData(formData);
       setOriginalDetailsData(formData);
       setDetailsErrors({});
+
+      // Load guarantors
+      const loadedGuarantors = customer.guarantors || [];
+      setGuarantors(loadedGuarantors);
+      setOriginalGuarantors(JSON.parse(JSON.stringify(loadedGuarantors)));
+      setExpandedGuarantors({});
     }
   }, [customer?.id]);
 
@@ -310,8 +321,9 @@ function CustomerDetails() {
     }
   }, [customer?.id]);
 
-  // Check if details form has changes
-  const hasDetailsChanges = originalDetailsData && JSON.stringify(detailsFormData) !== JSON.stringify(originalDetailsData);
+  // Check if details form has changes (including guarantors)
+  const hasDetailsChanges = (originalDetailsData && JSON.stringify(detailsFormData) !== JSON.stringify(originalDetailsData)) ||
+    (JSON.stringify(guarantors) !== JSON.stringify(originalGuarantors));
 
   // Check if proposal form has changes
   const hasProposalChanges = originalProposalData && JSON.stringify(proposalFormData) !== JSON.stringify(originalProposalData);
@@ -326,6 +338,50 @@ function CustomerDetails() {
     if (detailsErrors[name]) {
       setDetailsErrors((prev) => ({ ...prev, [name]: '' }));
     }
+  };
+
+  // Guarantor helper functions
+  const createEmptyGuarantor = () => ({
+    name: '',
+    phone: '',
+    email: '',
+    nric: '',
+    occupation: '',
+    dob: '',
+    address: '',
+    addressContinue: '',
+  });
+
+  const addGuarantor = () => {
+    if (guarantors.length < 5) {
+      const newGuarantor = createEmptyGuarantor();
+      const newIndex = guarantors.length;
+      setGuarantors([...guarantors, newGuarantor]);
+      setExpandedGuarantors(prev => ({ ...prev, [newIndex]: true }));
+    }
+  };
+
+  const removeGuarantor = (index) => {
+    setGuarantors(guarantors.filter((_, i) => i !== index));
+    setExpandedGuarantors(prev => {
+      const updated = {};
+      Object.keys(prev).forEach(key => {
+        const keyNum = parseInt(key);
+        if (keyNum < index) updated[keyNum] = prev[keyNum];
+        else if (keyNum > index) updated[keyNum - 1] = prev[keyNum];
+      });
+      return updated;
+    });
+  };
+
+  const handleGuarantorChange = (index, field, value) => {
+    setGuarantors(prev => prev.map((g, i) =>
+      i === index ? { ...g, [field]: value } : g
+    ));
+  };
+
+  const toggleGuarantorExpanded = (index) => {
+    setExpandedGuarantors(prev => ({ ...prev, [index]: !prev[index] }));
   };
 
   // Handle proposal form field change
@@ -364,17 +420,19 @@ function CustomerDetails() {
     setIsSubmitting(true);
     try {
       await new Promise((resolve) => setTimeout(resolve, 500));
-      updateCustomer(customer.id, detailsFormData);
+      const updateData = { ...detailsFormData, guarantors };
+      updateCustomer(customer.id, updateData);
       saveToLocalStorage();
 
       if (isSignedIn && customer.driveFolderId) {
         const updatedCustomer = customers.find(c => c.id === customer.id);
         if (updatedCustomer) {
-          await saveCustomerToFolder({ ...updatedCustomer, ...detailsFormData }, isSignedIn);
+          await saveCustomerToFolder({ ...updatedCustomer, ...updateData }, isSignedIn);
         }
       }
 
       setOriginalDetailsData(detailsFormData);
+      setOriginalGuarantors(JSON.parse(JSON.stringify(guarantors)));
     } catch (error) {
       console.error('Error updating customer:', error);
       alert('Failed to update customer. Please try again.');
@@ -387,6 +445,8 @@ function CustomerDetails() {
   const handleDetailsCancel = () => {
     if (originalDetailsData) {
       setDetailsFormData(originalDetailsData);
+      setGuarantors(JSON.parse(JSON.stringify(originalGuarantors)));
+      setExpandedGuarantors({});
       setDetailsErrors({});
     }
   };
@@ -1312,6 +1372,142 @@ function CustomerDetails() {
                     placeholder="Add notes about this customer..."
                   />
                 </div>
+              </div>
+
+              {/* Guarantors Section */}
+              <div className="info-section">
+                <div className="section-header-with-action">
+                  <h3>Guarantors ({guarantors.length}/5)</h3>
+                  {guarantors.length < 5 && (
+                    <button
+                      type="button"
+                      className="btn btn-add-small"
+                      onClick={addGuarantor}
+                      disabled={isSubmitting}
+                    >
+                      + Add Guarantor
+                    </button>
+                  )}
+                </div>
+
+                {guarantors.length === 0 ? (
+                  <p className="empty-state-text">No guarantors added. Click "+ Add Guarantor" to add one.</p>
+                ) : (
+                  <div className="guarantors-list">
+                    {guarantors.map((guarantor, index) => (
+                      <div key={index} className="guarantor-card">
+                        <div
+                          className="guarantor-header"
+                          onClick={() => toggleGuarantorExpanded(index)}
+                        >
+                          <div className="guarantor-header-left">
+                            <span className={`expand-icon ${expandedGuarantors[index] ? 'expanded' : ''}`}>▶</span>
+                            <span className="guarantor-title">
+                              Guarantor {index + 1}{guarantor.name ? `: ${guarantor.name}` : ''}
+                            </span>
+                          </div>
+                          <button
+                            type="button"
+                            className="btn-remove-guarantor"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              removeGuarantor(index);
+                            }}
+                            disabled={isSubmitting}
+                          >
+                            ✕
+                          </button>
+                        </div>
+
+                        {expandedGuarantors[index] && (
+                          <div className="guarantor-content">
+                            <div className="inline-edit-grid">
+                              <div className="inline-edit-item">
+                                <label>Name</label>
+                                <input
+                                  type="text"
+                                  value={guarantor.name}
+                                  onChange={(e) => handleGuarantorChange(index, 'name', e.target.value)}
+                                  placeholder="Full name"
+                                  disabled={isSubmitting}
+                                />
+                              </div>
+                              <div className="inline-edit-item">
+                                <label>Contact Number</label>
+                                <input
+                                  type="text"
+                                  value={guarantor.phone}
+                                  onChange={(e) => handleGuarantorChange(index, 'phone', e.target.value)}
+                                  placeholder="e.g., 91234567"
+                                  disabled={isSubmitting}
+                                />
+                              </div>
+                              <div className="inline-edit-item">
+                                <label>Email</label>
+                                <input
+                                  type="email"
+                                  value={guarantor.email}
+                                  onChange={(e) => handleGuarantorChange(index, 'email', e.target.value)}
+                                  placeholder="email@example.com"
+                                  disabled={isSubmitting}
+                                />
+                              </div>
+                              <div className="inline-edit-item">
+                                <label>NRIC/FIN</label>
+                                <input
+                                  type="text"
+                                  value={guarantor.nric}
+                                  onChange={(e) => handleGuarantorChange(index, 'nric', e.target.value)}
+                                  placeholder="S1234567A"
+                                  disabled={isSubmitting}
+                                />
+                              </div>
+                              <div className="inline-edit-item">
+                                <label>Occupation</label>
+                                <input
+                                  type="text"
+                                  value={guarantor.occupation}
+                                  onChange={(e) => handleGuarantorChange(index, 'occupation', e.target.value)}
+                                  placeholder="e.g., Engineer"
+                                  disabled={isSubmitting}
+                                />
+                              </div>
+                              <div className="inline-edit-item">
+                                <label>Date of Birth</label>
+                                <input
+                                  type="date"
+                                  value={guarantor.dob}
+                                  onChange={(e) => handleGuarantorChange(index, 'dob', e.target.value)}
+                                  disabled={isSubmitting}
+                                />
+                              </div>
+                              <div className="inline-edit-item">
+                                <label>Address</label>
+                                <input
+                                  type="text"
+                                  value={guarantor.address}
+                                  onChange={(e) => handleGuarantorChange(index, 'address', e.target.value)}
+                                  placeholder="Street address"
+                                  disabled={isSubmitting}
+                                />
+                              </div>
+                              <div className="inline-edit-item">
+                                <label>Address Continue</label>
+                                <input
+                                  type="text"
+                                  value={guarantor.addressContinue}
+                                  onChange={(e) => handleGuarantorChange(index, 'addressContinue', e.target.value)}
+                                  placeholder="e.g., SINGAPORE 123456"
+                                  disabled={isSubmitting}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="details-actions">

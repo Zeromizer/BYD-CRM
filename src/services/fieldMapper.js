@@ -96,6 +96,56 @@ export const FIELD_TYPES = {
   proposalBenefitsGiven: { label: 'Benefits Given', category: 'Proposal' },
   proposalRemarks: { label: 'Remarks', category: 'Proposal' },
 
+  // Guarantor 1
+  guarantor1Name: { label: 'Guarantor 1 Name', category: 'Guarantor 1' },
+  guarantor1Phone: { label: 'Guarantor 1 Phone', category: 'Guarantor 1' },
+  guarantor1Email: { label: 'Guarantor 1 Email', category: 'Guarantor 1' },
+  guarantor1Nric: { label: 'Guarantor 1 NRIC', category: 'Guarantor 1' },
+  guarantor1Occupation: { label: 'Guarantor 1 Occupation', category: 'Guarantor 1' },
+  guarantor1Dob: { label: 'Guarantor 1 DOB', category: 'Guarantor 1' },
+  guarantor1Address: { label: 'Guarantor 1 Address', category: 'Guarantor 1' },
+  guarantor1AddressContinue: { label: 'Guarantor 1 Address Continue', category: 'Guarantor 1' },
+
+  // Guarantor 2
+  guarantor2Name: { label: 'Guarantor 2 Name', category: 'Guarantor 2' },
+  guarantor2Phone: { label: 'Guarantor 2 Phone', category: 'Guarantor 2' },
+  guarantor2Email: { label: 'Guarantor 2 Email', category: 'Guarantor 2' },
+  guarantor2Nric: { label: 'Guarantor 2 NRIC', category: 'Guarantor 2' },
+  guarantor2Occupation: { label: 'Guarantor 2 Occupation', category: 'Guarantor 2' },
+  guarantor2Dob: { label: 'Guarantor 2 DOB', category: 'Guarantor 2' },
+  guarantor2Address: { label: 'Guarantor 2 Address', category: 'Guarantor 2' },
+  guarantor2AddressContinue: { label: 'Guarantor 2 Address Continue', category: 'Guarantor 2' },
+
+  // Guarantor 3
+  guarantor3Name: { label: 'Guarantor 3 Name', category: 'Guarantor 3' },
+  guarantor3Phone: { label: 'Guarantor 3 Phone', category: 'Guarantor 3' },
+  guarantor3Email: { label: 'Guarantor 3 Email', category: 'Guarantor 3' },
+  guarantor3Nric: { label: 'Guarantor 3 NRIC', category: 'Guarantor 3' },
+  guarantor3Occupation: { label: 'Guarantor 3 Occupation', category: 'Guarantor 3' },
+  guarantor3Dob: { label: 'Guarantor 3 DOB', category: 'Guarantor 3' },
+  guarantor3Address: { label: 'Guarantor 3 Address', category: 'Guarantor 3' },
+  guarantor3AddressContinue: { label: 'Guarantor 3 Address Continue', category: 'Guarantor 3' },
+
+  // Guarantor 4
+  guarantor4Name: { label: 'Guarantor 4 Name', category: 'Guarantor 4' },
+  guarantor4Phone: { label: 'Guarantor 4 Phone', category: 'Guarantor 4' },
+  guarantor4Email: { label: 'Guarantor 4 Email', category: 'Guarantor 4' },
+  guarantor4Nric: { label: 'Guarantor 4 NRIC', category: 'Guarantor 4' },
+  guarantor4Occupation: { label: 'Guarantor 4 Occupation', category: 'Guarantor 4' },
+  guarantor4Dob: { label: 'Guarantor 4 DOB', category: 'Guarantor 4' },
+  guarantor4Address: { label: 'Guarantor 4 Address', category: 'Guarantor 4' },
+  guarantor4AddressContinue: { label: 'Guarantor 4 Address Continue', category: 'Guarantor 4' },
+
+  // Guarantor 5
+  guarantor5Name: { label: 'Guarantor 5 Name', category: 'Guarantor 5' },
+  guarantor5Phone: { label: 'Guarantor 5 Phone', category: 'Guarantor 5' },
+  guarantor5Email: { label: 'Guarantor 5 Email', category: 'Guarantor 5' },
+  guarantor5Nric: { label: 'Guarantor 5 NRIC', category: 'Guarantor 5' },
+  guarantor5Occupation: { label: 'Guarantor 5 Occupation', category: 'Guarantor 5' },
+  guarantor5Dob: { label: 'Guarantor 5 DOB', category: 'Guarantor 5' },
+  guarantor5Address: { label: 'Guarantor 5 Address', category: 'Guarantor 5' },
+  guarantor5AddressContinue: { label: 'Guarantor 5 Address Continue', category: 'Guarantor 5' },
+
   // Special
   custom: { label: 'Custom Value', category: 'Other' },
 };
@@ -229,7 +279,34 @@ export function getCustomerDataMapping(customer) {
     proposalBenefit5: customer.proposal_benefit5 || '',
     proposalBenefitsGiven: customer.proposal_benefitsGiven || '',
     proposalRemarks: customer.proposal_remarks || '',
+
+    // Guarantor fields (dynamically extracted from guarantors array)
+    ...extractGuarantorFields(customer.guarantors),
   };
+}
+
+/**
+ * Extract guarantor fields from guarantors array
+ */
+function extractGuarantorFields(guarantors) {
+  const fields = {};
+  const maxGuarantors = 5;
+
+  for (let i = 0; i < maxGuarantors; i++) {
+    const g = guarantors?.[i] || {};
+    const num = i + 1;
+
+    fields[`guarantor${num}Name`] = g.name || '';
+    fields[`guarantor${num}Phone`] = g.phone || '';
+    fields[`guarantor${num}Email`] = g.email || '';
+    fields[`guarantor${num}Nric`] = g.nric || '';
+    fields[`guarantor${num}Occupation`] = g.occupation || '';
+    fields[`guarantor${num}Dob`] = g.dob || '';
+    fields[`guarantor${num}Address`] = g.address || '';
+    fields[`guarantor${num}AddressContinue`] = g.addressContinue || '';
+  }
+
+  return fields;
 }
 
 /**
