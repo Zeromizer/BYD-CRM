@@ -7,7 +7,7 @@ import templateExportService from '../../services/templateExportService';
 import './TemplateExportImport.css';
 
 function TemplateExportImport({ isOpen, onClose }) {
-  const { templates: documentTemplates, saveToLocalStorage: saveDocTemplates, loadFromLocalStorage: loadDocTemplates } = useDocumentStore();
+  const { templates: documentTemplates, saveToLocalStorage: saveDocTemplates, loadFromLocalStorage: loadDocTemplates, queueSync: queueDocSync } = useDocumentStore();
   const { excelTemplates, addTemplate: addExcelTemplate } = useExcelStore();
   const { isSignedIn } = useAuthStore();
 
@@ -120,6 +120,12 @@ function TemplateExportImport({ isOpen, onClose }) {
         if (importResults.documentTemplates) {
           saveDocTemplates(importResults.documentTemplates.merged);
           loadDocTemplates();
+
+          // Sync each imported document template to Google Drive
+          for (const item of importResults.documentTemplates.imported) {
+            queueDocSync(item.templateId);
+          }
+
           results.push({
             type: 'Document Templates',
             imported: importResults.documentTemplates.imported
@@ -153,6 +159,11 @@ function TemplateExportImport({ isOpen, onClose }) {
           // Save merged templates to localStorage and reload
           saveDocTemplates(docResult.merged);
           loadDocTemplates();
+
+          // Sync each imported document template to Google Drive
+          for (const item of docResult.imported) {
+            queueDocSync(item.templateId);
+          }
 
           results.push({
             type: 'Document Templates',
