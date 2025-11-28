@@ -67,8 +67,6 @@ const useCustomerStore = create((set, get) => ({
 
     if (isSignedIn) {
       try {
-        console.log(`[Folder Creation] Creating folder for: ${customerName} (ID: ${customerId})`);
-
         const folderInfo = await driveService.createCustomerFolderStructure(
           customerName,
           customerId
@@ -76,10 +74,7 @@ const useCustomerStore = create((set, get) => ({
 
         driveFolderId = folderInfo.folderId;
         driveFolderLink = folderInfo.folderUrl;
-
-        console.log(`[Folder Creation] Success! Folder ID: ${driveFolderId}`);
       } catch (error) {
-        console.error('[Folder Creation] FAILED:', error);
         alert(`Folder creation failed: ${error.message}\nCustomer will be created without folder.`);
       }
     }
@@ -122,8 +117,6 @@ const useCustomerStore = create((set, get) => ({
     if (isSignedIn && driveFolderId) {
       await get().saveCustomerToFolder(newCustomer, isSignedIn);
     }
-
-    console.log('[Customer Created] With folder IDs:', { driveFolderId, driveFolderLink });
 
     return newCustomer;
   },
@@ -197,9 +190,7 @@ const useCustomerStore = create((set, get) => ({
 
         // Save updated index
         await driveService.saveCustomersIndex(updatedIndex);
-        console.log(`Removed customer ${id} from Drive index`);
-      } catch (error) {
-        console.error('Failed to update Drive index after deletion:', error);
+      } catch {
         // Don't throw - customer is already deleted locally
       }
     }
@@ -234,7 +225,6 @@ const useCustomerStore = create((set, get) => ({
       if (userEmail) {
         const customers = userStorage.loadUserData(userEmail, 'customers');
         if (customers && customers.length > 0) {
-          console.log(`Loaded ${customers.length} customers for user: ${userEmail}`);
           set({ customers });
           return;
         }
@@ -244,14 +234,11 @@ const useCustomerStore = create((set, get) => ({
       const stored = localStorage.getItem('bydCRM');
       if (stored) {
         const customers = JSON.parse(stored);
-        console.log('Loaded customers from legacy localStorage:', customers.length);
         set({ customers });
       } else {
-        console.log('No customer data found in localStorage');
         set({ customers: [] });
       }
-    } catch (error) {
-      console.error('Failed to load customers from localStorage:', error);
+    } catch {
       set({ error: 'Failed to load customer data', customers: [] });
     }
   },
@@ -269,14 +256,11 @@ const useCustomerStore = create((set, get) => ({
         // Save to user-specific storage
         userStorage.saveUserData(userEmail, 'customers', customers);
         userStorage.setCurrentDataOwner(userEmail);
-        console.log(`Saved ${customers.length} customers for user: ${userEmail}`);
       } else {
         // Fall back to legacy storage (offline mode)
         localStorage.setItem('bydCRM', JSON.stringify(customers));
-        console.log('Saved customers to legacy localStorage:', customers.length);
       }
-    } catch (error) {
-      console.error('Failed to save customers to localStorage:', error);
+    } catch {
       set({ error: 'Failed to save customer data' });
     }
   },
@@ -298,7 +282,6 @@ const useCustomerStore = create((set, get) => ({
 
     // If signed in, also save to Drive using hybrid method
     if (!isSignedIn) {
-      console.log('Not signed in, saved to localStorage only');
       return;
     }
 
@@ -331,9 +314,7 @@ const useCustomerStore = create((set, get) => ({
       }
 
       set({ isSyncing: false });
-      console.log('Synced customers to Drive (hybrid):', customers.length);
-    } catch (error) {
-      console.error('Failed to sync to Drive:', error);
+    } catch {
       set({ isSyncing: false, error: 'Failed to sync with Google Drive' });
       // Don't throw - data is saved to localStorage anyway
     }
@@ -348,7 +329,6 @@ const useCustomerStore = create((set, get) => ({
    * Clears both user-specific and legacy storage
    */
   clearAllData: () => {
-    console.log('Clearing all customer data');
     const userEmail = localStorage.getItem('googleUserEmail');
 
     set({
@@ -376,7 +356,6 @@ const useCustomerStore = create((set, get) => ({
    */
   repairCustomerFolders: async (isSignedIn, forceRescan = false) => {
     if (!isSignedIn) {
-      console.error('Must be signed in to repair folder references');
       alert('Please sign in to Google Drive first');
       return null;
     }
@@ -384,8 +363,6 @@ const useCustomerStore = create((set, get) => ({
     try {
       set({ isSyncing: true, error: null });
       const { customers, syncToDrive } = get();
-
-      console.log('Starting folder repair for', customers.length, 'customers');
 
       // Run repair process
       const { customers: repairedCustomers, results } =
@@ -400,10 +377,9 @@ const useCustomerStore = create((set, get) => ({
       set({ isSyncing: false });
 
       return results;
-    } catch (error) {
-      console.error('Failed to repair customer folders:', error);
+    } catch {
       set({ isSyncing: false, error: 'Failed to repair customer folders' });
-      throw error;
+      throw new Error('Failed to repair customer folders');
     }
   },
 
@@ -412,7 +388,6 @@ const useCustomerStore = create((set, get) => ({
    */
   createMissingFolders: async (isSignedIn) => {
     if (!isSignedIn) {
-      console.error('Must be signed in to create folders');
       alert('Please sign in to Google Drive first');
       return null;
     }
@@ -420,8 +395,6 @@ const useCustomerStore = create((set, get) => ({
     try {
       set({ isSyncing: true, error: null });
       const { customers, syncToDrive } = get();
-
-      console.log('Creating missing folders...');
 
       // Create folders for customers without folder IDs
       const { customers: updatedCustomers, created, errors } =
@@ -436,10 +409,9 @@ const useCustomerStore = create((set, get) => ({
       set({ isSyncing: false });
 
       return { created, errors };
-    } catch (error) {
-      console.error('Failed to create missing folders:', error);
+    } catch {
       set({ isSyncing: false, error: 'Failed to create missing folders' });
-      throw error;
+      throw new Error('Failed to create missing folders');
     }
   },
 
@@ -453,8 +425,7 @@ const useCustomerStore = create((set, get) => ({
 
     try {
       return await driveService.checkMigrationNeeded();
-    } catch (error) {
-      console.error('Failed to check migration status:', error);
+    } catch {
       return false;
     }
   },
@@ -464,7 +435,6 @@ const useCustomerStore = create((set, get) => ({
    */
   migrateToHybridStructure: async (isSignedIn) => {
     if (!isSignedIn) {
-      console.error('Must be signed in to migrate');
       alert('Please sign in to Google Drive first');
       return null;
     }
@@ -472,8 +442,6 @@ const useCustomerStore = create((set, get) => ({
     try {
       set({ isSyncing: true, error: null });
       const { customers } = get();
-
-      console.log('Starting migration to hybrid structure...');
 
       // Run migration
       const migrationResult = await driveService.migrateToHybridStructure(customers);
@@ -491,10 +459,9 @@ const useCustomerStore = create((set, get) => ({
       } else {
         throw new Error(migrationResult.error || 'Migration failed');
       }
-    } catch (error) {
-      console.error('Failed to migrate:', error);
+    } catch {
       set({ isSyncing: false, error: 'Failed to migrate to hybrid structure' });
-      throw error;
+      throw new Error('Failed to migrate to hybrid structure');
     }
   },
 
@@ -505,7 +472,6 @@ const useCustomerStore = create((set, get) => ({
    */
   syncFromDriveHybrid: async (isSignedIn) => {
     if (!isSignedIn) {
-      console.log('Not signed in, skipping hybrid sync');
       return;
     }
 
@@ -516,8 +482,6 @@ const useCustomerStore = create((set, get) => ({
       const migrationNeeded = await driveService.checkMigrationNeeded();
 
       if (migrationNeeded) {
-        console.log('🚀 Hybrid structure not found - auto-migrating...');
-
         // Get customers from localStorage as the source
         const { customers } = get();
 
@@ -526,31 +490,26 @@ const useCustomerStore = create((set, get) => ({
           const migrationResult = await driveService.migrateToHybridStructure(customers);
 
           if (migrationResult.success) {
-            console.log('✅ Auto-migration successful!');
             // Update customers with any folder IDs that were created/updated
             set({ customers: migrationResult.customers });
             get().saveToLocalStorage();
           } else {
-            console.error('❌ Auto-migration failed:', migrationResult.error);
             throw new Error('Auto-migration failed');
           }
         } else {
           // No local customers - create empty index
-          console.log('No local customers found - creating empty index');
           await driveService.saveCustomersIndex([]);
         }
       }
 
       // Load index from Drive (lightweight, fast)
       const driveIndex = await driveService.loadCustomersIndex();
-      console.log(`✅ Loaded index with ${driveIndex.length} customers (index-only mode)`);
 
       // If index is empty, we're done
       if (driveIndex.length === 0) {
         set({ customers: [] });
         get().saveToLocalStorage();
         set({ isSyncing: false });
-        console.log('No customers in index');
         return;
       }
 
@@ -579,16 +538,11 @@ const useCustomerStore = create((set, get) => ({
       set({ customers: mergedCustomers });
       get().saveToLocalStorage();
 
-      console.log(`✅ Loaded index with ${mergedCustomers.length} customers - Loading full data...`);
-
       // Load full data for customers that don't have it (AWAITED)
       await get().loadMissingCustomerData(driveIndex);
 
       set({ isSyncing: false });
-      console.log(`✅ All customer data synced from Drive (hybrid): ${driveIndex.length}`);
-
-    } catch (error) {
-      console.error('Failed to sync from Drive (hybrid):', error);
+    } catch {
       set({ isSyncing: false, error: 'Failed to sync with Google Drive' });
     }
   },
@@ -619,12 +573,10 @@ const useCustomerStore = create((set, get) => ({
       const driveIsNewer = driveModified > localModified;
 
       if (hasFullData && !driveIsNewer) {
-        console.log(`✓ ${customer.name} already has full data (local is up to date)`);
         return false;
       }
 
       if (hasFullData && driveIsNewer) {
-        console.log(`↻ ${customer.name} has stale local data - fetching from Drive`);
         return true;
       }
 
@@ -632,11 +584,8 @@ const useCustomerStore = create((set, get) => ({
     });
 
     if (customersToLoad.length === 0) {
-      console.log('✅ All customers already have full data');
       return;
     }
-
-    console.log(`📥 Loading full data for ${customersToLoad.length} customers in parallel...`);
 
     // OPTIMIZATION: Load all customers in parallel instead of sequentially
     const loadPromises = customersToLoad.map(async (indexEntry) => {
@@ -647,14 +596,11 @@ const useCustomerStore = create((set, get) => ({
         );
 
         if (fullData) {
-          console.log(`✅ Loaded: ${fullData.name}`);
           return { id: indexEntry.id, data: fullData };
         } else {
-          console.log(`⚠️ No customer.json found for ${indexEntry.name || indexEntry.id}, using index data`);
           return null;
         }
-      } catch (error) {
-        console.error(`❌ Failed to load ${indexEntry.name}:`, error);
+      } catch {
         return null;
       }
     });
@@ -674,7 +620,6 @@ const useCustomerStore = create((set, get) => ({
     // Update state once with all loaded data
     set({ customers: currentCustomers });
     get().saveToLocalStorage();
-    console.log(`✅ Full data loading complete (${results.filter(r => r).length} loaded)`);
   },
 
   /**
@@ -682,7 +627,6 @@ const useCustomerStore = create((set, get) => ({
    */
   saveCustomerToFolder: async (customer, isSignedIn) => {
     if (!isSignedIn || !customer.driveFolderId) {
-      console.log('Cannot save to folder: not signed in or no folder ID');
       return false;
     }
 
@@ -717,10 +661,8 @@ const useCustomerStore = create((set, get) => ({
 
       await driveService.saveCustomersIndex(index);
 
-      console.log(`Saved customer ${customer.name} to folder (hybrid)`);
       return true;
-    } catch (error) {
-      console.error('Failed to save customer to folder:', error);
+    } catch {
       return false;
     }
   },
@@ -730,16 +672,13 @@ const useCustomerStore = create((set, get) => ({
    */
   loadCustomerFromFolder: async (customerId, customerFolderId, isSignedIn) => {
     if (!isSignedIn || !customerFolderId) {
-      console.log('Cannot load from folder: not signed in or no folder ID');
       return null;
     }
 
     try {
       const customerData = await driveService.loadCustomerData(customerId, customerFolderId);
-      console.log(`Loaded customer ${customerId} from folder (hybrid)`);
       return customerData;
-    } catch (error) {
-      console.error('Failed to load customer from folder:', error);
+    } catch {
       return null;
     }
   },

@@ -7,7 +7,7 @@ import './Dashboard.css';
 
 function Dashboard() {
   const { loadFromLocalStorage, selectedCustomerId } = useCustomerStore();
-  const { isInitialized, canLoadData, isUserVerified } = useAuthStore();
+  const { isInitialized, canLoadData } = useAuthStore();
 
   useEffect(() => {
     // Wait for auth to initialize before loading data
@@ -17,12 +17,9 @@ function Dashboard() {
 
     // Only load data if it's safe (user matches data owner or fresh start)
     if (canLoadData()) {
-      console.log('Dashboard: Loading customer data from localStorage');
       loadFromLocalStorage();
-    } else {
-      console.log('Dashboard: Waiting for user verification before loading data');
     }
-  }, [isInitialized, isUserVerified, loadFromLocalStorage, canLoadData]);
+  }, [isInitialized, loadFromLocalStorage, canLoadData]);
 
   return (
     <div className="dashboard">

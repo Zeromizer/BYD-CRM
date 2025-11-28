@@ -103,8 +103,8 @@ function getLegacyDataSummary() {
       summary.excel = Object.keys(parsed).length;
       summary.hasData = summary.hasData || summary.excel > 0;
     }
-  } catch (error) {
-    console.error('Error reading legacy data summary:', error);
+  } catch {
+    // Error reading legacy data
   }
 
   return summary;
@@ -129,8 +129,6 @@ function migrateLegacyData(userEmail) {
     errors: [],
   };
 
-  console.log(`🔄 Starting migration for user: ${normalizedEmail}`);
-
   // Create backup before migration
   try {
     const backup = {
@@ -140,9 +138,8 @@ function migrateLegacyData(userEmail) {
       excel: localStorage.getItem(STORAGE_KEYS.OLD_EXCEL),
     };
     localStorage.setItem(STORAGE_KEYS.MIGRATION_BACKUP, JSON.stringify(backup));
-    console.log('✅ Created migration backup');
-  } catch (error) {
-    console.warn('⚠️ Could not create backup:', error);
+  } catch {
+    // Could not create backup
   }
 
   // Migrate customers
@@ -154,12 +151,10 @@ function migrateLegacyData(userEmail) {
         const userKey = getUserKey(STORAGE_KEYS.CUSTOMERS_PREFIX, normalizedEmail);
         localStorage.setItem(userKey, oldCustomers);
         result.migrated.customers = customers.length;
-        console.log(`✅ Migrated ${customers.length} customers to ${userKey}`);
       }
     }
   } catch (error) {
     result.errors.push(`Customers: ${error.message}`);
-    console.error('❌ Failed to migrate customers:', error);
   }
 
   // Migrate Excel templates
@@ -172,12 +167,10 @@ function migrateLegacyData(userEmail) {
         const userKey = getUserKey(STORAGE_KEYS.EXCEL_PREFIX, normalizedEmail);
         localStorage.setItem(userKey, oldExcel);
         result.migrated.excel = excelCount;
-        console.log(`✅ Migrated ${excelCount} Excel templates to ${userKey}`);
       }
     }
   } catch (error) {
     result.errors.push(`Excel: ${error.message}`);
-    console.error('❌ Failed to migrate Excel templates:', error);
   }
 
   // Mark migration as completed and clean up old keys
@@ -190,11 +183,8 @@ function migrateLegacyData(userEmail) {
 
     // Set current data owner
     setCurrentDataOwner(normalizedEmail);
-
-    console.log('✅ Migration completed successfully');
   } else {
     result.success = false;
-    console.error('❌ Migration completed with errors:', result.errors);
   }
 
   return result;
@@ -216,7 +206,6 @@ function loadUserData(userEmail, dataType) {
       prefix = STORAGE_KEYS.EXCEL_PREFIX;
       break;
     default:
-      console.error('Unknown data type:', dataType);
       return null;
   }
 
@@ -226,8 +215,7 @@ function loadUserData(userEmail, dataType) {
   if (data) {
     try {
       return JSON.parse(data);
-    } catch (error) {
-      console.error(`Failed to parse ${dataType} data:`, error);
+    } catch {
       return null;
     }
   }
@@ -241,7 +229,6 @@ function loadUserData(userEmail, dataType) {
 function saveUserData(userEmail, dataType, data) {
   const normalizedEmail = normalizeEmail(userEmail);
   if (!normalizedEmail) {
-    console.warn(`Cannot save ${dataType}: no user email`);
     return false;
   }
 
@@ -254,7 +241,6 @@ function saveUserData(userEmail, dataType, data) {
       prefix = STORAGE_KEYS.EXCEL_PREFIX;
       break;
     default:
-      console.error('Unknown data type:', dataType);
       return false;
   }
 
@@ -263,8 +249,7 @@ function saveUserData(userEmail, dataType, data) {
   try {
     localStorage.setItem(key, JSON.stringify(data));
     return true;
-  } catch (error) {
-    console.error(`Failed to save ${dataType} data:`, error);
+  } catch {
     return false;
   }
 }
@@ -290,7 +275,6 @@ function clearUserData(userEmail, dataType) {
       clearUserData(userEmail, 'excel');
       return;
     default:
-      console.error('Unknown data type:', dataType);
       return;
   }
 
@@ -334,7 +318,6 @@ function clearLegacyData() {
   localStorage.removeItem(STORAGE_KEYS.OLD_EXCEL);
   // Also remove old forms data if it exists (legacy cleanup)
   localStorage.removeItem('formTemplates');
-  console.log('Cleared legacy data');
 }
 
 /**
@@ -343,7 +326,6 @@ function clearLegacyData() {
 function resetMigration() {
   localStorage.removeItem(STORAGE_KEYS.MIGRATION_COMPLETED);
   localStorage.removeItem(STORAGE_KEYS.MIGRATION_BACKUP);
-  console.log('Migration state reset');
 }
 
 // Export the service

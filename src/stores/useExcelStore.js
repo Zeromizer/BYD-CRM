@@ -23,7 +23,6 @@ const useExcelStore = create((set, get) => ({
       if (userEmail) {
         const templates = userStorage.loadUserData(userEmail, 'excel');
         if (templates && Object.keys(templates).length > 0) {
-          console.log(`Loaded ${Object.keys(templates).length} Excel templates for user: ${userEmail}`);
           set({ excelTemplates: templates });
           return;
         }
@@ -33,11 +32,9 @@ const useExcelStore = create((set, get) => ({
       const stored = localStorage.getItem('excelTemplates');
       if (stored) {
         const templates = JSON.parse(stored);
-        console.log('Loaded Excel templates from legacy localStorage:', Object.keys(templates).length);
         set({ excelTemplates: templates });
       }
-    } catch (error) {
-      console.error('Failed to load Excel templates from localStorage:', error);
+    } catch {
       set({ error: 'Failed to load Excel templates' });
     }
   },
@@ -54,14 +51,11 @@ const useExcelStore = create((set, get) => ({
       if (userEmail) {
         // Save to user-specific storage
         userStorage.saveUserData(userEmail, 'excel', excelTemplates);
-        console.log(`Saved ${Object.keys(excelTemplates).length} Excel templates for user: ${userEmail}`);
       } else {
         // Fall back to legacy storage (offline mode)
         localStorage.setItem('excelTemplates', JSON.stringify(excelTemplates));
-        console.log('Saved Excel templates to legacy localStorage');
       }
-    } catch (error) {
-      console.error('Failed to save Excel templates:', error);
+    } catch {
       set({ error: 'Failed to save Excel templates' });
     }
   },
@@ -83,10 +77,8 @@ const useExcelStore = create((set, get) => ({
       });
       get().saveToLocalStorage();
 
-      console.log('Excel templates synced with Drive successfully');
       return synced;
     } catch (error) {
-      console.error('Failed to sync Excel templates with Drive:', error);
       set({ error: 'Failed to sync with Google Drive', isLoading: false });
       throw error;
     }
@@ -114,19 +106,16 @@ const useExcelStore = create((set, get) => ({
         syncError: null,
         lastSyncTime: new Date().toISOString()
       });
-      console.log('Excel templates saved to Drive');
     } else if (result.offline) {
       set({
         syncStatus: SYNC_STATUS.OFFLINE,
         syncError: 'Offline - will sync when connected'
       });
-      console.log('Excel templates queued for later sync (offline)');
     } else {
       set({
         syncStatus: SYNC_STATUS.FAILED,
         syncError: result.error || 'Failed to sync'
       });
-      console.error('Failed to save Excel templates to Drive:', result.error);
     }
 
     return result;
@@ -236,7 +225,6 @@ const useExcelStore = create((set, get) => ({
    * Clears both user-specific and legacy storage
    */
   clearAllData: () => {
-    console.log('Clearing all Excel templates');
     const userEmail = localStorage.getItem('googleUserEmail');
 
     set({
@@ -255,19 +243,6 @@ const useExcelStore = create((set, get) => ({
 
     // Also clear legacy storage
     localStorage.removeItem('excelTemplates');
-  },
-
-  /**
-   * Subscribe to sync status changes from the queue service
-   */
-  initSyncStatusListener: () => {
-    return syncQueueService.onStatusChange('excel', (status) => {
-      set({
-        syncStatus: status.status,
-        syncError: status.lastError,
-        lastSyncTime: status.lastSyncTime
-      });
-    });
   },
 }));
 
