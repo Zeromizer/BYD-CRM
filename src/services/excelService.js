@@ -127,7 +127,19 @@ class ExcelService {
   formatLoanSummary(loanAmount, interest, tenure) {
     if (!loanAmount && !interest && !tenure) return '';
 
-    const loanStr = loanAmount ? `$${loanAmount}` : '';
+    // Format loan amount with commas
+    let loanStr = '';
+    if (loanAmount) {
+      // Remove any existing formatting and parse as number
+      const numericLoan = parseFloat(loanAmount.toString().replace(/[^0-9.-]/g, ''));
+      if (!isNaN(numericLoan)) {
+        // Format with commas
+        loanStr = `$${numericLoan.toLocaleString('en-US')}`;
+      } else {
+        loanStr = `$${loanAmount}`;
+      }
+    }
+
     const interestStr = interest ? `${interest}%` : '';
     const tenureStr = tenure ? `${tenure} MONTHS` : '';
 
