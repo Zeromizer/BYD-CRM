@@ -7,6 +7,7 @@ import pdfGenerator from '../../../services/pdfGenerator';
 import { getCustomerDataMapping } from '../../../services/fieldMapper';
 import driveService from '../../../services/driveService';
 import ImageSelector from '../ImageSelector/ImageSelector';
+import { useToast } from '../../Toast/Toast';
 import './PrintManager.css';
 
 /**
@@ -23,6 +24,7 @@ import './PrintManager.css';
 function PrintManager({ isOpen, onClose, customer }) {
   const { templates, loadFromLocalStorage } = useDocumentStore();
   const { isSignedIn } = useAuthStore();
+  const toast = useToast();
 
   const [selectedTemplateIds, setSelectedTemplateIds] = useState([]);
   const [doubleSidedTemplates, setDoubleSidedTemplates] = useState({}); // templateId -> { enabled, images: [] }
@@ -96,7 +98,7 @@ function PrintManager({ isOpen, onClose, customer }) {
 
   const handleProceedToImages = () => {
     if (!customer.driveFolderId) {
-      alert('Customer does not have a Google Drive folder. Cannot select images.');
+      toast.warning('Customer does not have a Google Drive folder. Cannot select images.');
       return;
     }
 
@@ -111,12 +113,12 @@ function PrintManager({ isOpen, onClose, customer }) {
 
   const handleGeneratePreview = async () => {
     if (selectedTemplateIds.length === 0) {
-      alert('Please select at least one document template');
+      toast.warning('Please select at least one document template');
       return;
     }
 
     if (!isSignedIn) {
-      alert('Please sign in to Google Drive to access templates');
+      toast.warning('Please sign in to Google Drive to access templates');
       return;
     }
 
@@ -282,11 +284,11 @@ function PrintManager({ isOpen, onClose, customer }) {
       await driveService.uploadFile(filename, blob, customerFolderId);
       console.log('✅ PDF uploaded successfully');
 
-      alert(`PDF saved to Google Drive successfully!\n\nYou can find it in the customer's main folder: ${customer.name}`);
+      toast.success(`PDF saved to Google Drive: ${customer.name}`);
       onClose();
     } catch (err) {
       console.error('❌ Error saving to Drive:', err);
-      alert('Failed to save to Drive: ' + err.message);
+      toast.error('Failed to save to Drive: ' + err.message);
       setStep('preview');
     }
   };

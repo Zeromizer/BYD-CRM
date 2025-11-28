@@ -3,6 +3,7 @@ import useExcelStore from '../../stores/useExcelStore';
 import useAuthStore from '../../stores/useAuthStore';
 import excelService from '../../services/excelService';
 import Modal from '../Modal/Modal';
+import { useToast } from '../Toast/Toast';
 import './ExcelPopulateModal.css';
 
 const FIELD_NAMES = {
@@ -66,6 +67,7 @@ const FIELD_NAMES = {
 function ExcelPopulateModal({ isOpen, onClose, customer }) {
   const { excelTemplates, loadFromLocalStorage } = useExcelStore();
   const { isSignedIn } = useAuthStore();
+  const toast = useToast();
 
   const [selectedTemplateId, setSelectedTemplateId] = useState('');
   const [uploadedFile, setUploadedFile] = useState(null);
@@ -100,7 +102,7 @@ function ExcelPopulateModal({ isOpen, onClose, customer }) {
 
   const handleGenerate = async () => {
     if (!canGenerate) {
-      alert('Please select a template and upload an Excel file (or use a template with a master file)');
+      toast.warning('Please select a template and upload an Excel file (or use a template with a master file)');
       return;
     }
 
@@ -157,26 +159,26 @@ function ExcelPopulateModal({ isOpen, onClose, customer }) {
           const uploadResult = await excelService.uploadFileToDrive(file, customerFolderId, fileName);
           console.log('✅ Upload complete! File ID:', uploadResult.id);
 
-          alert('Excel file generated and saved to Google Drive successfully!\n\nYou can find it in the customer\'s main folder.');
+          toast.success('Excel file saved to Google Drive');
         } catch (error) {
           console.error('❌ Error saving to Drive:', error);
           // Download if Drive save failed
           console.log('⬇️ Falling back to download...');
           excelService.downloadExcelFile(blob, fileName);
-          alert('Excel file generated!\n\nCould not save to Google Drive: ' + error.message);
+          toast.warning('Excel downloaded - could not save to Drive: ' + error.message);
         }
       } else {
         // Just download
         console.log('⬇️ Downloading file (not saving to Drive)...');
         excelService.downloadExcelFile(blob, fileName);
-        alert('Excel file generated and downloaded successfully!');
+        toast.success('Excel file downloaded successfully');
       }
 
       console.log('✅ Excel generation process complete');
       onClose();
     } catch (error) {
       console.error('❌ Error generating Excel file:', error);
-      alert('Failed to generate Excel file: ' + error.message);
+      toast.error('Failed to generate Excel file: ' + error.message);
     } finally {
       setProcessing(false);
     }
