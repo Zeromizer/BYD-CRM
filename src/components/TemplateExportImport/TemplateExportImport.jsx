@@ -7,7 +7,7 @@ import templateExportService from '../../services/templateExportService';
 import './TemplateExportImport.css';
 
 function TemplateExportImport({ isOpen, onClose }) {
-  const { templates: documentTemplates, saveToLocalStorage: saveDocTemplates, loadFromLocalStorage: loadDocTemplates, queueSync: queueDocSync } = useDocumentStore();
+  const { templates: documentTemplates, saveToLocalStorage: saveDocTemplates, loadFromLocalStorage: loadDocTemplates, queueSyncBatch } = useDocumentStore();
   const { excelTemplates, addTemplate: addExcelTemplate } = useExcelStore();
   const { isSignedIn } = useAuthStore();
 
@@ -121,9 +121,10 @@ function TemplateExportImport({ isOpen, onClose }) {
           saveDocTemplates(importResults.documentTemplates.merged);
           loadDocTemplates();
 
-          // Sync each imported document template to Google Drive
-          for (const item of importResults.documentTemplates.imported) {
-            queueDocSync(item.templateId);
+          // Batch sync all imported document templates to Google Drive
+          const templateIds = importResults.documentTemplates.imported.map(item => item.templateId);
+          if (templateIds.length > 0) {
+            queueSyncBatch(templateIds);
           }
 
           results.push({
@@ -160,9 +161,10 @@ function TemplateExportImport({ isOpen, onClose }) {
           saveDocTemplates(docResult.merged);
           loadDocTemplates();
 
-          // Sync each imported document template to Google Drive
-          for (const item of docResult.imported) {
-            queueDocSync(item.templateId);
+          // Batch sync all imported document templates to Google Drive
+          const templateIds = docResult.imported.map(item => item.templateId);
+          if (templateIds.length > 0) {
+            queueSyncBatch(templateIds);
           }
 
           results.push({
