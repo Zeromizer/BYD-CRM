@@ -134,6 +134,174 @@ class DriveService {
   }
 
   /**
+   * OPTIMIZATION Phase 3: Batch validate multiple file IDs in a single request
+   * Uses Google Drive Batch API to reduce HTTP round-trips
+   * @param {string[]} fileIds - Array of file IDs to validate
+   * @returns {Map<string, boolean>} - Map of fileId -> isValid
+   */
+  async _batchValidateIds(fileIds) {
+    if (!fileIds || fileIds.length === 0) {
+      return new Map();
+    }
+
+    // Filter out IDs that are already in TTL cache
+    const idsToValidate = fileIds.filter(id => id && !this._isValidationCacheValid(id));
+    const results = new Map();
+
+    // Add cached results
+    fileIds.forEach(id => {
+      if (id && this._isValidationCacheValid(id)) {
+        results.set(id, true);
+        console.log(`[DriveService] Batch: ID ${id.substring(0, 12)}... valid (from cache)`);
+      }
+    });
+
+    if (idsToValidate.length === 0) {
+      console.log('[DriveService] Batch validation: all IDs already cached');
+      return results;
+    }
+
+    console.log(`[DriveService] 📦 Batch validating ${idsToValidate.length} IDs...`);
+    const startTime = Date.now();
+
+    try {
+      // Create batch request
+      const batch = window.gapi.client.newBatch();
+
+      idsToValidate.forEach((fileId, index) => {
+        batch.add(
+          window.gapi.client.drive.files.get({
+            fileId: fileId,
+            fields: 'id, trashed',
+          }),
+          { id: fileId }
+        );
+      });
+
+      // Execute batch
+      const batchResponse = await batch;
+
+      // Process results
+      Object.entries(batchResponse.result).forEach(([fileId, response]) => {
+        if (response.result && !response.result.trashed) {
+          results.set(fileId, true);
+          this._validatedIds.set(fileId, Date.now());
+        } else {
+          results.set(fileId, false);
+          this._validatedIds.delete(fileId);
+        }
+      });
+
+      const elapsed = Date.now() - startTime;
+      const validCount = [...results.values()].filter(v => v).length;
+      console.log(`[DriveService] 📦 Batch validation complete in ${elapsed}ms: ${validCount}/${fileIds.length} valid`);
+
+      return results;
+    } catch (error) {
+      console.error('[DriveService] Batch validation failed:', error);
+      // Fall back to individual validation
+      for (const fileId of idsToValidate) {
+        const isValid = await this._validateId(fileId);
+        results.set(fileId, isValid);
+      }
+      return results;
+    }
+  }
+
+  /**
+   * OPTIMIZATION Phase 3: Batch fetch multiple file contents in a single request
+   * Uses Google Drive Batch API for media downloads
+   * @param {Array<{id: string, name: string}>} files - Array of file objects with id and name
+   * @returns {Map<string, string>} - Map of fileId -> content
+   */
+  async _batchGetFileContents(files) {
+    if (!files || files.length === 0) {
+      return new Map();
+    }
+
+    // For small batches (1-2 files), use regular parallel fetch
+    if (files.length <= 2) {
+      const results = new Map();
+      await Promise.all(files.map(async (file) => {
+        try {
+          const content = await this.getFileContent(file.id);
+          results.set(file.id, content);
+        } catch (error) {
+          console.error(`Failed to get content for ${file.name}:`, error);
+        }
+      }));
+      return results;
+    }
+
+    console.log(`[DriveService] 📦 Batch fetching ${files.length} file contents...`);
+    const startTime = Date.now();
+    const results = new Map();
+
+    try {
+      // Google Drive batch API doesn't support media downloads directly
+      // So we use parallel fetch with the access token instead
+      const token = window.gapi.client.getToken()?.access_token;
+      if (!token) {
+        throw new Error('No access token available');
+      }
+
+      // Fetch all files in parallel with a concurrency limit
+      const BATCH_SIZE = 5; // Limit concurrent requests to avoid rate limiting
+      for (let i = 0; i < files.length; i += BATCH_SIZE) {
+        const batch = files.slice(i, i + BATCH_SIZE);
+
+        const batchPromises = batch.map(async (file) => {
+          try {
+            const response = await fetch(
+              `https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`,
+              {
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                },
+              }
+            );
+
+            if (response.ok) {
+              const content = await response.text();
+              return { id: file.id, content };
+            } else {
+              console.error(`Failed to fetch ${file.name}: ${response.status}`);
+              return { id: file.id, content: null };
+            }
+          } catch (error) {
+            console.error(`Error fetching ${file.name}:`, error);
+            return { id: file.id, content: null };
+          }
+        });
+
+        const batchResults = await Promise.all(batchPromises);
+        batchResults.forEach(result => {
+          if (result.content !== null) {
+            results.set(result.id, result.content);
+          }
+        });
+      }
+
+      const elapsed = Date.now() - startTime;
+      console.log(`[DriveService] 📦 Batch fetch complete in ${elapsed}ms: ${results.size}/${files.length} files`);
+
+      return results;
+    } catch (error) {
+      console.error('[DriveService] Batch fetch failed:', error);
+      // Fall back to individual fetching
+      for (const file of files) {
+        try {
+          const content = await this.getFileContent(file.id);
+          results.set(file.id, content);
+        } catch (err) {
+          console.error(`Failed to get content for ${file.name}:`, err);
+        }
+      }
+      return results;
+    }
+  }
+
+  /**
    * Clear all cached folder and file IDs (for sign out or account switching)
    */
   clearCache() {
@@ -158,9 +326,10 @@ class DriveService {
   }
 
   /**
-   * OPTIMIZATION Phase 2: Warmup/preload all folder IDs in parallel
+   * OPTIMIZATION Phase 2+3: Warmup/preload all folder IDs in parallel
    * Call this before sync operations to resolve all folder structures upfront
    * This prevents sequential folder resolution during sync
+   * Phase 3: Uses batch validation for cached IDs
    */
   async warmup() {
     // Skip if already warmed up this session
@@ -173,7 +342,19 @@ class DriveService {
     const startTime = Date.now();
 
     try {
-      // Resolve all folder IDs in parallel
+      // Phase 3: If we have persisted IDs, batch validate them first
+      const cachedIds = [
+        this.rootFolderId,
+        this.customersDataFolderId,
+        this.excelFileId,
+      ].filter(id => id);
+
+      if (cachedIds.length > 0) {
+        console.log(`[DriveService] 📦 Batch validating ${cachedIds.length} cached folder IDs...`);
+        await this._batchValidateIds(cachedIds);
+      }
+
+      // Resolve all folder IDs in parallel (will use cache if batch validation succeeded)
       const [rootFolderId, customersDataFolderId, excelFileId] = await Promise.all([
         this.getOrCreateRootFolder(),
         this.getOrCreateCustomersDataFolder(),
@@ -1404,7 +1585,7 @@ class DriveService {
   /**
    * Load document templates from Google Drive
    * Returns an object with template IDs as keys
-   * OPTIMIZED: Loads all templates in parallel for better performance
+   * OPTIMIZED Phase 3: Uses batch file content fetching for better performance
    */
   async loadDocumentTemplatesFromDrive() {
     try {
@@ -1421,31 +1602,24 @@ class DriveService {
         return {};
       }
 
-      console.log(`Loading ${jsonFiles.length} document templates in parallel...`);
+      console.log(`Loading ${jsonFiles.length} document templates...`);
 
-      // OPTIMIZATION: Load all templates in parallel instead of sequentially
-      const loadPromises = jsonFiles.map(async (file) => {
-        try {
-          const content = await this.getFileContent(file.id);
-          const template = JSON.parse(content);
-          if (template && template.id) {
-            return { id: template.id, template };
-          }
-          return null;
-        } catch (error) {
-          console.error(`Failed to load document template ${file.name}:`, error);
-          return null;
-        }
-      });
+      // OPTIMIZATION Phase 3: Use batch file content fetching
+      const contentsMap = await this._batchGetFileContents(jsonFiles);
 
-      // Wait for all templates to load in parallel
-      const results = await Promise.all(loadPromises);
-
-      // Build templates object from results
+      // Build templates object from fetched contents
       const templates = {};
-      for (const result of results) {
-        if (result) {
-          templates[result.id] = result.template;
+      for (const file of jsonFiles) {
+        const content = contentsMap.get(file.id);
+        if (content) {
+          try {
+            const template = JSON.parse(content);
+            if (template && template.id) {
+              templates[template.id] = template;
+            }
+          } catch (parseError) {
+            console.error(`Failed to parse document template ${file.name}:`, parseError);
+          }
         }
       }
 
