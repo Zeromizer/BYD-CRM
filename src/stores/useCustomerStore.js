@@ -612,9 +612,19 @@ const useCustomerStore = create((set, get) => ({
         customer.vsa_makeModel || customer.proposal_model
       );
 
-      if (hasFullData) {
-        console.log(`✓ ${customer.name} already has full data`);
+      // NEW: Check if Drive has newer data than local
+      const driveModified = indexEntry.lastModified ? new Date(indexEntry.lastModified).getTime() : 0;
+      const localModified = customer?.lastModified ? new Date(customer.lastModified).getTime() : 0;
+      const driveIsNewer = driveModified > localModified;
+
+      if (hasFullData && !driveIsNewer) {
+        console.log(`✓ ${customer.name} already has full data (local is up to date)`);
         return false;
+      }
+
+      if (hasFullData && driveIsNewer) {
+        console.log(`↻ ${customer.name} has stale local data - fetching from Drive`);
+        return true;
       }
 
       return true;
