@@ -50,6 +50,10 @@ export const FIELD_TYPES = {
   tradeInOwnerMobile: { label: 'Trade In Owner Mobile', category: 'Trade-In' },
   tradeInInsuranceCompany: { label: 'Trade In Insurance Company', category: 'Trade-In' },
   tradeInPolicyNumber: { label: 'Trade In Policy Number', category: 'Trade-In' },
+  // Trade-In fields with Customer fallback (uses Trade In Owner if available, else Customer)
+  tradeInNameAuto: { label: 'Trade In Name (Auto)', category: 'Trade-In' },
+  tradeInNricAuto: { label: 'Trade In NRIC (Auto)', category: 'Trade-In' },
+  tradeInMobileAuto: { label: 'Trade In Mobile (Auto)', category: 'Trade-In' },
 
   // VSA Details - Delivery Details
   dateOfRegistration: { label: 'Date of Registration', category: 'Delivery' },
@@ -234,6 +238,16 @@ export function getCustomerDataMapping(customer) {
     tradeInCarNo: customer.vsa_tradeInCarNo || '',
     tradeInCarModel: customer.vsa_tradeInCarModel || '',
     tradeInAmount: customer.vsa_tradeInAmount || '',
+    tradeInOwnerNotCustomer: customer.vsa_tradeInOwnerNotCustomer || false,
+    tradeInOwnerName: customer.vsa_tradeInOwnerName || '',
+    tradeInOwnerNric: customer.vsa_tradeInOwnerNric || '',
+    tradeInOwnerMobile: customer.vsa_tradeInOwnerMobile || '',
+    tradeInInsuranceCompany: customer.vsa_tradeInInsuranceCompany || '',
+    tradeInPolicyNumber: customer.vsa_tradeInPolicyNumber || '',
+    // Trade-In Auto fields (use Trade In Owner if available, else Customer)
+    tradeInNameAuto: customer.vsa_tradeInOwnerName || customer.name || '',
+    tradeInNricAuto: customer.vsa_tradeInOwnerNric || customer.nric || '',
+    tradeInMobileAuto: customer.vsa_tradeInOwnerMobile || customer.phone || '',
 
     // VSA Details - Delivery Details
     dateOfRegistration: customer.vsa_dateOfRegistration || '',
