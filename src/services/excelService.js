@@ -122,30 +122,22 @@ class ExcelService {
   }
 
   /**
-   * Format loan summary as "LOAN AMOUNT $X x Y% x Z MONTHS"
+   * Format loan summary as "LOAN AMOUNT $X x Y% x Z MONTHS" or "NO LOAN" if no loan
    */
   formatLoanSummary(loanAmount, interest, tenure) {
-    if (!loanAmount && !interest && !tenure) return '';
-
-    // Format loan amount with commas
-    let loanStr = '';
-    if (loanAmount) {
-      // Remove any existing formatting and parse as number
-      const numericLoan = parseFloat(loanAmount.toString().replace(/[^0-9.-]/g, ''));
-      if (!isNaN(numericLoan)) {
-        // Format with commas
-        loanStr = `$${numericLoan.toLocaleString('en-US')}`;
-      } else {
-        loanStr = `$${loanAmount}`;
-      }
+    // Check if loan amount is empty or zero - return "NO LOAN"
+    const numericLoan = loanAmount ? parseFloat(loanAmount.toString().replace(/[^0-9.-]/g, '')) : 0;
+    if (!numericLoan || numericLoan === 0) {
+      return 'NO LOAN';
     }
 
+    // Format loan amount with commas
+    const loanStr = `$${numericLoan.toLocaleString('en-US')}`;
     const interestStr = interest ? `${interest}%` : '';
     const tenureStr = tenure ? `${tenure} MONTHS` : '';
 
     // Build the string with parts that exist
     const parts = [loanStr, interestStr, tenureStr].filter(p => p);
-    if (parts.length === 0) return '';
 
     return `LOAN AMOUNT ${parts.join(' x ')}`;
   }
