@@ -399,6 +399,7 @@ function FieldMappingModal({ isOpen, onClose, formType, template, onSave }) {
                     <option value="adminFee">Admin Fee</option>
                     <option value="insuranceSubsidy">Insurance Subsidy</option>
                     <option value="monthlyRepayment">Monthly Repayment</option>
+                    <option value="loanSummary">Loan Summary (Combined)</option>
                   </optgroup>
 
                   <optgroup label="Proposal">

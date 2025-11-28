@@ -62,6 +62,7 @@ const FIELD_NAMES = {
   tenure: 'Tenure',
   adminFee: 'Admin Fee',
   insuranceSubsidy: 'Insurance Subsidy',
+  loanSummary: 'Loan Summary (Combined)',
 };
 
 function ExcelPopulateModal({ isOpen, onClose, customer }) {

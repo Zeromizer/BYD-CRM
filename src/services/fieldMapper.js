@@ -76,6 +76,7 @@ export const FIELD_TYPES = {
   adminFee: { label: 'Admin Fee', category: 'Remarks & Loan' },
   insuranceSubsidy: { label: 'Insurance Subsidy', category: 'Remarks & Loan' },
   monthlyRepayment: { label: 'Monthly Repayment', category: 'Remarks & Loan' },
+  loanSummary: { label: 'Loan Summary (Combined)', category: 'Remarks & Loan' },
 
   // Proposal Details
   proposalModel: { label: 'Model', category: 'Proposal' },
