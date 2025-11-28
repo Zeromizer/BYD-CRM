@@ -1,9 +1,103 @@
+import JSZip from 'jszip';
+import authService from './authService';
+
 /**
  * Template Export/Import Service
  * Handles exporting and importing of Document and Excel templates
+ * Supports exporting with master files (ZIP) for seamless sharing
  */
 
 class TemplateExportService {
+  /**
+   * Download file from Google Drive
+   */
+  async downloadFileFromDrive(fileId) {
+    try {
+      const token = authService.getAccessToken();
+      const response = await fetch(
+        `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch file: ${response.statusText}`);
+      }
+
+      return await response.blob();
+    } catch (error) {
+      console.error('Error downloading file from Drive:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Upload file to Google Drive
+   */
+  async uploadFileToGoogleDrive(file, folderId) {
+    const metadata = {
+      name: file.name,
+      parents: [folderId],
+    };
+
+    const form = new FormData();
+    form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+    form.append('file', file);
+
+    const token = authService.getAccessToken();
+    const response = await fetch(
+      'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: form,
+      }
+    );
+
+    const result = await response.json();
+    return result.id;
+  }
+
+  /**
+   * Get or create Excel templates folder in Google Drive
+   */
+  async getOrCreateExcelTemplatesFolder() {
+    try {
+      let folderId = localStorage.getItem('excelTemplatesFolderId');
+
+      if (folderId) {
+        try {
+          await window.gapi.client.drive.files.get({ fileId: folderId });
+          return folderId;
+        } catch {
+          folderId = null;
+        }
+      }
+
+      const metadata = {
+        name: 'BYD CRM - Excel Templates',
+        mimeType: 'application/vnd.google-apps.folder',
+      };
+
+      const response = await window.gapi.client.drive.files.create({
+        resource: metadata,
+        fields: 'id',
+      });
+
+      folderId = response.result.id;
+      localStorage.setItem('excelTemplatesFolderId', folderId);
+      return folderId;
+    } catch (error) {
+      console.error('Error getting/creating Excel templates folder:', error);
+      return null;
+    }
+  }
+
   /**
    * Export all document templates to JSON
    */
@@ -20,6 +114,9 @@ class TemplateExportService {
         canvasData: template.canvasData,
         width: template.width,
         height: template.height,
+        fileId: template.fileId,
+        fileName: template.fileName,
+        dpi: template.dpi,
         createdAt: template.createdAt,
         updatedAt: template.updatedAt,
       }))
@@ -42,6 +139,7 @@ class TemplateExportService {
         fieldMappings: template.fieldMappings,
         hasMasterFile: !!(template.driveFileId && template.driveFileName),
         masterFileName: template.driveFileName || null,
+        driveFileId: template.driveFileId || null,
         createdAt: template.createdAt,
         updatedAt: template.updatedAt,
       }))
@@ -66,6 +164,9 @@ class TemplateExportService {
         canvasData: template.canvasData,
         width: template.width,
         height: template.height,
+        fileId: template.fileId,
+        fileName: template.fileName,
+        dpi: template.dpi,
         createdAt: template.createdAt,
         updatedAt: template.updatedAt,
       })),
@@ -75,12 +176,140 @@ class TemplateExportService {
         fieldMappings: template.fieldMappings,
         hasMasterFile: !!(template.driveFileId && template.driveFileName),
         masterFileName: template.driveFileName || null,
+        driveFileId: template.driveFileId || null,
         createdAt: template.createdAt,
         updatedAt: template.updatedAt,
       }))
     };
 
     return exportData;
+  }
+
+  /**
+   * Export templates with master files as ZIP
+   * Downloads master files from Google Drive and packages them
+   */
+  async exportWithMasterFiles(documentTemplates, excelTemplates, type = 'all', onProgress = null) {
+    const zip = new JSZip();
+    const timestamp = new Date().toISOString().split('T')[0];
+    let masterFilesIncluded = 0;
+    let totalFiles = 0;
+    let processedFiles = 0;
+
+    // Calculate total files for progress
+    if (type === 'all' || type === 'excel') {
+      totalFiles += Object.values(excelTemplates).filter(t => t.driveFileId).length;
+    }
+    if (type === 'all' || type === 'documents') {
+      totalFiles += Object.values(documentTemplates).filter(t => t.fileId).length;
+    }
+
+    // Create manifest with all template configurations
+    let exportData;
+    let filename;
+
+    switch (type) {
+      case 'documents':
+        exportData = this.exportDocumentTemplates(documentTemplates);
+        filename = `document-templates-${timestamp}`;
+        break;
+      case 'excel':
+        exportData = this.exportExcelTemplates(excelTemplates);
+        filename = `excel-templates-${timestamp}`;
+        break;
+      case 'all':
+      default:
+        exportData = this.exportAllTemplates(documentTemplates, excelTemplates);
+        filename = `all-templates-${timestamp}`;
+        break;
+    }
+
+    // Add manifest JSON
+    zip.file('manifest.json', JSON.stringify(exportData, null, 2));
+
+    // Create folders for master files
+    const excelFilesFolder = zip.folder('excel_master_files');
+    const documentFilesFolder = zip.folder('document_background_files');
+
+    // Download and add Excel master files
+    if (type === 'all' || type === 'excel') {
+      for (const template of Object.values(excelTemplates)) {
+        if (template.driveFileId && template.driveFileName) {
+          try {
+            if (onProgress) {
+              onProgress({
+                type: 'downloading',
+                templateName: template.name,
+                fileType: 'excel',
+                current: processedFiles + 1,
+                total: totalFiles
+              });
+            }
+
+            const blob = await this.downloadFileFromDrive(template.driveFileId);
+            // Use template ID in filename to ensure uniqueness
+            const safeFileName = `${template.id}_${template.driveFileName}`;
+            excelFilesFolder.file(safeFileName, blob);
+            masterFilesIncluded++;
+          } catch (error) {
+            console.error(`Failed to download master file for ${template.name}:`, error);
+          }
+          processedFiles++;
+        }
+      }
+    }
+
+    // Download and add Document background files
+    if (type === 'all' || type === 'documents') {
+      for (const template of Object.values(documentTemplates)) {
+        if (template.fileId && template.fileName) {
+          try {
+            if (onProgress) {
+              onProgress({
+                type: 'downloading',
+                templateName: template.name,
+                fileType: 'document',
+                current: processedFiles + 1,
+                total: totalFiles
+              });
+            }
+
+            const blob = await this.downloadFileFromDrive(template.fileId);
+            // Use template ID in filename to ensure uniqueness
+            const safeFileName = `${template.id}_${template.fileName}`;
+            documentFilesFolder.file(safeFileName, blob);
+            masterFilesIncluded++;
+          } catch (error) {
+            console.error(`Failed to download background file for ${template.name}:`, error);
+          }
+          processedFiles++;
+        }
+      }
+    }
+
+    if (onProgress) {
+      onProgress({ type: 'creating_zip' });
+    }
+
+    // Generate and download ZIP
+    const zipBlob = await zip.generateAsync({ type: 'blob' });
+    const url = URL.createObjectURL(zipBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${filename}.zip`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    return {
+      success: true,
+      filename: `${filename}.zip`,
+      documentCount: type === 'excel' ? 0 : Object.keys(documentTemplates).length,
+      excelCount: type === 'documents' ? 0 : Object.keys(excelTemplates).length,
+      masterFilesIncluded,
+      isZip: true
+    };
   }
 
   /**
@@ -101,9 +330,13 @@ class TemplateExportService {
   }
 
   /**
-   * Parse imported JSON file
+   * Parse imported file (JSON or ZIP)
    */
   async parseImportFile(file) {
+    if (file.name.endsWith('.zip')) {
+      return this.parseZipFile(file);
+    }
+
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
 
@@ -111,7 +344,7 @@ class TemplateExportService {
         try {
           const data = JSON.parse(e.target.result);
           resolve(data);
-        } catch (error) {
+        } catch {
           reject(new Error('Invalid JSON file'));
         }
       };
@@ -122,6 +355,94 @@ class TemplateExportService {
 
       reader.readAsText(file);
     });
+  }
+
+  /**
+   * Parse ZIP file containing templates and master files
+   */
+  async parseZipFile(file) {
+    const zip = new JSZip();
+    const zipContent = await zip.loadAsync(file);
+
+    // Look for manifest.json (new format) or individual config files (legacy format)
+    let manifest = null;
+    const masterFiles = {
+      excel: {},      // templateId -> blob
+      document: {}    // templateId -> blob
+    };
+
+    // Try to read manifest.json first
+    if (zipContent.files['manifest.json']) {
+      const manifestContent = await zipContent.files['manifest.json'].async('text');
+      manifest = JSON.parse(manifestContent);
+    }
+
+    // Extract Excel master files
+    const excelFolder = zipContent.folder('excel_master_files');
+    if (excelFolder) {
+      const excelFiles = Object.keys(zipContent.files).filter(
+        f => f.startsWith('excel_master_files/') && !zipContent.files[f].dir
+      );
+
+      for (const filepath of excelFiles) {
+        const filename = filepath.replace('excel_master_files/', '');
+        // Extract template ID from filename (format: templateId_originalFileName)
+        const underscoreIndex = filename.indexOf('_');
+        if (underscoreIndex > 0) {
+          const templateId = filename.substring(0, underscoreIndex);
+          const blob = await zipContent.files[filepath].async('blob');
+          masterFiles.excel[templateId] = {
+            blob,
+            filename: filename.substring(underscoreIndex + 1)
+          };
+        }
+      }
+    }
+
+    // Extract Document background files
+    const docFolder = zipContent.folder('document_background_files');
+    if (docFolder) {
+      const docFiles = Object.keys(zipContent.files).filter(
+        f => f.startsWith('document_background_files/') && !zipContent.files[f].dir
+      );
+
+      for (const filepath of docFiles) {
+        const filename = filepath.replace('document_background_files/', '');
+        // Extract template ID from filename (format: templateId_originalFileName)
+        const underscoreIndex = filename.indexOf('_');
+        if (underscoreIndex > 0) {
+          const templateId = filename.substring(0, underscoreIndex);
+          const blob = await zipContent.files[filepath].async('blob');
+          masterFiles.document[templateId] = {
+            blob,
+            filename: filename.substring(underscoreIndex + 1)
+          };
+        }
+      }
+    }
+
+    // If no manifest, try legacy format (individual config files)
+    if (!manifest) {
+      const jsonFiles = Object.keys(zipContent.files).filter(
+        f => f.endsWith('.json') && !f.includes('/') && !zipContent.files[f].dir
+      );
+
+      if (jsonFiles.length > 0) {
+        // Try to parse the first JSON as manifest
+        const firstJson = await zipContent.files[jsonFiles[0]].async('text');
+        manifest = JSON.parse(firstJson);
+      }
+    }
+
+    if (!manifest) {
+      throw new Error('No valid template manifest found in ZIP file');
+    }
+
+    // Attach master file blobs to manifest
+    manifest._masterFiles = masterFiles;
+    manifest._isZipImport = true;
+
+    return manifest;
   }
 
   /**
@@ -144,9 +465,9 @@ class TemplateExportService {
    */
   importDocumentTemplates(data, existingTemplates) {
     if (data.type === 'document_templates') {
-      return this._mergeTemplates(data.templates, existingTemplates);
+      return this._mergeTemplates(data.templates, existingTemplates, 'document', data._masterFiles);
     } else if (data.type === 'all_templates') {
-      return this._mergeTemplates(data.documentTemplates, existingTemplates);
+      return this._mergeTemplates(data.documentTemplates, existingTemplates, 'document', data._masterFiles);
     }
     throw new Error('No document templates found in import file');
   }
@@ -156,9 +477,9 @@ class TemplateExportService {
    */
   importExcelTemplates(data, existingTemplates) {
     if (data.type === 'excel_templates') {
-      return this._mergeTemplates(data.templates, existingTemplates);
+      return this._mergeTemplates(data.templates, existingTemplates, 'excel', data._masterFiles);
     } else if (data.type === 'all_templates') {
-      return this._mergeTemplates(data.excelTemplates, existingTemplates);
+      return this._mergeTemplates(data.excelTemplates, existingTemplates, 'excel', data._masterFiles);
     }
     throw new Error('No Excel templates found in import file');
   }
@@ -167,7 +488,7 @@ class TemplateExportService {
    * Merge imported templates with existing ones
    * Handles conflicts by renaming duplicates
    */
-  _mergeTemplates(importedTemplates, existingTemplates) {
+  _mergeTemplates(importedTemplates, existingTemplates, templateType = 'excel', masterFiles = null) {
     const existingNames = Object.values(existingTemplates).map(t => t.name);
     const merged = { ...existingTemplates };
     const imported = [];
@@ -182,6 +503,9 @@ class TemplateExportService {
         counter++;
       }
 
+      // Add to existing names to prevent duplicate renaming
+      existingNames.push(finalName);
+
       // Generate new ID to avoid conflicts
       const newId = this._generateId();
       const newTemplate = {
@@ -189,20 +513,249 @@ class TemplateExportService {
         id: newId,
         name: finalName,
         importedAt: new Date().toISOString(),
-        // Remove Drive-specific fields that won't work in new account
-        driveFileId: undefined,
-        driveFileName: template.masterFileName || template.driveFileName,
+        _originalId: template.id, // Keep original ID for master file matching
       };
+
+      // For Excel templates
+      if (templateType === 'excel') {
+        newTemplate.driveFileId = undefined;
+        newTemplate.driveFileName = template.masterFileName || template.driveFileName;
+
+        // Check if we have a master file blob for this template
+        if (masterFiles && masterFiles.excel && masterFiles.excel[template.id]) {
+          newTemplate._masterFileBlob = masterFiles.excel[template.id].blob;
+          newTemplate._masterFileName = masterFiles.excel[template.id].filename;
+        }
+      }
+
+      // For Document templates
+      if (templateType === 'document') {
+        newTemplate.fileId = undefined;
+
+        // Check if we have a background file blob for this template
+        if (masterFiles && masterFiles.document && masterFiles.document[template.id]) {
+          newTemplate._backgroundFileBlob = masterFiles.document[template.id].blob;
+          newTemplate._backgroundFileName = masterFiles.document[template.id].filename;
+        }
+      }
 
       merged[newId] = newTemplate;
       imported.push({
         originalName: template.name,
         newName: finalName,
         renamed: finalName !== template.name,
+        hasMasterFile: templateType === 'excel' ? !!newTemplate._masterFileBlob : !!newTemplate._backgroundFileBlob,
+        templateId: newId,
       });
     }
 
     return { merged, imported };
+  }
+
+  /**
+   * Import templates with master files from ZIP
+   * Uploads master files to Google Drive and links them
+   */
+  async importWithMasterFiles(data, existingDocTemplates, existingExcelTemplates, onProgress = null) {
+    const results = {
+      documentTemplates: null,
+      excelTemplates: null,
+      masterFilesUploaded: 0,
+      errors: []
+    };
+
+    // Get or create Excel templates folder
+    let excelFolderId = null;
+    try {
+      excelFolderId = await this.getOrCreateExcelTemplatesFolder();
+    } catch (error) {
+      console.error('Failed to get Excel templates folder:', error);
+    }
+
+    // Import document templates if present
+    if (data.type === 'document_templates' || data.type === 'all_templates') {
+      const docResult = this.importDocumentTemplates(data, existingDocTemplates);
+
+      // Upload background files for document templates
+      for (const item of docResult.imported) {
+        const template = docResult.merged[item.templateId];
+        if (template._backgroundFileBlob) {
+          try {
+            if (onProgress) {
+              onProgress({
+                type: 'uploading',
+                templateName: template.name,
+                fileType: 'document'
+              });
+            }
+
+            // Upload to Document Templates folder
+            const file = new File(
+              [template._backgroundFileBlob],
+              template._backgroundFileName || template.fileName,
+              { type: 'application/pdf' }
+            );
+
+            // Use driveService to upload document background
+            const fileId = await this.uploadDocumentBackgroundFile(file);
+
+            if (fileId) {
+              template.fileId = fileId;
+              template.fileName = file.name;
+              results.masterFilesUploaded++;
+            }
+          } catch (error) {
+            console.error(`Failed to upload background for ${template.name}:`, error);
+            results.errors.push(`${template.name}: ${error.message}`);
+          }
+
+          // Clean up blob from template
+          delete template._backgroundFileBlob;
+          delete template._backgroundFileName;
+        }
+        delete template._originalId;
+      }
+
+      results.documentTemplates = docResult;
+    }
+
+    // Import Excel templates if present
+    if (data.type === 'excel_templates' || data.type === 'all_templates') {
+      const excelResult = this.importExcelTemplates(data, existingExcelTemplates);
+
+      // Upload master files for Excel templates
+      if (excelFolderId) {
+        for (const item of excelResult.imported) {
+          const template = excelResult.merged[item.templateId];
+          if (template._masterFileBlob) {
+            try {
+              if (onProgress) {
+                onProgress({
+                  type: 'uploading',
+                  templateName: template.name,
+                  fileType: 'excel'
+                });
+              }
+
+              const file = new File(
+                [template._masterFileBlob],
+                template._masterFileName || template.driveFileName,
+                { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }
+              );
+
+              const fileId = await this.uploadFileToGoogleDrive(file, excelFolderId);
+
+              if (fileId) {
+                template.driveFileId = fileId;
+                template.driveFileName = file.name;
+                results.masterFilesUploaded++;
+              }
+            } catch (error) {
+              console.error(`Failed to upload master file for ${template.name}:`, error);
+              results.errors.push(`${template.name}: ${error.message}`);
+            }
+
+            // Clean up blob from template
+            delete template._masterFileBlob;
+            delete template._masterFileName;
+          }
+          delete template._originalId;
+        }
+      }
+
+      results.excelTemplates = excelResult;
+    }
+
+    return results;
+  }
+
+  /**
+   * Upload document background file to Google Drive
+   */
+  async uploadDocumentBackgroundFile(file) {
+    try {
+      // Get or create BYD_CRM_Data folder
+      let dataFolderId = localStorage.getItem('bydCrmDataFolderId');
+
+      if (!dataFolderId) {
+        // Search for existing folder
+        const searchResponse = await window.gapi.client.drive.files.list({
+          q: "name='BYD_CRM_Data' and mimeType='application/vnd.google-apps.folder' and trashed=false",
+          fields: 'files(id, name)',
+        });
+
+        if (searchResponse.result.files && searchResponse.result.files.length > 0) {
+          dataFolderId = searchResponse.result.files[0].id;
+        } else {
+          // Create the folder
+          const createResponse = await window.gapi.client.drive.files.create({
+            resource: {
+              name: 'BYD_CRM_Data',
+              mimeType: 'application/vnd.google-apps.folder',
+            },
+            fields: 'id',
+          });
+          dataFolderId = createResponse.result.id;
+        }
+        localStorage.setItem('bydCrmDataFolderId', dataFolderId);
+      }
+
+      // Get or create Document Templates folder inside BYD_CRM_Data
+      let docFolderId = localStorage.getItem('documentTemplatesFolderId');
+
+      if (!docFolderId) {
+        const searchResponse = await window.gapi.client.drive.files.list({
+          q: `name='Document Templates' and '${dataFolderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
+          fields: 'files(id, name)',
+        });
+
+        if (searchResponse.result.files && searchResponse.result.files.length > 0) {
+          docFolderId = searchResponse.result.files[0].id;
+        } else {
+          const createResponse = await window.gapi.client.drive.files.create({
+            resource: {
+              name: 'Document Templates',
+              mimeType: 'application/vnd.google-apps.folder',
+              parents: [dataFolderId],
+            },
+            fields: 'id',
+          });
+          docFolderId = createResponse.result.id;
+        }
+        localStorage.setItem('documentTemplatesFolderId', docFolderId);
+      }
+
+      // Get or create Background Images folder
+      let bgFolderId = localStorage.getItem('documentBgFolderId');
+
+      if (!bgFolderId) {
+        const searchResponse = await window.gapi.client.drive.files.list({
+          q: `name='Background Images' and '${docFolderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
+          fields: 'files(id, name)',
+        });
+
+        if (searchResponse.result.files && searchResponse.result.files.length > 0) {
+          bgFolderId = searchResponse.result.files[0].id;
+        } else {
+          const createResponse = await window.gapi.client.drive.files.create({
+            resource: {
+              name: 'Background Images',
+              mimeType: 'application/vnd.google-apps.folder',
+              parents: [docFolderId],
+            },
+            fields: 'id',
+          });
+          bgFolderId = createResponse.result.id;
+        }
+        localStorage.setItem('documentBgFolderId', bgFolderId);
+      }
+
+      // Upload the file
+      return await this.uploadFileToGoogleDrive(file, bgFolderId);
+    } catch (error) {
+      console.error('Error uploading document background file:', error);
+      throw error;
+    }
   }
 
   /**
@@ -213,7 +766,7 @@ class TemplateExportService {
   }
 
   /**
-   * Export templates and download
+   * Export templates and download (JSON only - legacy method)
    */
   exportAndDownload(documentTemplates, excelTemplates, type = 'all') {
     let data;
@@ -243,6 +796,13 @@ class TemplateExportService {
       documentCount: type === 'excel' ? 0 : Object.keys(documentTemplates).length,
       excelCount: type === 'documents' ? 0 : Object.keys(excelTemplates).length,
     };
+  }
+
+  /**
+   * Check if signed in to Google
+   */
+  isSignedIn() {
+    return !!authService.getAccessToken();
   }
 }
 
