@@ -160,6 +160,24 @@
   flex: 1;
 }
 
+.action-menu-divider {
+  height: 1px;
+  background: var(--color-border-light);
+  margin: 8px 0;
+}
+
+.action-menu-item-danger {
+  color: var(--color-error);
+}
+
+.action-menu-item-danger:hover {
+  background: #fee2e2;
+}
+
+.action-menu-item-danger svg {
+  stroke: var(--color-error);
+}
+
 .btn-secondary {
   background: #f5f5f5;
   color: var(--color-text-on-card);
