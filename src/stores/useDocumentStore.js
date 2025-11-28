@@ -102,19 +102,6 @@ const useDocumentStore = create((set, get) => ({
   },
 
   /**
-   * Add multiple templates to sync queue (batch operation)
-   * More efficient than calling queueSync multiple times
-   */
-  queueSyncBatch: (templateIds) => {
-    const { syncQueue } = get();
-    const newIds = templateIds.filter(id => !syncQueue.includes(id));
-    if (newIds.length > 0) {
-      set({ syncQueue: [...syncQueue, ...newIds] });
-      get().processSyncQueue();
-    }
-  },
-
-  /**
    * Process sync queue
    */
   processSyncQueue: async () => {
