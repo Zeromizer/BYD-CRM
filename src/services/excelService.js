@@ -48,6 +48,16 @@ class ExcelService {
       tradeInCarNo: customer.vsa_tradeInCarNo || '',
       tradeInCarModel: customer.vsa_tradeInCarModel || '',
       tradeInAmount: customer.vsa_tradeInAmount || '',
+      tradeInOwnerNotCustomer: customer.vsa_tradeInOwnerNotCustomer || '',
+      tradeInOwnerName: customer.vsa_tradeInOwnerName || '',
+      tradeInOwnerNric: customer.vsa_tradeInOwnerNric || '',
+      tradeInOwnerMobile: customer.vsa_tradeInOwnerMobile || '',
+      tradeInInsuranceCompany: customer.vsa_tradeInInsuranceCompany || '',
+      tradeInPolicyNumber: customer.vsa_tradeInPolicyNumber || '',
+      // Trade-In Auto fields - use owner details if different, else customer details
+      tradeInNameAuto: customer.vsa_tradeInOwnerNotCustomer ? (customer.vsa_tradeInOwnerName || '') : (customer.name || ''),
+      tradeInNricAuto: customer.vsa_tradeInOwnerNotCustomer ? (customer.vsa_tradeInOwnerNric || '') : (customer.nric || ''),
+      tradeInMobileAuto: customer.vsa_tradeInOwnerNotCustomer ? (customer.vsa_tradeInOwnerMobile || '') : (customer.phone || ''),
 
       // VSA Details - Delivery Details
       dateOfRegistration: customer.vsa_dateOfRegistration || '',
@@ -94,6 +104,9 @@ class ExcelService {
       proposalBenefit5: customer.proposal_benefit5 || '',
       proposalBenefitsGiven: customer.proposal_benefitsGiven || '',
       proposalRemarks: customer.proposal_remarks || '',
+
+      // Guarantor fields (extracted from guarantors array)
+      ...this.extractGuarantorFields(customer.guarantors),
     };
 
     return dataMapping;
@@ -123,6 +136,26 @@ class ExcelService {
     if (parts.length === 0) return '';
 
     return `LOAN AMOUNT ${parts.join(' x ')}`;
+  }
+
+  /**
+   * Extract guarantor fields from guarantors array
+   */
+  extractGuarantorFields(guarantors) {
+    const fields = {};
+    for (let i = 0; i < 5; i++) {
+      const num = i + 1;
+      const g = guarantors?.[i] || {};
+      fields[`guarantor${num}Name`] = g.name || '';
+      fields[`guarantor${num}Phone`] = g.phone || '';
+      fields[`guarantor${num}Email`] = g.email || '';
+      fields[`guarantor${num}Nric`] = g.nric || '';
+      fields[`guarantor${num}Occupation`] = g.occupation || '';
+      fields[`guarantor${num}Dob`] = g.dob || '';
+      fields[`guarantor${num}Address`] = g.address || '';
+      fields[`guarantor${num}AddressContinue`] = g.addressContinue || '';
+    }
+    return fields;
   }
 
   /**

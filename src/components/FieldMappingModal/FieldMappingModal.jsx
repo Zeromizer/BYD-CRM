@@ -40,6 +40,15 @@ const FIELD_NAMES = {
   tradeInCarNo: 'Trade in Car No',
   tradeInCarModel: 'Trade in Car Model',
   tradeInAmount: 'Trade In Amount',
+  tradeInOwnerNotCustomer: 'Trade-In Owner Different',
+  tradeInOwnerName: 'Trade-In Owner Name',
+  tradeInOwnerNric: 'Trade-In Owner NRIC',
+  tradeInOwnerMobile: 'Trade-In Owner Mobile',
+  tradeInInsuranceCompany: 'Trade-In Insurance Company',
+  tradeInPolicyNumber: 'Trade-In Policy Number',
+  tradeInNameAuto: 'Trade-In Name (Auto)',
+  tradeInNricAuto: 'Trade-In NRIC (Auto)',
+  tradeInMobileAuto: 'Trade-In Mobile (Auto)',
 
   // VSA Details - Delivery Details
   dateOfRegistration: 'Date of Registration',
@@ -62,6 +71,7 @@ const FIELD_NAMES = {
   adminFee: 'Admin Fee',
   insuranceSubsidy: 'Insurance Subsidy',
   monthlyRepayment: 'Monthly Repayment',
+  loanSummary: 'Loan Summary (Combined)',
 
   // Proposal Details
   proposalModel: 'Proposal - Model',
@@ -85,6 +95,56 @@ const FIELD_NAMES = {
   proposalBenefit5: 'Proposal - Benefit 5',
   proposalBenefitsGiven: 'Proposal - Benefits Given',
   proposalRemarks: 'Proposal - Remarks',
+
+  // Guarantor 1
+  guarantor1Name: 'Guarantor 1 - Name',
+  guarantor1Phone: 'Guarantor 1 - Phone',
+  guarantor1Email: 'Guarantor 1 - Email',
+  guarantor1Nric: 'Guarantor 1 - NRIC',
+  guarantor1Occupation: 'Guarantor 1 - Occupation',
+  guarantor1Dob: 'Guarantor 1 - DOB',
+  guarantor1Address: 'Guarantor 1 - Address',
+  guarantor1AddressContinue: 'Guarantor 1 - Address Continue',
+
+  // Guarantor 2
+  guarantor2Name: 'Guarantor 2 - Name',
+  guarantor2Phone: 'Guarantor 2 - Phone',
+  guarantor2Email: 'Guarantor 2 - Email',
+  guarantor2Nric: 'Guarantor 2 - NRIC',
+  guarantor2Occupation: 'Guarantor 2 - Occupation',
+  guarantor2Dob: 'Guarantor 2 - DOB',
+  guarantor2Address: 'Guarantor 2 - Address',
+  guarantor2AddressContinue: 'Guarantor 2 - Address Continue',
+
+  // Guarantor 3
+  guarantor3Name: 'Guarantor 3 - Name',
+  guarantor3Phone: 'Guarantor 3 - Phone',
+  guarantor3Email: 'Guarantor 3 - Email',
+  guarantor3Nric: 'Guarantor 3 - NRIC',
+  guarantor3Occupation: 'Guarantor 3 - Occupation',
+  guarantor3Dob: 'Guarantor 3 - DOB',
+  guarantor3Address: 'Guarantor 3 - Address',
+  guarantor3AddressContinue: 'Guarantor 3 - Address Continue',
+
+  // Guarantor 4
+  guarantor4Name: 'Guarantor 4 - Name',
+  guarantor4Phone: 'Guarantor 4 - Phone',
+  guarantor4Email: 'Guarantor 4 - Email',
+  guarantor4Nric: 'Guarantor 4 - NRIC',
+  guarantor4Occupation: 'Guarantor 4 - Occupation',
+  guarantor4Dob: 'Guarantor 4 - DOB',
+  guarantor4Address: 'Guarantor 4 - Address',
+  guarantor4AddressContinue: 'Guarantor 4 - Address Continue',
+
+  // Guarantor 5
+  guarantor5Name: 'Guarantor 5 - Name',
+  guarantor5Phone: 'Guarantor 5 - Phone',
+  guarantor5Email: 'Guarantor 5 - Email',
+  guarantor5Nric: 'Guarantor 5 - NRIC',
+  guarantor5Occupation: 'Guarantor 5 - Occupation',
+  guarantor5Dob: 'Guarantor 5 - DOB',
+  guarantor5Address: 'Guarantor 5 - Address',
+  guarantor5AddressContinue: 'Guarantor 5 - Address Continue',
 
   custom: 'Custom Value',
 };
@@ -374,6 +434,15 @@ function FieldMappingModal({ isOpen, onClose, formType, template, onSave }) {
                     <option value="tradeInCarNo">Trade in Car No</option>
                     <option value="tradeInCarModel">Trade in Car Model</option>
                     <option value="tradeInAmount">Trade In Amount</option>
+                    <option value="tradeInOwnerNotCustomer">Trade-In Owner Different</option>
+                    <option value="tradeInOwnerName">Trade-In Owner Name</option>
+                    <option value="tradeInOwnerNric">Trade-In Owner NRIC</option>
+                    <option value="tradeInOwnerMobile">Trade-In Owner Mobile</option>
+                    <option value="tradeInInsuranceCompany">Trade-In Insurance Company</option>
+                    <option value="tradeInPolicyNumber">Trade-In Policy Number</option>
+                    <option value="tradeInNameAuto">Trade-In Name (Auto)</option>
+                    <option value="tradeInNricAuto">Trade-In NRIC (Auto)</option>
+                    <option value="tradeInMobileAuto">Trade-In Mobile (Auto)</option>
                   </optgroup>
 
                   <optgroup label="VSA - Delivery Details">
@@ -424,6 +493,61 @@ function FieldMappingModal({ isOpen, onClose, formType, template, onSave }) {
                     <option value="proposalBenefit5">Benefit 5</option>
                     <option value="proposalBenefitsGiven">Benefits Given</option>
                     <option value="proposalRemarks">Remarks</option>
+                  </optgroup>
+
+                  <optgroup label="Guarantor 1">
+                    <option value="guarantor1Name">Guarantor 1 - Name</option>
+                    <option value="guarantor1Phone">Guarantor 1 - Phone</option>
+                    <option value="guarantor1Email">Guarantor 1 - Email</option>
+                    <option value="guarantor1Nric">Guarantor 1 - NRIC</option>
+                    <option value="guarantor1Occupation">Guarantor 1 - Occupation</option>
+                    <option value="guarantor1Dob">Guarantor 1 - DOB</option>
+                    <option value="guarantor1Address">Guarantor 1 - Address</option>
+                    <option value="guarantor1AddressContinue">Guarantor 1 - Address Continue</option>
+                  </optgroup>
+
+                  <optgroup label="Guarantor 2">
+                    <option value="guarantor2Name">Guarantor 2 - Name</option>
+                    <option value="guarantor2Phone">Guarantor 2 - Phone</option>
+                    <option value="guarantor2Email">Guarantor 2 - Email</option>
+                    <option value="guarantor2Nric">Guarantor 2 - NRIC</option>
+                    <option value="guarantor2Occupation">Guarantor 2 - Occupation</option>
+                    <option value="guarantor2Dob">Guarantor 2 - DOB</option>
+                    <option value="guarantor2Address">Guarantor 2 - Address</option>
+                    <option value="guarantor2AddressContinue">Guarantor 2 - Address Continue</option>
+                  </optgroup>
+
+                  <optgroup label="Guarantor 3">
+                    <option value="guarantor3Name">Guarantor 3 - Name</option>
+                    <option value="guarantor3Phone">Guarantor 3 - Phone</option>
+                    <option value="guarantor3Email">Guarantor 3 - Email</option>
+                    <option value="guarantor3Nric">Guarantor 3 - NRIC</option>
+                    <option value="guarantor3Occupation">Guarantor 3 - Occupation</option>
+                    <option value="guarantor3Dob">Guarantor 3 - DOB</option>
+                    <option value="guarantor3Address">Guarantor 3 - Address</option>
+                    <option value="guarantor3AddressContinue">Guarantor 3 - Address Continue</option>
+                  </optgroup>
+
+                  <optgroup label="Guarantor 4">
+                    <option value="guarantor4Name">Guarantor 4 - Name</option>
+                    <option value="guarantor4Phone">Guarantor 4 - Phone</option>
+                    <option value="guarantor4Email">Guarantor 4 - Email</option>
+                    <option value="guarantor4Nric">Guarantor 4 - NRIC</option>
+                    <option value="guarantor4Occupation">Guarantor 4 - Occupation</option>
+                    <option value="guarantor4Dob">Guarantor 4 - DOB</option>
+                    <option value="guarantor4Address">Guarantor 4 - Address</option>
+                    <option value="guarantor4AddressContinue">Guarantor 4 - Address Continue</option>
+                  </optgroup>
+
+                  <optgroup label="Guarantor 5">
+                    <option value="guarantor5Name">Guarantor 5 - Name</option>
+                    <option value="guarantor5Phone">Guarantor 5 - Phone</option>
+                    <option value="guarantor5Email">Guarantor 5 - Email</option>
+                    <option value="guarantor5Nric">Guarantor 5 - NRIC</option>
+                    <option value="guarantor5Occupation">Guarantor 5 - Occupation</option>
+                    <option value="guarantor5Dob">Guarantor 5 - DOB</option>
+                    <option value="guarantor5Address">Guarantor 5 - Address</option>
+                    <option value="guarantor5AddressContinue">Guarantor 5 - Address Continue</option>
                   </optgroup>
 
                   <optgroup label="Other">
