@@ -562,12 +562,13 @@ const useCustomerStore = create((set, get) => ({
       const mergedCustomers = driveIndex.map(indexEntry => {
         const localData = localMap.get(indexEntry.id);
         if (localData) {
-          // Use local data but update metadata from index
+          // Use local data but update folder metadata from index
+          // IMPORTANT: Keep local lastModified so we can compare with Drive later
           return {
             ...localData,
             driveFolderId: indexEntry.driveFolderId || localData.driveFolderId,
             driveFolderLink: indexEntry.driveFolderLink || localData.driveFolderLink,
-            lastModified: indexEntry.lastModified,
+            // Don't overwrite lastModified - keep local value for comparison
           };
         }
         // New customer in Drive, use index data (will load full data immediately)
