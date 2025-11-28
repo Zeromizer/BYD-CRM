@@ -416,6 +416,62 @@ function VsaDetailsModal({ isOpen, onClose, customer, onSave }) {
                   placeholder="e.g., $50,000"
                 />
               </div>
+
+              <div className="form-group checkbox-group">
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={vsaData.tradeInOwnerNotCustomer || false}
+                    onChange={(e) => handleChange('tradeInOwnerNotCustomer', e.target.checked)}
+                  />
+                  <span>Trade In Owner is not Customer</span>
+                </label>
+              </div>
+
+              {vsaData.tradeInOwnerNotCustomer && (
+                <>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Trade In Owner Name</label>
+                      <input
+                        type="text"
+                        value={vsaData.tradeInOwnerName || ''}
+                        onChange={(e) => handleChange('tradeInOwnerName', e.target.value)}
+                        placeholder="e.g., John Doe"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Trade In Owner NRIC</label>
+                      <input
+                        type="text"
+                        value={vsaData.tradeInOwnerNric || ''}
+                        onChange={(e) => handleChange('tradeInOwnerNric', e.target.value)}
+                        placeholder="e.g., S1234567A"
+                      />
+                    </div>
+                  </div>
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>Trade In Insurance Company</label>
+                      <input
+                        type="text"
+                        value={vsaData.tradeInInsuranceCompany || ''}
+                        onChange={(e) => handleChange('tradeInInsuranceCompany', e.target.value)}
+                        placeholder="e.g., AXA, NTUC Income"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Trade In Policy Number</label>
+                      <input
+                        type="text"
+                        value={vsaData.tradeInPolicyNumber || ''}
+                        onChange={(e) => handleChange('tradeInPolicyNumber', e.target.value)}
+                        placeholder="e.g., POL-123456"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           )}
 

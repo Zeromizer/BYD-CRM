@@ -44,6 +44,11 @@ export const FIELD_TYPES = {
   tradeInCarNo: { label: 'Trade in Car No', category: 'Trade-In' },
   tradeInCarModel: { label: 'Trade in Car Model', category: 'Trade-In' },
   tradeInAmount: { label: 'Trade In Amount', category: 'Trade-In' },
+  tradeInOwnerNotCustomer: { label: 'Trade In Owner Not Customer', category: 'Trade-In' },
+  tradeInOwnerName: { label: 'Trade In Owner Name', category: 'Trade-In' },
+  tradeInOwnerNric: { label: 'Trade In Owner NRIC', category: 'Trade-In' },
+  tradeInInsuranceCompany: { label: 'Trade In Insurance Company', category: 'Trade-In' },
+  tradeInPolicyNumber: { label: 'Trade In Policy Number', category: 'Trade-In' },
 
   // VSA Details - Delivery Details
   dateOfRegistration: { label: 'Date of Registration', category: 'Delivery' },
