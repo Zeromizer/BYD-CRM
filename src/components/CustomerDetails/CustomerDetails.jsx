@@ -22,6 +22,7 @@ const VEHICLE_MODELS = [
   'BYD E6 7-Seater',
   'BYD M6 7-Seater',
   'BYD M6 Carbon Edge',
+  'BYD Sealion 7 Dynamic',
   'BYD Sealion 7 Premium',
   'BYD Sealion 7 Performance',
 ];
