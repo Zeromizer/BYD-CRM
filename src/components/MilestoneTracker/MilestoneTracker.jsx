@@ -11,14 +11,28 @@ import {
 import './MilestoneTracker.css';
 
 function MilestoneTracker({ customer, onSave }) {
-  const { updateChecklistItem, setCurrentMilestone, saveToLocalStorage, saveCustomerToFolder } = useCustomerStore();
+  const { updateCustomer, saveToLocalStorage, saveCustomerToFolder } = useCustomerStore();
   const { isSignedIn } = useAuthStore();
   const [expandedMilestone, setExpandedMilestone] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Get the checklist state, initializing if needed
-  const checklistState = customer?.checklist || getDefaultChecklistState();
-  const currentMilestone = checklistState.currentMilestone || 'test_drive';
+  // Local state for editing (not synced until save)
+  const [localChecklist, setLocalChecklist] = useState(() => {
+    return customer?.checklist || getDefaultChecklistState();
+  });
+
+  // Track if there are unsaved changes
+  const [hasChanges, setHasChanges] = useState(false);
+
+  // Reset local state when customer changes
+  useEffect(() => {
+    const newChecklist = customer?.checklist || getDefaultChecklistState();
+    setLocalChecklist(newChecklist);
+    setHasChanges(false);
+  }, [customer?.id]);
+
+  // Get current milestone from local state
+  const currentMilestone = localChecklist.currentMilestone || 'test_drive';
 
   // Auto-expand the current milestone on first render
   useEffect(() => {
@@ -31,60 +45,58 @@ function MilestoneTracker({ customer, onSave }) {
     setExpandedMilestone(expandedMilestone === milestoneId ? null : milestoneId);
   };
 
-  const handleSetCurrentMilestone = async (milestoneId) => {
-    if (!customer) return;
+  // Update local state only (no sync)
+  const handleSetCurrentMilestone = (milestoneId) => {
+    setLocalChecklist((prev) => ({
+      ...prev,
+      currentMilestone: milestoneId,
+    }));
+    setHasChanges(true);
+  };
+
+  // Update local state only (no sync)
+  const handleChecklistToggle = (milestoneId, itemId, checked) => {
+    setLocalChecklist((prev) => ({
+      ...prev,
+      [milestoneId]: {
+        ...(prev[milestoneId] || {}),
+        [itemId]: checked,
+      },
+    }));
+    setHasChanges(true);
+  };
+
+  // Save all changes to store and sync
+  const handleSaveChanges = async () => {
+    if (!customer || !hasChanges) return;
 
     setIsSaving(true);
     try {
-      setCurrentMilestone(customer.id, milestoneId);
+      // Update the customer with new checklist
+      updateCustomer(customer.id, { checklist: localChecklist });
       saveToLocalStorage();
 
       // Sync to Drive if signed in
       if (isSignedIn && customer.driveFolderId) {
         const updatedCustomer = {
           ...customer,
-          checklist: {
-            ...checklistState,
-            currentMilestone: milestoneId,
-          },
+          checklist: localChecklist,
         };
         await saveCustomerToFolder(updatedCustomer, isSignedIn);
       }
 
+      setHasChanges(false);
       if (onSave) onSave();
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleChecklistToggle = async (milestoneId, itemId, checked) => {
-    if (!customer) return;
-
-    setIsSaving(true);
-    try {
-      updateChecklistItem(customer.id, milestoneId, itemId, checked);
-      saveToLocalStorage();
-
-      // Sync to Drive if signed in
-      if (isSignedIn && customer.driveFolderId) {
-        const updatedChecklist = {
-          ...checklistState,
-          [milestoneId]: {
-            ...(checklistState[milestoneId] || {}),
-            [itemId]: checked,
-          },
-        };
-        const updatedCustomer = {
-          ...customer,
-          checklist: updatedChecklist,
-        };
-        await saveCustomerToFolder(updatedCustomer, isSignedIn);
-      }
-
-      if (onSave) onSave();
-    } finally {
-      setIsSaving(false);
-    }
+  // Cancel and revert to saved state
+  const handleCancel = () => {
+    const savedChecklist = customer?.checklist || getDefaultChecklistState();
+    setLocalChecklist(savedChecklist);
+    setHasChanges(false);
   };
 
   const getMilestoneIndex = (milestoneId) => {
@@ -95,14 +107,37 @@ function MilestoneTracker({ customer, onSave }) {
 
   return (
     <div className="milestone-tracker">
+      {/* Save/Cancel Actions Bar */}
+      {hasChanges && (
+        <div className="milestone-actions-bar">
+          <span className="unsaved-indicator">You have unsaved changes</span>
+          <div className="milestone-actions-buttons">
+            <button
+              className="btn btn-secondary"
+              onClick={handleCancel}
+              disabled={isSaving}
+            >
+              Cancel
+            </button>
+            <button
+              className="btn btn-primary"
+              onClick={handleSaveChanges}
+              disabled={isSaving}
+            >
+              {isSaving ? 'Saving...' : 'Save Changes'}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Progress Bar */}
       <div className="milestone-progress-container">
         <div className="milestone-progress-bar">
           {MILESTONES.map((milestone, index) => {
-            const isComplete = isMilestoneComplete(milestone.id, checklistState);
+            const isComplete = isMilestoneComplete(milestone.id, localChecklist);
             const isCurrent = milestone.id === currentMilestone;
             const isPast = index < currentMilestoneIndex;
-            const progress = getMilestoneProgress(milestone.id, checklistState);
+            const progress = getMilestoneProgress(milestone.id, localChecklist);
 
             return (
               <div
@@ -164,7 +199,7 @@ function MilestoneTracker({ customer, onSave }) {
         <div className="stage-buttons">
           {MILESTONES.map((milestone) => {
             const isCurrent = milestone.id === currentMilestone;
-            const isComplete = isMilestoneComplete(milestone.id, checklistState);
+            const isComplete = isMilestoneComplete(milestone.id, localChecklist);
 
             return (
               <button
@@ -177,7 +212,6 @@ function MilestoneTracker({ customer, onSave }) {
                   color: isCurrent ? 'white' : milestone.color,
                 }}
                 onClick={() => handleSetCurrentMilestone(milestone.id)}
-                disabled={isSaving}
               >
                 {milestone.icon} {milestone.name}
               </button>
@@ -191,8 +225,8 @@ function MilestoneTracker({ customer, onSave }) {
         {MILESTONES.map((milestone) => {
           const isExpanded = expandedMilestone === milestone.id;
           const items = CHECKLISTS[milestone.id] || [];
-          const progress = getMilestoneProgress(milestone.id, checklistState);
-          const isComplete = isMilestoneComplete(milestone.id, checklistState);
+          const progress = getMilestoneProgress(milestone.id, localChecklist);
+          const isComplete = isMilestoneComplete(milestone.id, localChecklist);
           const isCurrent = milestone.id === currentMilestone;
 
           return (
@@ -250,7 +284,7 @@ function MilestoneTracker({ customer, onSave }) {
               {isExpanded && (
                 <div className="checklist-items">
                   {items.map((item) => {
-                    const isChecked = checklistState[milestone.id]?.[item.id] || false;
+                    const isChecked = localChecklist[milestone.id]?.[item.id] || false;
 
                     return (
                       <label key={item.id} className={`checklist-item ${isChecked ? 'checked' : ''}`}>
@@ -258,12 +292,11 @@ function MilestoneTracker({ customer, onSave }) {
                           type="checkbox"
                           checked={isChecked}
                           onChange={(e) => handleChecklistToggle(milestone.id, item.id, e.target.checked)}
-                          disabled={isSaving}
                         />
                         <span
                           className="custom-checkbox"
                           style={{
-                            borderColor: isChecked ? milestone.color : 'var(--color-border)',
+                            borderColor: isChecked ? milestone.color : '#cbd5e1',
                             background: isChecked ? milestone.color : 'transparent',
                           }}
                         >
