@@ -3,7 +3,7 @@ import useCustomerStore from '../../stores/useCustomerStore';
 import useAuthStore from '../../stores/useAuthStore';
 import Modal from '../Modal/Modal';
 import CustomerForm from '../CustomerForm/CustomerForm';
-import { MILESTONES } from '../../constants/milestones';
+import { MILESTONES, isMilestoneComplete } from '../../constants/milestones';
 import './CustomerList.css';
 
 function CustomerList() {
@@ -83,7 +83,7 @@ function CustomerList() {
           ) : (
             filteredCustomers.map((customer) => {
               const currentMilestoneId = customer.checklist?.currentMilestone || 'test_drive';
-              const currentMilestone = MILESTONES.find(m => m.id === currentMilestoneId) || MILESTONES[0];
+              const currentMilestoneIndex = MILESTONES.findIndex(m => m.id === currentMilestoneId);
 
               return (
                 <div
@@ -97,11 +97,27 @@ function CustomerList() {
                   <div className="customer-info">
                     <div className="customer-name">{customer.name || 'Unnamed'}</div>
                     <div className="customer-phone">{customer.phone || 'No phone'}</div>
-                    <div
-                      className="customer-milestone-badge"
-                      style={{ background: currentMilestone.color }}
-                    >
-                      {currentMilestone.icon} {currentMilestone.name}
+                    <div className="customer-milestone-progress">
+                      {MILESTONES.map((milestone, index) => {
+                        const isComplete = isMilestoneComplete(milestone.id, customer.checklist);
+                        const isCurrent = index === currentMilestoneIndex;
+                        const isPast = index < currentMilestoneIndex;
+
+                        return (
+                          <div
+                            key={milestone.id}
+                            className={`milestone-segment ${isComplete ? 'complete' : ''} ${isCurrent ? 'current' : ''} ${isPast ? 'past' : ''}`}
+                            style={{
+                              '--milestone-color': milestone.color,
+                              background: isComplete || isPast ? milestone.color : isCurrent ? milestone.color : '#e2e8f0',
+                              opacity: isComplete || isCurrent || isPast ? 1 : 0.4,
+                            }}
+                            title={`${milestone.name}${isComplete ? ' ✓' : isCurrent ? ' (Current)' : ''}`}
+                          >
+                            <span className="milestone-segment-label">{milestone.shortName}</span>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
