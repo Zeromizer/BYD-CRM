@@ -7,26 +7,37 @@ export const MILESTONES = [
   {
     id: 'test_drive',
     name: 'Test Drive',
+    shortName: 'TD',
     color: '#3B82F6', // Blue
     icon: '🚗',
   },
   {
     id: 'close_deal',
     name: 'Close Deal',
+    shortName: 'CD',
     color: '#F59E0B', // Amber
     icon: '🤝',
   },
   {
     id: 'registration',
     name: 'Registration',
+    shortName: 'REG',
     color: '#8B5CF6', // Purple
     icon: '📋',
   },
   {
     id: 'delivery',
     name: 'Delivery',
+    shortName: 'DEL',
     color: '#10B981', // Green
     icon: '🎉',
+  },
+  {
+    id: 'nps',
+    name: 'NPS',
+    shortName: 'NPS',
+    color: '#EC4899', // Pink
+    icon: '⭐',
   },
 ];
 
@@ -55,6 +66,10 @@ export const CHECKLISTS = {
     { id: 'insurance_forms_printed', label: 'Insurance Forms Printed' },
     { id: 'performa_invoice_copy', label: 'Copy of Performa Invoice for Customer' },
     { id: 'remaining_delivery_items', label: 'Any Remaining Delivery items or gifts to be prepared' },
+  ],
+  nps: [
+    { id: 'nps_survey_sent', label: 'NPS Survey Sent' },
+    { id: 'nps_response_received', label: 'NPS Response Received' },
   ],
 };
 

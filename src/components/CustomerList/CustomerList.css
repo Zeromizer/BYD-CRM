@@ -117,19 +117,53 @@
 .customer-phone {
   font-size: 13px;
   color: var(--color-text-tertiary);
+  margin-bottom: 6px;
 }
 
-.customer-milestone-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px 8px;
-  border-radius: 12px;
-  font-size: 10px;
-  font-weight: 600;
-  color: white;
+/* Milestone Progress Bar in Customer List */
+.customer-milestone-progress {
+  display: flex;
+  gap: 3px;
   margin-top: 4px;
-  white-space: nowrap;
+}
+
+.milestone-segment {
+  flex: 1;
+  height: 22px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.milestone-segment.current {
+  box-shadow: 0 0 0 2px white, 0 0 0 4px var(--milestone-color);
+  z-index: 1;
+}
+
+.milestone-segment.complete {
+  opacity: 1 !important;
+}
+
+.milestone-segment-label {
+  font-size: 8px;
+  font-weight: 700;
+  color: white;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.milestone-segment:not(.complete):not(.current):not(.past) .milestone-segment-label {
+  color: #94a3b8;
+  text-shadow: none;
+}
+
+/* Old badge - hidden */
+.customer-milestone-badge {
+  display: none;
 }
 
 .empty-state {
