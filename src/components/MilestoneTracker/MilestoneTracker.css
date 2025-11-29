@@ -1,0 +1,414 @@
+.milestone-tracker {
+  padding: 0 0 1rem 0;
+}
+
+/* Progress Bar Container */
+.milestone-progress-container {
+  padding: 1.5rem 1rem;
+  background: var(--color-card-background);
+  border-radius: 12px;
+  margin-bottom: 1rem;
+  border: 1px solid var(--color-border-light);
+}
+
+.milestone-progress-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  position: relative;
+}
+
+.milestone-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  position: relative;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.milestone-step:hover {
+  transform: translateY(-2px);
+}
+
+/* Connector Lines */
+.milestone-connector {
+  position: absolute;
+  top: 16px;
+  right: 50%;
+  width: calc(100% - 32px);
+  height: 3px;
+  background: var(--color-border-light);
+  z-index: 0;
+  transition: background 0.3s ease;
+}
+
+/* Milestone Circle */
+.milestone-circle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 3px solid;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-card-background);
+  z-index: 1;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.milestone-circle.current {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.milestone-circle.complete {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.milestone-number {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+/* Milestone Label */
+.milestone-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 8px;
+  text-align: center;
+}
+
+.milestone-name {
+  font-size: 12px;
+  font-weight: 600;
+  transition: color 0.3s ease;
+  white-space: nowrap;
+}
+
+.milestone-progress-text {
+  font-size: 10px;
+  color: var(--color-text-tertiary);
+  margin-top: 2px;
+}
+
+/* Current Stage Selector */
+.current-stage-selector {
+  margin-bottom: 1rem;
+  padding: 1rem;
+  background: var(--color-card-background);
+  border-radius: 12px;
+  border: 1px solid var(--color-border-light);
+}
+
+.current-stage-selector label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  margin-bottom: 0.75rem;
+}
+
+.stage-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.stage-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 2px solid;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: transparent;
+}
+
+.stage-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.stage-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.stage-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.stage-button.active {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.stage-button.complete:not(.active)::after {
+  content: '✓';
+  margin-left: 4px;
+  font-size: 11px;
+}
+
+/* Milestone Checklists */
+.milestone-checklists {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.checklist-section {
+  background: var(--color-card-background);
+  border-radius: 12px;
+  border: 1px solid var(--color-border-light);
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.checklist-section.current {
+  border-color: var(--milestone-color, var(--color-border));
+  box-shadow: 0 0 0 1px var(--milestone-color, var(--color-border));
+}
+
+.checklist-section.expanded {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* Checklist Header */
+.checklist-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 14px 16px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.checklist-header:hover {
+  background: var(--color-background-tertiary);
+}
+
+.checklist-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.checklist-indicator {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  font-size: 14px;
+}
+
+.checklist-indicator.complete {
+  border-color: transparent;
+}
+
+.checklist-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text-on-card);
+  transition: color 0.2s ease;
+}
+
+.current-badge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 3px 8px;
+  border-radius: 10px;
+  color: white;
+}
+
+.checklist-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.checklist-progress-bar {
+  width: 60px;
+  height: 6px;
+  background: var(--color-border-light);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.checklist-progress-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.checklist-header-right .checklist-progress-text {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-tertiary);
+  min-width: 32px;
+  text-align: right;
+}
+
+.chevron {
+  color: var(--color-text-tertiary);
+  transition: transform 0.2s ease;
+}
+
+.chevron.expanded {
+  transform: rotate(180deg);
+}
+
+/* Checklist Items */
+.checklist-items {
+  padding: 0 16px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  animation: slideDown 0.2s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.checklist-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--color-background-secondary);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: 1px solid transparent;
+}
+
+.checklist-item:hover {
+  background: var(--color-background-tertiary);
+  border-color: var(--color-border-light);
+}
+
+.checklist-item.checked {
+  background: rgba(16, 185, 129, 0.08);
+}
+
+.checklist-item input[type="checkbox"] {
+  display: none;
+}
+
+.custom-checkbox {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--color-border);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.checklist-item:hover .custom-checkbox {
+  border-color: var(--color-border-dark);
+}
+
+.checklist-item-label {
+  font-size: 14px;
+  color: var(--color-text-on-card);
+  line-height: 1.4;
+  flex: 1;
+}
+
+.checklist-item.checked .checklist-item-label {
+  color: var(--color-text-secondary);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .milestone-progress-container {
+    padding: 1rem 0.5rem;
+  }
+
+  .milestone-circle {
+    width: 28px;
+    height: 28px;
+  }
+
+  .milestone-number {
+    font-size: 12px;
+  }
+
+  .milestone-name {
+    font-size: 10px;
+  }
+
+  .milestone-connector {
+    top: 14px;
+  }
+
+  .stage-buttons {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .stage-button {
+    justify-content: center;
+    padding: 10px 12px;
+    font-size: 12px;
+  }
+
+  .checklist-progress-bar {
+    width: 40px;
+  }
+
+  .checklist-item {
+    padding: 10px 12px;
+  }
+
+  .checklist-item-label {
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 480px) {
+  .milestone-progress-bar {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1rem;
+  }
+
+  .milestone-step {
+    flex: 0 0 auto;
+    width: calc(50% - 0.5rem);
+  }
+
+  .milestone-connector {
+    display: none;
+  }
+
+  .stage-buttons {
+    grid-template-columns: 1fr;
+  }
+}

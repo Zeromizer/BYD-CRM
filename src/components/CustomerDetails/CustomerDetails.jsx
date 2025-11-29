@@ -7,6 +7,7 @@ import ExcelPopulateModal from '../ExcelPopulateModal/ExcelPopulateModal';
 import PrintManager from '../Documents/PrintManager/PrintManager';
 import DocumentViewer from '../DocumentViewer/DocumentViewer';
 import DocumentScanner from '../DocumentScanner/DocumentScanner';
+import MilestoneTracker from '../MilestoneTracker/MilestoneTracker';
 import { useToast } from '../Toast/Toast';
 import './CustomerDetails.css';
 
@@ -89,7 +90,7 @@ function CustomerDetails() {
     return customerId === targetId;
   }) || null;
 
-  const [activeTab, setActiveTab] = useState('details');
+  const [activeTab, setActiveTab] = useState('milestones');
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   // Inline editing state for Details tab
@@ -1191,6 +1192,12 @@ function CustomerDetails() {
         {/* Tabs */}
         <div className="customer-tabs">
           <button
+            className={`tab ${activeTab === 'milestones' ? 'active' : ''}`}
+            onClick={() => setActiveTab('milestones')}
+          >
+            Milestones
+          </button>
+          <button
             className={`tab ${activeTab === 'details' ? 'active' : ''}`}
             onClick={() => setActiveTab('details')}
           >
@@ -1224,7 +1231,9 @@ function CustomerDetails() {
 
         {/* Tab Content */}
         <div className="customer-details-content">
-          {activeTab === 'details' ? (
+          {activeTab === 'milestones' ? (
+            <MilestoneTracker customer={customer} />
+          ) : activeTab === 'details' ? (
             <>
               <div className="info-section">
                 <h3>Contact Information</h3>

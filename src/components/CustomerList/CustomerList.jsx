@@ -3,6 +3,7 @@ import useCustomerStore from '../../stores/useCustomerStore';
 import useAuthStore from '../../stores/useAuthStore';
 import Modal from '../Modal/Modal';
 import CustomerForm from '../CustomerForm/CustomerForm';
+import { MILESTONES } from '../../constants/milestones';
 import './CustomerList.css';
 
 function CustomerList() {
@@ -80,21 +81,32 @@ function CustomerList() {
               <p className="empty-hint">Click "Add Customer" to get started</p>
             </div>
           ) : (
-            filteredCustomers.map((customer) => (
-              <div
-                key={customer.id}
-                className={`customer-item ${selectedCustomerId === customer.id ? 'active' : ''}`}
-                onClick={() => selectCustomer(customer.id)}
-              >
-                <div className="customer-avatar">
-                  {customer.name?.charAt(0).toUpperCase() || '?'}
+            filteredCustomers.map((customer) => {
+              const currentMilestoneId = customer.checklist?.currentMilestone || 'test_drive';
+              const currentMilestone = MILESTONES.find(m => m.id === currentMilestoneId) || MILESTONES[0];
+
+              return (
+                <div
+                  key={customer.id}
+                  className={`customer-item ${selectedCustomerId === customer.id ? 'active' : ''}`}
+                  onClick={() => selectCustomer(customer.id)}
+                >
+                  <div className="customer-avatar">
+                    {customer.name?.charAt(0).toUpperCase() || '?'}
+                  </div>
+                  <div className="customer-info">
+                    <div className="customer-name">{customer.name || 'Unnamed'}</div>
+                    <div className="customer-phone">{customer.phone || 'No phone'}</div>
+                    <div
+                      className="customer-milestone-badge"
+                      style={{ background: currentMilestone.color }}
+                    >
+                      {currentMilestone.icon} {currentMilestone.name}
+                    </div>
+                  </div>
                 </div>
-                <div className="customer-info">
-                  <div className="customer-name">{customer.name || 'Unnamed'}</div>
-                  <div className="customer-phone">{customer.phone || 'No phone'}</div>
-                </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </div>
