@@ -136,56 +136,31 @@ function MilestoneTracker({ customer, onSave }) {
           {MILESTONES.map((milestone, index) => {
             const isComplete = isMilestoneComplete(milestone.id, localChecklist);
             const isCurrent = milestone.id === currentMilestone;
-            const isPast = index < currentMilestoneIndex;
             const progress = getMilestoneProgress(milestone.id, localChecklist);
 
             return (
               <div
                 key={milestone.id}
-                className={`milestone-step ${isCurrent ? 'current' : ''} ${isComplete ? 'complete' : ''} ${isPast ? 'past' : ''}`}
+                className={`milestone-step ${isCurrent ? 'current' : ''} ${isComplete ? 'complete' : ''}`}
                 onClick={() => handleMilestoneClick(milestone.id)}
               >
-                {/* Connector line (except for first item) */}
-                {index > 0 && (
-                  <div
-                    className={`milestone-connector ${isPast || (isCurrent && index <= currentMilestoneIndex) ? 'filled' : ''}`}
-                    style={{
-                      background: isPast || isComplete
-                        ? MILESTONES[index - 1].color
-                        : 'var(--color-border-light)',
-                    }}
-                  />
-                )}
-
-                {/* Milestone Circle */}
+                {/* Milestone Pill */}
                 <div
                   className={`milestone-circle ${isCurrent ? 'current' : ''} ${isComplete ? 'complete' : ''}`}
                   style={{
-                    borderColor: milestone.color,
-                    background: isComplete || isCurrent ? milestone.color : 'transparent',
+                    background: isCurrent ? milestone.color : isComplete ? undefined : undefined,
+                    boxShadow: isCurrent ? `0 4px 20px ${milestone.color}50` : undefined,
                   }}
                   title={`${milestone.name} - ${progress}% complete`}
                 >
                   {isComplete ? (
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
                       <polyline points="20 6 9 17 4 12"></polyline>
                     </svg>
                   ) : (
-                    <span className="milestone-number" style={{ color: isCurrent ? 'white' : milestone.color }}>
-                      {index + 1}
-                    </span>
+                    <span className="milestone-number">{index + 1}</span>
                   )}
-                </div>
-
-                {/* Milestone Label */}
-                <div className="milestone-label">
-                  <span
-                    className="milestone-name"
-                    style={{ color: isCurrent || isComplete ? milestone.color : 'var(--color-text-secondary)' }}
-                  >
-                    {milestone.name}
-                  </span>
-                  <span className="milestone-progress-text">{progress}%</span>
+                  <span className="milestone-name">{milestone.name}</span>
                 </div>
               </div>
             );

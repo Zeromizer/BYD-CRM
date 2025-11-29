@@ -62,98 +62,128 @@
 
 /* Progress Bar Container */
 .milestone-progress-container {
-  padding: 1.5rem 1rem;
-  background: var(--color-card-background);
-  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  border-radius: 16px;
   margin-bottom: 1rem;
-  border: 1px solid var(--color-border-light);
+  border: none;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
 }
 
 .milestone-progress-bar {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  align-items: flex-start;
   position: relative;
+}
+
+/* The connecting line behind the steps */
+.milestone-progress-bar::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 24px;
+  right: 24px;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateY(-50%);
+  border-radius: 2px;
+  z-index: 0;
 }
 
 .milestone-step {
   display: flex;
   flex-direction: column;
   align-items: center;
-  flex: 1;
   position: relative;
   cursor: pointer;
-  transition: transform 0.2s ease;
+  transition: all 0.3s ease;
+  z-index: 1;
+  padding: 0 8px;
 }
 
 .milestone-step:hover {
-  transform: translateY(-2px);
+  transform: scale(1.05);
 }
 
-/* Connector Lines */
+/* Hide old connector */
 .milestone-connector {
-  position: absolute;
-  top: 16px;
-  right: 50%;
-  width: calc(100% - 32px);
-  height: 3px;
-  background: var(--color-border-light);
-  z-index: 0;
-  transition: background 0.3s ease;
+  display: none;
 }
 
-/* Milestone Circle */
+/* Milestone Circle - Modern pill style */
 .milestone-circle {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: 3px solid;
+  width: auto;
+  min-width: 44px;
+  height: 44px;
+  border-radius: 22px;
+  padding: 0 16px;
+  border: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--color-card-background);
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
   z-index: 1;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.milestone-circle.current {
-  transform: scale(1.1);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.milestone-circle.complete {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
-.milestone-number {
-  font-size: 14px;
-  font-weight: 700;
+.milestone-circle.current {
+  transform: scale(1.08);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
-/* Milestone Label */
+.milestone-circle.complete {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+}
+
+.milestone-number {
+  font-size: 15px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.milestone-circle.current .milestone-number {
+  color: white;
+}
+
+/* Milestone Label - integrated into pill */
 .milestone-label {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  margin-top: 8px;
-  text-align: center;
+  display: none;
 }
 
 .milestone-name {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
-  transition: color 0.3s ease;
+  color: rgba(255, 255, 255, 0.7);
   white-space: nowrap;
+  transition: color 0.3s ease;
+}
+
+.milestone-circle.current .milestone-name,
+.milestone-circle.complete .milestone-name {
+  color: white;
 }
 
 .milestone-progress-text {
-  font-size: 10px;
-  color: var(--color-text-tertiary);
-  margin-top: 2px;
+  display: none;
 }
 
-/* Current Stage Selector */
+/* Show name inside the pill on larger screens */
+@media (min-width: 600px) {
+  .milestone-circle {
+    padding: 0 14px;
+  }
+
+  .milestone-circle .milestone-name {
+    display: inline;
+  }
+}
+
+/* Current Stage Selector - Modern card style */
 .current-stage-selector {
   margin-bottom: 1rem;
   padding: 1rem;
@@ -408,24 +438,30 @@
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .milestone-progress-container {
-    padding: 1rem 0.5rem;
+    padding: 1rem 0.75rem;
+  }
+
+  .milestone-progress-bar::before {
+    left: 12px;
+    right: 12px;
+  }
+
+  .milestone-step {
+    padding: 0 4px;
   }
 
   .milestone-circle {
-    width: 28px;
-    height: 28px;
+    min-width: 36px;
+    height: 36px;
+    padding: 0 10px;
+  }
+
+  .milestone-circle .milestone-name {
+    display: none;
   }
 
   .milestone-number {
-    font-size: 12px;
-  }
-
-  .milestone-name {
-    font-size: 10px;
-  }
-
-  .milestone-connector {
-    top: 14px;
+    font-size: 13px;
   }
 
   .stage-buttons {
@@ -445,6 +481,16 @@
 
   .checklist-item {
     padding: 10px 12px;
+  }
+
+  .milestone-actions-bar {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: center;
+  }
+
+  .milestone-actions-buttons {
+    justify-content: center;
   }
 
   .checklist-item-label {
