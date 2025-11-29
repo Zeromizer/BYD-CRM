@@ -106,8 +106,8 @@ function DocumentManager() {
     setUploadProgress(0);
 
     try {
-      // Upload file to Google Drive
-      const folderId = await driveService.getOrCreateFolder('Document Templates');
+      // Upload file to Google Drive (use the correct folder inside BYD CRM root)
+      const folderId = await driveService.getOrCreateDocumentTemplatesFolder();
 
       // Generate unique filename
       const timestamp = Date.now();
@@ -193,7 +193,8 @@ function DocumentManager() {
 
     try {
       const template = templates[currentTemplateId];
-      const folderId = await driveService.getOrCreateFolder('Document Templates');
+      // Use the correct folder inside BYD CRM root
+      const folderId = await driveService.getOrCreateDocumentTemplatesFolder();
 
       // Delete old file if exists
       if (template.fileId) {
