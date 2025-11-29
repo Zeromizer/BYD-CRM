@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import driveService from '../services/driveService';
 import userStorage from '../services/userStorage';
+import { getDefaultChecklistState } from '../constants/milestones';
 
 /**
  * Customer Store
@@ -35,7 +36,7 @@ const useCustomerStore = create((set, get) => ({
       addressContinue: customerData.addressContinue || '',
       notes: customerData.notes || '',
       dateAdded: new Date().toISOString(),
-      checklist: {},
+      checklist: getDefaultChecklistState(),
       dealClosed: false,
       driveFolderId: null,
       driveFolderLink: null,
@@ -94,7 +95,7 @@ const useCustomerStore = create((set, get) => ({
       addressContinue: customerData.addressContinue || '',
       notes: customerData.notes || '',
       dateAdded: new Date().toISOString(),
-      checklist: {},
+      checklist: getDefaultChecklistState(),
       dealClosed: false,
       driveFolderId,
       driveFolderLink,
@@ -129,17 +130,73 @@ const useCustomerStore = create((set, get) => ({
         const targetId = typeof id === 'string' ? parseInt(id) : id;
 
         if (customerId === targetId) {
+          // Merge checklist if provided in updates, otherwise keep existing or initialize
+          const mergedChecklist = updates.checklist
+            ? { ...(c.checklist || getDefaultChecklistState()), ...updates.checklist }
+            : (c.checklist || getDefaultChecklistState());
+
           return {
             ...c,
             ...updates,
             // Preserve vanilla JS fields
             id: c.id,
             dateAdded: c.dateAdded,
-            checklist: c.checklist || {},
-            dealClosed: c.dealClosed || false,
+            checklist: mergedChecklist,
+            dealClosed: updates.dealClosed !== undefined ? updates.dealClosed : (c.dealClosed || false),
             // Preserve folder IDs from updates if provided, otherwise keep existing
             driveFolderId: updates.driveFolderId !== undefined ? updates.driveFolderId : (c.driveFolderId || null),
             driveFolderLink: updates.driveFolderLink !== undefined ? updates.driveFolderLink : (c.driveFolderLink || null),
+          };
+        }
+        return c;
+      })
+    }));
+  },
+
+  /**
+   * Update a specific checklist item for a customer
+   */
+  updateChecklistItem: (customerId, milestoneId, itemId, checked) => {
+    set((state) => ({
+      customers: state.customers.map((c) => {
+        const cId = typeof c.id === 'string' ? parseInt(c.id) : c.id;
+        const targetId = typeof customerId === 'string' ? parseInt(customerId) : customerId;
+
+        if (cId === targetId) {
+          const checklist = c.checklist || getDefaultChecklistState();
+          return {
+            ...c,
+            checklist: {
+              ...checklist,
+              [milestoneId]: {
+                ...(checklist[milestoneId] || {}),
+                [itemId]: checked,
+              },
+            },
+          };
+        }
+        return c;
+      })
+    }));
+  },
+
+  /**
+   * Set the current milestone stage for a customer
+   */
+  setCurrentMilestone: (customerId, milestoneId) => {
+    set((state) => ({
+      customers: state.customers.map((c) => {
+        const cId = typeof c.id === 'string' ? parseInt(c.id) : c.id;
+        const targetId = typeof customerId === 'string' ? parseInt(customerId) : customerId;
+
+        if (cId === targetId) {
+          const checklist = c.checklist || getDefaultChecklistState();
+          return {
+            ...c,
+            checklist: {
+              ...checklist,
+              currentMilestone: milestoneId,
+            },
           };
         }
         return c;
