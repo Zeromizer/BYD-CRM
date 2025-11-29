@@ -207,6 +207,10 @@ class DocumentRenderer {
       const canvas = this.createCanvas(width, height);
       const ctx = canvas.getContext('2d');
 
+      // Enable high-quality image scaling for best photo quality
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+
       // Fill white background
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, width, height);
@@ -316,7 +320,7 @@ class DocumentRenderer {
 
       return {
         canvas,
-        dataUrl: canvas.toDataURL('image/jpeg', 0.95),
+        dataUrl: canvas.toDataURL('image/jpeg', 1.0),
         width,
         height,
         dpi,

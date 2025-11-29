@@ -46,8 +46,8 @@ class PDFGenerator {
       creator: 'BYD CRM System',
     });
 
-    // Add canvas as image
-    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+    // Add canvas as image (use NONE compression for best quality)
+    const imgData = canvas.toDataURL('image/jpeg', 1.0);
     pdf.addImage(
       imgData,
       'JPEG',
@@ -56,7 +56,7 @@ class PDFGenerator {
       this.a4Width,
       this.a4Height,
       undefined,
-      'FAST'
+      'NONE'
     );
 
     return pdf;
@@ -92,13 +92,13 @@ class PDFGenerator {
       creator: 'BYD CRM System',
     });
 
-    // Add each canvas as a page
+    // Add each canvas as a page (use NONE compression for best quality)
     canvases.forEach((canvas, index) => {
       if (index > 0) {
         pdf.addPage();
       }
 
-      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      const imgData = canvas.toDataURL('image/jpeg', 1.0);
       pdf.addImage(
         imgData,
         'JPEG',
@@ -107,7 +107,7 @@ class PDFGenerator {
         this.a4Width,
         this.a4Height,
         undefined,
-        'FAST'
+        'NONE'
       );
     });
 
