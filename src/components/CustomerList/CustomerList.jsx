@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import useCustomerStore from '../../stores/useCustomerStore';
 import useAuthStore from '../../stores/useAuthStore';
+import driveService from '../../services/driveService';
 import Modal from '../Modal/Modal';
 import CustomerForm from '../CustomerForm/CustomerForm';
 import { MILESTONES, isMilestoneComplete } from '../../constants/milestones';
 import './CustomerList.css';
 
 function CustomerList() {
-  const { customers, selectedCustomerId, selectCustomer, addCustomerWithFolder } = useCustomerStore();
+  const { customers, selectedCustomerId, selectCustomer, addCustomerWithFolder, updateChecklistItem, saveCustomerToFolder } = useCustomerStore();
   const { isSignedIn } = useAuthStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -36,11 +37,58 @@ function CustomerList() {
     setIsSubmitting(true);
 
     try {
+      // Extract scanned ID images from form data
+      const { scannedIDImages, ...customerData } = formData;
+
       // Simulate API call delay
       await new Promise((resolve) => setTimeout(resolve, 500));
 
       // Add customer to store and create folder structure in Drive
-      const newCustomer = await addCustomerWithFolder(formData, isSignedIn);
+      const newCustomer = await addCustomerWithFolder(customerData, isSignedIn);
+
+      // If we have scanned ID images and the customer has a Drive folder, upload them
+      if (scannedIDImages && isSignedIn && newCustomer.driveFolderId) {
+        try {
+          // Find or create NRIC subfolder
+          const nricFolderId = await driveService.getOrCreateFolder(
+            'NRIC',
+            newCustomer.driveFolderId
+          );
+
+          const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+
+          // Upload front image
+          if (scannedIDImages.front) {
+            const frontBase64 = scannedIDImages.front.split(',')[1];
+            await uploadIDImage(frontBase64, `ID_Front_${timestamp}.jpg`, nricFolderId);
+          }
+
+          // Upload back image
+          if (scannedIDImages.back) {
+            const backBase64 = scannedIDImages.back.split(',')[1];
+            await uploadIDImage(backBase64, `ID_Back_${timestamp}.jpg`, nricFolderId);
+          }
+
+          // Mark "ID Scanned" checklist item as complete
+          updateChecklistItem(newCustomer.id, 'test_drive', 'id_scanned', true);
+
+          // Save updated checklist to Drive
+          const updatedCustomer = {
+            ...newCustomer,
+            checklist: {
+              ...newCustomer.checklist,
+              test_drive: {
+                ...newCustomer.checklist?.test_drive,
+                id_scanned: true,
+              },
+            },
+          };
+          await saveCustomerToFolder(updatedCustomer, isSignedIn);
+        } catch (uploadError) {
+          console.error('Error uploading ID images:', uploadError);
+          // Don't fail the whole operation, customer was already created
+        }
+      }
 
       // Select the newly added customer
       selectCustomer(newCustomer.id);
@@ -53,6 +101,41 @@ function CustomerList() {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // Helper function to upload ID image to Google Drive
+  const uploadIDImage = async (base64Data, filename, folderId) => {
+    const boundary = '-------314159265358979323846';
+    const delimiter = "\r\n--" + boundary + "\r\n";
+    const close_delim = "\r\n--" + boundary + "--";
+
+    const metadata = {
+      name: filename,
+      mimeType: 'image/jpeg',
+      parents: [folderId]
+    };
+
+    const multipartRequestBody =
+      delimiter +
+      'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
+      JSON.stringify(metadata) +
+      delimiter +
+      'Content-Type: image/jpeg\r\n' +
+      'Content-Transfer-Encoding: base64\r\n\r\n' +
+      base64Data +
+      close_delim;
+
+    const request = window.gapi.client.request({
+      path: '/upload/drive/v3/files',
+      method: 'POST',
+      params: { uploadType: 'multipart' },
+      headers: {
+        'Content-Type': 'multipart/related; boundary="' + boundary + '"'
+      },
+      body: multipartRequestBody
+    });
+
+    return request;
   };
 
   return (

@@ -17,6 +17,7 @@
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.9.6",
+    "tesseract.js": "^6.0.1",
     "vite-plugin-node-polyfills": "^0.24.0",
     "xlsx-populate": "^1.21.0",
     "zustand": "^5.0.8"
