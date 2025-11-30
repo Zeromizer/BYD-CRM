@@ -5,7 +5,8 @@
     <meta http-equiv="Content-Security-Policy" content="
       default-src 'self';
       script-src 'self' https://accounts.google.com https://apis.google.com;
-      connect-src 'self' https://accounts.google.com https://www.googleapis.com https://apis.google.com https://oauth2.googleapis.com https://content.googleapis.com;
+      worker-src 'self' blob:;
+      connect-src 'self' https://accounts.google.com https://www.googleapis.com https://apis.google.com https://oauth2.googleapis.com https://content.googleapis.com https://tessdata.projectnaptha.com;
       style-src 'self' 'unsafe-inline';
       img-src 'self' data: https: blob:;
       font-src 'self' data:;
