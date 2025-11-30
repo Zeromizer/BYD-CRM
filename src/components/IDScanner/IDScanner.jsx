@@ -129,11 +129,42 @@ function IDScanner({ isOpen, onClose, onDataExtracted }) {
 
     const video = videoRef.current;
     const canvas = canvasRef.current;
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+
+    // Get the actual video dimensions
+    const videoWidth = video.videoWidth;
+    const videoHeight = video.videoHeight;
+
+    // The camera view container has aspect ratio 4:3 with object-fit: cover
+    // We need to crop the video to match what's visible in the view
+    const containerAspect = 4 / 3;
+    const videoAspect = videoWidth / videoHeight;
+
+    let cropX = 0;
+    let cropY = 0;
+    let cropWidth = videoWidth;
+    let cropHeight = videoHeight;
+
+    if (videoAspect > containerAspect) {
+      // Video is wider than container - crop sides
+      cropWidth = videoHeight * containerAspect;
+      cropX = (videoWidth - cropWidth) / 2;
+    } else if (videoAspect < containerAspect) {
+      // Video is taller than container - crop top/bottom
+      cropHeight = videoWidth / containerAspect;
+      cropY = (videoHeight - cropHeight) / 2;
+    }
+
+    // Set canvas to the cropped dimensions
+    canvas.width = cropWidth;
+    canvas.height = cropHeight;
 
     const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    // Draw the cropped portion of the video
+    ctx.drawImage(
+      video,
+      cropX, cropY, cropWidth, cropHeight,  // Source rectangle
+      0, 0, cropWidth, cropHeight            // Destination rectangle
+    );
 
     const imageDataUrl = canvas.toDataURL('image/jpeg', 0.95);
 

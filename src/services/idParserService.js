@@ -1,4 +1,4 @@
-import Tesseract from 'tesseract.js';
+import { createWorker } from 'tesseract.js';
 
 /**
  * ID Parser Service
@@ -13,8 +13,47 @@ const DATE_PATTERN = /(\d{1,2})[-/.]\s*(\d{1,2})[-/.]\s*(\d{4})/g;
 
 // Singapore address pattern (Block, Street, Unit, Postal)
 const POSTAL_CODE_PATTERN = /\b\d{6}\b/g;
-const BLOCK_PATTERN = /(?:BLK|BLOCK)\s*(\d+[A-Z]?)/gi;
-const UNIT_PATTERN = /#?\d{1,2}-\d{1,4}/g;
+
+// Singleton worker instance for better performance
+let workerInstance = null;
+let workerInitializing = false;
+let workerInitPromise = null;
+
+/**
+ * Get or create the Tesseract worker
+ */
+const getWorker = async () => {
+  if (workerInstance) {
+    return workerInstance;
+  }
+
+  if (workerInitializing) {
+    return workerInitPromise;
+  }
+
+  workerInitializing = true;
+  workerInitPromise = (async () => {
+    try {
+      console.log('Initializing Tesseract worker...');
+      const worker = await createWorker('eng', 1, {
+        logger: (m) => {
+          if (m.status) {
+            console.log(`Tesseract: ${m.status} ${m.progress ? Math.round(m.progress * 100) + '%' : ''}`);
+          }
+        }
+      });
+      workerInstance = worker;
+      console.log('Tesseract worker initialized successfully');
+      return worker;
+    } catch (error) {
+      console.error('Failed to initialize Tesseract worker:', error);
+      workerInitializing = false;
+      throw error;
+    }
+  })();
+
+  return workerInitPromise;
+};
 
 /**
  * Perform OCR on an image
@@ -24,21 +63,21 @@ const UNIT_PATTERN = /#?\d{1,2}-\d{1,4}/g;
  */
 export const performOCR = async (imageDataUrl, onProgress = null) => {
   try {
-    const result = await Tesseract.recognize(
-      imageDataUrl,
-      'eng',
-      {
-        logger: (m) => {
-          if (onProgress && m.status === 'recognizing text') {
-            onProgress(Math.round(m.progress * 100));
-          }
-        }
-      }
-    );
+    const worker = await getWorker();
+
+    if (onProgress) onProgress(10);
+
+    const result = await worker.recognize(imageDataUrl);
+
+    if (onProgress) onProgress(100);
+
     return result.data.text;
   } catch (error) {
     console.error('OCR error:', error);
-    throw new Error('Failed to process image');
+    // Reset worker on error so it can be re-initialized
+    workerInstance = null;
+    workerInitializing = false;
+    throw new Error(`Failed to process image: ${error.message}`);
   }
 };
 
