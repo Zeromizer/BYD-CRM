@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import IDScanner from '../IDScanner/IDScanner';
 import './CustomerForm.css';
 
 function CustomerForm({ customer, onSubmit, onCancel, isSubmitting = false }) {
@@ -17,6 +18,8 @@ function CustomerForm({ customer, onSubmit, onCancel, isSubmitting = false }) {
   });
 
   const [errors, setErrors] = useState({});
+  const [isIDScannerOpen, setIsIDScannerOpen] = useState(false);
+  const [scannedIDImages, setScannedIDImages] = useState({ front: null, back: null });
 
   // Populate form when editing existing customer
   useEffect(() => {
@@ -72,11 +75,68 @@ function CustomerForm({ customer, onSubmit, onCancel, isSubmitting = false }) {
       return;
     }
 
-    onSubmit(formData);
+    // Include scanned ID images with form data
+    const submitData = {
+      ...formData,
+      scannedIDImages: scannedIDImages.front ? scannedIDImages : null,
+    };
+
+    onSubmit(submitData);
+  };
+
+  const handleIDDataExtracted = (data) => {
+    // Auto-fill form with extracted data
+    setFormData((prev) => ({
+      ...prev,
+      name: data.name || prev.name,
+      nric: data.nric || prev.nric,
+      dob: data.dob || prev.dob,
+      address: data.address || prev.address,
+      addressContinue: data.addressContinue || prev.addressContinue,
+    }));
+
+    // Store scanned images for later upload
+    setScannedIDImages({
+      front: data.frontImage || null,
+      back: data.backImage || null,
+    });
+
+    // Clear any errors for auto-filled fields
+    setErrors({});
   };
 
   return (
     <form onSubmit={handleSubmit} className="customer-form">
+      {/* ID Scan Section */}
+      {!customer && (
+        <div className="id-scan-section">
+          {scannedIDImages.front ? (
+            <div className="id-scanned-banner">
+              <span className="id-scanned-icon">&#10003;</span>
+              <span className="id-scanned-text">ID Scanned - Details auto-filled</span>
+              <button
+                type="button"
+                className="btn btn-text btn-small"
+                onClick={() => setIsIDScannerOpen(true)}
+                disabled={isSubmitting}
+              >
+                Rescan
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              className="btn btn-scan-id"
+              onClick={() => setIsIDScannerOpen(true)}
+              disabled={isSubmitting}
+            >
+              <span className="scan-icon">&#128179;</span>
+              Scan ID to Auto-fill
+            </button>
+          )}
+        </div>
+      )}
+
       <div className="form-row">
         <div className="form-group">
           <label htmlFor="name">
@@ -251,6 +311,13 @@ function CustomerForm({ customer, onSubmit, onCancel, isSubmitting = false }) {
           Cancel
         </button>
       </div>
+
+      {/* ID Scanner Modal */}
+      <IDScanner
+        isOpen={isIDScannerOpen}
+        onClose={() => setIsIDScannerOpen(false)}
+        onDataExtracted={handleIDDataExtracted}
+      />
     </form>
   );
 }
