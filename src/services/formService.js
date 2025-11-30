@@ -1,5 +1,18 @@
 import authService from './authService';
 
+/**
+ * Escape HTML special characters to prevent XSS
+ */
+const escapeHtml = (str) => {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+};
+
 class FormService {
   /**
    * Get customer data mapping for form population
@@ -213,12 +226,14 @@ class FormService {
    */
   openFormInPrintWindow(renderedFormBase64, formName, customerName) {
     const printWin = window.open('', '_blank');
+    const safeCustomerName = escapeHtml(customerName);
+    const safeFormName = escapeHtml(formName);
     printWin.document.write(`
       <!DOCTYPE html>
       <html>
       <head>
         <meta charset="UTF-8">
-        <title>${customerName} - ${formName}</title>
+        <title>${safeCustomerName} - ${safeFormName}</title>
         <style>
           @page {
             size: A4;
@@ -300,7 +315,7 @@ class FormService {
       <body>
         <button class="print-btn no-print" onclick="window.print()">🖨️ Print Form</button>
         <div class="page">
-          <img src="${renderedFormBase64}" alt="${formName}">
+          <img src="${renderedFormBase64}" alt="${safeFormName}">
         </div>
       </body>
       </html>
