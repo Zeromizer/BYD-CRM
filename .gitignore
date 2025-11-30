@@ -25,5 +25,5 @@ Thumbs.db
 .idea
 *.local
 
-# Note: dist/ is NOT ignored because it contains the production build
-# that needs to be committed for GitHub Pages hosting
+# Build output - now deployed via GitHub Actions
+dist/
