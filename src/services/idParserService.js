@@ -77,43 +77,81 @@ export const extractNRIC = (text) => {
 
 /**
  * Extract name from Singapore IC text
- * Names on Singapore ICs appear after "NAME" label
+ * Names on Singapore ICs appear after "Name" label
  * @param {string} text - OCR text
  * @returns {string|null} - Extracted name
  */
 export const extractName = (text) => {
   const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
 
-  // Look for name after "NAME" label
+  console.log('Extracting name from lines:', lines);
+
+  // Look for name after "Name" label - Singapore IC specific
   for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].toUpperCase();
-    if (line.includes('NAME')) {
-      // Name might be on the same line after "NAME" or on the next line
-      const afterName = line.split(/NAME\s*/i)[1];
-      if (afterName && afterName.length > 2) {
-        // Clean up the name
-        return cleanName(afterName);
+    const line = lines[i];
+    const upperLine = line.toUpperCase();
+
+    // Check if this line contains "NAME" label
+    if (upperLine.includes('NAME') && !upperLine.includes('SURNAME')) {
+      // Try to get name from the same line after "Name"
+      const nameMatch = line.match(/NAME\s*[:\.]?\s*(.+)/i);
+      if (nameMatch && nameMatch[1] && nameMatch[1].length > 3) {
+        const potentialName = nameMatch[1].trim();
+        // Make sure it's not another label
+        if (!potentialName.match(/^(NRIC|RACE|SEX|DATE|BIRTH)/i)) {
+          console.log('Found name on same line:', potentialName);
+          return cleanName(potentialName);
+        }
       }
-      // Check next line
-      if (i + 1 < lines.length) {
-        const nextLine = lines[i + 1];
-        if (nextLine.length > 2 && !nextLine.match(NRIC_PATTERN) && !nextLine.match(/RACE|SEX|DATE/i)) {
-          return cleanName(nextLine);
+
+      // Name is likely on the next line(s)
+      // Singapore ICs often have the name on 1-2 lines after "Name"
+      for (let j = i + 1; j < Math.min(i + 3, lines.length); j++) {
+        const nextLine = lines[j].trim();
+        // Skip if it's another label or contains NRIC pattern
+        if (nextLine.match(/^(RACE|SEX|DATE|BIRTH|COUNTRY|NRIC)/i)) continue;
+        if (nextLine.match(NRIC_PATTERN)) continue;
+        if (nextLine.length < 3) continue;
+
+        // Check if line looks like a name (has letters, possibly comma for surname)
+        if (nextLine.match(/[A-Za-z]{2,}/)) {
+          // If it contains Chinese characters in parentheses, it's likely the name line
+          if (nextLine.includes('(') || nextLine.match(/[A-Z]{2,}\s+[A-Z]{2,}/)) {
+            console.log('Found name on next line:', nextLine);
+            return cleanName(nextLine);
+          }
         }
       }
     }
   }
 
-  // Alternative: Look for lines that look like names (all caps, multiple words, no numbers)
+  // Fallback: Look for lines that look like full names (SURNAME, GIVEN NAME format)
   for (const line of lines) {
-    const cleaned = line.replace(/[^A-Za-z\s@]/g, '').trim();
-    // Names are usually 2-5 words, all letters
-    const words = cleaned.split(/\s+/).filter(w => w.length > 1);
-    if (words.length >= 2 && words.length <= 6 && cleaned.length > 5) {
-      // Check if it's likely a name (not a label)
-      const isLabel = /^(NAME|NRIC|DATE|BIRTH|SEX|RACE|ADDRESS|COUNTRY|REPUBLIC|SINGAPORE)$/i.test(cleaned);
-      if (!isLabel && !line.match(/\d/)) {
-        return cleanName(cleaned);
+    // Singapore IC names are often in format: "SURNAME, GIVEN NAME" or "GIVEN NAME SURNAME"
+    // They're usually in ALL CAPS and may have Chinese name in parentheses
+    if (line.match(/^[A-Z][A-Z\s,]+[A-Z]$/)) {
+      // All caps with possibly comma - likely a name
+      const words = line.replace(/,/g, ' ').split(/\s+/).filter(w => w.length > 0);
+      if (words.length >= 2 && words.length <= 5) {
+        // Check it's not a label
+        const isLabel = /^(REPUBLIC|SINGAPORE|IDENTITY|CARD)/i.test(line);
+        if (!isLabel) {
+          console.log('Found name by pattern:', line);
+          return cleanName(line);
+        }
+      }
+    }
+  }
+
+  // Last resort: find any line with comma that looks like "SURNAME, FIRSTNAME"
+  for (const line of lines) {
+    if (line.includes(',') && line.match(/^[A-Z]/)) {
+      const parts = line.split(',');
+      if (parts.length === 2 && parts[0].length > 1 && parts[1].trim().length > 1) {
+        if (!line.match(/SINGAPORE|REPUBLIC|IDENTITY|CARD|DATE|NRIC/i)) {
+          console.log('Found name with comma:', line);
+          return cleanName(line);
+        }
       }
     }
   }
@@ -127,21 +165,34 @@ export const extractName = (text) => {
  * @returns {string} - Cleaned name
  */
 const cleanName = (name) => {
-  // Remove common OCR artifacts and IC labels
-  let cleaned = name
-    .replace(/[^A-Za-z\s@']/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .toUpperCase();
+  // Remove Chinese characters in parentheses but keep the English name
+  let cleaned = name.replace(/\([^)]*[\u4e00-\u9fff][^)]*\)/g, '').trim();
 
-  // Remove common misreads
-  cleaned = cleaned.replace(/^(NAME|THE|IC)\s*/i, '');
+  // Remove common OCR artifacts
+  cleaned = cleaned
+    .replace(/[^A-Za-z\s,@'.-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  // Remove common misreads and labels
+  cleaned = cleaned.replace(/^(NAME|THE|IC|NO|CARD)\s*/i, '');
+
+  // If name has comma (SURNAME, GIVEN), keep as is but title case
+  if (cleaned.includes(',')) {
+    return cleaned
+      .split(',')
+      .map(part => part.trim().toLowerCase().split(' ')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' '))
+      .join(', ');
+  }
 
   // Title case the name
   return cleaned
-    .toLowerCase()
+    .toUpperCase()
     .split(' ')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .filter(w => w.length > 0)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(' ');
 };
 
@@ -212,51 +263,83 @@ const parseDate = (dateStr) => {
  */
 export const extractAddress = (text) => {
   const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-  const addressLines = [];
-  let isAddressSection = false;
 
-  for (const line of lines) {
+  console.log('Extracting address from lines:', lines);
+
+  // Singapore address keywords to look for
+  const addressKeywords = /\b(BLK|BLOCK|APT|STREET|ST|AVE|AVENUE|ROAD|RD|DRIVE|DR|LANE|LN|TERRACE|TER|CRESCENT|CRES|WALK|PLACE|PL|CLOSE|CL|RISE|HILL|PARK|GARDEN|GDN|COURT|CT|HEIGHTS|HTS|VIEW|LORONG|LOR|JALAN|JLN|TAMAN|TMN|KAMPONG|KG)\b/i;
+  const unitPattern = /#\d{1,2}-\d{1,4}/;
+
+  let addressLines = [];
+  let foundAddressStart = false;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
     const upperLine = line.toUpperCase();
 
-    // Start collecting after "ADDRESS" label
-    if (upperLine.includes('ADDRESS')) {
-      isAddressSection = true;
-      // Check if address is on the same line
-      const afterAddress = line.split(/ADDRESS\s*/i)[1];
-      if (afterAddress && afterAddress.length > 3) {
-        addressLines.push(afterAddress.trim());
-      }
+    // Look for address indicators
+    const hasAddressKeyword = addressKeywords.test(line);
+    const hasUnit = unitPattern.test(line);
+    const hasPostalCode = POSTAL_CODE_PATTERN.test(line);
+
+    // Skip obvious non-address lines
+    if (upperLine.match(/^(NRIC|NAME|RACE|SEX|DATE|BIRTH|COUNTRY|ISSUE|EXPIRY|IDENTITY|REPUBLIC)/)) {
       continue;
     }
 
-    // Collect address lines
-    if (isAddressSection) {
-      // Stop at certain keywords
-      if (upperLine.match(/^(SEX|RACE|DATE|COUNTRY|ISSUE|EXPIRY)/)) {
-        break;
+    // If we find an address keyword, unit number, or postal code, start collecting
+    if (hasAddressKeyword || hasUnit || hasPostalCode) {
+      foundAddressStart = true;
+
+      // Clean the line - remove obvious garbage
+      let cleanedLine = line
+        .replace(/^[-—_=~|]+/, '')  // Remove leading dashes/lines
+        .replace(/[-—_=~|]+$/, '')  // Remove trailing dashes/lines
+        .replace(/[^\w\s#,.-]/g, ' ')  // Remove special chars except common address ones
+        .replace(/\s+/g, ' ')
+        .trim();
+
+      if (cleanedLine.length > 3) {
+        addressLines.push(cleanedLine);
       }
 
-      // Check for postal code (indicates end of address)
-      const postalMatch = line.match(POSTAL_CODE_PATTERN);
-      if (postalMatch) {
-        addressLines.push(line);
+      // If we found postal code, we're at the end of address
+      if (hasPostalCode) {
         break;
       }
-
-      // Add line if it looks like address content
-      if (line.length > 2) {
+    } else if (foundAddressStart) {
+      // Continue collecting until we hit something that's clearly not address
+      if (upperLine.match(/(SINGAPORE|S'PORE)/) || line.match(/^\d{6}$/)) {
         addressLines.push(line);
+        break;
       }
     }
   }
 
-  // If no explicit address section found, look for Singapore postal code
+  // If no address found with keywords, look for postal code and work backwards
   if (addressLines.length === 0) {
     for (let i = 0; i < lines.length; i++) {
-      if (lines[i].match(POSTAL_CODE_PATTERN)) {
-        // Include this line and up to 2 lines before it
-        const start = Math.max(0, i - 2);
-        addressLines.push(...lines.slice(start, i + 1));
+      const postalMatch = lines[i].match(/\b(\d{6})\b/);
+      if (postalMatch) {
+        // Found postal code, look for address lines before it
+        const postalLine = lines[i];
+
+        // Check 1-3 lines before for address content
+        for (let j = Math.max(0, i - 3); j <= i; j++) {
+          const checkLine = lines[j];
+          if (addressKeywords.test(checkLine) || unitPattern.test(checkLine) || j === i) {
+            let cleanedLine = checkLine
+              .replace(/^[-—_=~|]+/, '')
+              .replace(/[-—_=~|]+$/, '')
+              .replace(/[^\w\s#,.-]/g, ' ')
+              .replace(/\s+/g, ' ')
+              .trim();
+
+            if (cleanedLine.length > 3 && !cleanedLine.match(/^(NRIC|DATE|ISSUE)/i)) {
+              addressLines.push(cleanedLine);
+            }
+          }
+        }
         break;
       }
     }
@@ -267,34 +350,37 @@ export const extractAddress = (text) => {
     return { address: '', addressContinue: '' };
   }
 
-  const fullAddress = addressLines.join(' ').replace(/\s+/g, ' ').trim();
+  // Join and clean the full address
+  let fullAddress = addressLines.join(' ')
+    .replace(/\s+/g, ' ')
+    .replace(/\s*,\s*/g, ', ')
+    .trim()
+    .toUpperCase();
 
-  // Try to split at postal code for address and addressContinue
-  const postalMatch = fullAddress.match(POSTAL_CODE_PATTERN);
+  console.log('Full address before split:', fullAddress);
+
+  // Extract postal code
+  const postalMatch = fullAddress.match(/\b(\d{6})\b/);
   if (postalMatch) {
-    const postalIndex = fullAddress.indexOf(postalMatch[0]);
-    const beforePostal = fullAddress.substring(0, postalIndex).trim();
-    const postalAndAfter = fullAddress.substring(postalIndex).trim();
+    const postalCode = postalMatch[1];
+    const postalIndex = fullAddress.indexOf(postalCode);
+
+    // Everything before postal is street address
+    let streetAddress = fullAddress.substring(0, postalIndex).trim();
+    // Remove trailing "SINGAPORE" if present
+    streetAddress = streetAddress.replace(/,?\s*SINGAPORE\s*$/i, '').trim();
+    // Remove trailing punctuation
+    streetAddress = streetAddress.replace(/[,\s]+$/, '').trim();
 
     return {
-      address: beforePostal.toUpperCase(),
-      addressContinue: `SINGAPORE ${postalAndAfter}`.toUpperCase()
+      address: streetAddress,
+      addressContinue: `SINGAPORE ${postalCode}`
     };
   }
 
-  // Split in half if no postal code
-  const midpoint = Math.ceil(fullAddress.length / 2);
-  const spaceIndex = fullAddress.indexOf(' ', midpoint);
-
-  if (spaceIndex > 0) {
-    return {
-      address: fullAddress.substring(0, spaceIndex).toUpperCase(),
-      addressContinue: fullAddress.substring(spaceIndex + 1).toUpperCase()
-    };
-  }
-
+  // No postal code found, return as-is
   return {
-    address: fullAddress.toUpperCase(),
+    address: fullAddress,
     addressContinue: ''
   };
 };
