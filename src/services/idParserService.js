@@ -14,70 +14,50 @@ const DATE_PATTERN = /(\d{1,2})[-/.]\s*(\d{1,2})[-/.]\s*(\d{4})/g;
 // Singapore address pattern (Block, Street, Unit, Postal)
 const POSTAL_CODE_PATTERN = /\b\d{6}\b/g;
 
-// Singleton worker instance for better performance
-let workerInstance = null;
-let workerInitializing = false;
-let workerInitPromise = null;
-
 /**
- * Get or create the Tesseract worker
- */
-const getWorker = async () => {
-  if (workerInstance) {
-    return workerInstance;
-  }
-
-  if (workerInitializing) {
-    return workerInitPromise;
-  }
-
-  workerInitializing = true;
-  workerInitPromise = (async () => {
-    try {
-      console.log('Initializing Tesseract worker...');
-      const worker = await createWorker('eng', 1, {
-        logger: (m) => {
-          if (m.status) {
-            console.log(`Tesseract: ${m.status} ${m.progress ? Math.round(m.progress * 100) + '%' : ''}`);
-          }
-        }
-      });
-      workerInstance = worker;
-      console.log('Tesseract worker initialized successfully');
-      return worker;
-    } catch (error) {
-      console.error('Failed to initialize Tesseract worker:', error);
-      workerInitializing = false;
-      throw error;
-    }
-  })();
-
-  return workerInitPromise;
-};
-
-/**
- * Perform OCR on an image
+ * Perform OCR on an image using Tesseract.js
+ * Creates a new worker for each request to avoid state issues
  * @param {string} imageDataUrl - Base64 data URL of the image
  * @param {function} onProgress - Progress callback
  * @returns {Promise<string>} - Extracted text
  */
 export const performOCR = async (imageDataUrl, onProgress = null) => {
-  try {
-    const worker = await getWorker();
+  let worker = null;
 
-    if (onProgress) onProgress(10);
+  try {
+    if (onProgress) onProgress(5);
+    console.log('Creating Tesseract worker...');
+
+    // Create worker with just the language - simplest form for v6
+    worker = await createWorker('eng');
+
+    if (onProgress) onProgress(30);
+    console.log('Worker created, starting recognition...');
 
     const result = await worker.recognize(imageDataUrl);
+
+    if (onProgress) onProgress(90);
+    console.log('Recognition complete, text length:', result.data.text.length);
+
+    // Terminate worker after use
+    await worker.terminate();
 
     if (onProgress) onProgress(100);
 
     return result.data.text;
   } catch (error) {
-    console.error('OCR error:', error);
-    // Reset worker on error so it can be re-initialized
-    workerInstance = null;
-    workerInitializing = false;
-    throw new Error(`Failed to process image: ${error.message}`);
+    console.error('OCR error details:', error);
+
+    // Make sure to terminate worker on error
+    if (worker) {
+      try {
+        await worker.terminate();
+      } catch (e) {
+        // Ignore termination errors
+      }
+    }
+
+    throw new Error(`OCR failed: ${error.message || 'Unknown error'}`);
   }
 };
 
