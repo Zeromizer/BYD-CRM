@@ -523,6 +523,31 @@
     display: none;
   }
 
+  /* Compact save bar for mobile */
+  .milestone-actions-bar {
+    flex-direction: row;
+    align-items: center;
+    padding: 8px 12px;
+    margin-bottom: 0.5rem;
+    border-radius: 8px;
+    gap: 8px;
+  }
+
+  .unsaved-indicator {
+    font-size: 11px;
+    flex: 1;
+    text-align: left;
+  }
+
+  .milestone-actions-buttons {
+    gap: 6px;
+  }
+
+  .milestone-actions-bar .btn {
+    padding: 6px 12px;
+    font-size: 11px;
+  }
+
   /* Compact stage selector for mobile */
   .current-stage-selector {
     padding: 0.75rem;
