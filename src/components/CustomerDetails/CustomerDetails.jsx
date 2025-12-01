@@ -558,14 +558,12 @@ function CustomerDetails() {
 
   // Load documents when current folder changes
   useEffect(() => {
-    if (activeTab === 'documents' && currentFolderId && isSignedIn && customer) {
-      // Check if we're at the root folder to determine if we should use recursive listing
-      const isRootFolder = currentFolderId === customer.driveFolderId;
-      loadCustomerDocuments(currentFolderId, isRootFolder);
+    if (activeTab === 'documents' && currentFolderId && isSignedIn) {
+      loadCustomerDocuments(currentFolderId);
     }
-  }, [currentFolderId, activeTab, isSignedIn, customer]);
+  }, [currentFolderId, activeTab, isSignedIn]);
 
-  const loadCustomerDocuments = async (folderId, isRootFolder = false) => {
+  const loadCustomerDocuments = async (folderId) => {
     if (!folderId) {
       setDocuments([]);
       return;
@@ -575,41 +573,21 @@ function CustomerDetails() {
 
     try {
       let allFiles = [];
+      let pageToken = null;
 
-      // At root folder: show all files from all subfolders recursively
-      // In subfolder: show only direct children
-      if (isRootFolder) {
-        // Use recursive listing to get files from all subfolders
-        const recursiveFiles = await driveService.listAllFilesRecursively(folderId);
-
-        // Also get direct children (including folders) for folder navigation
+      // Fetch all pages of results
+      do {
         const response = await window.gapi.client.drive.files.list({
           q: `'${folderId}' in parents and trashed=false`,
-          fields: 'files(id, name, mimeType, size, createdTime, webViewLink, iconLink)',
+          fields: 'nextPageToken, files(id, name, mimeType, size, createdTime, webViewLink, iconLink)',
           pageSize: 1000,
+          pageToken: pageToken,
         });
 
-        const directChildren = response.result.files || [];
-        const folders = directChildren.filter(f => f.mimeType === 'application/vnd.google-apps.folder');
-
-        // Combine folders and recursive files
-        allFiles = [...folders, ...recursiveFiles];
-      } else {
-        // Standard direct-children listing for subfolders
-        let pageToken = null;
-        do {
-          const response = await window.gapi.client.drive.files.list({
-            q: `'${folderId}' in parents and trashed=false`,
-            fields: 'nextPageToken, files(id, name, mimeType, size, createdTime, webViewLink, iconLink)',
-            pageSize: 1000,
-            pageToken: pageToken,
-          });
-
-          const files = response.result.files || [];
-          allFiles = allFiles.concat(files);
-          pageToken = response.result.nextPageToken;
-        } while (pageToken);
-      }
+        const files = response.result.files || [];
+        allFiles = allFiles.concat(files);
+        pageToken = response.result.nextPageToken;
+      } while (pageToken);
 
       // Sort folders first, then files, both alphabetically
       allFiles.sort((a, b) => {
@@ -648,9 +626,8 @@ function CustomerDetails() {
   // Handle scan complete
   const handleScanComplete = (uploadedFile) => {
     // Reload documents if we're on the documents tab
-    if (currentFolderId && customer) {
-      const isRootFolder = currentFolderId === customer.driveFolderId;
-      loadCustomerDocuments(currentFolderId, isRootFolder);
+    if (currentFolderId) {
+      loadCustomerDocuments(currentFolderId);
     }
   };
 
@@ -674,8 +651,7 @@ function CustomerDetails() {
       });
 
       // Refresh the current folder
-      const isRootFolder = currentFolderId === customer?.driveFolderId;
-      await loadCustomerDocuments(currentFolderId, isRootFolder);
+      await loadCustomerDocuments(currentFolderId);
 
       toast.success('Document deleted successfully');
     } catch (error) {
@@ -730,8 +706,7 @@ function CustomerDetails() {
         removeParents: currentFolderId,
       });
 
-      const isRootFolder = currentFolderId === customer?.driveFolderId;
-      await loadCustomerDocuments(currentFolderId, isRootFolder);
+      await loadCustomerDocuments(currentFolderId);
       setShowFolderMenu(false);
       setSelectedFileToMove(null);
     } catch (error) {
@@ -793,11 +768,10 @@ function CustomerDetails() {
       });
 
       // Reload documents
-      const targetFolderId = folderPath.length > 0
+      const currentFolderId = folderPath.length > 0
         ? folderPath[folderPath.length - 1].id
         : customer.driveFolderId;
-      const isRootFolder = targetFolderId === customer?.driveFolderId;
-      await loadCustomerDocuments(targetFolderId, isRootFolder);
+      await loadCustomerDocuments(currentFolderId);
 
       setShowRenameModal(false);
       setRenamingItem(null);
@@ -894,8 +868,7 @@ function CustomerDetails() {
       });
 
       // Refresh the current folder to show updated file list
-      const isRootFolder = currentFolderId === customer?.driveFolderId;
-      await loadCustomerDocuments(currentFolderId, isRootFolder);
+      await loadCustomerDocuments(currentFolderId);
     } catch (error) {
       toast.error(`Failed to move file: ${error.message}`);
     } finally {
@@ -923,8 +896,7 @@ function CustomerDetails() {
       });
 
       // Refresh the current folder to show updated file list
-      const isRootFolder = currentFolderId === customer?.driveFolderId;
-      await loadCustomerDocuments(currentFolderId, isRootFolder);
+      await loadCustomerDocuments(currentFolderId);
     } catch (error) {
       toast.error(`Failed to move file: ${error.message}`);
     } finally {
@@ -2432,10 +2404,7 @@ function CustomerDetails() {
                       <div className="breadcrumb-actions">
                         <button
                           className="breadcrumb-refresh"
-                          onClick={() => {
-                            const isRootFolder = currentFolderId === customer?.driveFolderId;
-                            loadCustomerDocuments(currentFolderId, isRootFolder);
-                          }}
+                          onClick={() => loadCustomerDocuments(currentFolderId)}
                           title="Refresh folder contents"
                           disabled={loadingDocuments}
                         >
@@ -2581,11 +2550,6 @@ function CustomerDetails() {
                                     )}
                                   </h4>
                                   <p>
-                                    {doc.folderPath && (
-                                      <span className="folder-path-badge" title={`In folder: ${doc.folderPath}`}>
-                                        📁 {doc.folderPath} •{' '}
-                                      </span>
-                                    )}
                                     {formatFileSize(doc.size)} • {formatDate(doc.createdTime)}
                                   </p>
                                 </div>

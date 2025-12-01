@@ -570,47 +570,6 @@ class DriveService {
   }
 
   /**
-   * Recursively list ALL files from a folder and its subfolders
-   * Returns all files (excluding folders) with their folder path and additional metadata
-   * Used by the Documents tab to show files from all subfolders
-   */
-  async listAllFilesRecursively(folderId, folderPath = '') {
-    try {
-      const allFiles = [];
-
-      // Get all files and folders in current folder with full metadata
-      const response = await window.gapi.client.drive.files.list({
-        q: `'${folderId}' in parents and trashed=false`,
-        fields: 'files(id, name, mimeType, size, createdTime, webViewLink, iconLink)',
-        orderBy: 'name',
-      });
-
-      const items = response.result.files || [];
-
-      for (const item of items) {
-        if (item.mimeType === 'application/vnd.google-apps.folder') {
-          // Recursively search subfolder
-          const subfolderPath = folderPath ? `${folderPath}/${item.name}` : item.name;
-          const subFiles = await this.listAllFilesRecursively(item.id, subfolderPath);
-          allFiles.push(...subFiles);
-        } else {
-          // Add file with folder path for context
-          allFiles.push({
-            ...item,
-            folderPath: folderPath || '',
-            parentFolderId: folderId
-          });
-        }
-      }
-
-      return allFiles;
-    } catch (error) {
-      console.error('Failed to list files recursively:', error);
-      throw error;
-    }
-  }
-
-  /**
    * Get file content as text
    */
   async getFileContent(fileId) {
