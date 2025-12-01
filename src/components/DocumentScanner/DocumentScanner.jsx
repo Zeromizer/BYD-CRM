@@ -713,6 +713,21 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
   };
 
   const applyPerspectiveTransform = (img, srcCorners) => {
+    const imgWidth = img.naturalWidth || img.width;
+    const imgHeight = img.naturalHeight || img.height;
+
+    // Ensure corners are valid
+    if (!srcCorners || srcCorners.length !== 4) {
+      console.error('Invalid corners for perspective transform');
+      // Return original image as canvas
+      const canvas = document.createElement('canvas');
+      canvas.width = imgWidth;
+      canvas.height = imgHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      return canvas;
+    }
+
     const ordered = orderCorners(srcCorners);
 
     const widthTop = distance(ordered[0], ordered[1]);
@@ -720,8 +735,19 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
     const heightLeft = distance(ordered[0], ordered[3]);
     const heightRight = distance(ordered[1], ordered[2]);
 
-    const maxWidth = Math.max(widthTop, widthBottom);
-    const maxHeight = Math.max(heightLeft, heightRight);
+    const maxWidth = Math.round(Math.max(widthTop, widthBottom));
+    const maxHeight = Math.round(Math.max(heightLeft, heightRight));
+
+    // Validate dimensions
+    if (maxWidth <= 0 || maxHeight <= 0 || !isFinite(maxWidth) || !isFinite(maxHeight)) {
+      console.error('Invalid dimensions for perspective transform');
+      const canvas = document.createElement('canvas');
+      canvas.width = imgWidth;
+      canvas.height = imgHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      return canvas;
+    }
 
     const canvas = document.createElement('canvas');
     canvas.width = maxWidth;
@@ -730,12 +756,12 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
 
     // Create temporary canvas with source image
     const srcCanvas = document.createElement('canvas');
-    srcCanvas.width = img.width;
-    srcCanvas.height = img.height;
+    srcCanvas.width = imgWidth;
+    srcCanvas.height = imgHeight;
     const srcCtx = srcCanvas.getContext('2d');
     srcCtx.drawImage(img, 0, 0);
 
-    const srcImageData = srcCtx.getImageData(0, 0, img.width, img.height);
+    const srcImageData = srcCtx.getImageData(0, 0, imgWidth, imgHeight);
     const dstImageData = ctx.createImageData(maxWidth, maxHeight);
 
     const dst = [
@@ -745,47 +771,67 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
       { x: 0, y: maxHeight }
     ];
 
-    const transform = getPerspectiveTransform(dst, ordered);
+    try {
+      const transform = getPerspectiveTransform(dst, ordered);
 
-    for (let y = 0; y < maxHeight; y++) {
-      for (let x = 0; x < maxWidth; x++) {
-        const srcPoint = applyTransformPoint({ x, y }, transform);
+      // Check if transform is valid
+      if (Object.values(transform).some(v => !isFinite(v))) {
+        throw new Error('Invalid transform matrix');
+      }
 
-        if (srcPoint.x >= 0 && srcPoint.x < img.width - 1 &&
-            srcPoint.y >= 0 && srcPoint.y < img.height - 1) {
+      for (let y = 0; y < maxHeight; y++) {
+        for (let x = 0; x < maxWidth; x++) {
+          const srcPoint = applyTransformPoint({ x, y }, transform);
 
-          const x0 = Math.floor(srcPoint.x);
-          const y0 = Math.floor(srcPoint.y);
-          const x1 = x0 + 1;
-          const y1 = y0 + 1;
+          if (srcPoint.x >= 0 && srcPoint.x < imgWidth - 1 &&
+              srcPoint.y >= 0 && srcPoint.y < imgHeight - 1 &&
+              isFinite(srcPoint.x) && isFinite(srcPoint.y)) {
 
-          const fx = srcPoint.x - x0;
-          const fy = srcPoint.y - y0;
+            const x0 = Math.floor(srcPoint.x);
+            const y0 = Math.floor(srcPoint.y);
+            const x1 = Math.min(x0 + 1, imgWidth - 1);
+            const y1 = Math.min(y0 + 1, imgHeight - 1);
 
-          const idx00 = (y0 * img.width + x0) * 4;
-          const idx10 = (y0 * img.width + x1) * 4;
-          const idx01 = (y1 * img.width + x0) * 4;
-          const idx11 = (y1 * img.width + x1) * 4;
+            const fx = srcPoint.x - x0;
+            const fy = srcPoint.y - y0;
 
-          const dstIdx = (y * maxWidth + x) * 4;
+            const idx00 = (y0 * imgWidth + x0) * 4;
+            const idx10 = (y0 * imgWidth + x1) * 4;
+            const idx01 = (y1 * imgWidth + x0) * 4;
+            const idx11 = (y1 * imgWidth + x1) * 4;
 
-          for (let c = 0; c < 3; c++) {
-            const v00 = srcImageData.data[idx00 + c];
-            const v10 = srcImageData.data[idx10 + c];
-            const v01 = srcImageData.data[idx01 + c];
-            const v11 = srcImageData.data[idx11 + c];
+            const dstIdx = (y * maxWidth + x) * 4;
 
-            const v0 = v00 * (1 - fx) + v10 * fx;
-            const v1 = v01 * (1 - fx) + v11 * fx;
+            for (let c = 0; c < 3; c++) {
+              const v00 = srcImageData.data[idx00 + c] || 0;
+              const v10 = srcImageData.data[idx10 + c] || 0;
+              const v01 = srcImageData.data[idx01 + c] || 0;
+              const v11 = srcImageData.data[idx11 + c] || 0;
 
-            dstImageData.data[dstIdx + c] = Math.round(v0 * (1 - fy) + v1 * fy);
+              const v0 = v00 * (1 - fx) + v10 * fx;
+              const v1 = v01 * (1 - fx) + v11 * fx;
+
+              dstImageData.data[dstIdx + c] = Math.round(v0 * (1 - fy) + v1 * fy);
+            }
+            dstImageData.data[dstIdx + 3] = 255;
           }
-          dstImageData.data[dstIdx + 3] = 255;
         }
       }
+
+      ctx.putImageData(dstImageData, 0, 0);
+    } catch (e) {
+      console.error('Perspective transform failed:', e);
+      // Fallback: simple crop using bounding box
+      const minX = Math.min(...ordered.map(c => c.x));
+      const minY = Math.min(...ordered.map(c => c.y));
+      const cropWidth = Math.max(...ordered.map(c => c.x)) - minX;
+      const cropHeight = Math.max(...ordered.map(c => c.y)) - minY;
+
+      canvas.width = cropWidth;
+      canvas.height = cropHeight;
+      ctx.drawImage(img, minX, minY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
     }
 
-    ctx.putImageData(dstImageData, 0, 0);
     return canvas;
   };
 
@@ -816,6 +862,7 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
   const solveLinearSystem = (A, b) => {
     const n = A.length;
     const augmented = A.map((row, i) => [...row, b[i]]);
+    const EPSILON = 1e-10;
 
     for (let i = 0; i < n; i++) {
       let maxRow = i;
@@ -825,6 +872,11 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
         }
       }
       [augmented[i], augmented[maxRow]] = [augmented[maxRow], augmented[i]];
+
+      // Check for singular matrix
+      if (Math.abs(augmented[i][i]) < EPSILON) {
+        throw new Error('Singular matrix - cannot solve');
+      }
 
       for (let k = i + 1; k < n; k++) {
         const factor = augmented[k][i] / augmented[i][i];
@@ -840,7 +892,11 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
       for (let j = i + 1; j < n; j++) {
         x[i] -= augmented[i][j] * x[j];
       }
-      x[i] /= augmented[i][i];
+      if (Math.abs(augmented[i][i]) < EPSILON) {
+        x[i] = 0;
+      } else {
+        x[i] /= augmented[i][i];
+      }
     }
 
     return x;
