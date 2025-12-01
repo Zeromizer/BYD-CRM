@@ -128,13 +128,16 @@ const useAuthStore = create((set, get) => ({
   signIn: async () => {
     try {
       set({ error: null });
-      authService.signIn();
+      await authService.signIn();
     } catch (error) {
-      set({ error: error.message });
+      // User may have cancelled the popup - don't show error for that
+      if (error !== 'popup_closed_by_user' && error?.type !== 'popup_closed') {
+        set({ error: error.message || error });
+      }
     }
   },
 
-  signOut: () => {
+  signOut: async () => {
     try {
       set({ error: null });
 
@@ -149,7 +152,7 @@ const useAuthStore = create((set, get) => ({
       userStorage.setCurrentDataOwner(null);
 
       // Sign out from auth service (clears localStorage and Drive cache)
-      authService.signOut();
+      await authService.signOut();
 
       // Clear auth state (including currentUserEmail for account switching detection)
       set({

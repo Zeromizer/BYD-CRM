@@ -1,16 +1,22 @@
 import { CONFIG } from '../config/config.js';
 import driveService from './driveService.js';
+import { generateCodeVerifier, generateCodeChallenge, storePkceVerifier, retrievePkceVerifier } from '../utils/pkce.js';
 
 /**
  * Google Drive Authentication Service
- * Handles OAuth authentication, token management, and refresh logic
- * Compatible with vanilla JS app using same localStorage keys
+ * Uses Authorization Code flow with PKCE for proper refresh token support
+ * Refresh tokens last 7 days in testing mode, 6 months in production
  */
+
+// Google OAuth endpoints
+const TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token';
+const REVOKE_ENDPOINT = 'https://oauth2.googleapis.com/revoke';
 
 class AuthService {
   constructor() {
-    this.tokenClient = null;
+    this.codeClient = null;
     this.accessToken = null;
+    this.refreshToken = null;
     this.gapiInitialized = false;
     this.gisInitialized = false;
     this.refreshTimer = null;
@@ -18,6 +24,7 @@ class AuthService {
     this.healthCheckTimer = null;
     this.refreshRetryCount = 0;
     this.onAuthChangeCallbacks = [];
+    this.pendingSignIn = null; // Promise for pending sign-in
   }
 
   /**
@@ -31,22 +38,22 @@ class AuthService {
       // Initialize GAPI
       await this.initializeGapi();
 
-      // Initialize GIS
+      // Initialize GIS with Authorization Code flow
       await this.initializeGis();
 
       // Try to restore session from storage
-      const restored = this.restoreSession();
+      const restored = await this.restoreSession();
 
-      // If persistent auth is enabled and session wasn't restored, try silent sign-in
-      if (CONFIG.ENABLE_PERSISTENT_AUTH && CONFIG.AUTO_SIGNIN_ON_STARTUP && !restored) {
-        const hasPersistentSession = this.hasPersistentSession();
-        if (hasPersistentSession) {
-          console.log('Attempting silent sign-in for persistent session...');
-          // OPTIMIZED: Use microtask instead of 1-second delay for faster startup
-          // This still allows initialization to complete but triggers sign-in immediately after
-          Promise.resolve().then(() => {
-            this.attemptSilentSignIn();
-          });
+      // If persistent auth is enabled and session wasn't restored, try silent refresh
+      if (CONFIG.ENABLE_PERSISTENT_AUTH && !restored) {
+        const hasRefreshToken = this.getRefreshTokenFromStorage();
+        if (hasRefreshToken) {
+          console.log('Found refresh token, attempting silent refresh...');
+          try {
+            await this.refreshAccessToken();
+          } catch (error) {
+            console.log('Silent refresh failed, user needs to sign in:', error);
+          }
         }
       }
 
@@ -95,30 +102,54 @@ class AuthService {
   }
 
   /**
-   * Initialize Google Identity Services
+   * Initialize Google Identity Services with Authorization Code flow
    */
-  initializeGis() {
-    return new Promise((resolve, reject) => {
+  async initializeGis() {
+    return new Promise(async (resolve, reject) => {
       try {
-        this.tokenClient = window.google.accounts.oauth2.initTokenClient({
+        // Generate PKCE code verifier and challenge
+        const codeVerifier = generateCodeVerifier();
+        const codeChallenge = await generateCodeChallenge(codeVerifier);
+
+        // Store verifier for token exchange
+        storePkceVerifier(codeVerifier);
+
+        this.codeClient = window.google.accounts.oauth2.initCodeClient({
           client_id: CONFIG.CLIENT_ID,
           scope: CONFIG.SCOPES,
+          ux_mode: 'popup',
           callback: async (response) => {
             if (response.error) {
-              console.error('Token response error:', response);
+              console.error('Authorization error:', response);
+              if (this.pendingSignIn) {
+                this.pendingSignIn.reject(response.error);
+                this.pendingSignIn = null;
+              }
               this.notifyAuthChange(false);
-              reject(response.error);
               return;
             }
 
-            const expiresIn = response.expires_in || 3600;
-            await this.setAccessToken(response.access_token, expiresIn);
-            this.notifyAuthChange(true);
+            try {
+              // Exchange authorization code for tokens
+              await this.exchangeCodeForTokens(response.code);
+
+              if (this.pendingSignIn) {
+                this.pendingSignIn.resolve();
+                this.pendingSignIn = null;
+              }
+            } catch (error) {
+              console.error('Token exchange failed:', error);
+              if (this.pendingSignIn) {
+                this.pendingSignIn.reject(error);
+                this.pendingSignIn = null;
+              }
+              this.notifyAuthChange(false);
+            }
           },
         });
 
         this.gisInitialized = true;
-        console.log('GIS initialized');
+        console.log('GIS initialized with Authorization Code flow + PKCE');
         resolve();
       } catch (error) {
         console.error('GIS initialization error:', error);
@@ -128,11 +159,107 @@ class AuthService {
   }
 
   /**
+   * Reinitialize GIS client with fresh PKCE values
+   * Called before each sign-in to ensure fresh PKCE challenge
+   */
+  async reinitializeGisForSignIn() {
+    const codeVerifier = generateCodeVerifier();
+    const codeChallenge = await generateCodeChallenge(codeVerifier);
+    storePkceVerifier(codeVerifier);
+
+    return new Promise((resolve, reject) => {
+      try {
+        this.codeClient = window.google.accounts.oauth2.initCodeClient({
+          client_id: CONFIG.CLIENT_ID,
+          scope: CONFIG.SCOPES,
+          ux_mode: 'popup',
+          callback: async (response) => {
+            if (response.error) {
+              console.error('Authorization error:', response);
+              if (this.pendingSignIn) {
+                this.pendingSignIn.reject(response.error);
+                this.pendingSignIn = null;
+              }
+              this.notifyAuthChange(false);
+              return;
+            }
+
+            try {
+              await this.exchangeCodeForTokens(response.code);
+
+              if (this.pendingSignIn) {
+                this.pendingSignIn.resolve();
+                this.pendingSignIn = null;
+              }
+            } catch (error) {
+              console.error('Token exchange failed:', error);
+              if (this.pendingSignIn) {
+                this.pendingSignIn.reject(error);
+                this.pendingSignIn = null;
+              }
+              this.notifyAuthChange(false);
+            }
+          },
+        });
+        resolve();
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+
+  /**
+   * Exchange authorization code for access and refresh tokens
+   */
+  async exchangeCodeForTokens(code) {
+    const codeVerifier = retrievePkceVerifier();
+
+    if (!codeVerifier) {
+      throw new Error('PKCE code verifier not found');
+    }
+
+    const params = new URLSearchParams({
+      client_id: CONFIG.CLIENT_ID,
+      code: code,
+      code_verifier: codeVerifier,
+      grant_type: 'authorization_code',
+      redirect_uri: window.location.origin + window.location.pathname,
+    });
+
+    const response = await fetch(TOKEN_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: params.toString(),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(`Token exchange failed: ${error.error_description || error.error}`);
+    }
+
+    const tokens = await response.json();
+
+    console.log('Token exchange successful, refresh_token received:', !!tokens.refresh_token);
+
+    // Store refresh token if provided
+    if (tokens.refresh_token) {
+      this.refreshToken = tokens.refresh_token;
+      this.saveRefreshTokenToStorage(tokens.refresh_token);
+    }
+
+    // Set access token
+    await this.setAccessToken(tokens.access_token, tokens.expires_in);
+    this.notifyAuthChange(true);
+  }
+
+  /**
    * Sign in to Google Drive
    */
-  signIn() {
-    if (!this.tokenClient) {
-      throw new Error('Token client not initialized');
+  async signIn() {
+    if (!this.codeClient) {
+      throw new Error('Code client not initialized');
     }
 
     // Enable persistent session if configured
@@ -140,39 +267,41 @@ class AuthService {
       this.enablePersistentSession();
     }
 
-    // Request access token
-    // Use 'select_account' instead of 'consent' for better UX on return visits
-    this.tokenClient.requestAccessToken({ prompt: 'select_account' });
-  }
+    // Reinitialize with fresh PKCE values before sign-in
+    await this.reinitializeGisForSignIn();
 
-  /**
-   * Attempt silent sign-in (no user interaction)
-   */
-  attemptSilentSignIn() {
-    if (!this.tokenClient) {
-      console.error('Token client not initialized');
-      return;
-    }
+    // Create a promise to track sign-in completion
+    return new Promise((resolve, reject) => {
+      this.pendingSignIn = { resolve, reject };
 
-    try {
-      console.log('Attempting silent sign-in...');
-      // prompt: '' or 'none' for completely silent authentication
-      this.tokenClient.requestAccessToken({ prompt: '' });
-    } catch (error) {
-      console.log('Silent sign-in failed:', error);
-      // Silently fail - user will need to sign in manually
-    }
+      // Request authorization code
+      this.codeClient.requestCode();
+    });
   }
 
   /**
    * Sign out from Google Drive
    */
-  signOut() {
-    if (this.accessToken) {
-      // Revoke the token
-      window.google.accounts.oauth2.revoke(this.accessToken, () => {
-        console.log('Token revoked');
-      });
+  async signOut() {
+    // Revoke the refresh token if available
+    if (this.refreshToken) {
+      try {
+        await fetch(`${REVOKE_ENDPOINT}?token=${this.refreshToken}`, {
+          method: 'POST',
+        });
+        console.log('Refresh token revoked');
+      } catch (error) {
+        console.error('Failed to revoke refresh token:', error);
+      }
+    } else if (this.accessToken) {
+      try {
+        await fetch(`${REVOKE_ENDPOINT}?token=${this.accessToken}`, {
+          method: 'POST',
+        });
+        console.log('Access token revoked');
+      } catch (error) {
+        console.error('Failed to revoke access token:', error);
+      }
     }
 
     // Disable persistent session on explicit sign-out
@@ -228,7 +357,7 @@ class AuthService {
   }
 
   /**
-   * Save token to localStorage
+   * Save access token to localStorage
    */
   saveTokenToStorage(token, expiresIn) {
     const expiryTime = Date.now() + (expiresIn * 1000);
@@ -238,7 +367,29 @@ class AuthService {
   }
 
   /**
-   * Get token from localStorage
+   * Save refresh token to localStorage
+   */
+  saveRefreshTokenToStorage(refreshToken) {
+    localStorage.setItem('googleRefreshToken', refreshToken);
+    console.log('Refresh token saved');
+  }
+
+  /**
+   * Get refresh token from localStorage
+   */
+  getRefreshTokenFromStorage() {
+    return localStorage.getItem('googleRefreshToken');
+  }
+
+  /**
+   * Clear refresh token from localStorage
+   */
+  clearRefreshTokenFromStorage() {
+    localStorage.removeItem('googleRefreshToken');
+  }
+
+  /**
+   * Get access token from localStorage
    */
   getTokenFromStorage() {
     const token = localStorage.getItem('googleAccessToken');
@@ -253,7 +404,7 @@ class AuthService {
 
     // Check if token is still valid (with 5 minute buffer)
     if (now >= expiryTime - (5 * 60 * 1000)) {
-      console.log('Token expired or expiring soon');
+      console.log('Access token expired or expiring soon');
       this.clearTokenFromStorage();
       return null;
     }
@@ -262,7 +413,7 @@ class AuthService {
   }
 
   /**
-   * Clear token from localStorage
+   * Clear access token from localStorage
    * Note: googleUserEmail is NOT cleared here - it should persist across token refreshes
    * and only be cleared on explicit sign-out (in clearAllAppData)
    */
@@ -276,11 +427,14 @@ class AuthService {
   /**
    * Restore session from localStorage
    */
-  restoreSession() {
+  async restoreSession() {
     const tokenData = this.getTokenFromStorage();
+    const refreshToken = this.getRefreshTokenFromStorage();
 
+    // If we have a valid access token, use it
     if (tokenData && this.gapiInitialized) {
       this.accessToken = tokenData.token;
+      this.refreshToken = refreshToken;
       window.gapi.client.setToken({ access_token: tokenData.token });
 
       // Calculate remaining time
@@ -292,16 +446,30 @@ class AuthService {
       this.startHealthCheck();
 
       // Ensure user email is cached (needed for multi-user storage)
-      // This is a safety measure in case the email was somehow cleared
       const cachedEmail = localStorage.getItem('googleUserEmail');
       if (!cachedEmail) {
         console.log('User email not cached, fetching...');
-        this.fetchAndCacheUserEmail();
+        await this.fetchAndCacheUserEmail();
       }
 
       this.notifyAuthChange(true);
       console.log('Session restored from storage');
       return true;
+    }
+
+    // If access token expired but we have a refresh token, try to refresh
+    if (refreshToken && this.gapiInitialized) {
+      this.refreshToken = refreshToken;
+      console.log('Access token expired, attempting refresh with stored refresh token...');
+      try {
+        await this.refreshAccessToken();
+        return true;
+      } catch (error) {
+        console.error('Failed to refresh with stored refresh token:', error);
+        // Clear invalid refresh token
+        this.clearRefreshTokenFromStorage();
+        return false;
+      }
     }
 
     return false;
@@ -321,25 +489,71 @@ class AuthService {
     if (refreshTime > 0) {
       console.log('Token refresh scheduled in', refreshTime / 1000, 'seconds');
       this.refreshTimer = setTimeout(() => {
-        this.refreshToken();
+        this.refreshAccessToken();
       }, refreshTime);
+    } else {
+      // Token expires in less than 5 minutes, refresh now
+      console.log('Token expiring soon, refreshing now...');
+      this.refreshAccessToken();
     }
   }
 
   /**
-   * Refresh token silently
+   * Refresh access token using refresh token
    */
-  refreshToken() {
-    if (!this.tokenClient) {
-      console.error('Token client not initialized');
-      return;
+  async refreshAccessToken() {
+    const refreshToken = this.refreshToken || this.getRefreshTokenFromStorage();
+
+    if (!refreshToken) {
+      throw new Error('No refresh token available');
     }
 
+    console.log('Refreshing access token...');
+
+    const params = new URLSearchParams({
+      client_id: CONFIG.CLIENT_ID,
+      refresh_token: refreshToken,
+      grant_type: 'refresh_token',
+    });
+
     try {
-      console.log('Refreshing token...');
-      // Use prompt: '' for silent refresh (no user interaction)
-      this.tokenClient.requestAccessToken({ prompt: '' });
+      const response = await fetch(TOKEN_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: params.toString(),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+
+        // If refresh token is invalid/expired, clear it
+        if (error.error === 'invalid_grant') {
+          console.error('Refresh token expired or revoked');
+          this.clearRefreshTokenFromStorage();
+          this.refreshToken = null;
+          throw new Error('Refresh token expired. Please sign in again.');
+        }
+
+        throw new Error(`Token refresh failed: ${error.error_description || error.error}`);
+      }
+
+      const tokens = await response.json();
+
+      // Update refresh token if a new one is provided
+      if (tokens.refresh_token) {
+        this.refreshToken = tokens.refresh_token;
+        this.saveRefreshTokenToStorage(tokens.refresh_token);
+      }
+
+      // Set new access token
+      await this.setAccessToken(tokens.access_token, tokens.expires_in);
       this.refreshRetryCount = 0;
+
+      console.log('Access token refreshed successfully');
+      this.notifyAuthChange(true);
+
     } catch (error) {
       console.error('Token refresh failed:', error);
 
@@ -348,19 +562,30 @@ class AuthService {
         this.refreshRetryCount++;
         const retryDelay = Math.min(5000 * Math.pow(2, this.refreshRetryCount - 1), 30000);
         console.log(`Retrying token refresh in ${retryDelay}ms (attempt ${this.refreshRetryCount}/${CONFIG.MAX_REFRESH_RETRIES})`);
-        setTimeout(() => this.refreshToken(), retryDelay);
-      } else {
-        // Only clear session if not using persistent auth
-        if (!CONFIG.ENABLE_PERSISTENT_AUTH || !this.hasPersistentSession()) {
-          this.clearSession();
-          this.notifyAuthChange(false);
-          alert('Your Google Drive session has expired. Please reconnect.');
-        } else {
-          console.log('Persistent session enabled - will retry on next periodic refresh');
-          // Reset retry count for next attempt
-          this.refreshRetryCount = 0;
-        }
+
+        return new Promise((resolve, reject) => {
+          setTimeout(async () => {
+            try {
+              await this.refreshAccessToken();
+              resolve();
+            } catch (retryError) {
+              reject(retryError);
+            }
+          }, retryDelay);
+        });
       }
+
+      // All retries failed
+      this.refreshRetryCount = 0;
+
+      // If refresh token is invalid, user needs to sign in again
+      if (error.message.includes('Refresh token expired')) {
+        this.clearSession();
+        this.notifyAuthChange(false);
+        throw error;
+      }
+
+      throw error;
     }
   }
 
@@ -372,9 +597,13 @@ class AuthService {
       clearInterval(this.periodicRefreshTimer);
     }
 
-    this.periodicRefreshTimer = setInterval(() => {
+    this.periodicRefreshTimer = setInterval(async () => {
       console.log('Periodic token refresh...');
-      this.refreshToken();
+      try {
+        await this.refreshAccessToken();
+      } catch (error) {
+        console.error('Periodic refresh failed:', error);
+      }
     }, CONFIG.PERIODIC_REFRESH_INTERVAL);
   }
 
@@ -403,7 +632,11 @@ class AuthService {
     } catch (error) {
       console.error('Token health check failed:', error);
       if (error.status === 401) {
-        this.refreshToken();
+        try {
+          await this.refreshAccessToken();
+        } catch (refreshError) {
+          console.error('Health check refresh failed:', refreshError);
+        }
       }
     }
   }
@@ -413,7 +646,9 @@ class AuthService {
    */
   clearSession() {
     this.accessToken = null;
+    this.refreshToken = null;
     this.clearTokenFromStorage();
+    this.clearRefreshTokenFromStorage();
 
     if (this.refreshTimer) {
       clearTimeout(this.refreshTimer);
