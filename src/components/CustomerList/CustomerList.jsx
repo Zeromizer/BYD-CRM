@@ -174,9 +174,6 @@ function CustomerList() {
                   className={`customer-item ${selectedCustomerId === customer.id ? 'active' : ''}`}
                   onClick={() => selectCustomer(customer.id)}
                 >
-                  <div className="customer-avatar">
-                    {customer.name?.charAt(0).toUpperCase() || '?'}
-                  </div>
                   <div className="customer-info">
                     <div className="customer-name">{customer.name || 'Unnamed'}</div>
                     <div className="customer-phone">{customer.phone || 'No phone'}</div>
@@ -194,10 +191,13 @@ function CustomerList() {
                               '--milestone-color': milestone.color,
                               background: isComplete || isPast ? milestone.color : isCurrent ? milestone.color : '#e2e8f0',
                               opacity: isComplete || isCurrent || isPast ? 1 : 0.4,
+                              flex: isCurrent ? 2 : 1,
                             }}
                             title={`${milestone.name}${isComplete ? ' ✓' : isCurrent ? ' (Current)' : ''}`}
                           >
-                            <span className="milestone-segment-label">{milestone.shortName}</span>
+                            <span className="milestone-segment-label">
+                              {isCurrent ? milestone.name : milestone.shortName}
+                            </span>
                           </div>
                         );
                       })}
