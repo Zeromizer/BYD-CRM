@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { FolderOpen, ScanLine } from 'lucide-react';
 import useCustomerStore from '../../stores/useCustomerStore';
 import useAuthStore from '../../stores/useAuthStore';
 import driveService from '../../services/driveService';
@@ -91,7 +92,7 @@ function CustomerDetails() {
     return customerId === targetId;
   }) || null;
 
-  const [activeTab, setActiveTab] = useState('milestones');
+  const [activeTab, setActiveTab] = useState('details');
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   // Inline editing state for Details tab
@@ -1152,12 +1153,6 @@ function CustomerDetails() {
         {/* Tabs */}
         <div className="customer-tabs">
           <button
-            className={`tab ${activeTab === 'milestones' ? 'active' : ''}`}
-            onClick={() => setActiveTab('milestones')}
-          >
-            Milestones
-          </button>
-          <button
             className={`tab ${activeTab === 'details' ? 'active' : ''}`}
             onClick={() => setActiveTab('details')}
           >
@@ -1176,24 +1171,32 @@ function CustomerDetails() {
             VSA
           </button>
           <button
-            className={`tab ${activeTab === 'documents' ? 'active' : ''}`}
-            onClick={() => setActiveTab('documents')}
+            className={`tab ${activeTab === 'status' ? 'active' : ''}`}
+            onClick={() => setActiveTab('status')}
           >
-            Documents {!isSignedIn && '🔒'}
+            Status
           </button>
           <button
-            className={`tab ${activeTab === 'scanner' ? 'active' : ''}`}
-            onClick={() => setActiveTab('scanner')}
+            className={`tab tab-icon ${activeTab === 'documents' ? 'active' : ''}`}
+            onClick={() => setActiveTab('documents')}
+            title="Documents"
           >
-            Scanner {!isSignedIn && '🔒'}
+            <FolderOpen size={18} />
+            {!isSignedIn && <span className="lock-icon">🔒</span>}
+          </button>
+          <button
+            className={`tab tab-icon ${activeTab === 'scanner' ? 'active' : ''}`}
+            onClick={() => setActiveTab('scanner')}
+            title="Scanner"
+          >
+            <ScanLine size={18} />
+            {!isSignedIn && <span className="lock-icon">🔒</span>}
           </button>
         </div>
 
         {/* Tab Content */}
         <div className="customer-details-content">
-          {activeTab === 'milestones' ? (
-            <MilestoneTracker customer={customer} />
-          ) : activeTab === 'details' ? (
+          {activeTab === 'details' ? (
             <>
               <div className="info-section">
                 <h3>Contact Information</h3>
@@ -2360,6 +2363,8 @@ function CustomerDetails() {
                 </div>
               </div>
             </>
+          ) : activeTab === 'status' ? (
+            <MilestoneTracker customer={customer} />
           ) : activeTab === 'documents' ? (
             /* Documents Tab */
             <div className="documents-section">

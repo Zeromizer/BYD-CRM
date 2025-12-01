@@ -499,6 +499,19 @@
   background: var(--color-card-background);
 }
 
+/* Icon-only tabs */
+.customer-tabs .tab.tab-icon {
+  padding: var(--spacing-md) var(--spacing-lg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.customer-tabs .tab.tab-icon .lock-icon {
+  font-size: 10px;
+}
+
 /* Documents Section */
 .documents-section {
   padding: 20px 0;
@@ -1044,6 +1057,10 @@
     font-size: 14px;
     min-width: auto;
     min-height: 44px;
+  }
+
+  .customer-tabs .tab.tab-icon {
+    padding: 12px;
   }
 
   /* Smaller Edit Details button on mobile */
