@@ -21,6 +21,7 @@ function CustomerList() {
     const search = searchTerm.toLowerCase();
     return (
       customer.name?.toLowerCase().includes(search) ||
+      customer.vsaNo?.toLowerCase().includes(search) ||
       customer.phone?.includes(search) ||
       customer.email?.toLowerCase().includes(search)
     );
@@ -212,7 +213,7 @@ function CustomerList() {
                 >
                   <div className="customer-info">
                     <div className="customer-name">{customer.name || 'Unnamed'}</div>
-                    <div className="customer-phone">{customer.phone || 'No phone'}</div>
+                    <div className="customer-vsa">{customer.vsaNo || 'No VSA'}</div>
                     <div className="customer-milestone-progress">
                       {MILESTONES.map((milestone, index) => {
                         const isComplete = isMilestoneComplete(milestone.id, customer.checklist);
