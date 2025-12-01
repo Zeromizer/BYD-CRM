@@ -86,19 +86,7 @@
 }
 
 .customer-avatar {
-  width: 42px;
-  height: 42px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, #334155 0%, #475569 100%);
-  color: var(--color-text-primary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 600;
-  font-size: 16px;
-  margin-right: var(--spacing-md);
-  flex-shrink: 0;
-  letter-spacing: 0.5px;
+  display: none;
 }
 
 .customer-info {
@@ -153,6 +141,15 @@
   font-weight: 600;
   color: white;
   text-transform: uppercase;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0 4px;
+}
+
+.milestone-segment.current .milestone-segment-label {
+  font-size: 10px;
   letter-spacing: 0.5px;
 }
 
@@ -207,13 +204,6 @@
   .customer-item {
     padding: var(--spacing-md);
     min-height: 72px;
-  }
-
-  .customer-avatar {
-    width: 44px;
-    height: 44px;
-    font-size: 17px;
-    border-radius: 10px;
   }
 
   .customer-name {
