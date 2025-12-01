@@ -168,7 +168,7 @@ const MilestoneTracker = memo(function MilestoneTracker({ customer, onSave }) {
               >
                 {getMilestoneIcon(milestone.iconName, 16, isCurrent ? 'white' : milestone.color)}
                 <span className="stage-name-full">{milestone.name}</span>
-                <span className="stage-name-short">{milestone.shortName}</span>
+                <span className="stage-name-short">{isCurrent ? milestone.name : milestone.shortName}</span>
               </button>
             );
           })}
