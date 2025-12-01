@@ -48,6 +48,9 @@ const useCustomerStore = create((set, get) => ({
       customers: [...state.customers, newCustomer]
     }));
 
+    // Save to localStorage
+    get().saveToLocalStorage();
+
     return newCustomer;
   },
 
