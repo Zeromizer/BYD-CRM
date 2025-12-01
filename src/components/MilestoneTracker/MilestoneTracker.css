@@ -301,7 +301,7 @@
 }
 
 .checklist-header:hover {
-  background: var(--color-background-tertiary);
+  background: rgba(0, 188, 212, 0.1);
 }
 
 .checklist-header-left {
