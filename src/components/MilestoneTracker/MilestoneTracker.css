@@ -523,39 +523,35 @@
     display: none;
   }
 
-  /* Horizontal scrollable stage buttons for mobile */
+  /* Compact stage selector for mobile */
+  .current-stage-selector {
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .current-stage-selector label {
+    display: none;
+  }
+
+  /* Horizontal stage buttons for mobile */
   .stage-buttons {
     display: flex;
     flex-wrap: nowrap;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scroll-snap-type: x mandatory;
     gap: 6px;
-    padding-bottom: 4px;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
-  }
-
-  .stage-buttons::-webkit-scrollbar {
-    height: 4px;
-  }
-
-  .stage-buttons::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  .stage-buttons::-webkit-scrollbar-thumb {
-    background: rgba(0, 0, 0, 0.15);
-    border-radius: 2px;
   }
 
   .stage-button {
-    flex: 0 0 auto;
-    scroll-snap-align: start;
-    padding: 8px 12px;
-    font-size: 12px;
-    gap: 6px;
+    flex: 1 1 auto;
+    justify-content: center;
+    padding: 6px 8px;
+    font-size: 11px;
+    gap: 0;
     white-space: nowrap;
+  }
+
+  /* Hide icons on mobile stage buttons */
+  .stage-button svg {
+    display: none;
   }
 
   /* Show short name on mobile */
@@ -565,5 +561,71 @@
 
   .stage-button .stage-name-short {
     display: inline;
+  }
+
+  /* Compact checklist cards for mobile */
+  .milestone-checklists {
+    gap: 4px;
+  }
+
+  .checklist-section {
+    border-radius: 8px;
+  }
+
+  .checklist-header {
+    padding: 10px 12px;
+  }
+
+  .checklist-indicator {
+    width: 22px;
+    height: 22px;
+  }
+
+  .checklist-indicator svg {
+    width: 10px;
+    height: 10px;
+  }
+
+  .checklist-title {
+    font-size: 13px;
+  }
+
+  .current-badge {
+    font-size: 8px;
+    padding: 2px 5px;
+  }
+
+  .checklist-progress-bar {
+    width: 32px;
+    height: 4px;
+  }
+
+  .checklist-header-right .checklist-progress-text {
+    font-size: 10px;
+    min-width: 28px;
+  }
+
+  .chevron {
+    width: 16px;
+    height: 16px;
+  }
+
+  .checklist-items {
+    padding: 0 12px 12px 12px;
+    gap: 6px;
+  }
+
+  .checklist-item {
+    padding: 8px 10px;
+    gap: 10px;
+  }
+
+  .custom-checkbox {
+    width: 18px;
+    height: 18px;
+  }
+
+  .checklist-item-label {
+    font-size: 12px;
   }
 }
