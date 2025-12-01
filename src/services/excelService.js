@@ -1,6 +1,25 @@
-import XlsxPopulate from 'xlsx-populate';
 import authService from './authService';
 import driveService from './driveService';
+
+/**
+ * Excel Service for populating Excel templates with customer data
+ *
+ * NOTE: xlsx-populate is lazy-loaded to reduce initial bundle size
+ */
+
+// Cache the xlsx-populate module after first load
+let xlsxModule = null;
+
+/**
+ * Lazy load xlsx-populate module
+ */
+const loadXlsxPopulate = async () => {
+  if (!xlsxModule) {
+    const module = await import('xlsx-populate');
+    xlsxModule = module.default;
+  }
+  return xlsxModule;
+};
 
 class ExcelService {
   /**
@@ -267,8 +286,8 @@ class ExcelService {
         throw new Error('No Excel file available. Please upload a file or configure a master template.');
       }
 
-      console.log('📊 Loading workbook with xlsx-populate...');
-      // Load with xlsx-populate
+      // Lazy load xlsx-populate and load workbook
+      const XlsxPopulate = await loadXlsxPopulate();
       const workbook = await XlsxPopulate.fromDataAsync(arrayBuffer);
 
       // Get first sheet

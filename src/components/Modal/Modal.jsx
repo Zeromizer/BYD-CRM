@@ -1,7 +1,7 @@
-import { useEffect } from 'react';
+import { useEffect, memo } from 'react';
 import './Modal.css';
 
-function Modal({ isOpen, onClose, title, children, size = 'medium' }) {
+const Modal = memo(function Modal({ isOpen, onClose, title, children, size = 'medium' }) {
   // Close modal on Escape key
   useEffect(() => {
     const handleEscape = (e) => {
@@ -45,6 +45,6 @@ function Modal({ isOpen, onClose, title, children, size = 'medium' }) {
       </div>
     </div>
   );
-}
+});
 
 export default Modal;

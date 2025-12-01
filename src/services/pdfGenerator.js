@@ -1,5 +1,3 @@
-import jsPDF from 'jspdf';
-
 /**
  * PDFGenerator - Generate print-ready PDFs from rendered canvases
  *
@@ -8,7 +6,24 @@ import jsPDF from 'jspdf';
  * - Automatic double-sided setup
  * - Perfect for printing
  * - High quality output
+ *
+ * NOTE: jsPDF is lazy-loaded to reduce initial bundle size
  */
+
+// Cache the jsPDF module after first load
+let jsPDFModule = null;
+
+/**
+ * Lazy load jsPDF module
+ */
+const loadJsPDF = async () => {
+  if (!jsPDFModule) {
+    const module = await import('jspdf');
+    jsPDFModule = module.default || module.jsPDF;
+  }
+  return jsPDFModule;
+};
+
 class PDFGenerator {
   constructor() {
     // A4 dimensions in inches
@@ -29,6 +44,9 @@ class PDFGenerator {
       filename = 'document.pdf',
       title = 'Document',
     } = options;
+
+    // Lazy load jsPDF
+    const jsPDF = await loadJsPDF();
 
     // Create PDF
     const pdf = new jsPDF({
@@ -75,6 +93,9 @@ class PDFGenerator {
     if (!canvases || canvases.length === 0) {
       throw new Error('No canvases provided');
     }
+
+    // Lazy load jsPDF
+    const jsPDF = await loadJsPDF();
 
     // Create PDF
     const pdf = new jsPDF({
