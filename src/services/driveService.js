@@ -739,16 +739,6 @@ class DriveService {
       const mainFolder = await this.createFolder(mainFolderName, customersFolderId);
       console.log('[DriveService] Main folder created:', mainFolder);
 
-      // Create subfolders
-      const subfolders = ['NIRC', 'Test Drive', 'Other Documents', 'VSA', 'Trade In'];
-      console.log(`[DriveService] Step 3: Creating ${subfolders.length} subfolders in parallel...`);
-      const subfolderPromises = subfolders.map(subfolder =>
-        this.createFolder(subfolder, mainFolder.id)
-      );
-
-      const createdSubfolders = await Promise.all(subfolderPromises);
-      console.log(`[DriveService] All ${createdSubfolders.length} subfolders created successfully`);
-
       const result = {
         folderId: mainFolder.id,
         folderName: mainFolder.name,
