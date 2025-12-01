@@ -576,13 +576,14 @@
   background: #0a0a0a;
 }
 
+.crop-header,
 .enhance-header,
 .gallery-header,
 .export-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: max(12px, env(safe-area-inset-top)) 12px 12px;
+  padding: max(16px, calc(env(safe-area-inset-top) + 8px)) 12px 12px;
   background: #1a1a1a;
   border-bottom: 1px solid #2a2a2a;
   flex-shrink: 0;
@@ -621,6 +622,7 @@
   height: 18px;
 }
 
+.crop-header h3,
 .enhance-header h3,
 .gallery-header h3,
 .export-header h3 {
