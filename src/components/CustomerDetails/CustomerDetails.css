@@ -506,6 +506,7 @@
   align-items: center;
   justify-content: center;
   gap: 4px;
+  flex: 1;
 }
 
 .customer-tabs .tab.tab-icon .lock-icon {
