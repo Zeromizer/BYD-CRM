@@ -279,6 +279,14 @@
   border-color: var(--color-primary);
 }
 
+.checklist-section.expanded .checklist-header {
+  background: rgba(0, 188, 212, 0.15);
+}
+
+.checklist-section.expanded .checklist-header:hover {
+  background: rgba(0, 188, 212, 0.2);
+}
+
 /* Checklist Header */
 .checklist-header {
   display: flex;
