@@ -1539,6 +1539,21 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
       {/* CROP VIEW */}
       {viewMode === VIEW_MODES.CROP && capturedImage && (
         <div className="scanner-crop-view">
+          <div className="crop-header">
+            <button className="header-btn" onClick={resetScanner}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
+              Cancel
+            </button>
+            <h3>Adjust Corners</h3>
+            <button className="header-btn primary" onClick={applyCrop}>
+              Next
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+            </button>
+          </div>
           <div
             className="crop-container"
             ref={cropContainerRef}
