@@ -56,10 +56,6 @@ function CustomerForm({ customer, onSubmit, onCancel, isSubmitting = false }) {
       newErrors.name = 'Name is required';
     }
 
-    if (!formData.phone.trim()) {
-      newErrors.phone = 'Contact number is required';
-    }
-
     if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = 'Invalid email format';
     }
@@ -159,19 +155,15 @@ function CustomerForm({ customer, onSubmit, onCancel, isSubmitting = false }) {
         </div>
 
         <div className="form-group">
-          <label htmlFor="phone">
-            Contact Number <span className="required">*</span>
-          </label>
+          <label htmlFor="phone">Contact Number</label>
           <input
             type="tel"
             id="phone"
             name="phone"
             value={formData.phone}
             onChange={handleChange}
-            className={errors.phone ? 'error' : ''}
             disabled={isSubmitting}
           />
-          {errors.phone && <span className="error-message">{errors.phone}</span>}
         </div>
       </div>
 
