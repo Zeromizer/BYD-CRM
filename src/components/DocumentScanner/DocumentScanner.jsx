@@ -1,125 +1,147 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import pdfGenerator from '../../services/pdfGenerator';
 import './DocumentScanner.css';
 
-function DocumentScanner({ customerId, customerName, customerFolderId, onScanComplete }) {
-  const [cameraActive, setCameraActive] = useState(false);
+/**
+ * Professional Document Scanner Component
+ *
+ * Features:
+ * - Live camera with real-time document edge detection
+ * - Interactive corner adjustment
+ * - Multiple filter presets (Original, Auto, B&W, Grayscale, Magic Color)
+ * - Manual adjustments (brightness, contrast, rotation)
+ * - Multi-page document support
+ * - Page reordering, deletion, retake
+ * - Export to PDF or images
+ * - Google Drive upload
+ */
+
+// Scanner view modes
+const VIEW_MODES = {
+  START: 'start',
+  CAMERA: 'camera',
+  CROP: 'crop',
+  ENHANCE: 'enhance',
+  GALLERY: 'gallery',
+  EXPORT: 'export'
+};
+
+// Filter presets
+const FILTERS = {
+  original: { name: 'Original', brightness: 0, contrast: 0, saturation: 100, grayscale: false, bw: false },
+  auto: { name: 'Auto', brightness: 10, contrast: 20, saturation: 110, grayscale: false, bw: false },
+  bw: { name: 'B&W', brightness: 5, contrast: 30, saturation: 0, grayscale: false, bw: true },
+  grayscale: { name: 'Grayscale', brightness: 0, contrast: 10, saturation: 0, grayscale: true, bw: false },
+  magic: { name: 'Magic', brightness: 15, contrast: 25, saturation: 120, grayscale: false, bw: false }
+};
+
+function DocumentScanner({ customerId, customerName, customerFolderId, onScanComplete, onClose }) {
+  // View state
+  const [viewMode, setViewMode] = useState(VIEW_MODES.START);
   const [cameraLoading, setCameraLoading] = useState(false);
-  const [capturedImages, setCapturedImages] = useState([]); // Changed to array for multiple photos
-  const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState(null);
 
+  // Camera state
+  const [flashMode, setFlashMode] = useState('off'); // off, on
+  const [facingMode, setFacingMode] = useState('environment');
+  const [detectedCorners, setDetectedCorners] = useState(null);
+  const [isStable, setIsStable] = useState(false);
+  const [autoCapture, setAutoCapture] = useState(true);
+
+  // Document state
+  const [pages, setPages] = useState([]);
+  const [currentPageIndex, setCurrentPageIndex] = useState(0);
+  const [capturedImage, setCapturedImage] = useState(null);
+
+  // Crop state
+  const [corners, setCorners] = useState(null);
+  const [draggingCorner, setDraggingCorner] = useState(null);
+  const [imageDimensions, setImageDimensions] = useState({ width: 1920, height: 1080 });
+
+  // Enhancement state
+  const [currentFilter, setCurrentFilter] = useState('auto');
+  const [brightness, setBrightness] = useState(0);
+  const [contrast, setContrast] = useState(0);
+  const [rotation, setRotation] = useState(0);
+
+  // Export state
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportProgress, setExportProgress] = useState(0);
+
+  // Refs
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
+  const overlayCanvasRef = useRef(null);
   const streamRef = useRef(null);
+  const detectionIntervalRef = useRef(null);
+  const stableCountRef = useRef(0);
+  const lastCornersRef = useRef(null);
+  const cropContainerRef = useRef(null);
+  const enhanceCanvasRef = useRef(null);
 
-  const MAX_PHOTOS = 5; // Maximum number of photos allowed
+  // ========================================
+  // CAMERA FUNCTIONS
+  // ========================================
 
-  // Start camera
   const startCamera = async () => {
     try {
       setError(null);
       setCameraLoading(true);
-      console.log('Requesting camera access...');
 
-      const stream = await navigator.mediaDevices.getUserMedia({
+      const constraints = {
         video: {
-          facingMode: 'environment', // Use back camera on mobile
+          facingMode: facingMode,
           width: { ideal: 1920 },
           height: { ideal: 1080 }
         }
-      });
+      };
 
-      console.log('Camera access granted, stream obtained:', stream);
-
-      // Set camera active FIRST to render the video element
-      setCameraActive(true);
-
-      // Wait a tick for React to render the video element
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      if (!videoRef.current) {
-        console.error('Video ref is still null after render!');
-        setCameraLoading(false);
-        setCameraActive(false);
-        setError('Video element not ready. Please try again.');
-        stream.getTracks().forEach(track => track.stop());
-        return;
+      // Add torch constraint if flash is on
+      if (flashMode === 'on' && facingMode === 'environment') {
+        constraints.video.advanced = [{ torch: true }];
       }
 
-      const video = videoRef.current;
-      console.log('Video element found:', video);
-
-      video.srcObject = stream;
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
       streamRef.current = stream;
 
-      console.log('Video element state after setting srcObject:', {
-        readyState: video.readyState,
-        videoWidth: video.videoWidth,
-        videoHeight: video.videoHeight,
-        srcObject: video.srcObject
-      });
+      setViewMode(VIEW_MODES.CAMERA);
 
-      // Wait for video metadata to load with timeout
-      try {
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+
         await new Promise((resolve, reject) => {
-          const timeout = setTimeout(() => {
-            console.log('Metadata load timeout (3s), attempting to play anyway');
-            resolve();
-          }, 3000);
-
-          // If metadata already loaded, resolve immediately
-          if (video.readyState >= 1) {
-            console.log('Video metadata already loaded (readyState:', video.readyState, ')');
+          const timeout = setTimeout(resolve, 3000);
+          if (videoRef.current.readyState >= 1) {
             clearTimeout(timeout);
             resolve();
             return;
           }
-
-          console.log('Waiting for loadedmetadata event...');
-          video.onloadedmetadata = () => {
-            console.log('Video metadata loaded via event');
+          videoRef.current.onloadedmetadata = () => {
             clearTimeout(timeout);
             resolve();
           };
-
-          video.onerror = (e) => {
-            console.error('Video error event:', e);
-            clearTimeout(timeout);
-            reject(new Error('Video element error'));
-          };
+          videoRef.current.onerror = reject;
         });
-      } catch (metadataError) {
-        console.error('Metadata loading error:', metadataError);
-        setCameraLoading(false);
-        setCameraActive(false);
-        setError('Failed to initialize video. Please try again.');
-        stream.getTracks().forEach(track => track.stop());
-        return;
+
+        await videoRef.current.play();
+        startEdgeDetection();
       }
 
-      // Explicitly play the video (required in some browsers)
-      try {
-        console.log('Attempting to play video...');
-        await video.play();
-        console.log('Video playing successfully');
-        setCameraLoading(false);
-      } catch (playError) {
-        console.error('Error playing video:', playError);
-        setCameraLoading(false);
-        setCameraActive(false);
-        setError('Unable to start video playback. Please try again.');
-        stream.getTracks().forEach(track => track.stop());
-      }
-    } catch (err) {
-      console.error('Error accessing camera:', err);
       setCameraLoading(false);
-      setCameraActive(false);
-      setError(`Unable to access camera: ${err.message}. Please check permissions.`);
+    } catch (err) {
+      console.error('Camera error:', err);
+      setCameraLoading(false);
+      setError(`Unable to access camera: ${err.message}`);
     }
   };
 
-  // Stop camera
-  const stopCamera = () => {
+  const stopCamera = useCallback(() => {
+    if (detectionIntervalRef.current) {
+      cancelAnimationFrame(detectionIntervalRef.current);
+      detectionIntervalRef.current = null;
+    }
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
@@ -127,42 +149,100 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
     if (videoRef.current) {
       videoRef.current.srcObject = null;
     }
-    setCameraActive(false);
-    setCameraLoading(false);
-  };
+    setDetectedCorners(null);
+    setIsStable(false);
+    stableCountRef.current = 0;
+  }, []);
 
-  // Capture photo
-  const capturePhoto = () => {
-    if (!videoRef.current || !canvasRef.current) return;
+  const toggleFlash = async () => {
+    if (!streamRef.current) return;
 
-    // Check if max photos reached
-    if (capturedImages.length >= MAX_PHOTOS) {
-      setError(`Maximum ${MAX_PHOTOS} photos allowed`);
-      return;
+    const track = streamRef.current.getVideoTracks()[0];
+    if (track && track.getCapabilities && track.getCapabilities().torch) {
+      const newFlashMode = flashMode === 'off' ? 'on' : 'off';
+      try {
+        await track.applyConstraints({ advanced: [{ torch: newFlashMode === 'on' }] });
+        setFlashMode(newFlashMode);
+      } catch (e) {
+        console.warn('Flash not supported:', e);
+      }
     }
-
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-    const imageDataUrl = canvas.toDataURL('image/jpeg', 0.95);
-
-    // Add to captured images array instead of replacing
-    setCapturedImages(prev => [...prev, {
-      id: Date.now(),
-      data: imageDataUrl
-    }]);
-
-    // Keep camera active for more photos
-    setError(null);
   };
 
-  // Detect document edges and crop
-  const detectAndCropDocument = (canvas) => {
+  const switchCamera = async () => {
+    stopCamera();
+    const newFacing = facingMode === 'environment' ? 'user' : 'environment';
+    setFacingMode(newFacing);
+    // Camera will restart with new facing mode
+    setTimeout(() => startCamera(), 200);
+  };
+
+  // ========================================
+  // EDGE DETECTION
+  // ========================================
+
+  const startEdgeDetection = () => {
+    const detect = () => {
+      if (!videoRef.current || !overlayCanvasRef.current || !canvasRef.current) {
+        detectionIntervalRef.current = requestAnimationFrame(detect);
+        return;
+      }
+
+      const video = videoRef.current;
+      const overlay = overlayCanvasRef.current;
+      const ctx = overlay.getContext('2d');
+
+      // Match overlay size to video display size
+      const rect = video.getBoundingClientRect();
+      overlay.width = rect.width;
+      overlay.height = rect.height;
+
+      // Clear overlay
+      ctx.clearRect(0, 0, overlay.width, overlay.height);
+
+      // Process video frame for edge detection
+      const tempCanvas = canvasRef.current;
+      const tempCtx = tempCanvas.getContext('2d');
+
+      // Use lower resolution for detection
+      const scale = 0.25;
+      tempCanvas.width = video.videoWidth * scale;
+      tempCanvas.height = video.videoHeight * scale;
+
+      tempCtx.drawImage(video, 0, 0, tempCanvas.width, tempCanvas.height);
+
+      // Detect document edges
+      const documentCorners = detectDocumentEdges(tempCanvas, scale);
+
+      if (documentCorners) {
+        // Scale corners to overlay size
+        const scaleX = overlay.width / video.videoWidth;
+        const scaleY = overlay.height / video.videoHeight;
+
+        const scaledCorners = documentCorners.map(c => ({
+          x: c.x * scaleX,
+          y: c.y * scaleY
+        }));
+
+        // Draw detection overlay
+        drawDetectionOverlay(ctx, scaledCorners, overlay.width, overlay.height);
+        setDetectedCorners(documentCorners);
+
+        // Check stability for auto-capture
+        checkStability(documentCorners);
+      } else {
+        setDetectedCorners(null);
+        setIsStable(false);
+        stableCountRef.current = 0;
+      }
+
+      detectionIntervalRef.current = requestAnimationFrame(detect);
+    };
+
+    detect();
+  };
+
+  const detectDocumentEdges = (canvas, scale) => {
     const ctx = canvas.getContext('2d');
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     const width = canvas.width;
@@ -171,11 +251,10 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
     // Convert to grayscale
     const gray = new Uint8ClampedArray(width * height);
     for (let i = 0; i < imageData.data.length; i += 4) {
-      const avg = (imageData.data[i] + imageData.data[i + 1] + imageData.data[i + 2]) / 3;
-      gray[i / 4] = avg;
+      gray[i / 4] = (imageData.data[i] * 0.299 + imageData.data[i + 1] * 0.587 + imageData.data[i + 2] * 0.114);
     }
 
-    // Apply Gaussian blur to reduce noise
+    // Apply Gaussian blur
     const blurred = gaussianBlur(gray, width, height);
 
     // Canny edge detection
@@ -184,20 +263,20 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
     // Find contours
     const contours = findContours(edges, width, height);
 
-    // Find the largest quadrilateral contour (likely the document)
+    // Find document quadrilateral
     const docContour = findDocumentContour(contours, width, height);
 
     if (docContour) {
-      console.log('Document detected, applying perspective correction');
-      // Apply perspective transform
-      return applyPerspectiveTransform(canvas, docContour);
+      // Scale back to original video dimensions
+      return docContour.map(c => ({
+        x: c.x / scale,
+        y: c.y / scale
+      }));
     }
 
-    console.log('Document not detected, returning original');
-    return canvas;
+    return null;
   };
 
-  // Gaussian blur for noise reduction
   const gaussianBlur = (gray, width, height) => {
     const result = new Uint8ClampedArray(gray.length);
     const kernel = [1, 4, 6, 4, 1, 4, 16, 24, 16, 4, 6, 24, 36, 24, 6, 4, 16, 24, 16, 4, 1, 4, 6, 4, 1];
@@ -208,8 +287,7 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
         let sum = 0;
         for (let ky = -2; ky <= 2; ky++) {
           for (let kx = -2; kx <= 2; kx++) {
-            const idx = (y + ky) * width + (x + kx);
-            sum += gray[idx] * kernel[(ky + 2) * 5 + (kx + 2)];
+            sum += gray[(y + ky) * width + (x + kx)] * kernel[(ky + 2) * 5 + (kx + 2)];
           }
         }
         result[y * width + x] = sum / kernelSum;
@@ -218,30 +296,25 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
     return result;
   };
 
-  // Canny edge detection
   const cannyEdgeDetection = (gray, width, height) => {
     const edges = new Uint8ClampedArray(width * height);
 
-    // Sobel operator for gradient calculation
     for (let y = 1; y < height - 1; y++) {
       for (let x = 1; x < width - 1; x++) {
-        const gx =
-          -gray[(y - 1) * width + (x - 1)] + gray[(y - 1) * width + (x + 1)] +
-          -2 * gray[y * width + (x - 1)] + 2 * gray[y * width + (x + 1)] +
-          -gray[(y + 1) * width + (x - 1)] + gray[(y + 1) * width + (x + 1)];
+        const gx = -gray[(y - 1) * width + (x - 1)] + gray[(y - 1) * width + (x + 1)] +
+                   -2 * gray[y * width + (x - 1)] + 2 * gray[y * width + (x + 1)] +
+                   -gray[(y + 1) * width + (x - 1)] + gray[(y + 1) * width + (x + 1)];
 
-        const gy =
-          -gray[(y - 1) * width + (x - 1)] - 2 * gray[(y - 1) * width + x] - gray[(y - 1) * width + (x + 1)] +
-          gray[(y + 1) * width + (x - 1)] + 2 * gray[(y + 1) * width + x] + gray[(y + 1) * width + (x + 1)];
+        const gy = -gray[(y - 1) * width + (x - 1)] - 2 * gray[(y - 1) * width + x] - gray[(y - 1) * width + (x + 1)] +
+                   gray[(y + 1) * width + (x - 1)] + 2 * gray[(y + 1) * width + x] + gray[(y + 1) * width + (x + 1)];
 
         const magnitude = Math.sqrt(gx * gx + gy * gy);
-        edges[y * width + x] = magnitude > 30 ? 255 : 0; // Lower threshold for better detection
+        edges[y * width + x] = magnitude > 25 ? 255 : 0;
       }
     }
     return edges;
   };
 
-  // Find contours in edge image
   const findContours = (edges, width, height) => {
     const visited = new Uint8Array(width * height);
     const contours = [];
@@ -250,8 +323,30 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
       for (let x = 0; x < width; x++) {
         const idx = y * width + x;
         if (edges[idx] > 0 && !visited[idx]) {
-          const contour = traceContour(edges, visited, x, y, width, height);
-          if (contour.length > 50) { // Minimum contour size
+          const contour = [];
+          const stack = [[x, y]];
+
+          while (stack.length > 0) {
+            const [cx, cy] = stack.pop();
+            const cidx = cy * width + cx;
+
+            if (cx < 0 || cx >= width || cy < 0 || cy >= height || visited[cidx] || edges[cidx] === 0) {
+              continue;
+            }
+
+            visited[cidx] = 1;
+            contour.push({ x: cx, y: cy });
+
+            for (let dy = -1; dy <= 1; dy++) {
+              for (let dx = -1; dx <= 1; dx++) {
+                if (dx !== 0 || dy !== 0) {
+                  stack.push([cx + dx, cy + dy]);
+                }
+              }
+            }
+          }
+
+          if (contour.length > 30) {
             contours.push(contour);
           }
         }
@@ -260,78 +355,31 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
     return contours;
   };
 
-  // Trace a single contour
-  const traceContour = (edges, visited, startX, startY, width, height) => {
-    const contour = [];
-    const stack = [[startX, startY]];
-
-    while (stack.length > 0) {
-      const [x, y] = stack.pop();
-      const idx = y * width + x;
-
-      if (x < 0 || x >= width || y < 0 || y >= height || visited[idx] || edges[idx] === 0) {
-        continue;
-      }
-
-      visited[idx] = 1;
-      contour.push({ x, y });
-
-      // Check 8-connected neighbors
-      for (let dy = -1; dy <= 1; dy++) {
-        for (let dx = -1; dx <= 1; dx++) {
-          if (dx !== 0 || dy !== 0) {
-            stack.push([x + dx, y + dy]);
-          }
-        }
-      }
-    }
-    return contour;
-  };
-
-  // Find the document contour (largest quadrilateral)
   const findDocumentContour = (contours, width, height) => {
     let bestContour = null;
-    let maxArea = width * height * 0.05; // Minimum 5% of image area (lowered for better detection)
-
-    console.log(`Looking for document in ${contours.length} contours, min area: ${maxArea}`);
+    let maxArea = width * height * 0.08;
 
     for (const contour of contours) {
-      const approx = approximatePolygon(contour);
+      const hull = convexHull(contour);
+      const approx = simplifyPolygon(hull, hull.length * 0.02);
 
       if (approx.length === 4) {
         const area = polygonArea(approx);
-        console.log(`Found 4-sided contour with area: ${area}`);
-        if (area > maxArea) {
-          maxArea = area;
-          bestContour = approx;
+        if (area > maxArea && area < width * height * 0.95) {
+          if (isValidQuadrilateral(approx, width, height)) {
+            maxArea = area;
+            bestContour = orderCorners(approx);
+          }
         }
       }
-    }
-
-    if (bestContour) {
-      console.log(`Best document contour found with area: ${maxArea}`);
     }
 
     return bestContour;
   };
 
-  // Approximate polygon using Douglas-Peucker algorithm
-  const approximatePolygon = (contour, epsilon = 0.02) => {
-    const perimeter = contour.length;
-    const maxDistance = perimeter * epsilon;
-
-    // Get convex hull first
-    const hull = convexHull(contour);
-
-    // Simplify to get corners
-    return douglasPeucker(hull, maxDistance);
-  };
-
-  // Convex hull using Graham scan
   const convexHull = (points) => {
     if (points.length < 3) return points;
 
-    // Find the point with lowest y (and leftmost if tie)
     let start = points[0];
     for (const p of points) {
       if (p.y < start.y || (p.y === start.y && p.x < start.x)) {
@@ -339,7 +387,6 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
       }
     }
 
-    // Sort points by polar angle with start point
     const sorted = points.slice().sort((a, b) => {
       const angle1 = Math.atan2(a.y - start.y, a.x - start.x);
       const angle2 = Math.atan2(b.y - start.y, b.x - start.x);
@@ -353,10 +400,7 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
         const p1 = hull[hull.length - 2];
         const p2 = hull[hull.length - 1];
         const p3 = sorted[i];
-
-        // Cross product to check if we make a left turn
         const cross = (p2.x - p1.x) * (p3.y - p1.y) - (p2.y - p1.y) * (p3.x - p1.x);
-
         if (cross > 0) break;
         hull.pop();
       }
@@ -366,11 +410,9 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
     return hull;
   };
 
-  // Douglas-Peucker algorithm for polygon simplification
-  const douglasPeucker = (points, epsilon) => {
+  const simplifyPolygon = (points, epsilon) => {
     if (points.length < 3) return points;
 
-    // Find the point with maximum distance from line between start and end
     let maxDist = 0;
     let index = 0;
     const start = points[0];
@@ -384,26 +426,23 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
       }
     }
 
-    // If max distance is greater than epsilon, recursively simplify
     if (maxDist > epsilon) {
-      const left = douglasPeucker(points.slice(0, index + 1), epsilon);
-      const right = douglasPeucker(points.slice(index), epsilon);
+      const left = simplifyPolygon(points.slice(0, index + 1), epsilon);
+      const right = simplifyPolygon(points.slice(index), epsilon);
       return left.slice(0, -1).concat(right);
     }
 
     return [start, end];
   };
 
-  // Point to line distance
   const pointToLineDistance = (point, lineStart, lineEnd) => {
     const dx = lineEnd.x - lineStart.x;
     const dy = lineEnd.y - lineStart.y;
     const num = Math.abs(dy * point.x - dx * point.y + lineEnd.x * lineStart.y - lineEnd.y * lineStart.x);
     const den = Math.sqrt(dx * dx + dy * dy);
-    return num / den;
+    return den === 0 ? 0 : num / den;
   };
 
-  // Calculate polygon area
   const polygonArea = (points) => {
     let area = 0;
     for (let i = 0; i < points.length; i++) {
@@ -414,12 +453,226 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
     return Math.abs(area / 2);
   };
 
-  // Apply perspective transform to correct document
-  const applyPerspectiveTransform = (canvas, corners) => {
-    // Order corners: top-left, top-right, bottom-right, bottom-left
-    const ordered = orderCorners(corners);
+  const isValidQuadrilateral = (corners, width, height) => {
+    // Check minimum size
+    const area = polygonArea(corners);
+    if (area < width * height * 0.08) return false;
 
-    // Calculate output dimensions
+    // Check angles (should be roughly 90 degrees at each corner)
+    for (let i = 0; i < 4; i++) {
+      const p1 = corners[(i + 3) % 4];
+      const p2 = corners[i];
+      const p3 = corners[(i + 1) % 4];
+
+      const v1 = { x: p1.x - p2.x, y: p1.y - p2.y };
+      const v2 = { x: p3.x - p2.x, y: p3.y - p2.y };
+
+      const dot = v1.x * v2.x + v1.y * v2.y;
+      const mag1 = Math.sqrt(v1.x * v1.x + v1.y * v1.y);
+      const mag2 = Math.sqrt(v2.x * v2.x + v2.y * v2.y);
+
+      const cosAngle = dot / (mag1 * mag2);
+      const angle = Math.acos(Math.max(-1, Math.min(1, cosAngle))) * 180 / Math.PI;
+
+      if (angle < 45 || angle > 135) return false;
+    }
+
+    return true;
+  };
+
+  const orderCorners = (corners) => {
+    const sorted = corners.slice().sort((a, b) => a.y - b.y);
+    const top = sorted.slice(0, 2).sort((a, b) => a.x - b.x);
+    const bottom = sorted.slice(2).sort((a, b) => a.x - b.x);
+    return [top[0], top[1], bottom[1], bottom[0]];
+  };
+
+  const drawDetectionOverlay = (ctx, corners, width, height) => {
+    // Draw semi-transparent overlay outside document
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+    ctx.fillRect(0, 0, width, height);
+
+    // Cut out document area
+    ctx.save();
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.beginPath();
+    ctx.moveTo(corners[0].x, corners[0].y);
+    for (let i = 1; i < corners.length; i++) {
+      ctx.lineTo(corners[i].x, corners[i].y);
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+
+    // Draw document outline
+    const lineColor = isStable ? '#22c55e' : '#3b82f6';
+    ctx.strokeStyle = lineColor;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(corners[0].x, corners[0].y);
+    for (let i = 1; i < corners.length; i++) {
+      ctx.lineTo(corners[i].x, corners[i].y);
+    }
+    ctx.closePath();
+    ctx.stroke();
+
+    // Draw corner handles
+    corners.forEach(corner => {
+      ctx.fillStyle = lineColor;
+      ctx.beginPath();
+      ctx.arc(corner.x, corner.y, 12, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = 'white';
+      ctx.beginPath();
+      ctx.arc(corner.x, corner.y, 8, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  };
+
+  const checkStability = (newCorners) => {
+    if (!lastCornersRef.current) {
+      lastCornersRef.current = newCorners;
+      return;
+    }
+
+    const threshold = 5;
+    let stable = true;
+
+    for (let i = 0; i < 4; i++) {
+      const dx = Math.abs(newCorners[i].x - lastCornersRef.current[i].x);
+      const dy = Math.abs(newCorners[i].y - lastCornersRef.current[i].y);
+      if (dx > threshold || dy > threshold) {
+        stable = false;
+        break;
+      }
+    }
+
+    lastCornersRef.current = newCorners;
+
+    if (stable) {
+      stableCountRef.current++;
+      if (stableCountRef.current >= 15) {
+        setIsStable(true);
+        if (autoCapture && stableCountRef.current === 15) {
+          // Trigger auto-capture after a short delay
+          setTimeout(() => captureDocument(), 500);
+        }
+      }
+    } else {
+      stableCountRef.current = 0;
+      setIsStable(false);
+    }
+  };
+
+  // ========================================
+  // CAPTURE FUNCTIONS
+  // ========================================
+
+  const captureDocument = () => {
+    if (!videoRef.current || !canvasRef.current) return;
+
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+
+    // Capture at full resolution
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    const imageDataUrl = canvas.toDataURL('image/jpeg', 0.95);
+    setCapturedImage(imageDataUrl);
+    setImageDimensions({ width: video.videoWidth, height: video.videoHeight });
+
+    // Set corners for cropping
+    if (detectedCorners) {
+      setCorners(detectedCorners);
+    } else {
+      // Default to full frame with small margin
+      const margin = 50;
+      setCorners([
+        { x: margin, y: margin },
+        { x: video.videoWidth - margin, y: margin },
+        { x: video.videoWidth - margin, y: video.videoHeight - margin },
+        { x: margin, y: video.videoHeight - margin }
+      ]);
+    }
+
+    stopCamera();
+    setViewMode(VIEW_MODES.CROP);
+  };
+
+  const manualCapture = () => {
+    setAutoCapture(false);
+    captureDocument();
+  };
+
+  // ========================================
+  // CROP FUNCTIONS
+  // ========================================
+
+  const handleCornerDrag = (index, e) => {
+    e.preventDefault();
+    setDraggingCorner(index);
+  };
+
+  const handleCropMove = (e) => {
+    if (draggingCorner === null || !cropContainerRef.current || !capturedImage) return;
+
+    const container = cropContainerRef.current;
+    const rect = container.getBoundingClientRect();
+    const img = container.querySelector('img');
+    if (!img) return;
+
+    const imgRect = img.getBoundingClientRect();
+
+    // Get touch or mouse position
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+    // Calculate position relative to image
+    const x = ((clientX - imgRect.left) / imgRect.width) * img.naturalWidth;
+    const y = ((clientY - imgRect.top) / imgRect.height) * img.naturalHeight;
+
+    // Clamp to image bounds
+    const clampedX = Math.max(0, Math.min(x, img.naturalWidth));
+    const clampedY = Math.max(0, Math.min(y, img.naturalHeight));
+
+    setCorners(prev => {
+      const newCorners = [...prev];
+      newCorners[draggingCorner] = { x: clampedX, y: clampedY };
+      return newCorners;
+    });
+  };
+
+  const handleCropEnd = () => {
+    setDraggingCorner(null);
+  };
+
+  const applyCrop = () => {
+    if (!capturedImage || !corners) return;
+
+    const img = new Image();
+    img.onload = () => {
+      const croppedCanvas = applyPerspectiveTransform(img, corners);
+      const croppedImage = croppedCanvas.toDataURL('image/jpeg', 0.95);
+
+      setCapturedImage(croppedImage);
+      setViewMode(VIEW_MODES.ENHANCE);
+
+      // Reset enhancement values
+      setCurrentFilter('auto');
+      setBrightness(FILTERS.auto.brightness);
+      setContrast(FILTERS.auto.contrast);
+      setRotation(0);
+    };
+    img.src = capturedImage;
+  };
+
+  const applyPerspectiveTransform = (img, srcCorners) => {
+    const ordered = orderCorners(srcCorners);
+
     const widthTop = distance(ordered[0], ordered[1]);
     const widthBottom = distance(ordered[3], ordered[2]);
     const heightLeft = distance(ordered[0], ordered[3]);
@@ -428,13 +681,21 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
     const maxWidth = Math.max(widthTop, widthBottom);
     const maxHeight = Math.max(heightLeft, heightRight);
 
-    // Create output canvas
-    const outputCanvas = document.createElement('canvas');
-    outputCanvas.width = maxWidth;
-    outputCanvas.height = maxHeight;
-    const outputCtx = outputCanvas.getContext('2d');
+    const canvas = document.createElement('canvas');
+    canvas.width = maxWidth;
+    canvas.height = maxHeight;
+    const ctx = canvas.getContext('2d');
 
-    // Destination corners (rectangle)
+    // Create temporary canvas with source image
+    const srcCanvas = document.createElement('canvas');
+    srcCanvas.width = img.width;
+    srcCanvas.height = img.height;
+    const srcCtx = srcCanvas.getContext('2d');
+    srcCtx.drawImage(img, 0, 0);
+
+    const srcImageData = srcCtx.getImageData(0, 0, img.width, img.height);
+    const dstImageData = ctx.createImageData(maxWidth, maxHeight);
+
     const dst = [
       { x: 0, y: 0 },
       { x: maxWidth, y: 0 },
@@ -442,22 +703,15 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
       { x: 0, y: maxHeight }
     ];
 
-    // Apply perspective transform using inverse mapping
-    // We need inverse transform: dst coords -> src coords
-    // So we compute the transform from dst to ordered (not ordered to dst)
     const transform = getPerspectiveTransform(dst, ordered);
-
-    const srcImageData = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height);
-    const dstImageData = outputCtx.createImageData(maxWidth, maxHeight);
 
     for (let y = 0; y < maxHeight; y++) {
       for (let x = 0; x < maxWidth; x++) {
-        const srcPoint = applyTransform({ x, y }, transform);
+        const srcPoint = applyTransformPoint({ x, y }, transform);
 
-        if (srcPoint.x >= 0 && srcPoint.x < canvas.width - 1 &&
-            srcPoint.y >= 0 && srcPoint.y < canvas.height - 1) {
+        if (srcPoint.x >= 0 && srcPoint.x < img.width - 1 &&
+            srcPoint.y >= 0 && srcPoint.y < img.height - 1) {
 
-          // Bilinear interpolation for better quality
           const x0 = Math.floor(srcPoint.x);
           const y0 = Math.floor(srcPoint.y);
           const x1 = x0 + 1;
@@ -466,14 +720,13 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
           const fx = srcPoint.x - x0;
           const fy = srcPoint.y - y0;
 
-          const idx00 = (y0 * canvas.width + x0) * 4;
-          const idx10 = (y0 * canvas.width + x1) * 4;
-          const idx01 = (y1 * canvas.width + x0) * 4;
-          const idx11 = (y1 * canvas.width + x1) * 4;
+          const idx00 = (y0 * img.width + x0) * 4;
+          const idx10 = (y0 * img.width + x1) * 4;
+          const idx01 = (y1 * img.width + x0) * 4;
+          const idx11 = (y1 * img.width + x1) * 4;
 
           const dstIdx = (y * maxWidth + x) * 4;
 
-          // Interpolate each channel
           for (let c = 0; c < 3; c++) {
             const v00 = srcImageData.data[idx00 + c];
             const v10 = srcImageData.data[idx10 + c];
@@ -482,62 +735,35 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
 
             const v0 = v00 * (1 - fx) + v10 * fx;
             const v1 = v01 * (1 - fx) + v11 * fx;
-            const v = v0 * (1 - fy) + v1 * fy;
 
-            dstImageData.data[dstIdx + c] = Math.round(v);
+            dstImageData.data[dstIdx + c] = Math.round(v0 * (1 - fy) + v1 * fy);
           }
           dstImageData.data[dstIdx + 3] = 255;
         }
       }
     }
 
-    outputCtx.putImageData(dstImageData, 0, 0);
-    return outputCanvas;
+    ctx.putImageData(dstImageData, 0, 0);
+    return canvas;
   };
 
-  // Order corners: TL, TR, BR, BL
-  const orderCorners = (corners) => {
-    // Sort by y-coordinate
-    const sorted = corners.slice().sort((a, b) => a.y - b.y);
-
-    // Top two points
-    const top = sorted.slice(0, 2).sort((a, b) => a.x - b.x);
-    // Bottom two points
-    const bottom = sorted.slice(2).sort((a, b) => a.x - b.x);
-
-    return [top[0], top[1], bottom[1], bottom[0]];
-  };
-
-  // Distance between two points
   const distance = (p1, p2) => {
     return Math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2);
   };
 
-  // Get perspective transformation matrix (homography)
   const getPerspectiveTransform = (src, dst) => {
-    // Calculate the homography matrix for perspective transform
-    // We need to solve: dst = H * src where H is 3x3 homography matrix
-
-    // Build the system of equations Ax = b
     const A = [];
     const b = [];
 
     for (let i = 0; i < 4; i++) {
-      A.push([
-        src[i].x, src[i].y, 1, 0, 0, 0, -dst[i].x * src[i].x, -dst[i].x * src[i].y
-      ]);
-      A.push([
-        0, 0, 0, src[i].x, src[i].y, 1, -dst[i].y * src[i].x, -dst[i].y * src[i].y
-      ]);
-
+      A.push([src[i].x, src[i].y, 1, 0, 0, 0, -dst[i].x * src[i].x, -dst[i].x * src[i].y]);
+      A.push([0, 0, 0, src[i].x, src[i].y, 1, -dst[i].y * src[i].x, -dst[i].y * src[i].y]);
       b.push(dst[i].x);
       b.push(dst[i].y);
     }
 
-    // Solve Ax = b using Gaussian elimination
     const h = solveLinearSystem(A, b);
 
-    // Return as 3x3 matrix
     return {
       h11: h[0], h12: h[1], h13: h[2],
       h21: h[3], h22: h[4], h23: h[5],
@@ -545,25 +771,19 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
     };
   };
 
-  // Solve linear system using Gaussian elimination
   const solveLinearSystem = (A, b) => {
     const n = A.length;
     const augmented = A.map((row, i) => [...row, b[i]]);
 
-    // Forward elimination
     for (let i = 0; i < n; i++) {
-      // Find pivot
       let maxRow = i;
       for (let k = i + 1; k < n; k++) {
         if (Math.abs(augmented[k][i]) > Math.abs(augmented[maxRow][i])) {
           maxRow = k;
         }
       }
-
-      // Swap rows
       [augmented[i], augmented[maxRow]] = [augmented[maxRow], augmented[i]];
 
-      // Make all rows below this one 0 in current column
       for (let k = i + 1; k < n; k++) {
         const factor = augmented[k][i] / augmented[i][i];
         for (let j = i; j < n + 1; j++) {
@@ -572,7 +792,6 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
       }
     }
 
-    // Back substitution
     const x = new Array(n).fill(0);
     for (let i = n - 1; i >= 0; i--) {
       x[i] = augmented[i][n];
@@ -585,122 +804,251 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
     return x;
   };
 
-  // Apply transform to point using homography
-  const applyTransform = (point, transform) => {
+  const applyTransformPoint = (point, transform) => {
     const { h11, h12, h13, h21, h22, h23, h31, h32, h33 } = transform;
-
-    const x = point.x;
-    const y = point.y;
-
-    const denominator = h31 * x + h32 * y + h33;
-
+    const denominator = h31 * point.x + h32 * point.y + h33;
     return {
-      x: (h11 * x + h12 * y + h13) / denominator,
-      y: (h21 * x + h22 * y + h23) / denominator
+      x: (h11 * point.x + h12 * point.y + h13) / denominator,
+      y: (h21 * point.x + h22 * point.y + h23) / denominator
     };
   };
 
-  // Enhance document image
-  const enhanceDocument = (canvas) => {
+  // ========================================
+  // ENHANCEMENT FUNCTIONS
+  // ========================================
+
+  const applyFilter = (filterName) => {
+    setCurrentFilter(filterName);
+    const filter = FILTERS[filterName];
+    setBrightness(filter.brightness);
+    setContrast(filter.contrast);
+  };
+
+  const getEnhancedImage = useCallback(() => {
+    if (!capturedImage || !enhanceCanvasRef.current) return null;
+
+    const canvas = enhanceCanvasRef.current;
     const ctx = canvas.getContext('2d');
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const data = imageData.data;
+    const img = new Image();
 
-    // Increase contrast and brightness
-    const contrast = 1.3;
-    const brightness = 10;
+    return new Promise((resolve) => {
+      img.onload = () => {
+        // Apply rotation
+        const radians = (rotation * Math.PI) / 180;
+        const sin = Math.abs(Math.sin(radians));
+        const cos = Math.abs(Math.cos(radians));
 
-    for (let i = 0; i < data.length; i += 4) {
-      // Apply contrast
-      data[i] = ((data[i] - 128) * contrast + 128) + brightness;
-      data[i + 1] = ((data[i + 1] - 128) * contrast + 128) + brightness;
-      data[i + 2] = ((data[i + 2] - 128) * contrast + 128) + brightness;
+        const newWidth = img.width * cos + img.height * sin;
+        const newHeight = img.width * sin + img.height * cos;
 
-      // Clamp values
-      data[i] = Math.max(0, Math.min(255, data[i]));
-      data[i + 1] = Math.max(0, Math.min(255, data[i + 1]));
-      data[i + 2] = Math.max(0, Math.min(255, data[i + 2]));
-    }
+        canvas.width = newWidth;
+        canvas.height = newHeight;
 
-    ctx.putImageData(imageData, 0, 0);
+        ctx.translate(newWidth / 2, newHeight / 2);
+        ctx.rotate(radians);
+        ctx.drawImage(img, -img.width / 2, -img.height / 2);
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
 
-    // Apply sharpening filter
-    const sharpness = [
-      0, -1, 0,
-      -1, 5, -1,
-      0, -1, 0
-    ];
+        // Apply brightness and contrast
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imageData.data;
 
-    const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = canvas.width;
-    tempCanvas.height = canvas.height;
-    const tempCtx = tempCanvas.getContext('2d');
-    tempCtx.drawImage(canvas, 0, 0);
+        const filter = FILTERS[currentFilter];
+        const contrastFactor = (259 * (contrast + filter.contrast + 255)) / (255 * (259 - (contrast + filter.contrast)));
+        const brightnessFactor = brightness + filter.brightness;
 
-    const original = tempCtx.getImageData(0, 0, canvas.width, canvas.height);
-    const output = ctx.createImageData(canvas.width, canvas.height);
+        for (let i = 0; i < data.length; i += 4) {
+          let r = data[i];
+          let g = data[i + 1];
+          let b = data[i + 2];
 
-    // Apply convolution filter
-    for (let y = 1; y < canvas.height - 1; y++) {
-      for (let x = 1; x < canvas.width - 1; x++) {
-        for (let c = 0; c < 3; c++) {
-          let sum = 0;
-          for (let ky = -1; ky <= 1; ky++) {
-            for (let kx = -1; kx <= 1; kx++) {
-              const idx = ((y + ky) * canvas.width + (x + kx)) * 4 + c;
-              const kernelIdx = (ky + 1) * 3 + (kx + 1);
-              sum += original.data[idx] * sharpness[kernelIdx];
-            }
+          // Apply contrast
+          r = contrastFactor * (r - 128) + 128 + brightnessFactor;
+          g = contrastFactor * (g - 128) + 128 + brightnessFactor;
+          b = contrastFactor * (b - 128) + 128 + brightnessFactor;
+
+          // Apply filter effects
+          if (filter.grayscale) {
+            const gray = 0.299 * r + 0.587 * g + 0.114 * b;
+            r = g = b = gray;
           }
-          const outIdx = (y * canvas.width + x) * 4 + c;
-          output.data[outIdx] = Math.max(0, Math.min(255, sum));
+
+          if (filter.bw) {
+            const gray = 0.299 * r + 0.587 * g + 0.114 * b;
+            r = g = b = gray > 128 ? 255 : 0;
+          }
+
+          if (filter.saturation !== 100 && !filter.grayscale && !filter.bw) {
+            const gray = 0.299 * r + 0.587 * g + 0.114 * b;
+            const satMult = filter.saturation / 100;
+            r = gray + (r - gray) * satMult;
+            g = gray + (g - gray) * satMult;
+            b = gray + (b - gray) * satMult;
+          }
+
+          data[i] = Math.max(0, Math.min(255, r));
+          data[i + 1] = Math.max(0, Math.min(255, g));
+          data[i + 2] = Math.max(0, Math.min(255, b));
         }
-        // Copy alpha channel
-        const alphaIdx = (y * canvas.width + x) * 4 + 3;
-        output.data[alphaIdx] = 255;
-      }
+
+        ctx.putImageData(imageData, 0, 0);
+        resolve(canvas.toDataURL('image/jpeg', 0.95));
+      };
+      img.src = capturedImage;
+    });
+  }, [capturedImage, rotation, brightness, contrast, currentFilter]);
+
+  const rotateImage = (degrees) => {
+    setRotation((prev) => (prev + degrees + 360) % 360);
+  };
+
+  const confirmEnhancement = async () => {
+    const enhancedImage = await getEnhancedImage();
+    if (enhancedImage) {
+      // Add to pages
+      const newPage = {
+        id: Date.now(),
+        image: enhancedImage,
+        filter: currentFilter,
+        brightness,
+        contrast,
+        rotation
+      };
+
+      setPages(prev => [...prev, newPage]);
+      setCapturedImage(null);
+      setRotation(0);
+      setBrightness(0);
+      setContrast(0);
+      setCurrentFilter('auto');
+      setViewMode(VIEW_MODES.GALLERY);
     }
-
-    ctx.putImageData(output, 0, 0);
   };
 
-  // Delete a specific photo
-  const deletePhoto = (photoId) => {
-    setCapturedImages(prev => prev.filter(img => img.id !== photoId));
-    setError(null);
+  // ========================================
+  // GALLERY FUNCTIONS
+  // ========================================
+
+  const addMorePages = () => {
+    setAutoCapture(true);
+    startCamera();
   };
 
-  // Upload all photos to Google Drive
-  const uploadToGoogleDrive = async () => {
-    if (capturedImages.length === 0) return;
+  const deletePage = (pageId) => {
+    setPages(prev => prev.filter(p => p.id !== pageId));
+  };
 
-    setIsUploading(true);
-    setError(null);
+  const retakePage = (pageIndex) => {
+    setCurrentPageIndex(pageIndex);
+    setAutoCapture(true);
+    startCamera();
+  };
+
+  const movePage = (fromIndex, toIndex) => {
+    setPages(prev => {
+      const newPages = [...prev];
+      const [moved] = newPages.splice(fromIndex, 1);
+      newPages.splice(toIndex, 0, moved);
+      return newPages;
+    });
+  };
+
+  // ========================================
+  // EXPORT FUNCTIONS
+  // ========================================
+
+  const exportAsPDF = async () => {
+    if (pages.length === 0) return;
+
+    setIsExporting(true);
+    setExportProgress(0);
 
     try {
-      console.log(`Uploading ${capturedImages.length} document(s) to Google Drive`);
+      const canvases = [];
 
+      for (let i = 0; i < pages.length; i++) {
+        setExportProgress((i / pages.length) * 50);
+
+        const img = new Image();
+        await new Promise((resolve) => {
+          img.onload = resolve;
+          img.src = pages[i].image;
+        });
+
+        const canvas = document.createElement('canvas');
+        // A4 at 150 DPI for good quality
+        canvas.width = 1240;
+        canvas.height = 1754;
+
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Scale image to fit A4 while maintaining aspect ratio
+        const scale = Math.min(canvas.width / img.width, canvas.height / img.height);
+        const x = (canvas.width - img.width * scale) / 2;
+        const y = (canvas.height - img.height * scale) / 2;
+
+        ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+        canvases.push(canvas);
+      }
+
+      setExportProgress(60);
+
+      const pdf = await pdfGenerator.generateMultiPagePDF(canvases, {
+        title: `Scan_${new Date().toISOString().slice(0, 10)}`,
+        orientation: 'portrait'
+      });
+
+      setExportProgress(80);
+
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      pdfGenerator.downloadPDF(pdf, `Scan_${timestamp}.pdf`);
+
+      setExportProgress(100);
+
+      setTimeout(() => {
+        setIsExporting(false);
+        setViewMode(VIEW_MODES.GALLERY);
+      }, 500);
+
+    } catch (err) {
+      console.error('PDF export error:', err);
+      setError('Failed to create PDF. Please try again.');
+      setIsExporting(false);
+    }
+  };
+
+  const exportAsImages = () => {
+    pages.forEach((page, index) => {
+      const link = document.createElement('a');
+      link.download = `Scan_${index + 1}.jpg`;
+      link.href = page.image;
+      link.click();
+    });
+  };
+
+  const uploadToGoogleDrive = async () => {
+    if (pages.length === 0 || !customerFolderId) return;
+
+    setIsExporting(true);
+    setExportProgress(0);
+
+    try {
       const uploadedFiles = [];
 
-      // Upload each photo
-      for (let i = 0; i < capturedImages.length; i++) {
-        const image = capturedImages[i];
-        // Convert data URL to base64 (remove data:image/jpeg;base64, prefix)
-        const base64Data = image.data.split(',')[1];
+      for (let i = 0; i < pages.length; i++) {
+        setExportProgress((i / pages.length) * 90);
 
-        // Create a unique filename with index
+        const page = pages[i];
+        const base64Data = page.image.split(',')[1];
+
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-        const filename = capturedImages.length > 1
+        const filename = pages.length > 1
           ? `Scan_${timestamp}_${i + 1}.jpg`
           : `Scan_${timestamp}.jpg`;
 
-        console.log(`Uploading document ${i + 1}/${capturedImages.length}:`, filename);
-
-        // Upload using Google Drive API
         const boundary = '-------314159265358979323846';
-        const delimiter = "\r\n--" + boundary + "\r\n";
-        const close_delim = "\r\n--" + boundary + "--";
-
         const metadata = {
           name: filename,
           mimeType: 'image/jpeg',
@@ -708,16 +1056,16 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
         };
 
         const multipartRequestBody =
-          delimiter +
+          '\r\n--' + boundary + '\r\n' +
           'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
           JSON.stringify(metadata) +
-          delimiter +
+          '\r\n--' + boundary + '\r\n' +
           'Content-Type: image/jpeg\r\n' +
           'Content-Transfer-Encoding: base64\r\n\r\n' +
           base64Data +
-          close_delim;
+          '\r\n--' + boundary + '--';
 
-        const request = window.gapi.client.request({
+        const response = await window.gapi.client.request({
           path: '/upload/drive/v3/files',
           method: 'POST',
           params: { uploadType: 'multipart' },
@@ -727,187 +1075,577 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
           body: multipartRequestBody
         });
 
-        const response = await request;
-        console.log(`Document ${i + 1} uploaded successfully:`, response.result);
         uploadedFiles.push(response.result);
       }
 
-      // Reset scanner
-      resetScanner();
+      setExportProgress(100);
 
-      // Notify parent component
-      if (onScanComplete) {
-        onScanComplete(uploadedFiles);
-      }
+      setTimeout(() => {
+        setIsExporting(false);
+        if (onScanComplete) {
+          onScanComplete(uploadedFiles);
+        }
+        resetScanner();
+      }, 500);
 
-      alert(`${capturedImages.length} document(s) scanned and saved successfully!`);
     } catch (err) {
-      console.error('Error uploading to Google Drive:', err);
-      setError('Failed to upload documents. Please try again.');
-    } finally {
-      setIsUploading(false);
+      console.error('Upload error:', err);
+      setError('Failed to upload. Please try again.');
+      setIsExporting(false);
     }
   };
 
-  // Reset scanner
   const resetScanner = () => {
-    setCapturedImages([]);
+    stopCamera();
+    setPages([]);
+    setCapturedImage(null);
+    setCorners(null);
+    setRotation(0);
+    setBrightness(0);
+    setContrast(0);
+    setCurrentFilter('auto');
+    setViewMode(VIEW_MODES.START);
     setError(null);
-    stopCamera();
   };
 
-  // Done capturing (close camera, keep photos)
-  const finishCapturing = () => {
-    stopCamera();
-  };
+  // ========================================
+  // LIFECYCLE
+  // ========================================
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       stopCamera();
     };
-  }, []);
+  }, [stopCamera]);
+
+  // ========================================
+  // RENDER
+  // ========================================
 
   return (
-    <div className="document-scanner">
+    <div className="doc-scanner">
+      <canvas ref={canvasRef} style={{ display: 'none' }} />
+      <canvas ref={enhanceCanvasRef} style={{ display: 'none' }} />
+
       {error && (
-        <div className="error-banner">
-          <p>⚠️ {error}</p>
+        <div className="scanner-error">
+          <span>⚠️ {error}</span>
+          <button onClick={() => setError(null)}>✕</button>
         </div>
       )}
 
-      <div className="scanner-body">
-        {!cameraActive && capturedImages.length === 0 && !cameraLoading && (
-          <div className="scanner-start">
-            <div className="start-content">
-              <div className="camera-icon">📷</div>
-              <h3>Document Scanner</h3>
-              <p>Take up to {MAX_PHOTOS} photos</p>
-              <button className="btn btn-large btn-primary" onClick={startCamera}>
-                Start Camera
-              </button>
+      {/* START VIEW */}
+      {viewMode === VIEW_MODES.START && (
+        <div className="scanner-start-view">
+          <div className="start-content">
+            <div className="scanner-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <path d="M3 9h18M9 21V9" />
+              </svg>
             </div>
-          </div>
-        )}
+            <h2>Document Scanner</h2>
+            <p>Scan documents with automatic edge detection, perspective correction, and image enhancement.</p>
 
-        {cameraLoading && (
-          <div className="loading-state">
-            <div className="loading"></div>
-            <p>Starting camera...</p>
-          </div>
-        )}
-
-        {cameraActive && (
-          <div className="camera-view">
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              muted
-              className="camera-video"
-            />
-            <canvas ref={canvasRef} style={{ display: 'none' }} />
-
-            {/* Top bar with counter and close */}
-            <div className="camera-top-bar">
-              <button className="btn-close" onClick={resetScanner} title="Close">
-                ✕
-              </button>
-              <div className="photo-counter">
-                {capturedImages.length}/{MAX_PHOTOS}
+            {pages.length > 0 && (
+              <div className="existing-pages-notice">
+                <span>{pages.length} page{pages.length !== 1 ? 's' : ''} ready</span>
               </div>
+            )}
+
+            <div className="start-buttons">
+              <button className="btn-primary-large" onClick={startCamera}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                  <circle cx="12" cy="13" r="4" />
+                </svg>
+                {pages.length > 0 ? 'Add More Pages' : 'Start Scanning'}
+              </button>
+
+              {pages.length > 0 && (
+                <button className="btn-secondary-large" onClick={() => setViewMode(VIEW_MODES.GALLERY)}>
+                  View Pages ({pages.length})
+                </button>
+              )}
+            </div>
+          </div>
+
+          {onClose && (
+            <button className="btn-close-scanner" onClick={onClose}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* CAMERA VIEW */}
+      {(viewMode === VIEW_MODES.CAMERA || cameraLoading) && (
+        <div className="scanner-camera-view">
+          {cameraLoading && (
+            <div className="camera-loading">
+              <div className="loading-spinner" />
+              <p>Starting camera...</p>
+            </div>
+          )}
+
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted
+            className="camera-feed"
+          />
+          <canvas ref={overlayCanvasRef} className="detection-overlay" />
+
+          {/* Camera top bar */}
+          <div className="camera-topbar">
+            <button className="topbar-btn" onClick={resetScanner}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
+            </button>
+
+            <div className="topbar-center">
+              {isStable && (
+                <span className="auto-capture-badge">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                    <polyline points="22 4 12 14.01 9 11.01" />
+                  </svg>
+                  Hold steady
+                </span>
+              )}
             </div>
 
-            {/* Bottom area with thumbnails and controls */}
-            <div className="camera-bottom">
-              {/* Show thumbnail carousel while camera is active */}
-              {capturedImages.length > 0 && (
-                <div className="thumbnail-carousel">
-                  {capturedImages.map((image, index) => (
-                    <div key={image.id} className="thumbnail-item">
-                      <img src={image.data} alt={`${index + 1}`} />
-                      <button
-                        className="thumbnail-delete"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          deletePhoto(image.id);
-                        }}
-                        title="Delete"
-                      >
-                        ✕
-                      </button>
-                      <span className="thumbnail-number">{index + 1}</span>
-                    </div>
+            <div className="topbar-right">
+              <button className="topbar-btn" onClick={toggleFlash}>
+                {flashMode === 'on' ? (
+                  <svg viewBox="0 0 24 24" fill="currentColor">
+                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                  </svg>
+                ) : (
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                  </svg>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Camera bottom bar */}
+          <div className="camera-bottombar">
+            {pages.length > 0 && (
+              <div className="page-counter">
+                {pages.length} page{pages.length !== 1 ? 's' : ''}
+              </div>
+            )}
+
+            <div className="camera-controls">
+              <button className="btn-gallery" onClick={() => pages.length > 0 && setViewMode(VIEW_MODES.GALLERY)}>
+                {pages.length > 0 ? (
+                  <img src={pages[pages.length - 1].image} alt="Last" />
+                ) : (
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                    <circle cx="8.5" cy="8.5" r="1.5" />
+                    <polyline points="21 15 16 10 5 21" />
+                  </svg>
+                )}
+              </button>
+
+              <button className="btn-capture" onClick={manualCapture}>
+                <div className="capture-outer">
+                  <div className="capture-inner" />
+                </div>
+              </button>
+
+              <button className="btn-flip" onClick={switchCamera}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M11 19H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5" />
+                  <path d="M13 5h7a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-5" />
+                  <polyline points="8 15 4 12 8 9" />
+                  <polyline points="16 9 20 12 16 15" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="auto-capture-toggle">
+              <label>
+                <input
+                  type="checkbox"
+                  checked={autoCapture}
+                  onChange={(e) => setAutoCapture(e.target.checked)}
+                />
+                <span>Auto-capture</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CROP VIEW */}
+      {viewMode === VIEW_MODES.CROP && capturedImage && (
+        <div className="scanner-crop-view">
+          <div className="crop-header">
+            <button className="header-btn" onClick={() => { setCapturedImage(null); setAutoCapture(true); startCamera(); }}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M19 12H5M12 19l-7-7 7-7" />
+              </svg>
+              Retake
+            </button>
+            <h3>Adjust Corners</h3>
+            <button className="header-btn primary" onClick={applyCrop}>
+              Next
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M5 12h14M12 5l7 7-7 7" />
+              </svg>
+            </button>
+          </div>
+
+          <div
+            className="crop-container"
+            ref={cropContainerRef}
+            onMouseMove={handleCropMove}
+            onMouseUp={handleCropEnd}
+            onMouseLeave={handleCropEnd}
+            onTouchMove={handleCropMove}
+            onTouchEnd={handleCropEnd}
+          >
+            <img src={capturedImage} alt="Captured" className="crop-image" />
+
+            {corners && (
+              <svg
+                className="crop-overlay"
+                viewBox={`0 0 ${imageDimensions.width} ${imageDimensions.height}`}
+                preserveAspectRatio="none"
+              >
+                <defs>
+                  <mask id="cropMask">
+                    <rect width="100%" height="100%" fill="white" />
+                    <polygon
+                      points={corners.map(c => `${c.x},${c.y}`).join(' ')}
+                      fill="black"
+                    />
+                  </mask>
+                </defs>
+                <rect width="100%" height="100%" fill="rgba(0,0,0,0.5)" mask="url(#cropMask)" />
+                <polygon
+                  points={corners.map(c => `${c.x},${c.y}`).join(' ')}
+                  fill="none"
+                  stroke="#3b82f6"
+                  strokeWidth="6"
+                />
+                {corners.map((corner, i) => (
+                  <g key={i}>
+                    <circle
+                      cx={corner.x}
+                      cy={corner.y}
+                      r="30"
+                      fill="#3b82f6"
+                      stroke="white"
+                      strokeWidth="6"
+                      className="corner-handle"
+                      style={{ cursor: 'grab' }}
+                      onMouseDown={(e) => handleCornerDrag(i, e)}
+                      onTouchStart={(e) => handleCornerDrag(i, e)}
+                    />
+                  </g>
+                ))}
+              </svg>
+            )}
+          </div>
+
+          <div className="crop-hint">
+            Drag the corners to adjust the document edges
+          </div>
+        </div>
+      )}
+
+      {/* ENHANCE VIEW */}
+      {viewMode === VIEW_MODES.ENHANCE && capturedImage && (
+        <div className="scanner-enhance-view">
+          <div className="enhance-header">
+            <button className="header-btn" onClick={() => setViewMode(VIEW_MODES.CROP)}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M19 12H5M12 19l-7-7 7-7" />
+              </svg>
+              Back
+            </button>
+            <h3>Enhance</h3>
+            <button className="header-btn primary" onClick={confirmEnhancement}>
+              Done
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            </button>
+          </div>
+
+          <div className="enhance-preview">
+            <img
+              src={capturedImage}
+              alt="Preview"
+              style={{
+                filter: `
+                  brightness(${100 + brightness + FILTERS[currentFilter].brightness}%)
+                  contrast(${100 + contrast + FILTERS[currentFilter].contrast}%)
+                  saturate(${FILTERS[currentFilter].saturation}%)
+                  grayscale(${FILTERS[currentFilter].grayscale ? 100 : 0}%)
+                `,
+                transform: `rotate(${rotation}deg)`
+              }}
+            />
+          </div>
+
+          {/* Filter presets */}
+          <div className="filter-presets">
+            {Object.entries(FILTERS).map(([key, filter]) => (
+              <button
+                key={key}
+                className={`filter-btn ${currentFilter === key ? 'active' : ''}`}
+                onClick={() => applyFilter(key)}
+              >
+                <div
+                  className="filter-preview"
+                  style={{
+                    backgroundImage: `url(${capturedImage})`,
+                    filter: `
+                      brightness(${100 + filter.brightness}%)
+                      contrast(${100 + filter.contrast}%)
+                      saturate(${filter.saturation}%)
+                      grayscale(${filter.grayscale ? 100 : 0}%)
+                    `
+                  }}
+                />
+                <span>{filter.name}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Manual adjustments */}
+          <div className="adjust-controls">
+            <div className="adjust-row">
+              <label>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="5" />
+                  <line x1="12" y1="1" x2="12" y2="3" />
+                  <line x1="12" y1="21" x2="12" y2="23" />
+                  <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                  <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                  <line x1="1" y1="12" x2="3" y2="12" />
+                  <line x1="21" y1="12" x2="23" y2="12" />
+                  <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+                  <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+                </svg>
+                Brightness
+              </label>
+              <input
+                type="range"
+                min="-50"
+                max="50"
+                value={brightness}
+                onChange={(e) => setBrightness(parseInt(e.target.value))}
+              />
+              <span>{brightness > 0 ? '+' : ''}{brightness}</span>
+            </div>
+
+            <div className="adjust-row">
+              <label>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M12 2v20M2 12h20" />
+                </svg>
+                Contrast
+              </label>
+              <input
+                type="range"
+                min="-50"
+                max="50"
+                value={contrast}
+                onChange={(e) => setContrast(parseInt(e.target.value))}
+              />
+              <span>{contrast > 0 ? '+' : ''}{contrast}</span>
+            </div>
+          </div>
+
+          {/* Rotation controls */}
+          <div className="rotation-controls">
+            <button onClick={() => rotateImage(-90)}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M2.5 2v6h6M2.66 15.57a10 10 0 1 0 .57-8.38" />
+              </svg>
+            </button>
+            <span>Rotate</span>
+            <button onClick={() => rotateImage(90)}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* GALLERY VIEW */}
+      {viewMode === VIEW_MODES.GALLERY && (
+        <div className="scanner-gallery-view">
+          <div className="gallery-header">
+            <button className="header-btn" onClick={() => setViewMode(VIEW_MODES.START)}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
+            </button>
+            <h3>{pages.length} Page{pages.length !== 1 ? 's' : ''}</h3>
+            <button
+              className="header-btn primary"
+              onClick={() => setViewMode(VIEW_MODES.EXPORT)}
+              disabled={pages.length === 0}
+            >
+              Export
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="17 8 12 3 7 8" />
+                <line x1="12" y1="3" x2="12" y2="15" />
+              </svg>
+            </button>
+          </div>
+
+          <div className="gallery-grid">
+            {pages.map((page, index) => (
+              <div key={page.id} className="gallery-item">
+                <div className="gallery-image">
+                  <img src={page.image} alt={`Page ${index + 1}`} />
+                  <span className="page-number">{index + 1}</span>
+                </div>
+                <div className="gallery-actions">
+                  {index > 0 && (
+                    <button onClick={() => movePage(index, index - 1)} title="Move up">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="18 15 12 9 6 15" />
+                      </svg>
+                    </button>
+                  )}
+                  {index < pages.length - 1 && (
+                    <button onClick={() => movePage(index, index + 1)} title="Move down">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="6 9 12 15 18 9" />
+                      </svg>
+                    </button>
+                  )}
+                  <button onClick={() => retakePage(index)} title="Retake">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                      <circle cx="12" cy="13" r="4" />
+                    </svg>
+                  </button>
+                  <button onClick={() => deletePage(page.id)} title="Delete" className="delete-btn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <polyline points="3 6 5 6 21 6" />
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            ))}
+
+            {/* Add more button */}
+            <div className="gallery-add" onClick={addMorePages}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+              <span>Add Page</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* EXPORT VIEW */}
+      {viewMode === VIEW_MODES.EXPORT && (
+        <div className="scanner-export-view">
+          <div className="export-header">
+            <button className="header-btn" onClick={() => setViewMode(VIEW_MODES.GALLERY)}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M19 12H5M12 19l-7-7 7-7" />
+              </svg>
+              Back
+            </button>
+            <h3>Export</h3>
+            <div style={{ width: 60 }} />
+          </div>
+
+          {isExporting ? (
+            <div className="export-progress">
+              <div className="progress-circle">
+                <svg viewBox="0 0 36 36">
+                  <path
+                    className="progress-bg"
+                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                  />
+                  <path
+                    className="progress-fill"
+                    strokeDasharray={`${exportProgress}, 100`}
+                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                  />
+                </svg>
+                <span>{Math.round(exportProgress)}%</span>
+              </div>
+              <p>Exporting...</p>
+            </div>
+          ) : (
+            <div className="export-options">
+              <div className="export-preview">
+                <div className="preview-stack">
+                  {pages.slice(0, 3).map((page, i) => (
+                    <img
+                      key={page.id}
+                      src={page.image}
+                      alt={`Page ${i + 1}`}
+                      style={{
+                        transform: `translateY(${i * -8}px) rotate(${(i - 1) * 3}deg)`,
+                        zIndex: 3 - i
+                      }}
+                    />
                   ))}
                 </div>
-              )}
+                <p>{pages.length} page{pages.length !== 1 ? 's' : ''}</p>
+              </div>
 
-              {/* Camera controls */}
-              <div className="camera-controls">
-                {capturedImages.length > 0 && (
-                  <button className="btn-done" onClick={finishCapturing}>
-                    Done ({capturedImages.length})
+              <div className="export-buttons">
+                <button className="export-btn pdf" onClick={exportAsPDF}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                    <line x1="16" y1="13" x2="8" y2="13" />
+                    <line x1="16" y1="17" x2="8" y2="17" />
+                    <polyline points="10 9 9 9 8 9" />
+                  </svg>
+                  Save as PDF
+                </button>
+
+                <button className="export-btn images" onClick={exportAsImages}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                    <circle cx="8.5" cy="8.5" r="1.5" />
+                    <polyline points="21 15 16 10 5 21" />
+                  </svg>
+                  Save as Images
+                </button>
+
+                {customerFolderId && (
+                  <button className="export-btn drive" onClick={uploadToGoogleDrive}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z" />
+                      <polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02" />
+                    </svg>
+                    Upload to Drive
                   </button>
                 )}
-                <button
-                  className="btn-capture"
-                  onClick={capturePhoto}
-                  disabled={capturedImages.length >= MAX_PHOTOS}
-                >
-                  <div className="capture-ring">
-                    <div className="capture-button"></div>
-                  </div>
-                </button>
-                <div className="spacer"></div>
               </div>
             </div>
-          </div>
-        )}
-
-        {!cameraActive && capturedImages.length > 0 && (
-          <div className="preview-view">
-            {/* Preview header */}
-            <div className="preview-header">
-              <h3>{capturedImages.length} Photo{capturedImages.length !== 1 ? 's' : ''} Ready</h3>
-              {capturedImages.length < MAX_PHOTOS && (
-                <button className="btn-text" onClick={startCamera}>
-                  + Add More
-                </button>
-              )}
-            </div>
-
-            {/* Scrollable preview list */}
-            <div className="preview-list">
-              {capturedImages.map((image, index) => (
-                <div key={image.id} className="preview-item">
-                  <div className="preview-image-container">
-                    <img src={image.data} alt={`Document ${index + 1}`} />
-                    <span className="preview-number">{index + 1}</span>
-                    <button
-                      className="preview-delete-btn"
-                      onClick={() => deletePhoto(image.id)}
-                      title="Delete"
-                    >
-                      <span>🗑️</span>
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Fixed bottom controls */}
-            <div className="preview-controls">
-              <button
-                className="btn btn-primary btn-save"
-                onClick={uploadToGoogleDrive}
-                disabled={isUploading}
-              >
-                {isUploading ? 'Uploading...' : `Save All (${capturedImages.length})`}
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
