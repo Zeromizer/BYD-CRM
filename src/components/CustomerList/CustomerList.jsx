@@ -8,7 +8,7 @@ import { MILESTONES, isMilestoneComplete } from '../../constants/milestones';
 import './CustomerList.css';
 
 function CustomerList() {
-  const { customers, selectedCustomerId, selectCustomer, addCustomerWithFolder, updateChecklistItem, saveCustomerToFolder } = useCustomerStore();
+  const { customers, selectedCustomerId, selectCustomer, addCustomer, updateChecklistItem, saveCustomerToFolder } = useCustomerStore();
   const { isSignedIn } = useAuthStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -43,8 +43,8 @@ function CustomerList() {
       // Simulate API call delay
       await new Promise((resolve) => setTimeout(resolve, 500));
 
-      // Add customer to store and create folder structure in Drive
-      const newCustomer = await addCustomerWithFolder(customerData, isSignedIn);
+      // Add customer to store (folder creation is handled by other features as needed)
+      const newCustomer = addCustomer(customerData);
 
       // If we have scanned ID images and the customer has a Drive folder, upload them
       if (scannedIDImages && isSignedIn && newCustomer.driveFolderId) {
