@@ -244,6 +244,15 @@
   color: #059669;
 }
 
+/* Default: Show full name, hide short name */
+.stage-button .stage-name-short {
+  display: none;
+}
+
+.stage-button .stage-name-full {
+  display: inline;
+}
+
 /* Milestone Checklists */
 .milestone-checklists {
   display: flex;
@@ -557,13 +566,4 @@
   .stage-button .stage-name-short {
     display: inline;
   }
-}
-
-/* Show full name on larger screens */
-.stage-button .stage-name-short {
-  display: none;
-}
-
-.stage-button .stage-name-full {
-  display: inline;
 }
