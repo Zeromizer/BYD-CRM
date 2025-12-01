@@ -19,7 +19,7 @@ function CustomerForm({ customer, onSubmit, onCancel, isSubmitting = false }) {
 
   const [errors, setErrors] = useState({});
   const [isIDScannerOpen, setIsIDScannerOpen] = useState(false);
-  const [scannedIDImages, setScannedIDImages] = useState({ front: null, back: null });
+  const [scannedIDImages, setScannedIDImages] = useState({ front: null, back: null, licenseFront: null, licenseBack: null });
 
   // Populate form when editing existing customer
   useEffect(() => {
@@ -95,10 +95,12 @@ function CustomerForm({ customer, onSubmit, onCancel, isSubmitting = false }) {
       addressContinue: data.addressContinue || prev.addressContinue,
     }));
 
-    // Store scanned images for later upload
+    // Store scanned images for later upload (including license images)
     setScannedIDImages({
       front: data.frontImage || null,
       back: data.backImage || null,
+      licenseFront: data.licenseFrontImage || null,
+      licenseBack: data.licenseBackImage || null,
     });
 
     // Clear any errors for auto-filled fields
@@ -113,7 +115,9 @@ function CustomerForm({ customer, onSubmit, onCancel, isSubmitting = false }) {
           {scannedIDImages.front ? (
             <div className="id-scanned-banner">
               <span className="id-scanned-icon">&#10003;</span>
-              <span className="id-scanned-text">ID Scanned - Details auto-filled</span>
+              <span className="id-scanned-text">
+                ID Scanned{scannedIDImages.licenseFront ? ' + License' : ''} - Details auto-filled
+              </span>
               <button
                 type="button"
                 className="btn btn-text btn-small"

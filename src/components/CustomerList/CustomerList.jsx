@@ -49,24 +49,48 @@ function CustomerList() {
       // If we have scanned ID images and the customer has a Drive folder, upload them
       if (scannedIDImages && isSignedIn && newCustomer.driveFolderId) {
         try {
-          // Find or create NRIC subfolder
-          const nricFolderId = await driveService.getOrCreateFolder(
-            'NRIC',
-            newCustomer.driveFolderId
-          );
-
           const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
 
-          // Upload front image
-          if (scannedIDImages.front) {
-            const frontBase64 = scannedIDImages.front.split(',')[1];
-            await uploadIDImage(frontBase64, `ID_Front_${timestamp}.jpg`, nricFolderId);
+          // Upload NRIC/ID images
+          if (scannedIDImages.front || scannedIDImages.back) {
+            // Find or create NRIC subfolder
+            const nricFolderId = await driveService.getOrCreateFolder(
+              'NRIC',
+              newCustomer.driveFolderId
+            );
+
+            // Upload front image
+            if (scannedIDImages.front) {
+              const frontBase64 = scannedIDImages.front.split(',')[1];
+              await uploadIDImage(frontBase64, `ID_Front_${timestamp}.jpg`, nricFolderId);
+            }
+
+            // Upload back image
+            if (scannedIDImages.back) {
+              const backBase64 = scannedIDImages.back.split(',')[1];
+              await uploadIDImage(backBase64, `ID_Back_${timestamp}.jpg`, nricFolderId);
+            }
           }
 
-          // Upload back image
-          if (scannedIDImages.back) {
-            const backBase64 = scannedIDImages.back.split(',')[1];
-            await uploadIDImage(backBase64, `ID_Back_${timestamp}.jpg`, nricFolderId);
+          // Upload Driving License images
+          if (scannedIDImages.licenseFront || scannedIDImages.licenseBack) {
+            // Find or create Driving License subfolder
+            const licenseFolderId = await driveService.getOrCreateFolder(
+              'Driving License',
+              newCustomer.driveFolderId
+            );
+
+            // Upload license front image
+            if (scannedIDImages.licenseFront) {
+              const licenseFrontBase64 = scannedIDImages.licenseFront.split(',')[1];
+              await uploadIDImage(licenseFrontBase64, `License_Front_${timestamp}.jpg`, licenseFolderId);
+            }
+
+            // Upload license back image
+            if (scannedIDImages.licenseBack) {
+              const licenseBackBase64 = scannedIDImages.licenseBack.split(',')[1];
+              await uploadIDImage(licenseBackBase64, `License_Back_${timestamp}.jpg`, licenseFolderId);
+            }
           }
 
           // Mark "ID Scanned" checklist item as complete
