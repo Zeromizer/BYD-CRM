@@ -1,8 +1,8 @@
-import { createWorker } from 'tesseract.js';
-
 /**
  * ID Parser Service
  * Handles OCR processing and extraction of Singapore NRIC/FIN details
+ *
+ * NOTE: tesseract.js is lazy-loaded to reduce initial bundle size (~6.8MB)
  */
 
 // NRIC/FIN regex patterns
@@ -13,6 +13,20 @@ const DATE_PATTERN = /(\d{1,2})[-/.]\s*(\d{1,2})[-/.]\s*(\d{4})/g;
 
 // Singapore address pattern (Block, Street, Unit, Postal)
 const POSTAL_CODE_PATTERN = /\b\d{6}\b/g;
+
+// Cache the tesseract module after first load
+let tesseractModule = null;
+
+/**
+ * Lazy load tesseract.js module
+ * @returns {Promise<{createWorker: Function}>}
+ */
+const loadTesseract = async () => {
+  if (!tesseractModule) {
+    tesseractModule = await import('tesseract.js');
+  }
+  return tesseractModule;
+};
 
 /**
  * Perform OCR on an image using Tesseract.js
@@ -26,18 +40,18 @@ export const performOCR = async (imageDataUrl, onProgress = null) => {
 
   try {
     if (onProgress) onProgress(5);
-    console.log('Creating Tesseract worker...');
+
+    // Lazy load tesseract.js
+    const { createWorker } = await loadTesseract();
 
     // Create worker with just the language - simplest form for v6
     worker = await createWorker('eng');
 
     if (onProgress) onProgress(30);
-    console.log('Worker created, starting recognition...');
 
     const result = await worker.recognize(imageDataUrl);
 
     if (onProgress) onProgress(90);
-    console.log('Recognition complete, text length:', result.data.text.length);
 
     // Terminate worker after use
     await worker.terminate();
@@ -46,13 +60,11 @@ export const performOCR = async (imageDataUrl, onProgress = null) => {
 
     return result.data.text;
   } catch (error) {
-    console.error('OCR error details:', error);
-
     // Make sure to terminate worker on error
     if (worker) {
       try {
         await worker.terminate();
-      } catch (e) {
+      } catch {
         // Ignore termination errors
       }
     }

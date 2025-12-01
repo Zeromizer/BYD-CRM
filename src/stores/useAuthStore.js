@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { useShallow } from 'zustand/react/shallow';
 import authService from '../services/authService';
 import driveService from '../services/driveService';
 import userStorage from '../services/userStorage';
@@ -214,5 +215,35 @@ const useAuthStore = create((set, get) => ({
     };
   },
 }));
+
+// ==========================================
+// SELECTORS - Use these for granular subscriptions to prevent unnecessary re-renders
+// ==========================================
+
+// Selector for sign-in status only (most commonly needed)
+export const useIsSignedIn = () => useAuthStore((state) => state.isSignedIn);
+
+// Selector for initialization status
+export const useAuthInitState = () => useAuthStore(
+  useShallow((state) => ({
+    isInitialized: state.isInitialized,
+    isInitializing: state.isInitializing,
+  }))
+);
+
+// Selector for current user email
+export const useCurrentUserEmail = () => useAuthStore((state) => state.currentUserEmail);
+
+// Selector for auth actions (stable reference)
+export const useAuthActions = () => useAuthStore(
+  useShallow((state) => ({
+    initialize: state.initialize,
+    signIn: state.signIn,
+    signOut: state.signOut,
+    getAccessToken: state.getAccessToken,
+    setOnSignInCallback: state.setOnSignInCallback,
+    canLoadData: state.canLoadData,
+  }))
+);
 
 export default useAuthStore;

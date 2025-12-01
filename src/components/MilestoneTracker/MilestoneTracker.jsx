@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo, useCallback, useMemo } from 'react';
 import useCustomerStore from '../../stores/useCustomerStore';
 import useAuthStore from '../../stores/useAuthStore';
 import {
@@ -26,7 +26,7 @@ const getMilestoneIcon = (iconName, size = 16, color = 'currentColor') => {
   return IconComponent ? <IconComponent size={size} color={color} strokeWidth={2} /> : null;
 };
 
-function MilestoneTracker({ customer, onSave }) {
+const MilestoneTracker = memo(function MilestoneTracker({ customer, onSave }) {
   const { updateCustomer, saveToLocalStorage, saveCustomerToFolder } = useCustomerStore();
   const { isSignedIn } = useAuthStore();
   const [expandedMilestone, setExpandedMilestone] = useState(null);
@@ -272,6 +272,6 @@ function MilestoneTracker({ customer, onSave }) {
       </div>
     </div>
   );
-}
+});
 
 export default MilestoneTracker;

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import useCustomerStore from '../../stores/useCustomerStore';
 import useAuthStore from '../../stores/useAuthStore';
 import driveService from '../../services/driveService';
@@ -325,24 +325,32 @@ function CustomerDetails() {
     }
   }, [customer?.id]);
 
-  // Check if details form has changes (including guarantors)
-  const hasDetailsChanges = (originalDetailsData && JSON.stringify(detailsFormData) !== JSON.stringify(originalDetailsData)) ||
-    (JSON.stringify(guarantors) !== JSON.stringify(originalGuarantors));
+  // Check if details form has changes (including guarantors) - memoized to prevent expensive JSON comparisons on every render
+  const hasDetailsChanges = useMemo(() => {
+    if (!originalDetailsData) return false;
+    const detailsChanged = JSON.stringify(detailsFormData) !== JSON.stringify(originalDetailsData);
+    const guarantorsChanged = JSON.stringify(guarantors) !== JSON.stringify(originalGuarantors);
+    return detailsChanged || guarantorsChanged;
+  }, [detailsFormData, originalDetailsData, guarantors, originalGuarantors]);
 
-  // Check if proposal form has changes
-  const hasProposalChanges = originalProposalData && JSON.stringify(proposalFormData) !== JSON.stringify(originalProposalData);
+  // Check if proposal form has changes - memoized
+  const hasProposalChanges = useMemo(() => {
+    if (!originalProposalData) return false;
+    return JSON.stringify(proposalFormData) !== JSON.stringify(originalProposalData);
+  }, [proposalFormData, originalProposalData]);
 
-  // Check if VSA form has changes
-  const hasVsaChanges = originalVsaData && JSON.stringify(vsaFormData) !== JSON.stringify(originalVsaData);
+  // Check if VSA form has changes - memoized
+  const hasVsaChanges = useMemo(() => {
+    if (!originalVsaData) return false;
+    return JSON.stringify(vsaFormData) !== JSON.stringify(originalVsaData);
+  }, [vsaFormData, originalVsaData]);
 
-  // Handle details form field change
-  const handleDetailsChange = (e) => {
+  // Handle details form field change - memoized to prevent child re-renders
+  const handleDetailsChange = useCallback((e) => {
     const { name, value } = e.target;
     setDetailsFormData((prev) => ({ ...prev, [name]: value }));
-    if (detailsErrors[name]) {
-      setDetailsErrors((prev) => ({ ...prev, [name]: '' }));
-    }
-  };
+    setDetailsErrors((prev) => prev[name] ? { ...prev, [name]: '' } : prev);
+  }, []);
 
   // Guarantor helper functions
   const createEmptyGuarantor = () => ({
@@ -388,17 +396,17 @@ function CustomerDetails() {
     setExpandedGuarantors(prev => ({ ...prev, [index]: !prev[index] }));
   };
 
-  // Handle proposal form field change
-  const handleProposalChange = (e) => {
+  // Handle proposal form field change - memoized
+  const handleProposalChange = useCallback((e) => {
     const { name, value } = e.target;
     setProposalFormData((prev) => ({ ...prev, [name]: value }));
-  };
+  }, []);
 
-  // Handle VSA form field change
-  const handleVsaChange = (e) => {
+  // Handle VSA form field change - memoized
+  const handleVsaChange = useCallback((e) => {
     const { name, value } = e.target;
     setVsaFormData((prev) => ({ ...prev, [name]: value }));
-  };
+  }, []);
 
   // Validate details form
   const validateDetails = () => {
@@ -540,15 +548,6 @@ function CustomerDetails() {
 
   // Load documents when Documents tab is active
   useEffect(() => {
-    console.log('[CustomerDetails] Documents tab effect:', {
-      activeTab,
-      customerName: customer?.name,
-      customerId: customer?.id,
-      driveFolderId: customer?.driveFolderId,
-      driveFolderLink: customer?.driveFolderLink,
-      isSignedIn,
-    });
-
     if (activeTab === 'documents' && customer && isSignedIn) {
       // Reset to root folder when switching to documents tab
       setCurrentFolderId(customer.driveFolderId);
@@ -587,12 +586,6 @@ function CustomerDetails() {
         const files = response.result.files || [];
         allFiles = allFiles.concat(files);
         pageToken = response.result.nextPageToken;
-
-        console.log('API Page Response:', {
-          filesInPage: files.length,
-          hasNextPage: !!pageToken,
-          fileTypes: files.map(f => ({ name: f.name, mimeType: f.mimeType }))
-        });
       } while (pageToken);
 
       // Sort folders first, then files, both alphabetically
@@ -603,14 +596,6 @@ function CustomerDetails() {
         if (aIsFolder && !bIsFolder) return -1;
         if (!aIsFolder && bIsFolder) return 1;
         return a.name.localeCompare(b.name);
-      });
-
-      console.log('Documents loaded:', {
-        folderId,
-        totalFiles: allFiles.length,
-        folders: allFiles.filter(f => f.mimeType === 'application/vnd.google-apps.folder').length,
-        files: allFiles.filter(f => f.mimeType !== 'application/vnd.google-apps.folder').length,
-        items: allFiles.map(f => ({ name: f.name, type: f.mimeType }))
       });
 
       setDocuments(allFiles);
@@ -639,7 +624,6 @@ function CustomerDetails() {
 
   // Handle scan complete
   const handleScanComplete = (uploadedFile) => {
-    console.log('Scan completed:', uploadedFile);
     // Reload documents if we're on the documents tab
     if (currentFolderId) {
       loadCustomerDocuments(currentFolderId);
@@ -664,8 +648,6 @@ function CustomerDetails() {
       await window.gapi.client.drive.files.delete({
         fileId: doc.id
       });
-
-      console.log('Document deleted:', doc.name);
 
       // Refresh the current folder
       await loadCustomerDocuments(currentFolderId);
@@ -713,11 +695,8 @@ function CustomerDetails() {
   // Move file to selected folder
   const handleMoveToFolder = async (targetFolder) => {
     if (!selectedFileToMove || !targetFolder) {
-      console.log('Missing file or folder:', { selectedFileToMove, targetFolder });
       return;
     }
-
-    console.log('Moving file:', selectedFileToMove.name, 'to folder:', targetFolder.name);
 
     try {
       await window.gapi.client.drive.files.update({
@@ -729,10 +708,7 @@ function CustomerDetails() {
       await loadCustomerDocuments(currentFolderId);
       setShowFolderMenu(false);
       setSelectedFileToMove(null);
-
-      console.log('File moved successfully!');
     } catch (error) {
-      console.error('Error moving file:', error);
       toast.error(`Failed to move file: ${error.message}`);
     }
   };
@@ -782,8 +758,6 @@ function CustomerDetails() {
     if (!renamingItem || !renameValue.trim()) return;
 
     try {
-      console.log('Renaming file:', renamingItem.name, '→', renameValue);
-
       // Rename via Google Drive API
       await window.gapi.client.drive.files.update({
         fileId: renamingItem.id,
@@ -801,10 +775,7 @@ function CustomerDetails() {
       setShowRenameModal(false);
       setRenamingItem(null);
       setRenameValue('');
-
-      console.log('File renamed successfully!');
     } catch (error) {
-      console.error('Error renaming file:', error);
       toast.error(`Failed to rename: ${error.message}`);
     }
   };
@@ -897,10 +868,7 @@ function CustomerDetails() {
 
       // Refresh the current folder to show updated file list
       await loadCustomerDocuments(currentFolderId);
-
-      console.log(`Moved ${draggedFile.name} to ${targetFolder.name}`);
     } catch (error) {
-      console.error('Error moving file:', error);
       toast.error(`Failed to move file: ${error.message}`);
     } finally {
       setDraggedFile(null);
@@ -928,10 +896,7 @@ function CustomerDetails() {
 
       // Refresh the current folder to show updated file list
       await loadCustomerDocuments(currentFolderId);
-
-      console.log(`Moved ${draggedFile.name} to ${targetFolder.name}`);
     } catch (error) {
-      console.error('Error moving file:', error);
       toast.error(`Failed to move file: ${error.message}`);
     } finally {
       setDraggedFile(null);
@@ -999,11 +964,8 @@ function CustomerDetails() {
         if (deleteFolderChecked) {
           // Delete entire folder including all documents
           try {
-            console.log(`Deleting Google Drive folder: ${customer.driveFolderId}`);
             await driveService.deleteFolder(customer.driveFolderId);
-            console.log('Google Drive folder deleted successfully');
-          } catch (folderError) {
-            console.error('Error deleting Google Drive folder:', folderError);
+          } catch {
             // Ask user if they want to continue deleting the customer record
             const continueDelete = window.confirm(
               'Failed to delete the Google Drive folder. Would you like to continue deleting the customer record anyway?'
@@ -1016,7 +978,6 @@ function CustomerDetails() {
         } else {
           // Just delete the customer.json file, keep the folder and documents
           try {
-            console.log(`Deleting customer.json from folder: ${customer.driveFolderId}`);
             const fileName = 'customer.json';
             const response = await window.gapi.client.drive.files.list({
               q: `name='${fileName}' and '${customer.driveFolderId}' in parents and trashed=false`,
@@ -1029,10 +990,8 @@ function CustomerDetails() {
               await window.gapi.client.drive.files.delete({
                 fileId: fileId
               });
-              console.log('customer.json deleted successfully');
             }
-          } catch (fileError) {
-            console.error('Error deleting customer.json:', fileError);
+          } catch {
             // Continue anyway - the customer will still be removed from the system
           }
         }
@@ -2660,7 +2619,6 @@ function CustomerDetails() {
                                 const parentFolder = folderPath.length > 1
                                   ? folderPath[folderPath.length - 2]
                                   : { id: customer.driveFolderId, name: customer.name };
-                                console.log('Moving to parent folder:', parentFolder.name);
                                 handleMoveToFolder(parentFolder);
                               }}
                             >
@@ -2676,10 +2634,7 @@ function CustomerDetails() {
                             <button
                               key={folder.id}
                               className="folder-menu-item"
-                              onClick={() => {
-                                console.log('Folder tapped:', folder.name);
-                                handleMoveToFolder(folder);
-                              }}
+                              onClick={() => handleMoveToFolder(folder)}
                             >
                               <span className="folder-menu-icon">📁</span>
                               <span className="folder-menu-name">{folder.name}</span>

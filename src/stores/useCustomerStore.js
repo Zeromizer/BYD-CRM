@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { useShallow } from 'zustand/react/shallow';
 import driveService from '../services/driveService';
 import userStorage from '../services/userStorage';
 import { getDefaultChecklistState } from '../constants/milestones';
@@ -740,5 +741,67 @@ const useCustomerStore = create((set, get) => ({
     }
   },
 }));
+
+// ==========================================
+// SELECTORS - Use these for granular subscriptions to prevent unnecessary re-renders
+// ==========================================
+
+// Selector for customer list only (use in CustomerList component)
+export const useCustomers = () => useCustomerStore((state) => state.customers);
+
+// Selector for selected customer ID only
+export const useSelectedCustomerId = () => useCustomerStore((state) => state.selectedCustomerId);
+
+// Selector for selected customer (derived)
+export const useSelectedCustomer = () => useCustomerStore((state) => {
+  if (!state.selectedCustomerId) return null;
+  const targetId = typeof state.selectedCustomerId === 'string'
+    ? parseInt(state.selectedCustomerId)
+    : state.selectedCustomerId;
+  return state.customers.find((c) => {
+    const customerId = typeof c.id === 'string' ? parseInt(c.id) : c.id;
+    return customerId === targetId;
+  }) || null;
+});
+
+// Selector for loading/syncing states
+export const useCustomerLoadingState = () => useCustomerStore(
+  useShallow((state) => ({
+    isLoading: state.isLoading,
+    isSyncing: state.isSyncing,
+    error: state.error,
+  }))
+);
+
+// Selector for actions only (stable reference - actions don't change)
+export const useCustomerActions = () => useCustomerStore(
+  useShallow((state) => ({
+    addCustomer: state.addCustomer,
+    addCustomerWithFolder: state.addCustomerWithFolder,
+    updateCustomer: state.updateCustomer,
+    updateChecklistItem: state.updateChecklistItem,
+    setCurrentMilestone: state.setCurrentMilestone,
+    deleteCustomer: state.deleteCustomer,
+    deleteCustomerHybrid: state.deleteCustomerHybrid,
+    selectCustomer: state.selectCustomer,
+    loadFromLocalStorage: state.loadFromLocalStorage,
+    saveToLocalStorage: state.saveToLocalStorage,
+    syncFromDrive: state.syncFromDrive,
+    syncToDrive: state.syncToDrive,
+    saveCustomerToFolder: state.saveCustomerToFolder,
+    repairCustomerFolders: state.repairCustomerFolders,
+    createMissingFolders: state.createMissingFolders,
+  }))
+);
+
+// Selector for customer by ID (use when you need a specific customer)
+export const useCustomerById = (id) => useCustomerStore((state) => {
+  if (!id) return null;
+  const targetId = typeof id === 'string' ? parseInt(id) : id;
+  return state.customers.find((c) => {
+    const customerId = typeof c.id === 'string' ? parseInt(c.id) : c.id;
+    return customerId === targetId;
+  }) || null;
+});
 
 export default useCustomerStore;
