@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import useAuthStore from '../../stores/useAuthStore';
+import useCustomerStore from '../../stores/useCustomerStore';
 import syncCoordinator from '../../services/syncCoordinator';
 import SyncProgressModal from '../SyncProgressModal/SyncProgressModal';
 import SyncStatusIndicator from '../SyncStatusIndicator/SyncStatusIndicator';
@@ -10,6 +11,7 @@ import './Header.css';
 function Header() {
   const navigate = useNavigate();
   const { isSignedIn, initialize, signIn, signOut, setOnSignInCallback } = useAuthStore();
+  const { selectCustomer } = useCustomerStore();
   const [showDropdown, setShowDropdown] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [showSyncProgress, setShowSyncProgress] = useState(false);
@@ -114,7 +116,7 @@ function Header() {
     <header className="header">
       <div className="header-container">
         <div className="header-left">
-          <h1 className="header-title" onClick={() => navigate('/')} style={{ cursor: 'pointer' }} title="Go to homepage">
+          <h1 className="header-title" onClick={() => { selectCustomer(null); navigate('/'); }} style={{ cursor: 'pointer' }} title="Go to homepage">
             <span className="byd-logo">BYD</span>
             <span className="divider">|</span>
             <span className="motor-east">MOTOR-EAST</span>
