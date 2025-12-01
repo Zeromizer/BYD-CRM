@@ -57,6 +57,7 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
   const [corners, setCorners] = useState(null);
   const [draggingCorner, setDraggingCorner] = useState(null);
   const [imageDimensions, setImageDimensions] = useState({ width: 1920, height: 1080 });
+  const [overlayStyle, setOverlayStyle] = useState({});
 
   // Enhancement state
   const [currentFilter, setCurrentFilter] = useState('auto');
@@ -77,6 +78,7 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
   const stableCountRef = useRef(0);
   const lastCornersRef = useRef(null);
   const cropContainerRef = useRef(null);
+  const cropImageRef = useRef(null);
   const enhanceCanvasRef = useRef(null);
 
   // ========================================
@@ -614,41 +616,81 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
 
   const handleCornerDrag = (index, e) => {
     e.preventDefault();
+    e.stopPropagation();
     setDraggingCorner(index);
   };
 
-  const handleCropMove = (e) => {
-    if (draggingCorner === null || !cropContainerRef.current || !capturedImage) return;
+  const handleCropMove = useCallback((e) => {
+    if (draggingCorner === null || !cropImageRef.current) return;
 
-    const container = cropContainerRef.current;
-    const rect = container.getBoundingClientRect();
-    const img = container.querySelector('img');
-    if (!img) return;
+    e.preventDefault();
+    e.stopPropagation();
 
+    const img = cropImageRef.current;
     const imgRect = img.getBoundingClientRect();
 
     // Get touch or mouse position
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
 
-    // Calculate position relative to image
-    const x = ((clientX - imgRect.left) / imgRect.width) * img.naturalWidth;
-    const y = ((clientY - imgRect.top) / imgRect.height) * img.naturalHeight;
+    // Direct mapping from screen to image coordinates
+    const relX = clientX - imgRect.left;
+    const relY = clientY - imgRect.top;
 
-    // Clamp to image bounds
-    const clampedX = Math.max(0, Math.min(x, img.naturalWidth));
-    const clampedY = Math.max(0, Math.min(y, img.naturalHeight));
+    // Convert to image coordinates (simple ratio mapping)
+    const x = (relX / imgRect.width) * img.naturalWidth;
+    const y = (relY / imgRect.height) * img.naturalHeight;
+
+    // Clamp to image bounds with margin
+    const margin = 30;
+    const clampedX = Math.max(margin, Math.min(x, img.naturalWidth - margin));
+    const clampedY = Math.max(margin, Math.min(y, img.naturalHeight - margin));
 
     setCorners(prev => {
+      if (!prev) return prev;
       const newCorners = [...prev];
       newCorners[draggingCorner] = { x: clampedX, y: clampedY };
       return newCorners;
     });
-  };
+  }, [draggingCorner]);
 
-  const handleCropEnd = () => {
+  const handleCropEnd = useCallback(() => {
     setDraggingCorner(null);
-  };
+  }, []);
+
+  // Calculate overlay position to match displayed image
+  const updateOverlayPosition = useCallback(() => {
+    if (!cropImageRef.current || !cropContainerRef.current) return;
+
+    const img = cropImageRef.current;
+    const container = cropContainerRef.current;
+    const containerRect = container.getBoundingClientRect();
+    const imgRect = img.getBoundingClientRect();
+
+    // Calculate offset of image within container
+    const left = imgRect.left - containerRect.left;
+    const top = imgRect.top - containerRect.top;
+
+    setOverlayStyle({
+      left: `${left}px`,
+      top: `${top}px`,
+      width: `${imgRect.width}px`,
+      height: `${imgRect.height}px`
+    });
+  }, []);
+
+  // Update overlay when image loads or window resizes
+  useEffect(() => {
+    if (viewMode === VIEW_MODES.CROP && capturedImage) {
+      // Delay to ensure image is rendered
+      const timer = setTimeout(updateOverlayPosition, 100);
+      window.addEventListener('resize', updateOverlayPosition);
+      return () => {
+        clearTimeout(timer);
+        window.removeEventListener('resize', updateOverlayPosition);
+      };
+    }
+  }, [viewMode, capturedImage, updateOverlayPosition]);
 
   const applyCrop = () => {
     if (!capturedImage || !corners) return;
@@ -1288,22 +1330,6 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
       {/* CROP VIEW */}
       {viewMode === VIEW_MODES.CROP && capturedImage && (
         <div className="scanner-crop-view">
-          <div className="crop-header">
-            <button className="header-btn" onClick={() => { setCapturedImage(null); setAutoCapture(true); startCamera(); }}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M19 12H5M12 19l-7-7 7-7" />
-              </svg>
-              Retake
-            </button>
-            <h3>Adjust Corners</h3>
-            <button className="header-btn primary" onClick={applyCrop}>
-              Next
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M5 12h14M12 5l7 7-7 7" />
-              </svg>
-            </button>
-          </div>
-
           <div
             className="crop-container"
             ref={cropContainerRef}
@@ -1313,11 +1339,18 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
             onTouchMove={handleCropMove}
             onTouchEnd={handleCropEnd}
           >
-            <img src={capturedImage} alt="Captured" className="crop-image" />
+            <img
+              ref={cropImageRef}
+              src={capturedImage}
+              alt="Captured"
+              className="crop-image"
+              onLoad={updateOverlayPosition}
+            />
 
-            {corners && (
+            {corners && overlayStyle.width && (
               <svg
                 className="crop-overlay"
+                style={overlayStyle}
                 viewBox={`0 0 ${imageDimensions.width} ${imageDimensions.height}`}
                 preserveAspectRatio="none"
               >
@@ -1335,19 +1368,18 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
                   points={corners.map(c => `${c.x},${c.y}`).join(' ')}
                   fill="none"
                   stroke="#3b82f6"
-                  strokeWidth="6"
+                  strokeWidth="8"
                 />
                 {corners.map((corner, i) => (
                   <g key={i}>
                     <circle
                       cx={corner.x}
                       cy={corner.y}
-                      r="30"
+                      r="50"
                       fill="#3b82f6"
                       stroke="white"
-                      strokeWidth="6"
+                      strokeWidth="8"
                       className="corner-handle"
-                      style={{ cursor: 'grab' }}
                       onMouseDown={(e) => handleCornerDrag(i, e)}
                       onTouchStart={(e) => handleCornerDrag(i, e)}
                     />
@@ -1357,8 +1389,21 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
             )}
           </div>
 
-          <div className="crop-hint">
-            Drag the corners to adjust the document edges
+          {/* Fixed bottom action bar */}
+          <div className="crop-actions">
+            <button className="crop-btn retake" onClick={() => { setCapturedImage(null); setAutoCapture(true); startCamera(); }}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                <circle cx="12" cy="13" r="4" />
+              </svg>
+              Retake
+            </button>
+            <button className="crop-btn next" onClick={applyCrop}>
+              Continue
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+            </button>
           </div>
         </div>
       )}
