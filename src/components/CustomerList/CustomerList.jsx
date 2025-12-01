@@ -5,11 +5,13 @@ import driveService from '../../services/driveService';
 import Modal from '../Modal/Modal';
 import CustomerForm from '../CustomerForm/CustomerForm';
 import { MILESTONES, isMilestoneComplete } from '../../constants/milestones';
+import { useToast } from '../Toast/Toast';
 import './CustomerList.css';
 
 function CustomerList() {
   const { customers, selectedCustomerId, selectCustomer, addCustomerWithFolder, updateChecklistItem, saveCustomerToFolder } = useCustomerStore();
   const { isSignedIn } = useAuthStore();
+  const toast = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -40,90 +42,98 @@ function CustomerList() {
       // Extract scanned ID images from form data
       const { scannedIDImages, ...customerData } = formData;
 
-      // Simulate API call delay
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
       // Add customer to store and create folder structure in Drive
       const newCustomer = await addCustomerWithFolder(customerData, isSignedIn);
 
-      // If we have scanned ID images and the customer has a Drive folder, upload them
-      if (scannedIDImages && isSignedIn && newCustomer.driveFolderId) {
-        try {
-          const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-
-          // Upload NRIC/ID images
-          if (scannedIDImages.front || scannedIDImages.back) {
-            // Find or create NRIC subfolder
-            const nricFolderId = await driveService.getOrCreateFolder(
-              'NRIC',
-              newCustomer.driveFolderId
-            );
-
-            // Upload front image
-            if (scannedIDImages.front) {
-              const frontBase64 = scannedIDImages.front.split(',')[1];
-              await uploadIDImage(frontBase64, `ID_Front_${timestamp}.jpg`, nricFolderId);
-            }
-
-            // Upload back image
-            if (scannedIDImages.back) {
-              const backBase64 = scannedIDImages.back.split(',')[1];
-              await uploadIDImage(backBase64, `ID_Back_${timestamp}.jpg`, nricFolderId);
-            }
-          }
-
-          // Upload Driving License images
-          if (scannedIDImages.licenseFront || scannedIDImages.licenseBack) {
-            // Find or create Driving License subfolder
-            const licenseFolderId = await driveService.getOrCreateFolder(
-              'Driving License',
-              newCustomer.driveFolderId
-            );
-
-            // Upload license front image
-            if (scannedIDImages.licenseFront) {
-              const licenseFrontBase64 = scannedIDImages.licenseFront.split(',')[1];
-              await uploadIDImage(licenseFrontBase64, `License_Front_${timestamp}.jpg`, licenseFolderId);
-            }
-
-            // Upload license back image
-            if (scannedIDImages.licenseBack) {
-              const licenseBackBase64 = scannedIDImages.licenseBack.split(',')[1];
-              await uploadIDImage(licenseBackBase64, `License_Back_${timestamp}.jpg`, licenseFolderId);
-            }
-          }
-
-          // Mark "ID Scanned" checklist item as complete
-          updateChecklistItem(newCustomer.id, 'test_drive', 'id_scanned', true);
-
-          // Save updated checklist to Drive
-          const updatedCustomer = {
-            ...newCustomer,
-            checklist: {
-              ...newCustomer.checklist,
-              test_drive: {
-                ...newCustomer.checklist?.test_drive,
-                id_scanned: true,
-              },
-            },
-          };
-          await saveCustomerToFolder(updatedCustomer, isSignedIn);
-        } catch (uploadError) {
-          console.error('Error uploading ID images:', uploadError);
-          // Don't fail the whole operation, customer was already created
-        }
-      }
-
-      // Select the newly added customer
+      // Select the newly added customer and close modal immediately
       selectCustomer(newCustomer.id);
-
-      // Close modal
       setIsAddModalOpen(false);
+      setIsSubmitting(false);
+
+      // Upload photos in background if we have them
+      if (scannedIDImages && isSignedIn && newCustomer.driveFolderId) {
+        // Start background upload with toast notification
+        const toastId = toast.loading('Uploading ID photos...');
+
+        uploadPhotosInBackground(newCustomer, scannedIDImages, toastId);
+      }
     } catch (error) {
       console.error('Error adding customer:', error);
       alert('Failed to add customer. Please try again.');
-    } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  // Background upload function - runs after modal is closed
+  const uploadPhotosInBackground = async (customer, scannedIDImages, toastId) => {
+    try {
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const uploadPromises = [];
+
+      // Prepare NRIC uploads
+      if (scannedIDImages.front || scannedIDImages.back) {
+        const nricFolderPromise = driveService.getOrCreateFolder('NRIC', customer.driveFolderId);
+
+        uploadPromises.push(
+          nricFolderPromise.then(async (nricFolderId) => {
+            const nricUploads = [];
+            if (scannedIDImages.front) {
+              const frontBase64 = scannedIDImages.front.split(',')[1];
+              nricUploads.push(uploadIDImage(frontBase64, `ID_Front_${timestamp}.jpg`, nricFolderId));
+            }
+            if (scannedIDImages.back) {
+              const backBase64 = scannedIDImages.back.split(',')[1];
+              nricUploads.push(uploadIDImage(backBase64, `ID_Back_${timestamp}.jpg`, nricFolderId));
+            }
+            return Promise.all(nricUploads);
+          })
+        );
+      }
+
+      // Prepare License uploads (in parallel with NRIC)
+      if (scannedIDImages.licenseFront || scannedIDImages.licenseBack) {
+        const licenseFolderPromise = driveService.getOrCreateFolder('Driving License', customer.driveFolderId);
+
+        uploadPromises.push(
+          licenseFolderPromise.then(async (licenseFolderId) => {
+            const licenseUploads = [];
+            if (scannedIDImages.licenseFront) {
+              const licenseFrontBase64 = scannedIDImages.licenseFront.split(',')[1];
+              licenseUploads.push(uploadIDImage(licenseFrontBase64, `License_Front_${timestamp}.jpg`, licenseFolderId));
+            }
+            if (scannedIDImages.licenseBack) {
+              const licenseBackBase64 = scannedIDImages.licenseBack.split(',')[1];
+              licenseUploads.push(uploadIDImage(licenseBackBase64, `License_Back_${timestamp}.jpg`, licenseFolderId));
+            }
+            return Promise.all(licenseUploads);
+          })
+        );
+      }
+
+      // Wait for all uploads to complete in parallel
+      await Promise.all(uploadPromises);
+
+      // Mark "ID Scanned" checklist item as complete
+      updateChecklistItem(customer.id, 'test_drive', 'id_scanned', true);
+
+      // Save updated checklist to Drive
+      const updatedCustomer = {
+        ...customer,
+        checklist: {
+          ...customer.checklist,
+          test_drive: {
+            ...customer.checklist?.test_drive,
+            id_scanned: true,
+          },
+        },
+      };
+      await saveCustomerToFolder(updatedCustomer, isSignedIn);
+
+      // Update toast to success
+      toast.update(toastId, 'ID photos uploaded successfully', 'success');
+    } catch (uploadError) {
+      console.error('Error uploading ID images:', uploadError);
+      toast.update(toastId, 'Failed to upload some photos', 'error');
     }
   };
 
