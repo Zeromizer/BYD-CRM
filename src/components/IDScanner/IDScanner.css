@@ -597,6 +597,35 @@
   font-size: 1rem;
 }
 
+/* Ask License Section */
+.ask-license-section {
+  text-align: center;
+  padding: 2rem;
+}
+
+.ask-license-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+.ask-license-section h3 {
+  margin: 0 0 0.75rem 0;
+  font-size: 1.25rem;
+  color: #111827;
+}
+
+.ask-license-description {
+  color: #6b7280;
+  margin-bottom: 1.5rem;
+  font-size: 0.9375rem;
+}
+
+.ask-license-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+
 /* Mobile Responsiveness */
 @media (max-width: 640px) {
   .id-scanner-modal {
@@ -631,5 +660,9 @@
   .image-thumbnails {
     flex-direction: column;
     align-items: center;
+  }
+
+  .ask-license-actions {
+    flex-direction: column;
   }
 }

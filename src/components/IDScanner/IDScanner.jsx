@@ -4,12 +4,15 @@ import './IDScanner.css';
 
 /**
  * IDScanner Component
- * Captures front and back of ID card and extracts details using OCR
+ * Captures front and back of ID card and driving license, extracts details using OCR
  */
 function IDScanner({ isOpen, onClose, onDataExtracted }) {
-  const [step, setStep] = useState('front'); // 'front', 'back', 'processing', 'review'
+  // Steps: 'front', 'back', 'processing', 'review', 'ask-license', 'license-front', 'license-back', 'final-review'
+  const [step, setStep] = useState('front');
   const [frontImage, setFrontImage] = useState(null);
   const [backImage, setBackImage] = useState(null);
+  const [licenseFrontImage, setLicenseFrontImage] = useState(null);
+  const [licenseBackImage, setLicenseBackImage] = useState(null);
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraLoading, setCameraLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -45,6 +48,8 @@ function IDScanner({ isOpen, onClose, onDataExtracted }) {
     setStep('front');
     setFrontImage(null);
     setBackImage(null);
+    setLicenseFrontImage(null);
+    setLicenseBackImage(null);
     setError(null);
     setProcessingStatus({ stage: '', progress: 0 });
     setExtractedData(null);
@@ -174,6 +179,12 @@ function IDScanner({ isOpen, onClose, onDataExtracted }) {
     } else if (step === 'back') {
       setBackImage(imageDataUrl);
       stopCamera();
+    } else if (step === 'license-front') {
+      setLicenseFrontImage(imageDataUrl);
+      stopCamera();
+    } else if (step === 'license-back') {
+      setLicenseBackImage(imageDataUrl);
+      stopCamera();
     }
   };
 
@@ -182,6 +193,10 @@ function IDScanner({ isOpen, onClose, onDataExtracted }) {
       setFrontImage(null);
     } else if (step === 'back') {
       setBackImage(null);
+    } else if (step === 'license-front') {
+      setLicenseFrontImage(null);
+    } else if (step === 'license-back') {
+      setLicenseBackImage(null);
     }
     startCamera();
   };
@@ -191,12 +206,29 @@ function IDScanner({ isOpen, onClose, onDataExtracted }) {
       setStep('back');
     } else if (step === 'back' && backImage) {
       processImages();
+    } else if (step === 'license-front' && licenseFrontImage) {
+      setStep('license-back');
+    } else if (step === 'license-back' && licenseBackImage) {
+      setStep('final-review');
     }
   };
 
   const handleSkipBack = () => {
     setBackImage(null);
     processImages();
+  };
+
+  const handleSkipLicenseBack = () => {
+    setLicenseBackImage(null);
+    setStep('final-review');
+  };
+
+  const handleScanLicense = () => {
+    setStep('license-front');
+  };
+
+  const handleSkipLicense = () => {
+    setStep('final-review');
   };
 
   const processImages = async () => {
@@ -231,11 +263,18 @@ function IDScanner({ isOpen, onClose, onDataExtracted }) {
     setEditableData(prev => ({ ...prev, [name]: value }));
   };
 
+  const handleConfirmReview = () => {
+    // After reviewing ID data, ask if user wants to scan license
+    setStep('ask-license');
+  };
+
   const handleConfirm = () => {
     onDataExtracted({
       ...editableData,
       frontImage,
-      backImage
+      backImage,
+      licenseFrontImage,
+      licenseBackImage
     });
     onClose();
   };
@@ -257,6 +296,10 @@ function IDScanner({ isOpen, onClose, onDataExtracted }) {
             {step === 'back' && 'Scan Back of ID'}
             {step === 'processing' && 'Processing ID...'}
             {step === 'review' && 'Review Extracted Data'}
+            {step === 'ask-license' && 'Scan Driving License?'}
+            {step === 'license-front' && 'Scan Front of License'}
+            {step === 'license-back' && 'Scan Back of License'}
+            {step === 'final-review' && 'Review All Documents'}
           </h2>
           <button className="id-scanner-close" onClick={handleClose}>
             &times;
@@ -267,17 +310,27 @@ function IDScanner({ isOpen, onClose, onDataExtracted }) {
         <div className="id-scanner-progress">
           <div className={`progress-step ${step === 'front' || frontImage ? 'active' : ''} ${frontImage ? 'complete' : ''}`}>
             <span className="step-number">1</span>
-            <span className="step-label">Front</span>
+            <span className="step-label">ID Front</span>
           </div>
           <div className="progress-line"></div>
-          <div className={`progress-step ${step === 'back' || backImage ? 'active' : ''} ${backImage ? 'complete' : ''}`}>
+          <div className={`progress-step ${step === 'back' || backImage || step === 'processing' || step === 'review' || step === 'ask-license' || step === 'license-front' || step === 'license-back' || step === 'final-review' ? 'active' : ''} ${backImage || step === 'processing' || step === 'review' || step === 'ask-license' || step === 'license-front' || step === 'license-back' || step === 'final-review' ? 'complete' : ''}`}>
             <span className="step-number">2</span>
-            <span className="step-label">Back</span>
+            <span className="step-label">ID Back</span>
           </div>
           <div className="progress-line"></div>
-          <div className={`progress-step ${step === 'processing' || step === 'review' ? 'active' : ''} ${step === 'review' ? 'complete' : ''}`}>
+          <div className={`progress-step ${step === 'processing' || step === 'review' || step === 'ask-license' || step === 'license-front' || step === 'license-back' || step === 'final-review' ? 'active' : ''} ${step === 'review' || step === 'ask-license' || step === 'license-front' || step === 'license-back' || step === 'final-review' ? 'complete' : ''}`}>
             <span className="step-number">3</span>
             <span className="step-label">Review</span>
+          </div>
+          <div className="progress-line"></div>
+          <div className={`progress-step ${step === 'license-front' || step === 'license-back' || licenseFrontImage ? 'active' : ''} ${licenseFrontImage ? 'complete' : ''}`}>
+            <span className="step-number">4</span>
+            <span className="step-label">License</span>
+          </div>
+          <div className="progress-line"></div>
+          <div className={`progress-step ${step === 'final-review' ? 'active complete' : ''}`}>
+            <span className="step-number">5</span>
+            <span className="step-label">Done</span>
           </div>
         </div>
 
@@ -509,6 +562,244 @@ function IDScanner({ isOpen, onClose, onDataExtracted }) {
                   These images will be saved to the customer's folder
                 </p>
               </div>
+
+              <div className="review-actions">
+                <button className="btn btn-secondary" onClick={resetScanner}>
+                  Scan Again
+                </button>
+                <button className="btn btn-primary" onClick={handleConfirmReview}>
+                  Continue
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Ask License Step */}
+          {step === 'ask-license' && (
+            <div className="ask-license-section">
+              <div className="ask-license-icon">🚗</div>
+              <h3>Would you like to scan a driving license?</h3>
+              <p className="ask-license-description">
+                Scanning the driving license will save a copy to the customer's folder.
+              </p>
+              <div className="ask-license-actions">
+                <button className="btn btn-secondary" onClick={handleSkipLicense}>
+                  Skip
+                </button>
+                <button className="btn btn-primary" onClick={handleScanLicense}>
+                  Scan License
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* License Front/Back Capture Steps */}
+          {(step === 'license-front' || step === 'license-back') && (
+            <div className="capture-section">
+              {!cameraActive && !(step === 'license-front' ? licenseFrontImage : licenseBackImage) && !cameraLoading && (
+                <div className="capture-start">
+                  <div className="id-icon">
+                    {step === 'license-front' ? '🚗' : '🔄'}
+                  </div>
+                  <p className="capture-instruction">
+                    {step === 'license-front'
+                      ? 'Position the front of the driving license within the frame'
+                      : 'Position the back of the driving license within the frame'}
+                  </p>
+                  <button className="btn btn-primary btn-large" onClick={startCamera}>
+                    Start Camera
+                  </button>
+                </div>
+              )}
+
+              {cameraLoading && (
+                <div className="loading-state">
+                  <div className="loading"></div>
+                  <p>Starting camera...</p>
+                </div>
+              )}
+
+              {cameraActive && (
+                <div className="camera-view">
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="camera-video"
+                  />
+                  <canvas ref={canvasRef} style={{ display: 'none' }} />
+
+                  {/* License Guide Overlay */}
+                  <div className="id-guide-overlay">
+                    <div className="id-guide-frame">
+                      <div className="corner top-left"></div>
+                      <div className="corner top-right"></div>
+                      <div className="corner bottom-left"></div>
+                      <div className="corner bottom-right"></div>
+                    </div>
+                    <p className="guide-text">
+                      {step === 'license-front' ? 'Front of License' : 'Back of License'}
+                    </p>
+                  </div>
+
+                  <div className="camera-controls">
+                    <button className="btn-capture" onClick={capturePhoto}>
+                      <div className="capture-ring">
+                        <div className="capture-button"></div>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Preview captured license image */}
+              {(step === 'license-front' ? licenseFrontImage : licenseBackImage) && !cameraActive && (
+                <div className="preview-section">
+                  <div className="preview-image-container">
+                    <img
+                      src={step === 'license-front' ? licenseFrontImage : licenseBackImage}
+                      alt={`${step === 'license-front' ? 'Front' : 'Back'} of License`}
+                      className="preview-image"
+                    />
+                  </div>
+                  <div className="preview-actions">
+                    <button className="btn btn-secondary" onClick={handleRetake}>
+                      Retake
+                    </button>
+                    <button className="btn btn-primary" onClick={handleNextStep}>
+                      {step === 'license-front' ? 'Next: Scan Back' : 'Finish'}
+                    </button>
+                  </div>
+                  {step === 'license-back' && (
+                    <button className="btn btn-text" onClick={handleSkipLicenseBack}>
+                      Skip back scan
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* Skip license back button when on license-back step before capturing */}
+              {step === 'license-back' && !licenseBackImage && !cameraActive && !cameraLoading && (
+                <div className="skip-section">
+                  <button className="btn btn-text" onClick={handleSkipLicenseBack}>
+                    Skip back scan
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Final Review Step */}
+          {step === 'final-review' && (
+            <div className="review-section">
+              <p className="review-instruction">
+                Review all scanned documents below:
+              </p>
+
+              {/* Extracted Data Summary */}
+              <div className="review-form">
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Name</label>
+                    <input
+                      type="text"
+                      name="name"
+                      value={editableData.name}
+                      onChange={handleEditChange}
+                      placeholder="Full name"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>NRIC/FIN</label>
+                    <input
+                      type="text"
+                      name="nric"
+                      value={editableData.nric}
+                      onChange={handleEditChange}
+                      placeholder="S1234567A"
+                    />
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Date of Birth</label>
+                    <input
+                      type="date"
+                      name="dob"
+                      value={editableData.dob}
+                      onChange={handleEditChange}
+                    />
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group full-width">
+                    <label>Address</label>
+                    <input
+                      type="text"
+                      name="address"
+                      value={editableData.address}
+                      onChange={handleEditChange}
+                      placeholder="Block, Street, Unit"
+                    />
+                  </div>
+                </div>
+                <div className="form-row">
+                  <div className="form-group full-width">
+                    <label>Address (continued)</label>
+                    <input
+                      type="text"
+                      name="addressContinue"
+                      value={editableData.addressContinue}
+                      onChange={handleEditChange}
+                      placeholder="SINGAPORE + Postal Code"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* All Scanned Images Preview */}
+              <div className="scanned-images">
+                <h4>Scanned ID Card</h4>
+                <div className="image-thumbnails">
+                  {frontImage && (
+                    <div className="thumbnail">
+                      <img src={frontImage} alt="Front of ID" />
+                      <span>Front</span>
+                    </div>
+                  )}
+                  {backImage && (
+                    <div className="thumbnail">
+                      <img src={backImage} alt="Back of ID" />
+                      <span>Back</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {(licenseFrontImage || licenseBackImage) && (
+                <div className="scanned-images">
+                  <h4>Scanned Driving License</h4>
+                  <div className="image-thumbnails">
+                    {licenseFrontImage && (
+                      <div className="thumbnail">
+                        <img src={licenseFrontImage} alt="Front of License" />
+                        <span>Front</span>
+                      </div>
+                    )}
+                    {licenseBackImage && (
+                      <div className="thumbnail">
+                        <img src={licenseBackImage} alt="Back of License" />
+                        <span>Back</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <p className="images-note">
+                These images will be saved to the customer's folder
+              </p>
 
               <div className="review-actions">
                 <button className="btn btn-secondary" onClick={resetScanner}>
