@@ -47,6 +47,7 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
   const [detectedCorners, setDetectedCorners] = useState(null);
   const [isStable, setIsStable] = useState(false);
   const [autoCapture, setAutoCapture] = useState(true);
+  const [focusPoint, setFocusPoint] = useState(null); // For tap-to-focus indicator
 
   // Document state
   const [pages, setPages] = useState([]);
@@ -177,6 +178,77 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
     setFacingMode(newFacing);
     // Camera will restart with new facing mode
     setTimeout(() => startCamera(), 200);
+  };
+
+  // Tap to focus on a point
+  const handleTapToFocus = async (e) => {
+    if (!videoRef.current || !streamRef.current) return;
+
+    const video = videoRef.current;
+    const rect = video.getBoundingClientRect();
+
+    // Get tap position relative to video
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
+
+    // Show focus indicator
+    setFocusPoint({ x: clientX, y: clientY });
+    setTimeout(() => setFocusPoint(null), 1000);
+
+    // Try to set focus point on the camera
+    const track = streamRef.current.getVideoTracks()[0];
+    if (track) {
+      const capabilities = track.getCapabilities ? track.getCapabilities() : {};
+
+      // Check if focus mode is supported
+      if (capabilities.focusMode && capabilities.focusMode.includes('manual')) {
+        try {
+          // Calculate focus point as percentage
+          const pointX = x / rect.width;
+          const pointY = y / rect.height;
+
+          await track.applyConstraints({
+            advanced: [{
+              focusMode: 'manual',
+              pointsOfInterest: [{ x: pointX, y: pointY }]
+            }]
+          });
+
+          // Switch back to continuous focus after a delay
+          setTimeout(async () => {
+            try {
+              await track.applyConstraints({
+                advanced: [{ focusMode: 'continuous' }]
+              });
+            } catch (e) {
+              // Ignore
+            }
+          }, 2000);
+        } catch (e) {
+          console.log('Manual focus not supported, trying continuous refocus');
+          // Fallback: try to trigger auto-focus by toggling focus mode
+          try {
+            await track.applyConstraints({
+              advanced: [{ focusMode: 'continuous' }]
+            });
+          } catch (err) {
+            // Focus control not supported
+          }
+        }
+      } else if (capabilities.focusMode && capabilities.focusMode.includes('continuous')) {
+        // Try to trigger a refocus by toggling
+        try {
+          await track.applyConstraints({
+            advanced: [{ focusMode: 'continuous' }]
+          });
+        } catch (e) {
+          // Focus not supported
+        }
+      }
+    }
   };
 
   // ========================================
@@ -1294,8 +1366,21 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
             playsInline
             muted
             className="camera-feed"
+            onClick={handleTapToFocus}
+            onTouchStart={handleTapToFocus}
           />
           <canvas ref={overlayCanvasRef} className="detection-overlay" />
+
+          {/* Focus indicator */}
+          {focusPoint && (
+            <div
+              className="focus-indicator"
+              style={{
+                left: focusPoint.x,
+                top: focusPoint.y
+              }}
+            />
+          )}
 
           {/* Camera top bar */}
           <div className="camera-topbar">
@@ -1483,106 +1568,108 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
             </button>
           </div>
 
-          <div className="enhance-preview">
-            <img
-              src={capturedImage}
-              alt="Preview"
-              style={{
-                filter: `
-                  brightness(${100 + brightness + FILTERS[currentFilter].brightness}%)
-                  contrast(${100 + contrast + FILTERS[currentFilter].contrast}%)
-                  saturate(${FILTERS[currentFilter].saturation}%)
-                  grayscale(${FILTERS[currentFilter].grayscale ? 100 : 0}%)
-                `,
-                transform: `rotate(${rotation}deg)`
-              }}
-            />
-          </div>
+          <div className="enhance-content">
+            <div className="enhance-preview">
+              <img
+                src={capturedImage}
+                alt="Preview"
+                style={{
+                  filter: `
+                    brightness(${100 + brightness + FILTERS[currentFilter].brightness}%)
+                    contrast(${100 + contrast + FILTERS[currentFilter].contrast}%)
+                    saturate(${FILTERS[currentFilter].saturation}%)
+                    grayscale(${FILTERS[currentFilter].grayscale ? 100 : 0}%)
+                  `,
+                  transform: `rotate(${rotation}deg)`
+                }}
+              />
+            </div>
 
-          {/* Filter presets */}
-          <div className="filter-presets">
-            {Object.entries(FILTERS).map(([key, filter]) => (
-              <button
-                key={key}
-                className={`filter-btn ${currentFilter === key ? 'active' : ''}`}
-                onClick={() => applyFilter(key)}
-              >
-                <div
-                  className="filter-preview"
-                  style={{
-                    backgroundImage: `url(${capturedImage})`,
-                    filter: `
-                      brightness(${100 + filter.brightness}%)
-                      contrast(${100 + filter.contrast}%)
-                      saturate(${filter.saturation}%)
-                      grayscale(${filter.grayscale ? 100 : 0}%)
-                    `
-                  }}
+            {/* Filter presets */}
+            <div className="filter-presets">
+              {Object.entries(FILTERS).map(([key, filter]) => (
+                <button
+                  key={key}
+                  className={`filter-btn ${currentFilter === key ? 'active' : ''}`}
+                  onClick={() => applyFilter(key)}
+                >
+                  <div
+                    className="filter-preview"
+                    style={{
+                      backgroundImage: `url(${capturedImage})`,
+                      filter: `
+                        brightness(${100 + filter.brightness}%)
+                        contrast(${100 + filter.contrast}%)
+                        saturate(${filter.saturation}%)
+                        grayscale(${filter.grayscale ? 100 : 0}%)
+                      `
+                    }}
+                  />
+                  <span>{filter.name}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Manual adjustments */}
+            <div className="adjust-controls">
+              <div className="adjust-row">
+                <label>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="5" />
+                    <line x1="12" y1="1" x2="12" y2="3" />
+                    <line x1="12" y1="21" x2="12" y2="23" />
+                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                    <line x1="1" y1="12" x2="3" y2="12" />
+                    <line x1="21" y1="12" x2="23" y2="12" />
+                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+                  </svg>
+                  Brightness
+                </label>
+                <input
+                  type="range"
+                  min="-50"
+                  max="50"
+                  value={brightness}
+                  onChange={(e) => setBrightness(parseInt(e.target.value))}
                 />
-                <span>{filter.name}</span>
+                <span>{brightness > 0 ? '+' : ''}{brightness}</span>
+              </div>
+
+              <div className="adjust-row">
+                <label>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M12 2v20M2 12h20" />
+                  </svg>
+                  Contrast
+                </label>
+                <input
+                  type="range"
+                  min="-50"
+                  max="50"
+                  value={contrast}
+                  onChange={(e) => setContrast(parseInt(e.target.value))}
+                />
+                <span>{contrast > 0 ? '+' : ''}{contrast}</span>
+              </div>
+            </div>
+
+            {/* Rotation controls */}
+            <div className="rotation-controls">
+              <button onClick={() => rotateImage(-90)}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M2.5 2v6h6M2.66 15.57a10 10 0 1 0 .57-8.38" />
+                </svg>
               </button>
-            ))}
-          </div>
-
-          {/* Manual adjustments */}
-          <div className="adjust-controls">
-            <div className="adjust-row">
-              <label>
+              <span>Rotate</span>
+              <button onClick={() => rotateImage(90)}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <circle cx="12" cy="12" r="5" />
-                  <line x1="12" y1="1" x2="12" y2="3" />
-                  <line x1="12" y1="21" x2="12" y2="23" />
-                  <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
-                  <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
-                  <line x1="1" y1="12" x2="3" y2="12" />
-                  <line x1="21" y1="12" x2="23" y2="12" />
-                  <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
-                  <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+                  <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38" />
                 </svg>
-                Brightness
-              </label>
-              <input
-                type="range"
-                min="-50"
-                max="50"
-                value={brightness}
-                onChange={(e) => setBrightness(parseInt(e.target.value))}
-              />
-              <span>{brightness > 0 ? '+' : ''}{brightness}</span>
+              </button>
             </div>
-
-            <div className="adjust-row">
-              <label>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <circle cx="12" cy="12" r="10" />
-                  <path d="M12 2v20M2 12h20" />
-                </svg>
-                Contrast
-              </label>
-              <input
-                type="range"
-                min="-50"
-                max="50"
-                value={contrast}
-                onChange={(e) => setContrast(parseInt(e.target.value))}
-              />
-              <span>{contrast > 0 ? '+' : ''}{contrast}</span>
-            </div>
-          </div>
-
-          {/* Rotation controls */}
-          <div className="rotation-controls">
-            <button onClick={() => rotateImage(-90)}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M2.5 2v6h6M2.66 15.57a10 10 0 1 0 .57-8.38" />
-              </svg>
-            </button>
-            <span>Rotate</span>
-            <button onClick={() => rotateImage(90)}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38" />
-              </svg>
-            </button>
           </div>
         </div>
       )}
