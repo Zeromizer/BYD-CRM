@@ -92,42 +92,28 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
       setError(null);
       setCameraLoading(true);
 
-      // Request camera with optimal settings for document scanning
+      // Simple camera constraints - let device handle focus naturally
+      // This matches IDScanner which has better focus quality
       const constraints = {
         video: {
           facingMode: facingMode,
-          width: { ideal: 1920, min: 1280 },
-          height: { ideal: 1080, min: 720 },
-          // Request continuous autofocus for document scanning
-          focusMode: { ideal: 'continuous' },
-          // Request high resolution for better autofocus
-          resizeMode: 'none'
+          width: { ideal: 1920 },
+          height: { ideal: 1080 }
         }
       };
-
-      // Add torch constraint if flash is on
-      if (flashMode === 'on' && facingMode === 'environment') {
-        constraints.video.advanced = [{ torch: true }];
-      }
 
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       streamRef.current = stream;
 
-      // Initialize ImageCapture API for better focus control
-      const track = stream.getVideoTracks()[0];
-      if (track && typeof ImageCapture !== 'undefined') {
+      // Apply torch/flash if enabled (after stream is obtained)
+      if (flashMode === 'on' && facingMode === 'environment') {
+        const track = stream.getVideoTracks()[0];
         try {
-          imageCaptureRef.current = new ImageCapture(track);
-
-          // Try to enable continuous autofocus
-          const capabilities = track.getCapabilities ? track.getCapabilities() : {};
-          if (capabilities.focusMode && capabilities.focusMode.includes('continuous')) {
-            await track.applyConstraints({
-              advanced: [{ focusMode: 'continuous' }]
-            });
-          }
+          await track.applyConstraints({
+            advanced: [{ torch: true }]
+          });
         } catch (e) {
-          console.log('ImageCapture not fully supported:', e);
+          console.log('Torch not supported:', e);
         }
       }
 
