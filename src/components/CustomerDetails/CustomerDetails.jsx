@@ -579,7 +579,7 @@ function CustomerDetails() {
       do {
         const response = await window.gapi.client.drive.files.list({
           q: `'${folderId}' in parents and trashed=false`,
-          fields: 'nextPageToken, files(id, name, mimeType, size, createdTime, webViewLink, iconLink)',
+          fields: 'nextPageToken, files(id, name, mimeType, size, createdTime, webViewLink, iconLink, thumbnailLink)',
           pageSize: 1000,
           pageToken: pageToken,
         });
@@ -621,6 +621,10 @@ function CustomerDetails() {
 
   const isFolder = (mimeType) => {
     return mimeType === 'application/vnd.google-apps.folder';
+  };
+
+  const isImage = (mimeType) => {
+    return mimeType?.startsWith('image/');
   };
 
   // Handle scan complete
@@ -2533,8 +2537,10 @@ function CustomerDetails() {
                                 onTouchMove={handleTouchMove}
                                 onTouchEnd={handleTouchEnd}
                               >
-                                <div className="document-icon">
-                                  {doc.iconLink ? (
+                                <div className={`document-icon ${isImage(doc.mimeType) && doc.thumbnailLink ? 'has-thumbnail' : ''}`}>
+                                  {isImage(doc.mimeType) && doc.thumbnailLink ? (
+                                    <img src={doc.thumbnailLink} alt={doc.name} className="thumbnail-image" />
+                                  ) : doc.iconLink ? (
                                     <img src={doc.iconLink} alt="" />
                                   ) : (
                                     <span>📄</span>
