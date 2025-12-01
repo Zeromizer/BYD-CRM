@@ -275,6 +275,8 @@
 
 .checklist-section.expanded {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  background: rgba(0, 188, 212, 0.06);
+  border-color: var(--color-primary);
 }
 
 /* Checklist Header */
