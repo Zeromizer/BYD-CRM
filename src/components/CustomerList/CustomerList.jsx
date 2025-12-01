@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Plus } from 'lucide-react';
 import useCustomerStore from '../../stores/useCustomerStore';
 import useAuthStore from '../../stores/useAuthStore';
 import driveService from '../../services/driveService';
@@ -175,27 +176,28 @@ function CustomerList() {
   return (
     <>
       <div className="customer-list">
-        <div className="customer-list-header">
-          <h2>Customer List</h2>
-          <button className="btn btn-primary" onClick={handleAddCustomer}>
-            + Add Customer
-          </button>
-        </div>
-
-        <div className="search-box">
+        <div className="search-bar-container">
           <input
             type="text"
+            className="search-input"
             placeholder="Search customers..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
+          <button
+            className="btn-add-customer"
+            onClick={handleAddCustomer}
+            title="Add Customer"
+          >
+            <Plus size={20} />
+          </button>
         </div>
 
         <div className="customer-items">
           {filteredCustomers.length === 0 ? (
             <div className="empty-state">
               <p>No customers yet</p>
-              <p className="empty-hint">Click "Add Customer" to get started</p>
+              <p className="empty-hint">Tap + to add a customer</p>
             </div>
           ) : (
             filteredCustomers.map((customer) => {
