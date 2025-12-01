@@ -209,12 +209,12 @@
 .stage-button {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
-  border: 2px solid;
-  border-radius: 20px;
+  gap: 8px;
+  padding: 10px 16px;
+  border: 1.5px solid;
+  border-radius: 8px;
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
   background: transparent;
@@ -238,10 +238,10 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
-.stage-button.complete:not(.active)::after {
-  content: '✓';
-  margin-left: 4px;
-  font-size: 11px;
+.stage-button.complete:not(.active) {
+  background: rgba(5, 150, 105, 0.08);
+  border-color: #059669;
+  color: #059669;
 }
 
 /* Milestone Checklists */

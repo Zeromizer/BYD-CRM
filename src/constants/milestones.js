@@ -8,36 +8,36 @@ export const MILESTONES = [
     id: 'test_drive',
     name: 'Test Drive',
     shortName: 'TD',
-    color: '#3B82F6', // Blue
-    icon: '🚗',
+    color: '#64748b', // Slate - neutral professional start
+    iconName: 'Car',
   },
   {
     id: 'close_deal',
     name: 'Close Deal',
     shortName: 'CD',
-    color: '#F59E0B', // Amber
-    icon: '🤝',
+    color: '#0891b2', // Cyan - business progress
+    iconName: 'Handshake',
   },
   {
     id: 'registration',
     name: 'Registration',
     shortName: 'REG',
-    color: '#8B5CF6', // Purple
-    icon: '📋',
+    color: '#6366f1', // Indigo - process/documentation
+    iconName: 'ClipboardCheck',
   },
   {
     id: 'delivery',
     name: 'Delivery',
     shortName: 'DEL',
-    color: '#10B981', // Green
-    icon: '🎉',
+    color: '#059669', // Emerald - completion/success
+    iconName: 'Package',
   },
   {
     id: 'nps',
     name: 'NPS',
     shortName: 'NPS',
-    color: '#EC4899', // Pink
-    icon: '⭐',
+    color: '#d97706', // Amber - feedback/rating
+    iconName: 'Star',
   },
 ];
 

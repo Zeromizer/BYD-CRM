@@ -8,7 +8,23 @@ import {
   isMilestoneComplete,
   getDefaultChecklistState,
 } from '../../constants/milestones';
+import { Car, Handshake, ClipboardCheck, Package, Star } from 'lucide-react';
 import './MilestoneTracker.css';
+
+// Map icon names to components
+const iconComponents = {
+  Car,
+  Handshake,
+  ClipboardCheck,
+  Package,
+  Star,
+};
+
+// Helper to get icon component
+const getMilestoneIcon = (iconName, size = 16, color = 'currentColor') => {
+  const IconComponent = iconComponents[iconName];
+  return IconComponent ? <IconComponent size={size} color={color} strokeWidth={2} /> : null;
+};
 
 function MilestoneTracker({ customer, onSave }) {
   const { updateCustomer, saveToLocalStorage, saveCustomerToFolder } = useCustomerStore();
@@ -150,7 +166,8 @@ function MilestoneTracker({ customer, onSave }) {
                 }}
                 onClick={() => handleSetCurrentMilestone(milestone.id)}
               >
-                {milestone.icon} {milestone.name}
+                {getMilestoneIcon(milestone.iconName, 16, isCurrent ? 'white' : milestone.color)}
+                {milestone.name}
               </button>
             );
           })}
@@ -188,7 +205,7 @@ function MilestoneTracker({ customer, onSave }) {
                         <polyline points="20 6 9 17 4 12"></polyline>
                       </svg>
                     ) : (
-                      <span style={{ color: milestone.color }}>{milestone.icon}</span>
+                      getMilestoneIcon(milestone.iconName, 14, milestone.color)
                     )}
                   </div>
                   <span className="checklist-title" style={{ color: isCurrent ? milestone.color : 'inherit' }}>
