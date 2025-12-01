@@ -75,6 +75,7 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
   const canvasRef = useRef(null);
   const overlayCanvasRef = useRef(null);
   const streamRef = useRef(null);
+  const imageCaptureRef = useRef(null); // For ImageCapture API
   const detectionIntervalRef = useRef(null);
   const stableCountRef = useRef(0);
   const lastCornersRef = useRef(null);
@@ -91,11 +92,16 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
       setError(null);
       setCameraLoading(true);
 
+      // Request camera with optimal settings for document scanning
       const constraints = {
         video: {
           facingMode: facingMode,
-          width: { ideal: 1920 },
-          height: { ideal: 1080 }
+          width: { ideal: 1920, min: 1280 },
+          height: { ideal: 1080, min: 720 },
+          // Request continuous autofocus for document scanning
+          focusMode: { ideal: 'continuous' },
+          // Request high resolution for better autofocus
+          resizeMode: 'none'
         }
       };
 
@@ -106,6 +112,24 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
 
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       streamRef.current = stream;
+
+      // Initialize ImageCapture API for better focus control
+      const track = stream.getVideoTracks()[0];
+      if (track && typeof ImageCapture !== 'undefined') {
+        try {
+          imageCaptureRef.current = new ImageCapture(track);
+
+          // Try to enable continuous autofocus
+          const capabilities = track.getCapabilities ? track.getCapabilities() : {};
+          if (capabilities.focusMode && capabilities.focusMode.includes('continuous')) {
+            await track.applyConstraints({
+              advanced: [{ focusMode: 'continuous' }]
+            });
+          }
+        } catch (e) {
+          console.log('ImageCapture not fully supported:', e);
+        }
+      }
 
       setViewMode(VIEW_MODES.CAMERA);
 
@@ -152,6 +176,7 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
     if (videoRef.current) {
       videoRef.current.srcObject = null;
     }
+    imageCaptureRef.current = null;
     setDetectedCorners(null);
     setIsStable(false);
     stableCountRef.current = 0;
@@ -180,74 +205,131 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
     setTimeout(() => startCamera(), 200);
   };
 
-  // Tap to focus on a point
+  // Tap to focus on a point - uses multiple strategies for best compatibility
   const handleTapToFocus = async (e) => {
     if (!videoRef.current || !streamRef.current) return;
+
+    // Prevent double-firing on touch devices
+    if (e.type === 'click' && e.pointerType === 'touch') return;
 
     const video = videoRef.current;
     const rect = video.getBoundingClientRect();
 
-    // Get tap position relative to video
+    // Get tap position
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
 
     const x = clientX - rect.left;
     const y = clientY - rect.top;
 
+    // Calculate normalized coordinates (0-1)
+    const pointX = Math.max(0, Math.min(1, x / rect.width));
+    const pointY = Math.max(0, Math.min(1, y / rect.height));
+
     // Show focus indicator
     setFocusPoint({ x: clientX, y: clientY });
-    setTimeout(() => setFocusPoint(null), 1000);
 
-    // Try to set focus point on the camera
     const track = streamRef.current.getVideoTracks()[0];
-    if (track) {
-      const capabilities = track.getCapabilities ? track.getCapabilities() : {};
+    if (!track) return;
 
-      // Check if focus mode is supported
-      if (capabilities.focusMode && capabilities.focusMode.includes('manual')) {
-        try {
-          // Calculate focus point as percentage
-          const pointX = x / rect.width;
-          const pointY = y / rect.height;
+    const capabilities = track.getCapabilities ? track.getCapabilities() : {};
+    let focusTriggered = false;
 
+    // Strategy 1: Use ImageCapture API to trigger single-shot autofocus
+    if (imageCaptureRef.current) {
+      try {
+        const photoCapabilities = await imageCaptureRef.current.getPhotoCapabilities();
+
+        // Check if we can set focus point
+        if (photoCapabilities.focusMode && photoCapabilities.focusMode.includes('single-shot')) {
+          // Trigger single-shot autofocus by grabbing a frame
+          await imageCaptureRef.current.grabFrame();
+          focusTriggered = true;
+        }
+      } catch (e) {
+        // ImageCapture focus not supported
+      }
+    }
+
+    // Strategy 2: Use pointsOfInterest constraint (Chrome Android)
+    if (!focusTriggered && capabilities.pointsOfInterest) {
+      try {
+        await track.applyConstraints({
+          advanced: [{
+            pointsOfInterest: [{ x: pointX, y: pointY }]
+          }]
+        });
+        focusTriggered = true;
+      } catch (e) {
+        // pointsOfInterest not supported
+      }
+    }
+
+    // Strategy 3: Toggle focus mode to trigger refocus
+    if (!focusTriggered && capabilities.focusMode) {
+      const modes = capabilities.focusMode;
+
+      try {
+        // If single-shot is available, use it then switch back to continuous
+        if (modes.includes('single-shot')) {
           await track.applyConstraints({
-            advanced: [{
-              focusMode: 'manual',
-              pointsOfInterest: [{ x: pointX, y: pointY }]
-            }]
+            advanced: [{ focusMode: 'single-shot' }]
           });
 
-          // Switch back to continuous focus after a delay
+          // After focus completes, switch back to continuous
           setTimeout(async () => {
             try {
-              await track.applyConstraints({
-                advanced: [{ focusMode: 'continuous' }]
-              });
+              if (modes.includes('continuous')) {
+                await track.applyConstraints({
+                  advanced: [{ focusMode: 'continuous' }]
+                });
+              }
             } catch (e) {
               // Ignore
             }
-          }, 2000);
-        } catch (e) {
-          console.log('Manual focus not supported, trying continuous refocus');
-          // Fallback: try to trigger auto-focus by toggling focus mode
-          try {
-            await track.applyConstraints({
-              advanced: [{ focusMode: 'continuous' }]
-            });
-          } catch (err) {
-            // Focus control not supported
-          }
+          }, 1500);
+          focusTriggered = true;
         }
-      } else if (capabilities.focusMode && capabilities.focusMode.includes('continuous')) {
-        // Try to trigger a refocus by toggling
-        try {
+        // Otherwise toggle continuous to trigger refocus
+        else if (modes.includes('continuous')) {
+          // Toggle off and on to trigger refocus
+          if (modes.includes('manual')) {
+            await track.applyConstraints({
+              advanced: [{ focusMode: 'manual' }]
+            });
+            await new Promise(r => setTimeout(r, 100));
+          }
           await track.applyConstraints({
             advanced: [{ focusMode: 'continuous' }]
           });
-        } catch (e) {
-          // Focus not supported
+          focusTriggered = true;
         }
+      } catch (e) {
+        console.log('Focus mode toggle failed:', e);
       }
+    }
+
+    // Strategy 4: Adjust focus distance if available (some Android devices)
+    if (!focusTriggered && capabilities.focusDistance) {
+      try {
+        const { min, max } = capabilities.focusDistance;
+        // Focus at middle distance (good for documents)
+        const midFocus = (min + max) / 2;
+        await track.applyConstraints({
+          advanced: [{ focusDistance: midFocus }]
+        });
+        focusTriggered = true;
+      } catch (e) {
+        // Focus distance not supported
+      }
+    }
+
+    // Clear focus indicator after animation
+    setTimeout(() => setFocusPoint(null), 1000);
+
+    // Log for debugging
+    if (!focusTriggered) {
+      console.log('No focus method available. Camera capabilities:', capabilities);
     }
   };
 
