@@ -514,7 +514,56 @@
     display: none;
   }
 
+  /* Horizontal scrollable stage buttons for mobile */
   .stage-buttons {
-    grid-template-columns: 1fr;
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x mandatory;
+    gap: 6px;
+    padding-bottom: 4px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
   }
+
+  .stage-buttons::-webkit-scrollbar {
+    height: 4px;
+  }
+
+  .stage-buttons::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .stage-buttons::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 2px;
+  }
+
+  .stage-button {
+    flex: 0 0 auto;
+    scroll-snap-align: start;
+    padding: 8px 12px;
+    font-size: 12px;
+    gap: 6px;
+    white-space: nowrap;
+  }
+
+  /* Show short name on mobile */
+  .stage-button .stage-name-full {
+    display: none;
+  }
+
+  .stage-button .stage-name-short {
+    display: inline;
+  }
+}
+
+/* Show full name on larger screens */
+.stage-button .stage-name-short {
+  display: none;
+}
+
+.stage-button .stage-name-full {
+  display: inline;
 }
