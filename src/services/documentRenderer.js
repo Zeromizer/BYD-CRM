@@ -1,4 +1,4 @@
-import authService from './authService';
+import { getAuthService, getStorageService, isUsingOneDrive } from './storageServiceSelector';
 
 /**
  * DocumentRenderer - Unified Canvas Renderer for Print-First Design
@@ -30,30 +30,37 @@ class DocumentRenderer {
   }
 
   /**
-   * Fetch image from Google Drive
+   * Fetch image from cloud storage (Google Drive or OneDrive)
    */
   async fetchImageFromDrive(fileId) {
     try {
-      const token = authService.getAccessToken();
-      if (!token) {
-        throw new Error('No access token available. Please sign in.');
-      }
-
-      const response = await fetch(
-        `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+      if (isUsingOneDrive()) {
+        // OneDrive: Use storage service to download file as blob
+        const blob = await getStorageService().downloadFileAsBlob(fileId);
+        return blob;
+      } else {
+        // Google Drive: Use traditional fetch with auth token
+        const token = getAuthService().getAccessToken();
+        if (!token) {
+          throw new Error('No access token available. Please sign in.');
         }
-      );
 
-      if (!response.ok) {
-        throw new Error(`Failed to fetch image: ${response.status}`);
+        const response = await fetch(
+          `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch image: ${response.status}`);
+        }
+
+        const blob = await response.blob();
+        return blob;
       }
-
-      const blob = await response.blob();
-      return blob;
     } catch (error) {
       console.error('Error fetching image from Drive:', error);
       throw error;

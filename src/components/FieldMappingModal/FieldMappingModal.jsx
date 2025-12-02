@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import useAuthStore from '../../stores/useAuthStore';
-import authService from '../../services/authService';
+import { getAuthService, getStorageService, isUsingOneDrive } from '../../services/storageServiceSelector';
 import Modal from '../Modal/Modal';
 import './FieldMappingModal.css';
 
@@ -196,37 +196,45 @@ function FieldMappingModal({ isOpen, onClose, formType, template, onSave }) {
     setLoading(true);
 
     try {
-      const token = authService.getAccessToken();
-
-      if (!token) {
-        throw new Error('No access token available. Please sign in again.');
-      }
-
       console.log('Loading form image from Drive:', template.fileId);
 
-      const response = await fetch(
-        `https://www.googleapis.com/drive/v3/files/${template.fileId}?alt=media`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      let blob;
+      if (isUsingOneDrive()) {
+        // OneDrive: Use storage service
+        blob = await getStorageService().downloadFileAsBlob(template.fileId);
+      } else {
+        // Google Drive: Use traditional fetch with auth token
+        const token = getAuthService().getAccessToken();
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Drive API error:', response.status, errorText);
-        throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
+        if (!token) {
+          throw new Error('No access token available. Please sign in again.');
+        }
+
+        const response = await fetch(
+          `https://www.googleapis.com/drive/v3/files/${template.fileId}?alt=media`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('Drive API error:', response.status, errorText);
+          throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
+        }
+
+        blob = await response.blob();
       }
 
-      const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       setImageUrl(url);
       setLoading(false);
       console.log('Form image loaded successfully');
     } catch (error) {
       console.error('Error loading form image:', error);
-      alert('Failed to load form image: ' + error.message + '\n\nPlease make sure you are signed in to Google Drive.');
+      alert('Failed to load form image: ' + error.message + '\n\nPlease make sure you are signed in.');
       setLoading(false);
     }
   };
