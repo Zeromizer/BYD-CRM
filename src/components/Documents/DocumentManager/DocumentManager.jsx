@@ -107,7 +107,7 @@ function DocumentManager() {
   const handleUpload = async (name, category) => {
     if (!uploadingFile) return;
     if (!isSignedIn) {
-      alert('Please sign in to Google Drive first');
+      alert('Please sign in to cloud storage first');
       return;
     }
 
@@ -115,7 +115,7 @@ function DocumentManager() {
     setUploadProgress(0);
 
     try {
-      // Upload file to Google Drive (use the correct folder inside BYD CRM root)
+      // Upload file to cloud storage (use the correct folder inside BYD CRM root)
       const folderId = await getStorageService().getOrCreateDocumentTemplatesFolder();
 
       // Generate unique filename
@@ -126,7 +126,8 @@ function DocumentManager() {
 
       setUploadProgress(30);
 
-      const fileId = await getStorageService().uploadFile(
+      // Use uploadFileToFolder for OneDrive compatibility
+      const fileId = await getStorageService().uploadFileToFolder(
         filename,
         uploadingFile,
         folderId
@@ -200,7 +201,7 @@ function DocumentManager() {
     }
 
     if (!isSignedIn) {
-      alert('Please sign in to Google Drive first');
+      alert('Please sign in to cloud storage first');
       return;
     }
 
@@ -211,14 +212,13 @@ function DocumentManager() {
       // Use the correct folder inside BYD CRM root
       const folderId = await getStorageService().getOrCreateDocumentTemplatesFolder();
 
-      // Delete old file if exists
+      // Delete old file if exists (using OneDrive-compatible method)
       if (template.fileId) {
         try {
-          await window.gapi.client.drive.files.delete({
-            fileId: template.fileId,
-          });
+          await getStorageService().deleteFileById(template.fileId);
         } catch (error) {
           console.error('Error deleting old file:', error);
+          // Continue with upload even if delete fails
         }
       }
 
@@ -228,8 +228,8 @@ function DocumentManager() {
         masterFileToUpload.name.split('.').pop()
       }`;
 
-      // Upload new file
-      const fileId = await getStorageService().uploadFile(
+      // Upload new file using OneDrive-compatible method
+      const fileId = await getStorageService().uploadFileToFolder(
         filename,
         masterFileToUpload,
         folderId
@@ -247,7 +247,7 @@ function DocumentManager() {
       setMasterFileToUpload(null);
     } catch (error) {
       console.error('Error uploading master file:', error);
-      alert('Error uploading file to Google Drive: ' + error.message);
+      alert('Error uploading file to cloud storage: ' + error.message);
     } finally {
       setUploadingMaster(false);
     }
@@ -264,7 +264,7 @@ function DocumentManager() {
 
       {!isSignedIn && (
         <div className="warning-banner">
-          ⚠️ Please sign in to Google Drive to upload and manage document templates
+          ⚠️ Please sign in to cloud storage to upload and manage document templates
         </div>
       )}
 
@@ -422,7 +422,7 @@ function DocumentManager() {
               onClick={handleUploadMaster}
               disabled={!masterFileToUpload || uploadingMaster}
             >
-              {uploadingMaster ? 'Uploading...' : 'Upload to Google Drive'}
+              {uploadingMaster ? 'Uploading...' : 'Upload to Cloud Storage'}
             </button>
           </div>
         </div>

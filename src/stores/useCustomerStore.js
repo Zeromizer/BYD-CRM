@@ -527,6 +527,7 @@ const useCustomerStore = create((set, get) => ({
    * HYBRID: Sync using hybrid approach (index + individual files)
    * OPTIMIZED: Loads only index, lazy-loads full customer data on-demand
    * Automatically migrates to hybrid structure if needed
+   * FIXED: Loads from localStorage first to preserve local data during sync
    */
   syncFromDriveHybrid: async (isSignedIn) => {
     if (!isSignedIn) {
@@ -535,6 +536,10 @@ const useCustomerStore = create((set, get) => ({
 
     try {
       set({ isSyncing: true });
+
+      // CRITICAL: Load from localStorage first before syncing
+      // This ensures we don't lose locally-modified data when sync runs
+      get().loadFromLocalStorage();
 
       // Check if migration is needed
       const migrationNeeded = await getStorageService().checkMigrationNeeded();
@@ -573,6 +578,7 @@ const useCustomerStore = create((set, get) => ({
 
       // OPTIMIZATION: Merge index with localStorage data
       // This gives us instant display with local data + Drive index metadata
+      // FIXED: Properly preserve checklist/milestone data during merge
       const { customers: localCustomers } = get();
       const localMap = new Map(localCustomers.map(c => [c.id, c]));
 
@@ -581,15 +587,22 @@ const useCustomerStore = create((set, get) => ({
         if (localData) {
           // Use local data but update folder metadata from index
           // IMPORTANT: Keep local lastModified so we can compare with Drive later
+          // CRITICAL: Preserve checklist/milestone data from local storage
           return {
             ...localData,
             driveFolderId: indexEntry.driveFolderId || localData.driveFolderId,
             driveFolderLink: indexEntry.driveFolderLink || localData.driveFolderLink,
+            // Preserve checklist from local data (will be properly merged in loadMissingCustomerData)
+            checklist: localData.checklist || getDefaultChecklistState(),
             // Don't overwrite lastModified - keep local value for comparison
           };
         }
         // New customer in Drive, use index data (will load full data immediately)
-        return indexEntry;
+        // Initialize with default checklist state
+        return {
+          ...indexEntry,
+          checklist: getDefaultChecklistState(),
+        };
       });
 
       // Update state with merged data (for instant display)
@@ -609,6 +622,7 @@ const useCustomerStore = create((set, get) => ({
    * Load missing customer data immediately
    * Loads full customer.json for customers that only have index data
    * OPTIMIZED: Loads all customers in parallel for better performance
+   * FIXED: Properly merges checklist/milestone data to prevent data loss
    */
   loadMissingCustomerData: async (indexEntries) => {
     let currentCustomers = get().customers;
@@ -658,7 +672,9 @@ const useCustomerStore = create((set, get) => ({
           if (fullData._folderNotFound) {
             return { id: indexEntry.id, needsRepair: true, indexEntry };
           }
-          return { id: indexEntry.id, data: fullData };
+          // Return both drive data and local data for proper merging
+          const localCustomer = currentCustomers.find(c => c.id === indexEntry.id);
+          return { id: indexEntry.id, data: fullData, localData: localCustomer };
         } else {
           return null;
         }
@@ -673,16 +689,41 @@ const useCustomerStore = create((set, get) => ({
     // Separate successful loads from those needing repair
     const customersNeedingRepair = [];
 
-    // Apply all loaded data to customers array
+    // Apply all loaded data to customers array with proper merging
     for (const result of results) {
       if (result) {
         if (result.needsRepair) {
           // Mark customer for repair
           customersNeedingRepair.push(result.indexEntry);
         } else if (result.data) {
-          currentCustomers = currentCustomers.map(c =>
-            c.id === result.id ? result.data : c
-          );
+          currentCustomers = currentCustomers.map(c => {
+            if (c.id !== result.id) return c;
+
+            // CRITICAL FIX: Properly merge checklist/milestone data
+            // Use drive data as base, but merge checklist from both sources
+            const driveChecklist = result.data.checklist || {};
+            const localChecklist = result.localData?.checklist || c.checklist || {};
+
+            // Merge checklist - prefer drive data but keep local items that don't exist in drive
+            const mergedChecklist = {
+              ...localChecklist,
+              ...driveChecklist,
+              // Ensure currentMilestone is preserved (prefer drive if exists)
+              currentMilestone: driveChecklist.currentMilestone || localChecklist.currentMilestone,
+            };
+
+            return {
+              ...c,
+              ...result.data,
+              // Preserve folder IDs from local if drive doesn't have them
+              driveFolderId: result.data.driveFolderId || c.driveFolderId,
+              driveFolderLink: result.data.driveFolderLink || c.driveFolderLink,
+              // Use merged checklist
+              checklist: mergedChecklist,
+              // Preserve dealClosed status
+              dealClosed: result.data.dealClosed !== undefined ? result.data.dealClosed : c.dealClosed,
+            };
+          });
         }
       }
     }

@@ -678,14 +678,20 @@ class OneDriveService {
 
   /**
    * Save Excel templates
+   * IMPORTANT: Saves in { templates: {...} } format for consistency with loadExcelTemplates
    */
   async saveExcelTemplates(templates) {
     const folderIds = await this.getFolderIds();
-    return this.uploadFile(folderIds.root, ONEDRIVE_DATA_FILES.EXCEL, templates);
+    // Wrap in { templates: {...} } format if not already wrapped
+    const dataToSave = templates && typeof templates === 'object' && !templates.templates
+      ? { templates, lastModified: new Date().toISOString() }
+      : { ...templates, lastModified: new Date().toISOString() };
+    return this.uploadFile(folderIds.root, ONEDRIVE_DATA_FILES.EXCEL, dataToSave);
   }
 
   /**
    * Load Excel templates
+   * Always returns { templates: {...} } format for consistency
    */
   async loadExcelTemplates() {
     const folderIds = await this.getFolderIds();
@@ -695,7 +701,26 @@ class OneDriveService {
       return { templates: {} };
     }
 
-    return this.downloadFileAsJson(file.id);
+    const data = await this.downloadFileAsJson(file.id);
+
+    // Handle legacy format where templates were saved without wrapper
+    if (data && typeof data === 'object') {
+      // If data already has templates property, return as-is
+      if (data.templates) {
+        return data;
+      }
+      // If data is the templates object itself (legacy format), wrap it
+      // Check if it looks like a templates object (has template entries)
+      const keys = Object.keys(data);
+      const looksLikeTemplates = keys.length > 0 && keys.some(k =>
+        data[k]?.name || data[k]?.fieldMappings || data[k]?.masterFileId
+      );
+      if (looksLikeTemplates) {
+        return { templates: data };
+      }
+    }
+
+    return data || { templates: {} };
   }
 
   /**
@@ -1067,22 +1092,80 @@ class OneDriveService {
 
   /**
    * Get or create document templates folder
+   * Returns the folder ID string for compatibility with DocumentManager
    */
   async getOrCreateDocumentTemplatesFolder() {
     const folderIds = await this.getFolderIds();
-    return { id: folderIds.documentTemplates };
+    // Return just the ID string for compatibility with DocumentManager
+    return folderIds.documentTemplates;
+  }
+
+  /**
+   * Upload file to a specific folder - compatibility method for DocumentManager
+   * IMPORTANT: This method signature matches what DocumentManager expects
+   * @param {string} fileName - The name for the file
+   * @param {File|Blob} file - The file to upload
+   * @param {string} folderId - The target folder ID
+   * @returns {string} The file ID of the uploaded file
+   */
+  async uploadFileToFolder(fileName, file, folderId) {
+    try {
+      const token = await msAuthService.getAccessToken();
+      const path = `/me/drive/items/${folderId}:/${encodeURIComponent(fileName)}:/content`;
+
+      const response = await fetch(`${GRAPH_BASE_URL}${path}`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': file.type || 'application/octet-stream',
+        },
+        body: file,
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error?.message || 'File upload failed');
+      }
+
+      const result = await response.json();
+      // Return just the file ID for compatibility
+      return result.id;
+    } catch (error) {
+      console.error('Error uploading file to folder:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete a file by ID - compatibility method for DocumentManager
+   * @param {string} fileId - The file ID to delete
+   */
+  async deleteFileById(fileId) {
+    try {
+      await this.deleteFile(fileId);
+      return true;
+    } catch (error) {
+      console.error('Error deleting file:', error);
+      throw error;
+    }
   }
 
   /**
    * Save document templates to Drive
+   * IMPORTANT: Saves in { templates: {...} } format for consistency with loadDocumentTemplatesFromDrive
    */
   async saveDocumentTemplateToDrive(templates) {
     const folderIds = await this.getFolderIds();
-    return this.uploadFile(folderIds.root, 'document_templates.json', templates);
+    // Wrap in { templates: {...} } format if not already wrapped
+    const dataToSave = templates && typeof templates === 'object' && !templates.templates
+      ? { templates, lastModified: new Date().toISOString() }
+      : { ...templates, lastModified: new Date().toISOString() };
+    return this.uploadFile(folderIds.root, 'document_templates.json', dataToSave);
   }
 
   /**
    * Load document templates from Drive
+   * Always returns { templates: {...} } format for consistency
    */
   async loadDocumentTemplatesFromDrive() {
     const folderIds = await this.getFolderIds();
@@ -1092,7 +1175,23 @@ class OneDriveService {
       return { templates: {} };
     }
 
-    return this.downloadFileAsJson(file.id);
+    const data = await this.downloadFileAsJson(file.id);
+
+    // Handle legacy format where templates were saved without wrapper
+    if (data && typeof data === 'object') {
+      // If data already has templates property, return as-is
+      if (data.templates) {
+        return data;
+      }
+      // If data is the templates object itself (legacy format), wrap it
+      // Check if it looks like a templates object (has template IDs as keys)
+      const keys = Object.keys(data);
+      if (keys.length > 0 && keys.some(k => k.startsWith('template_') || data[k]?.name || data[k]?.fields)) {
+        return { templates: data };
+      }
+    }
+
+    return data || { templates: {} };
   }
 
   /**
@@ -1167,22 +1266,35 @@ class OneDriveService {
   /**
    * Sync Excel templates with OneDrive
    * Merges local templates with Drive templates (Drive is source of truth)
+   * FIXED: Properly handles format and preserves local templates
    */
   async syncExcel(localTemplates) {
     try {
-      // Load templates from Drive
+      // Load templates from Drive (always returns { templates: {...} } format)
       const driveData = await this.loadExcelTemplates();
       const driveTemplates = driveData.templates || {};
 
-      // Merge: Drive templates override local, but keep local-only templates
-      const merged = { ...localTemplates };
+      // Ensure localTemplates is an object
+      const safeLocalTemplates = localTemplates && typeof localTemplates === 'object'
+        ? (localTemplates.templates || localTemplates)
+        : {};
 
-      // Add/update from Drive
+      // Merge: Start with local templates, then overlay Drive templates
+      // Drive is source of truth, but we preserve local-only templates
+      const merged = { ...safeLocalTemplates };
+
+      // Add/update from Drive (Drive data takes precedence)
       for (const [id, template] of Object.entries(driveTemplates)) {
-        merged[id] = template;
+        // Only use drive template if it has valid data
+        if (template && typeof template === 'object' && (template.name || template.fieldMappings)) {
+          merged[id] = {
+            ...merged[id], // Keep any local-only fields
+            ...template,   // Override with drive data
+          };
+        }
       }
 
-      // Save merged back to Drive
+      // Save merged back to Drive (will be wrapped in { templates: {...} } format)
       await this.saveExcelTemplates(merged);
 
       return merged;
@@ -1203,22 +1315,36 @@ class OneDriveService {
   /**
    * Sync document templates with OneDrive
    * Merges local templates with Drive templates (Drive is source of truth)
+   * FIXED: Properly handles format and preserves local templates
    */
   async syncDocumentTemplates(localTemplates) {
     try {
-      // Load templates from Drive
+      // Load templates from Drive (always returns { templates: {...} } format)
       const driveData = await this.loadDocumentTemplatesFromDrive();
-      const driveTemplates = driveData.templates || driveData || {};
+      const driveTemplates = driveData.templates || {};
 
-      // Merge: Drive templates override local, but keep local-only templates
-      const merged = { ...localTemplates };
+      // Ensure localTemplates is an object
+      const safeLocalTemplates = localTemplates && typeof localTemplates === 'object'
+        ? (localTemplates.templates || localTemplates)
+        : {};
 
-      // Add/update from Drive
+      // Merge: Start with local templates, then overlay Drive templates
+      // Drive is source of truth, but we preserve local-only templates
+      const merged = { ...safeLocalTemplates };
+
+      // Add/update from Drive (Drive data takes precedence)
       for (const [id, template] of Object.entries(driveTemplates)) {
-        merged[id] = template;
+        // Only use drive template if it has valid data
+        if (template && typeof template === 'object' && (template.name || template.id)) {
+          merged[id] = {
+            ...merged[id], // Keep any local-only fields
+            ...template,   // Override with drive data
+            id: id,        // Ensure ID is set
+          };
+        }
       }
 
-      // Save merged back to Drive
+      // Save merged back to Drive (will be wrapped in { templates: {...} } format)
       await this.saveDocumentTemplateToDrive(merged);
 
       return merged;
@@ -1232,19 +1358,27 @@ class OneDriveService {
    * Delete document template from Drive
    * Note: For OneDrive, we just update the templates file without the deleted template
    * The actual background file cleanup could be done separately if needed
+   * FIXED: Properly handles the { templates: {...} } format
    */
   async deleteDocumentTemplateFromDrive(templateId) {
     try {
-      // Load current templates
+      // Load current templates (returns { templates: {...} } format)
       const driveData = await this.loadDocumentTemplatesFromDrive();
-      const templates = driveData.templates || driveData || {};
+      const templates = driveData.templates || {};
+
+      // Check if template exists before deletion
+      if (!templates[templateId]) {
+        console.warn(`Template ${templateId} not found in Drive, skipping deletion`);
+        return true;
+      }
 
       // Remove the template
       delete templates[templateId];
 
-      // Save updated templates
+      // Save updated templates (will be wrapped in { templates: {...} } format)
       await this.saveDocumentTemplateToDrive(templates);
 
+      console.log(`Successfully deleted template ${templateId} from Drive`);
       return true;
     } catch (error) {
       console.error('Error deleting document template from Drive:', error);

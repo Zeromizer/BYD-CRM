@@ -61,26 +61,41 @@ const useExcelStore = create((set, get) => ({
   },
 
   // Sync Excel templates with cloud storage
+  // FIXED: Properly handles template format and ensures all templates are preserved
+  // IMPORTANT: Loads from localStorage first to prevent data loss
   syncWithDrive: async () => {
     try {
       set({ isLoading: true, error: null });
+
+      // CRITICAL: Load from localStorage first before syncing
+      // This ensures we don't lose locally-created templates when sync runs
+      // before the component has mounted and called loadFromLocalStorage
+      get().loadFromLocalStorage();
+
       const { excelTemplates } = get();
 
       // Sync with Drive (Drive is source of truth)
+      // syncExcel now returns the templates object directly (not wrapped)
       const synced = await getStorageService().syncExcel(excelTemplates);
+
+      // Ensure we have a valid templates object
+      const validTemplates = synced && typeof synced === 'object'
+        ? (synced.templates || synced)
+        : {};
 
       // Update state and user-specific localStorage
       set({
-        excelTemplates: synced,
+        excelTemplates: validTemplates,
         isLoading: false,
         lastSyncTime: new Date().toISOString()
       });
       get().saveToLocalStorage();
 
-      return synced;
+      return validTemplates;
     } catch (error) {
       set({ error: 'Failed to sync with cloud storage', isLoading: false });
-      throw error;
+      // Return local templates as fallback instead of throwing
+      return get().excelTemplates;
     }
   },
 
