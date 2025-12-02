@@ -1,5 +1,5 @@
 import authService from './authService';
-import driveService from './driveService';
+import { getStorageService } from './storageServiceSelector';
 
 /**
  * Excel Service for populating Excel templates with customer data
@@ -369,7 +369,7 @@ class ExcelService {
       // Search for existing folder in Drive before creating a new one
       console.log('🔍 Searching for existing customer folder in Drive...');
       try {
-        const existingFolder = await driveService.findCustomerFolderByName(customerName);
+        const existingFolder = await getStorageService().findCustomerFolderByName(customerName);
         if (existingFolder) {
           console.log('✅ Found existing customer folder:', existingFolder.folderId);
 
@@ -391,8 +391,8 @@ class ExcelService {
       }
 
       // No folder found, create new one using driveService
-      console.log('🆕 Creating new customer folder structure using driveService...');
-      const folderInfo = await driveService.createCustomerFolderStructure(customerName, customerId);
+      console.log('🆕 Creating new customer folder structure using getStorageService()...');
+      const folderInfo = await getStorageService().createCustomerFolderStructure(customerName, customerId);
       console.log('✅ Customer folder structure created:', folderInfo.folderId);
 
       // Update customer record with folder ID (driveService should already do this, but ensure it's saved)

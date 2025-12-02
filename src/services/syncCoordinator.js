@@ -7,7 +7,7 @@
 import useCustomerStore from '../stores/useCustomerStore';
 import useExcelStore from '../stores/useExcelStore';
 import useDocumentStore from '../stores/useDocumentStore';
-import driveService from './driveService';
+import { getStorageService } from './storageServiceSelector';
 
 class SyncCoordinator {
   constructor() {
@@ -78,7 +78,7 @@ class SyncCoordinator {
     try {
       // OPTIMIZATION Phase 2: Warmup - preload all folder IDs in parallel before sync
       // This prevents sequential folder resolution during individual sync operations
-      await driveService.warmup();
+      await getStorageService().warmup();
 
       // Start all syncs in parallel
       const syncPromises = [

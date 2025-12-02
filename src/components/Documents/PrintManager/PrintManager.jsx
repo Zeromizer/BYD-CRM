@@ -5,7 +5,7 @@ import useAuthStore from '../../../stores/useAuthStore';
 import documentRenderer from '../../../services/documentRenderer';
 import pdfGenerator from '../../../services/pdfGenerator';
 import { getCustomerDataMapping } from '../../../services/fieldMapper';
-import driveService from '../../../services/driveService';
+import { getStorageService } from '../../../services/storageServiceSelector';
 import ImageSelector from '../ImageSelector/ImageSelector';
 import { useToast } from '../../Toast/Toast';
 import './PrintManager.css';
@@ -241,7 +241,7 @@ function PrintManager({ isOpen, onClose, customer }) {
       if (!customerFolderId) {
         console.log('🔍 Searching for existing customer folder...');
         try {
-          const existingFolder = await driveService.findCustomerFolderByName(customer.name);
+          const existingFolder = await getStorageService().findCustomerFolderByName(customer.name);
           if (existingFolder) {
             console.log('✅ Found existing customer folder:', existingFolder.folderId);
             customerFolderId = existingFolder.folderId;
@@ -251,7 +251,7 @@ function PrintManager({ isOpen, onClose, customer }) {
           } else {
             // Create new folder structure
             console.log('🆕 Creating new customer folder structure...');
-            const folderInfo = await driveService.createCustomerFolderStructure(customer.name, customer.id);
+            const folderInfo = await getStorageService().createCustomerFolderStructure(customer.name, customer.id);
             console.log('✅ Customer folder created:', folderInfo.folderId);
             customerFolderId = folderInfo.folderId;
           }
@@ -281,7 +281,7 @@ function PrintManager({ isOpen, onClose, customer }) {
 
       // Upload to customer's main folder
       console.log('📤 Uploading PDF to Drive...');
-      await driveService.uploadFile(filename, blob, customerFolderId);
+      await getStorageService().uploadFile(filename, blob, customerFolderId);
       console.log('✅ PDF uploaded successfully');
 
       toast.success(`PDF saved to Google Drive: ${customer.name}`);

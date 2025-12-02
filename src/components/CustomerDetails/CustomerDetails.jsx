@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { FolderOpen, ScanLine } from 'lucide-react';
 import useCustomerStore from '../../stores/useCustomerStore';
 import useAuthStore from '../../stores/useAuthStore';
-import driveService from '../../services/driveService';
+import { getStorageService } from '../../services/storageServiceSelector';
 import Modal from '../Modal/Modal';
 import ExcelPopulateModal from '../ExcelPopulateModal/ExcelPopulateModal';
 import PrintManager from '../Documents/PrintManager/PrintManager';
@@ -969,7 +969,7 @@ function CustomerDetails() {
         if (deleteFolderChecked) {
           // Delete entire folder including all documents
           try {
-            await driveService.deleteFolder(customer.driveFolderId);
+            await getStorageService().deleteFolder(customer.driveFolderId);
           } catch {
             // Ask user if they want to continue deleting the customer record
             const continueDelete = window.confirm(

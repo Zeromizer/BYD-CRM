@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
-import driveService from '../services/driveService';
+import { getStorageService } from '../services/storageServiceSelector';
 import userStorage from '../services/userStorage';
 import { getDefaultChecklistState } from '../constants/milestones';
 
@@ -9,7 +9,7 @@ import { getDefaultChecklistState } from '../constants/milestones';
  * Manages customer data, selection, and CRUD operations
  *
  * Multi-user support: Data is stored per-user using email-based keys
- * Syncs with Google Drive when signed in
+ * Syncs with Google Drive or OneDrive when signed in
  */
 const useCustomerStore = create((set, get) => ({
   // State
@@ -69,7 +69,7 @@ const useCustomerStore = create((set, get) => ({
 
     if (isSignedIn) {
       try {
-        const folderInfo = await driveService.createCustomerFolderStructure(
+        const folderInfo = await getStorageService().createCustomerFolderStructure(
           customerName,
           customerId
         );
@@ -237,7 +237,7 @@ const useCustomerStore = create((set, get) => ({
     if (isSignedIn) {
       try {
         // Load current index
-        const index = await driveService.loadCustomersIndex();
+        const index = await getStorageService().loadCustomersIndex();
 
         // Remove the deleted customer from index
         const targetId = typeof id === 'string' ? parseInt(id) : id;
@@ -247,7 +247,7 @@ const useCustomerStore = create((set, get) => ({
         });
 
         // Save updated index
-        await driveService.saveCustomersIndex(updatedIndex);
+        await getStorageService().saveCustomersIndex(updatedIndex);
       } catch {
         // Don't throw - customer is already deleted locally
       }
@@ -352,7 +352,7 @@ const useCustomerStore = create((set, get) => ({
       for (const customer of customers) {
         if (customer.driveFolderId) {
           // Save individual customer.json
-          await driveService.saveCustomerData(customer, customer.driveFolderId);
+          await getStorageService().saveCustomerData(customer, customer.driveFolderId);
 
           // Build index entry
           indexData.push({
@@ -368,7 +368,7 @@ const useCustomerStore = create((set, get) => ({
 
       // Save the index
       if (indexData.length > 0) {
-        await driveService.saveCustomersIndex(indexData);
+        await getStorageService().saveCustomersIndex(indexData);
       }
 
       set({ isSyncing: false });
@@ -424,7 +424,7 @@ const useCustomerStore = create((set, get) => ({
 
       // Run repair process
       const { customers: repairedCustomers, results } =
-        await driveService.repairCustomerFolderReferences(customers, forceRescan);
+        await getStorageService().repairCustomerFolderReferences(customers, forceRescan);
 
       // Update state with repaired data
       set({ customers: repairedCustomers });
@@ -456,7 +456,7 @@ const useCustomerStore = create((set, get) => ({
 
       // Create folders for customers without folder IDs
       const { customers: updatedCustomers, created, errors } =
-        await driveService.createMissingCustomerFolders(customers);
+        await getStorageService().createMissingCustomerFolders(customers);
 
       // Update state
       set({ customers: updatedCustomers });
@@ -482,7 +482,7 @@ const useCustomerStore = create((set, get) => ({
     }
 
     try {
-      return await driveService.checkMigrationNeeded();
+      return await getStorageService().checkMigrationNeeded();
     } catch {
       return false;
     }
@@ -502,7 +502,7 @@ const useCustomerStore = create((set, get) => ({
       const { customers } = get();
 
       // Run migration
-      const migrationResult = await driveService.migrateToHybridStructure(customers);
+      const migrationResult = await getStorageService().migrateToHybridStructure(customers);
 
       if (migrationResult.success) {
         // Update state with migrated customers
@@ -537,7 +537,7 @@ const useCustomerStore = create((set, get) => ({
       set({ isSyncing: true });
 
       // Check if migration is needed
-      const migrationNeeded = await driveService.checkMigrationNeeded();
+      const migrationNeeded = await getStorageService().checkMigrationNeeded();
 
       if (migrationNeeded) {
         // Get customers from localStorage as the source
@@ -545,7 +545,7 @@ const useCustomerStore = create((set, get) => ({
 
         if (customers && customers.length > 0) {
           // Migrate to hybrid structure
-          const migrationResult = await driveService.migrateToHybridStructure(customers);
+          const migrationResult = await getStorageService().migrateToHybridStructure(customers);
 
           if (migrationResult.success) {
             // Update customers with any folder IDs that were created/updated
@@ -556,12 +556,12 @@ const useCustomerStore = create((set, get) => ({
           }
         } else {
           // No local customers - create empty index
-          await driveService.saveCustomersIndex([]);
+          await getStorageService().saveCustomersIndex([]);
         }
       }
 
       // Load index from Drive (lightweight, fast)
-      const driveIndex = await driveService.loadCustomersIndex();
+      const driveIndex = await getStorageService().loadCustomersIndex();
 
       // If index is empty, we're done
       if (driveIndex.length === 0) {
@@ -648,7 +648,7 @@ const useCustomerStore = create((set, get) => ({
     // OPTIMIZATION: Load all customers in parallel instead of sequentially
     const loadPromises = customersToLoad.map(async (indexEntry) => {
       try {
-        const fullData = await driveService.loadCustomerData(
+        const fullData = await getStorageService().loadCustomerData(
           indexEntry.id,
           indexEntry.driveFolderId
         );
@@ -696,10 +696,10 @@ const useCustomerStore = create((set, get) => ({
       };
 
       // Save to individual customer.json
-      await driveService.saveCustomerData(customerData, customer.driveFolderId);
+      await getStorageService().saveCustomerData(customerData, customer.driveFolderId);
 
       // Update index
-      const index = await driveService.loadCustomersIndex();
+      const index = await getStorageService().loadCustomersIndex();
       const indexEntry = {
         id: customer.id,
         name: customer.name,
@@ -717,7 +717,7 @@ const useCustomerStore = create((set, get) => ({
         index.push(indexEntry);
       }
 
-      await driveService.saveCustomersIndex(index);
+      await getStorageService().saveCustomersIndex(index);
 
       return true;
     } catch {
@@ -734,7 +734,7 @@ const useCustomerStore = create((set, get) => ({
     }
 
     try {
-      const customerData = await driveService.loadCustomerData(customerId, customerFolderId);
+      const customerData = await getStorageService().loadCustomerData(customerId, customerFolderId);
       return customerData;
     } catch {
       return null;

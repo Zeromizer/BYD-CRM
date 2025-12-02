@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import driveService from '../services/driveService';
+import { getStorageService } from '../services/storageServiceSelector';
 import userStorage from '../services/userStorage';
 import syncQueueService, { SYNC_STATUS } from '../services/syncQueueService';
 
@@ -67,7 +67,7 @@ const useExcelStore = create((set, get) => ({
       const { excelTemplates } = get();
 
       // Sync with Drive (Drive is source of truth)
-      const synced = await driveService.syncExcel(excelTemplates);
+      const synced = await getStorageService().syncExcel(excelTemplates);
 
       // Update state and user-specific localStorage
       set({
@@ -95,7 +95,7 @@ const useExcelStore = create((set, get) => ({
     const result = await syncQueueService.enqueue(
       'excel',
       async () => {
-        await driveService.saveExcelToDrive(excelTemplates);
+        await getStorageService().saveExcelToDrive(excelTemplates);
       },
       { templateCount: Object.keys(excelTemplates).length }
     );
