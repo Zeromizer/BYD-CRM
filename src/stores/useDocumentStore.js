@@ -75,6 +75,7 @@ const useDocumentStore = create((set, get) => ({
 
   /**
    * Sync template to cloud storage
+   * FIXED: Saves ALL templates to maintain collection integrity
    * Uses the centralized storageService method for consistency
    */
   syncTemplateToDrive: async (templateId) => {
@@ -84,19 +85,18 @@ const useDocumentStore = create((set, get) => ({
     if (!template) return;
 
     try {
-      const templateData = {
-        id: templateId,
-        name: template.name,
-        category: template.category,
-        fields: template.fields,
-        dpi: template.dpi,
-        fileId: template.fileId,
-        fileName: template.fileName,
-        updatedAt: new Date().toISOString(),
+      // Update the specific template with new timestamp
+      const updatedTemplates = {
+        ...templates,
+        [templateId]: {
+          ...template,
+          id: templateId,
+          updatedAt: new Date().toISOString(),
+        },
       };
 
-      // Use driveService method which ensures correct folder location
-      await getStorageService().saveDocumentTemplateToDrive(templateData);
+      // Save ALL templates (storageService will handle the format)
+      await getStorageService().saveDocumentTemplateToDrive(updatedTemplates);
     } catch (error) {
       throw error;
     }
@@ -293,13 +293,17 @@ const useDocumentStore = create((set, get) => ({
   /**
    * Load templates from cloud storage
    * Uses storageService for consistent folder location
+   * FIXED: Properly extracts templates from { templates: {...} } format
    */
   loadFromDrive: async () => {
     try {
       set({ loading: true, error: null });
 
       // Use storageService to load templates (ensures correct folder location)
-      const templates = await getStorageService().loadDocumentTemplatesFromDrive();
+      const driveData = await getStorageService().loadDocumentTemplatesFromDrive();
+
+      // Extract templates from the wrapper format
+      const templates = driveData?.templates || driveData || {};
 
       set({ templates, loading: false });
       get().saveToLocalStorage(templates);
@@ -316,6 +320,7 @@ const useDocumentStore = create((set, get) => ({
    * IMPORTANT: Loads from localStorage first before syncing to prevent data loss
    * This is the primary sync function that should be called on app init
    * Uses getStorageService().syncDocumentTemplates for consistent behavior with forms/excel
+   * FIXED: Properly handles template format and ensures all templates are preserved
    */
   syncWithDrive: async () => {
     try {
@@ -329,17 +334,23 @@ const useDocumentStore = create((set, get) => ({
       const localTemplates = get().templates;
 
       // Use storageService for sync (ensures correct folder location)
+      // syncDocumentTemplates now handles the format properly and returns templates object
       const mergedTemplates = await getStorageService().syncDocumentTemplates(localTemplates);
+
+      // Ensure we have a valid templates object
+      const validTemplates = mergedTemplates && typeof mergedTemplates === 'object'
+        ? (mergedTemplates.templates || mergedTemplates)
+        : {};
 
       // Update state and localStorage
       set({
-        templates: mergedTemplates,
+        templates: validTemplates,
         loading: false,
         lastSyncTime: new Date().toISOString()
       });
-      get().saveToLocalStorage(mergedTemplates);
+      get().saveToLocalStorage(validTemplates);
 
-      return mergedTemplates;
+      return validTemplates;
     } catch {
       set({ error: 'Failed to sync with cloud storage', loading: false });
       // Don't throw - return local templates as fallback (same pattern as forms/excel)

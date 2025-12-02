@@ -722,6 +722,35 @@ class DriveService {
   }
 
   /**
+   * Upload file to a specific folder - compatibility method for DocumentManager
+   * This is an alias for uploadFile with the same parameter order
+   * @param {string} fileName - The name for the file
+   * @param {File|Blob} file - The file to upload
+   * @param {string} folderId - The target folder ID
+   * @returns {string} The file ID of the uploaded file
+   */
+  async uploadFileToFolder(fileName, file, folderId) {
+    return this.uploadFile(fileName, file, folderId);
+  }
+
+  /**
+   * Delete a file by ID - compatibility method for DocumentManager
+   * @param {string} fileId - The file ID to delete
+   */
+  async deleteFileById(fileId) {
+    try {
+      await window.gapi.client.drive.files.delete({
+        fileId: fileId,
+      });
+      console.log(`Deleted file: ${fileId}`);
+      return true;
+    } catch (error) {
+      console.error('Failed to delete file:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Create customer folder structure
    * Returns the main customer folder info
    */
