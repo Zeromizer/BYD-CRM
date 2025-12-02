@@ -18,7 +18,7 @@ export const STORAGE_PROVIDERS = {
  * - STORAGE_PROVIDERS.GOOGLE_DRIVE (default, current implementation)
  * - STORAGE_PROVIDERS.ONEDRIVE (new Microsoft/Azure implementation)
  */
-export const CURRENT_STORAGE_PROVIDER = STORAGE_PROVIDERS.GOOGLE_DRIVE;
+export const CURRENT_STORAGE_PROVIDER = STORAGE_PROVIDERS.ONEDRIVE;
 
 /**
  * Check if using OneDrive

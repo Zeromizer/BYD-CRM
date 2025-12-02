@@ -1,14 +1,21 @@
 import { create } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
-import authService from '../services/authService';
+import googleAuthService from '../services/authService';
+import msAuthService from '../services/msAuthService';
 import driveService from '../services/driveService';
+import oneDriveService from '../services/oneDriveService';
 import userStorage from '../services/userStorage';
 import useCustomerStore from './useCustomerStore';
 import useExcelStore from './useExcelStore';
+import { isUsingOneDrive } from '../config/storageConfig';
+
+// Get the appropriate auth and drive services based on storage provider
+const getAuthService = () => isUsingOneDrive() ? msAuthService : googleAuthService;
+const getDriveService = () => isUsingOneDrive() ? oneDriveService : driveService;
 
 /**
  * Authentication Store
- * Manages Google Drive authentication state and multi-user data isolation
+ * Manages authentication state for both Google Drive and OneDrive
  */
 const useAuthStore = create((set, get) => ({
   // State
@@ -45,6 +52,7 @@ const useAuthStore = create((set, get) => ({
       }
 
       // Subscribe to auth changes
+      const authService = getAuthService();
       authService.onAuthChange(async (isSignedIn) => {
         const previousSignInState = get().isSignedIn;
         const previousUserEmail = get().currentUserEmail;
@@ -54,8 +62,8 @@ const useAuthStore = create((set, get) => ({
         let currentUserEmail = null;
         if (isSignedIn) {
           currentUserEmail = authService.getUserEmail();
-          // If not cached, fetch it now
-          if (!currentUserEmail) {
+          // If not cached, fetch it now (Google Drive only has this method)
+          if (!currentUserEmail && authService.fetchAndCacheUserEmail) {
             currentUserEmail = await authService.fetchAndCacheUserEmail();
           }
         }
@@ -73,7 +81,7 @@ const useAuthStore = create((set, get) => ({
           useCustomerStore.getState().clearAllData();
           useExcelStore.getState().clearAllData();
           // Clear Drive service cache to prevent using old user's folder IDs
-          driveService.clearCache();
+          getDriveService().clearCache();
           // Clear the data owner since we're switching users
           userStorage.setCurrentDataOwner(null);
         }
@@ -129,7 +137,7 @@ const useAuthStore = create((set, get) => ({
   signIn: async () => {
     try {
       set({ error: null });
-      await authService.signIn();
+      await getAuthService().signIn();
     } catch (error) {
       // User may have cancelled the popup - don't show error for that
       if (error !== 'popup_closed_by_user' && error?.type !== 'popup_closed') {
@@ -147,13 +155,13 @@ const useAuthStore = create((set, get) => ({
       useExcelStore.getState().clearAllData();
 
       // Clear Drive service cache
-      driveService.clearCache();
+      getDriveService().clearCache();
 
       // Clear data owner tracking
       userStorage.setCurrentDataOwner(null);
 
       // Sign out from auth service (clears localStorage and Drive cache)
-      await authService.signOut();
+      await getAuthService().signOut();
 
       // Clear auth state (including currentUserEmail for account switching detection)
       set({
@@ -171,7 +179,7 @@ const useAuthStore = create((set, get) => ({
   },
 
   getAccessToken: () => {
-    return authService.getAccessToken();
+    return getAuthService().getAccessToken();
   },
 
   setFolderIds: (folderIds) => set(folderIds),
@@ -183,11 +191,14 @@ const useAuthStore = create((set, get) => ({
    * Returns true if:
    * - User is signed in and verified, OR
    * - No data owner is set (fresh start), OR
-   * - Data owner matches the cached googleUserEmail
+   * - Data owner matches the cached user email
    */
   canLoadData: () => {
     const currentDataOwner = userStorage.getCurrentDataOwner();
-    const cachedEmail = localStorage.getItem('googleUserEmail');
+    // Check for either Google or Microsoft cached email
+    const cachedEmail = isUsingOneDrive()
+      ? getAuthService().getUserEmail()
+      : localStorage.getItem('googleUserEmail');
 
     // No data owner set - safe to load (fresh start or offline mode)
     if (!currentDataOwner) {
