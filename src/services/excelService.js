@@ -1,5 +1,4 @@
-import authService from './authService';
-import { getStorageService } from './storageServiceSelector';
+import { getStorageService, getAuthService } from './storageServiceSelector';
 
 /**
  * Excel Service for populating Excel templates with customer data
@@ -182,81 +181,40 @@ class ExcelService {
   }
 
   /**
-   * Fetch Excel file from Google Drive
+   * Fetch Excel file from cloud storage (OneDrive/Google Drive)
    */
   async fetchFileFromDrive(fileId) {
     try {
-      const token = authService.getAccessToken();
-      const response = await fetch(
-        `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch file: ${response.statusText}`);
-      }
-
-      return await response.arrayBuffer();
+      const blob = await getStorageService().downloadFileAsBlob(fileId);
+      return await blob.arrayBuffer();
     } catch (error) {
-      console.error('Error fetching file from Drive:', error);
+      console.error('Error fetching file from cloud storage:', error);
       throw error;
     }
   }
 
   /**
-   * Upload file to Google Drive
+   * Upload file to cloud storage (OneDrive/Google Drive)
    */
   async uploadFileToDrive(file, folderId, fileName) {
     try {
-      console.log('📤 Starting file upload to Drive:', {
+      console.log('📤 Starting file upload to cloud storage:', {
         fileName,
         folderId,
         fileSize: file.size,
         fileType: file.type
       });
 
-      const metadata = {
-        name: fileName,
-        parents: [folderId],
-      };
+      const result = await getStorageService().uploadFile(folderId, fileName, file, file.type);
 
-      const form = new FormData();
-      form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-      form.append('file', file);
-
-      const token = authService.getAccessToken();
-      const response = await fetch(
-        'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,mimeType,size,createdTime',
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          body: form,
-        }
-      );
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ Drive upload failed with status:', response.status, errorText);
-        throw new Error(`Upload failed: ${response.statusText}`);
-      }
-
-      const result = await response.json();
-      console.log('✅ File uploaded successfully to Drive:', {
+      console.log('✅ File uploaded successfully to cloud storage:', {
         fileId: result.id,
-        fileName: result.name,
-        size: result.size,
-        createdTime: result.createdTime
+        fileName: result.name
       });
 
       return result;
     } catch (error) {
-      console.error('❌ Error uploading file to Drive:', error);
+      console.error('❌ Error uploading file to cloud storage:', error);
       throw error;
     }
   }
@@ -343,8 +301,8 @@ class ExcelService {
   }
 
   /**
-   * Get or create customer folder in Google Drive
-   * Uses driveService to ensure consistent folder structure and prevent duplicates
+   * Get or create customer folder in cloud storage
+   * Uses storageService to ensure consistent folder structure and prevent duplicates
    */
   async getOrCreateCustomerFolder(customerName, customerId) {
     try {
@@ -356,9 +314,9 @@ class ExcelService {
 
       if (customer && customer.driveFolderId) {
         console.log('🔍 Found existing folder ID from customer record:', customer.driveFolderId);
-        // Verify folder still exists
+        // Verify folder still exists using storage service
         try {
-          await window.gapi.client.drive.files.get({ fileId: customer.driveFolderId });
+          await getStorageService().validateFolderId(customer.driveFolderId);
           console.log('✅ Customer folder exists:', customer.driveFolderId);
           return customer.driveFolderId;
         } catch {
@@ -366,8 +324,8 @@ class ExcelService {
         }
       }
 
-      // Search for existing folder in Drive before creating a new one
-      console.log('🔍 Searching for existing customer folder in Drive...');
+      // Search for existing folder before creating a new one
+      console.log('🔍 Searching for existing customer folder in cloud storage...');
       try {
         const existingFolder = await getStorageService().findCustomerFolderByName(customerName);
         if (existingFolder) {
@@ -390,12 +348,12 @@ class ExcelService {
         console.warn('⚠️ Error searching for existing folder:', searchError);
       }
 
-      // No folder found, create new one using driveService
+      // No folder found, create new one using storageService
       console.log('🆕 Creating new customer folder structure using getStorageService()...');
       const folderInfo = await getStorageService().createCustomerFolderStructure(customerName, customerId);
       console.log('✅ Customer folder structure created:', folderInfo.folderId);
 
-      // Update customer record with folder ID (driveService should already do this, but ensure it's saved)
+      // Update customer record with folder ID
       const updatedCustomers = customers.map(c =>
         c.id === customerId ? {
           ...c,

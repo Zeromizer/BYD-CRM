@@ -15,7 +15,7 @@ const getDriveService = () => isUsingOneDrive() ? oneDriveService : driveService
 
 /**
  * Authentication Store
- * Manages authentication state for both Google Drive and OneDrive
+ * Manages authentication state for cloud storage (Google Drive or OneDrive)
  */
 const useAuthStore = create((set, get) => ({
   // State
@@ -23,7 +23,7 @@ const useAuthStore = create((set, get) => ({
   isInitialized: false,
   isInitializing: false,
   error: null,
-  currentUserEmail: null,  // Track current Google account
+  currentUserEmail: null,  // Track current user account
   isUserVerified: false,   // Track if current user has been verified against data owner
   migrationPending: false, // Track if legacy data migration is pending
 
@@ -92,9 +92,10 @@ const useAuthStore = create((set, get) => ({
           set({ migrationPending: false });
         }
 
-        // Set current data owner when user signs in
+        // Set current data owner and user email when user signs in
         if (isSignedIn && currentUserEmail) {
           userStorage.setCurrentDataOwner(currentUserEmail);
+          userStorage.setUserEmail(currentUserEmail);
         }
 
         set({ isSignedIn, currentUserEmail, isUserVerified: isSignedIn });
@@ -157,8 +158,9 @@ const useAuthStore = create((set, get) => ({
       // Clear Drive service cache
       getDriveService().clearCache();
 
-      // Clear data owner tracking
+      // Clear data owner tracking and user email
       userStorage.setCurrentDataOwner(null);
+      userStorage.clearUserEmail();
 
       // Sign out from auth service (clears localStorage and Drive cache)
       await getAuthService().signOut();
@@ -195,10 +197,8 @@ const useAuthStore = create((set, get) => ({
    */
   canLoadData: () => {
     const currentDataOwner = userStorage.getCurrentDataOwner();
-    // Check for either Google or Microsoft cached email
-    const cachedEmail = isUsingOneDrive()
-      ? getAuthService().getUserEmail()
-      : localStorage.getItem('googleUserEmail');
+    // Check for cached user email (storage-agnostic)
+    const cachedEmail = userStorage.getUserEmail() || getAuthService().getUserEmail();
 
     // No data owner set - safe to load (fresh start or offline mode)
     if (!currentDataOwner) {

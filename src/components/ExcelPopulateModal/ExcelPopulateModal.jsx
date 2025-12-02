@@ -217,9 +217,9 @@ function ExcelPopulateModal({ isOpen, onClose, customer }) {
       const fileName = `${customer.name.replace(/\s+/g, '_')}_${selectedTemplate.name.replace(/\s+/g, '_')}_${timestamp}.xlsx`;
       console.log('📄 Generated filename:', fileName);
 
-      // Save to Google Drive if requested and signed in
+      // Save to OneDrive if requested and signed in
       if (saveToDrive && isSignedIn) {
-        console.log('☁️ Saving to Google Drive...');
+        console.log('☁️ Saving to OneDrive...');
         try {
           // Get or create customer folder
           console.log('📁 Getting customer folder...');

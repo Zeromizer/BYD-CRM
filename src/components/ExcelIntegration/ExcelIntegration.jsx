@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import useExcelStore from '../../stores/useExcelStore';
 import useAuthStore from '../../stores/useAuthStore';
-import authService from '../../services/authService';
+import { getStorageService, getAuthService } from '../../services/storageServiceSelector';
 import Modal from '../Modal/Modal';
 import JSZip from 'jszip';
 import './ExcelIntegration.css';
@@ -231,7 +231,7 @@ function ExcelIntegration() {
         try {
           const folderId = await getOrCreateExcelTemplatesFolder();
           if (folderId) {
-            const fileId = await uploadFileToGoogleDrive(masterFile, folderId);
+            const fileId = await uploadFileToCloudStorage(masterFile, folderId);
             template.driveFileId = fileId;
             template.driveFileName = masterFile.name;
           }
@@ -259,60 +259,22 @@ function ExcelIntegration() {
 
   const getOrCreateExcelTemplatesFolder = async () => {
     try {
-      let folderId = localStorage.getItem('excelTemplatesFolderId');
-
-      if (folderId) {
-        try {
-          await window.gapi.client.drive.files.get({ fileId: folderId });
-          return folderId;
-        } catch {
-          folderId = null;
-        }
-      }
-
-      const metadata = {
-        name: 'BYD CRM - Excel Templates',
-        mimeType: 'application/vnd.google-apps.folder',
-      };
-
-      const response = await window.gapi.client.drive.files.create({
-        resource: metadata,
-        fields: 'id',
-      });
-
-      folderId = response.result.id;
-      localStorage.setItem('excelTemplatesFolderId', folderId);
-      return folderId;
+      const folder = await getStorageService().getOrCreateExcelTemplatesFolder();
+      return folder.id;
     } catch (error) {
       console.error('Error getting/creating Excel templates folder:', error);
       return null;
     }
   };
 
-  const uploadFileToGoogleDrive = async (file, folderId) => {
-    const metadata = {
-      name: file.name,
-      parents: [folderId],
-    };
-
-    const form = new FormData();
-    form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-    form.append('file', file);
-
-    const token = authService.getAccessToken();
-    const response = await fetch(
-      'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name',
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        body: form,
-      }
-    );
-
-    const result = await response.json();
-    return result.id;
+  const uploadFileToCloudStorage = async (file, folderId) => {
+    try {
+      const result = await getStorageService().uploadFile(folderId, file.name, file, file.type);
+      return result.id;
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      throw error;
+    }
   };
 
   const handleDeleteTemplate = async (templateId) => {
@@ -323,18 +285,20 @@ function ExcelIntegration() {
     const template = excelTemplates[templateId];
 
     try {
-      // Delete file from Google Drive if it exists
+      // Delete file from cloud storage if it exists
       if (template?.driveFileId && isSignedIn) {
-        await window.gapi.client.drive.files.delete({
-          fileId: template.driveFileId,
-        });
+        try {
+          await getStorageService().deleteFile(template.driveFileId);
+        } catch {
+          // Continue even if cloud deletion fails
+        }
       }
 
       deleteTemplate(templateId);
       alert('Template deleted successfully');
     } catch (error) {
       console.error('Error deleting template:', error);
-      // Continue with deletion even if Drive deletion fails
+      // Continue with deletion even if cloud deletion fails
       deleteTemplate(templateId);
     }
   };
@@ -406,7 +370,7 @@ function ExcelIntegration() {
     }
 
     if (!isSignedIn) {
-      alert('Please sign in to Google Drive first');
+      alert('Please sign in to OneDrive first');
       return;
     }
 
@@ -417,23 +381,21 @@ function ExcelIntegration() {
 
       const folderId = await getOrCreateExcelTemplatesFolder();
       if (!folderId) {
-        alert('Could not create Excel Templates folder in Google Drive');
+        alert('Could not create Excel Templates folder in OneDrive');
         return;
       }
 
       // Delete old file if exists
       if (template.driveFileId) {
         try {
-          await window.gapi.client.drive.files.delete({
-            fileId: template.driveFileId,
-          });
+          await getStorageService().deleteFile(template.driveFileId);
         } catch (error) {
           console.error('Error deleting old file:', error);
         }
       }
 
       // Upload new file
-      const fileId = await uploadFileToGoogleDrive(masterFileToUpload, folderId);
+      const fileId = await uploadFileToCloudStorage(masterFileToUpload, folderId);
 
       updateTemplate(currentTemplateId, {
         driveFileId: fileId,
@@ -446,32 +408,19 @@ function ExcelIntegration() {
       setMasterFileToUpload(null);
     } catch (error) {
       console.error('Error uploading master file:', error);
-      alert('Error uploading file to Google Drive: ' + error.message);
+      alert('Error uploading file to OneDrive: ' + error.message);
     } finally {
       setUploadingMaster(false);
     }
   };
 
-  // Download file from Google Drive
+  // Download file from cloud storage
   const downloadFileFromDrive = async (fileId) => {
     try {
-      const token = authService.getAccessToken();
-      const response = await fetch(
-        `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch file: ${response.statusText}`);
-      }
-
-      return await response.blob();
+      const blob = await getStorageService().downloadFileAsBlob(fileId);
+      return blob;
     } catch (error) {
-      console.error('Error downloading file from Drive:', error);
+      console.error('Error downloading file from cloud storage:', error);
       throw error;
     }
   };
@@ -719,7 +668,7 @@ function ExcelIntegration() {
     }
 
     if (!isSignedIn) {
-      alert('Please sign in to Google Drive to import templates');
+      alert('Please sign in to OneDrive to import templates');
       return;
     }
 
@@ -760,10 +709,10 @@ function ExcelIntegration() {
             fileName = config._masterFileName;
           }
 
-          // Upload master file to Google Drive if available
+          // Upload master file to OneDrive if available
           if (masterFileToUpload) {
             try {
-              fileId = await uploadFileToGoogleDrive(masterFileToUpload, folderId);
+              fileId = await uploadFileToCloudStorage(masterFileToUpload, folderId);
               masterFilesUploaded++;
             } catch (error) {
               console.error(`Failed to upload master file for ${config.templateName}:`, error);
@@ -795,7 +744,7 @@ function ExcelIntegration() {
       if (successCount > 0) {
         message += `Successfully imported ${successCount} Excel template(s).\n`;
         if (masterFilesUploaded > 0) {
-          message += `${masterFilesUploaded} master file(s) uploaded to Google Drive.\n`;
+          message += `${masterFilesUploaded} master file(s) uploaded to OneDrive.\n`;
         }
         if (masterFilesUploaded < successCount) {
           message += `${successCount - masterFilesUploaded} template(s) imported without master files - you can upload them later.\n`;
@@ -860,7 +809,7 @@ function ExcelIntegration() {
 
       {!isSignedIn && (
         <div className="warning-banner">
-          ⚠️ Sign in to Google Drive to upload master Excel files (optional)
+          ⚠️ Sign in to OneDrive to upload master Excel files (optional)
         </div>
       )}
 
@@ -986,7 +935,7 @@ function ExcelIntegration() {
               disabled={!isSignedIn}
             />
             {!isSignedIn && (
-              <p className="file-hint">Sign in to Google Drive to upload master file</p>
+              <p className="file-hint">Sign in to OneDrive to upload master file</p>
             )}
             {masterFile && <p className="file-selected">Selected: {masterFile.name}</p>}
           </div>
@@ -1306,7 +1255,7 @@ function ExcelIntegration() {
               onClick={handleUploadMaster}
               disabled={!masterFileToUpload || uploadingMaster}
             >
-              {uploadingMaster ? 'Uploading...' : 'Upload to Google Drive'}
+              {uploadingMaster ? 'Uploading...' : 'Upload to OneDrive'}
             </button>
           </div>
         </div>

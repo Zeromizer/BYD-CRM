@@ -321,6 +321,21 @@ class OneDriveService {
   }
 
   /**
+   * Validate folder ID exists
+   * @param {string} folderId - The folder ID to validate
+   * @returns {boolean} - True if folder exists
+   * @throws {Error} - If folder doesn't exist
+   */
+  async validateFolderId(folderId) {
+    try {
+      await this.request(`/me/drive/items/${folderId}`);
+      return true;
+    } catch (error) {
+      throw new Error(`Folder ${folderId} not found`);
+    }
+  }
+
+  /**
    * Find file by name in a folder
    */
   async findFile(folderId, fileName) {
@@ -874,6 +889,108 @@ class OneDriveService {
    */
   async listFilesInFolder(folderId) {
     return this.listFolder(folderId);
+  }
+
+  // ============================================================
+  // Sync Methods (Required by stores and syncCoordinator)
+  // ============================================================
+
+  /**
+   * Warmup - preload all folder IDs in parallel
+   * Called by syncCoordinator before sync operations
+   */
+  async warmup() {
+    console.log('OneDrive warmup: preloading folder IDs...');
+    await this.getFolderIds();
+    console.log('OneDrive warmup complete');
+  }
+
+  /**
+   * Sync Excel templates with OneDrive
+   * Merges local templates with Drive templates (Drive is source of truth)
+   */
+  async syncExcel(localTemplates) {
+    try {
+      // Load templates from Drive
+      const driveData = await this.loadExcelTemplates();
+      const driveTemplates = driveData.templates || {};
+
+      // Merge: Drive templates override local, but keep local-only templates
+      const merged = { ...localTemplates };
+
+      // Add/update from Drive
+      for (const [id, template] of Object.entries(driveTemplates)) {
+        merged[id] = template;
+      }
+
+      // Save merged back to Drive
+      await this.saveExcelTemplates(merged);
+
+      return merged;
+    } catch (error) {
+      console.error('Error syncing Excel templates:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Save Excel templates to Drive
+   * Alias used by useExcelStore
+   */
+  async saveExcelToDrive(templates) {
+    return this.saveExcelTemplates(templates);
+  }
+
+  /**
+   * Sync document templates with OneDrive
+   * Merges local templates with Drive templates (Drive is source of truth)
+   */
+  async syncDocumentTemplates(localTemplates) {
+    try {
+      // Load templates from Drive
+      const driveData = await this.loadDocumentTemplatesFromDrive();
+      const driveTemplates = driveData.templates || driveData || {};
+
+      // Merge: Drive templates override local, but keep local-only templates
+      const merged = { ...localTemplates };
+
+      // Add/update from Drive
+      for (const [id, template] of Object.entries(driveTemplates)) {
+        merged[id] = template;
+      }
+
+      // Save merged back to Drive
+      await this.saveDocumentTemplateToDrive(merged);
+
+      return merged;
+    } catch (error) {
+      console.error('Error syncing document templates:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete document template from Drive
+   * Note: For OneDrive, we just update the templates file without the deleted template
+   * The actual background file cleanup could be done separately if needed
+   */
+  async deleteDocumentTemplateFromDrive(templateId) {
+    try {
+      // Load current templates
+      const driveData = await this.loadDocumentTemplatesFromDrive();
+      const templates = driveData.templates || driveData || {};
+
+      // Remove the template
+      delete templates[templateId];
+
+      // Save updated templates
+      await this.saveDocumentTemplateToDrive(templates);
+
+      return true;
+    } catch (error) {
+      console.error('Error deleting document template from Drive:', error);
+      throw error;
+    }
   }
 }
 

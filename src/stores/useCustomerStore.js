@@ -9,7 +9,7 @@ import { getDefaultChecklistState } from '../constants/milestones';
  * Manages customer data, selection, and CRUD operations
  *
  * Multi-user support: Data is stored per-user using email-based keys
- * Syncs with Google Drive or OneDrive when signed in
+ * Syncs with cloud storage (Google Drive or OneDrive) when signed in
  */
 const useCustomerStore = create((set, get) => ({
   // State
@@ -277,7 +277,7 @@ const useCustomerStore = create((set, get) => ({
    */
   loadFromLocalStorage: () => {
     try {
-      const userEmail = localStorage.getItem('googleUserEmail');
+      const userEmail = userStorage.getUserEmail();
 
       // Try to load from user-specific storage first
       if (userEmail) {
@@ -308,7 +308,7 @@ const useCustomerStore = create((set, get) => ({
   saveToLocalStorage: () => {
     try {
       const { customers } = get();
-      const userEmail = localStorage.getItem('googleUserEmail');
+      const userEmail = userStorage.getUserEmail();
 
       if (userEmail) {
         // Save to user-specific storage
@@ -373,7 +373,7 @@ const useCustomerStore = create((set, get) => ({
 
       set({ isSyncing: false });
     } catch {
-      set({ isSyncing: false, error: 'Failed to sync with Google Drive' });
+      set({ isSyncing: false, error: 'Failed to sync with cloud storage' });
       // Don't throw - data is saved to localStorage anyway
     }
   },
@@ -387,7 +387,7 @@ const useCustomerStore = create((set, get) => ({
    * Clears both user-specific and legacy storage
    */
   clearAllData: () => {
-    const userEmail = localStorage.getItem('googleUserEmail');
+    const userEmail = userStorage.getUserEmail();
 
     set({
       customers: [],
@@ -414,7 +414,7 @@ const useCustomerStore = create((set, get) => ({
    */
   repairCustomerFolders: async (isSignedIn, forceRescan = false) => {
     if (!isSignedIn) {
-      alert('Please sign in to Google Drive first');
+      alert('Please sign in to cloud storage first');
       return null;
     }
 
@@ -446,7 +446,7 @@ const useCustomerStore = create((set, get) => ({
    */
   createMissingFolders: async (isSignedIn) => {
     if (!isSignedIn) {
-      alert('Please sign in to Google Drive first');
+      alert('Please sign in to cloud storage first');
       return null;
     }
 
@@ -493,7 +493,7 @@ const useCustomerStore = create((set, get) => ({
    */
   migrateToHybridStructure: async (isSignedIn) => {
     if (!isSignedIn) {
-      alert('Please sign in to Google Drive first');
+      alert('Please sign in to cloud storage first');
       return null;
     }
 
@@ -601,7 +601,7 @@ const useCustomerStore = create((set, get) => ({
 
       set({ isSyncing: false });
     } catch {
-      set({ isSyncing: false, error: 'Failed to sync with Google Drive' });
+      set({ isSyncing: false, error: 'Failed to sync with cloud storage' });
     }
   },
 

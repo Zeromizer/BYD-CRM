@@ -1,33 +1,22 @@
 import JSZip from 'jszip';
-import authService from './authService';
+import { getStorageService, getAuthService } from './storageServiceSelector';
 
 /**
  * Template Export/Import Service
  * Handles exporting and importing of Document and Excel templates
  * Supports exporting with master files (ZIP) for seamless sharing
+ * Works with both Google Drive and OneDrive via storageServiceSelector
  */
 
 class TemplateExportService {
   /**
-   * Download file from Google Drive
+   * Download file from cloud storage (Google Drive or OneDrive)
    */
   async downloadFileFromDrive(fileId) {
     try {
-      const token = authService.getAccessToken();
-      const response = await fetch(
-        `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch file: ${response.statusText}`);
-      }
-
-      return await response.blob();
+      const storageService = getStorageService();
+      const blob = await storageService.downloadFileAsBlob(fileId);
+      return blob;
     } catch (error) {
       console.error('Error downloading file from Drive:', error);
       throw error;
@@ -35,63 +24,27 @@ class TemplateExportService {
   }
 
   /**
-   * Upload file to Google Drive
+   * Upload file to cloud storage (Google Drive or OneDrive)
    */
-  async uploadFileToGoogleDrive(file, folderId) {
-    const metadata = {
-      name: file.name,
-      parents: [folderId],
-    };
-
-    const form = new FormData();
-    form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-    form.append('file', file);
-
-    const token = authService.getAccessToken();
-    const response = await fetch(
-      'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name',
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        body: form,
-      }
-    );
-
-    const result = await response.json();
-    return result.id;
+  async uploadFileToDrive(file, folderId) {
+    try {
+      const storageService = getStorageService();
+      const result = await storageService.uploadFile(folderId, file.name, file, file.type);
+      return result.id;
+    } catch (error) {
+      console.error('Error uploading file to Drive:', error);
+      throw error;
+    }
   }
 
   /**
-   * Get or create Excel templates folder in Google Drive
+   * Get or create Excel templates folder in cloud storage
    */
   async getOrCreateExcelTemplatesFolder() {
     try {
-      let folderId = localStorage.getItem('excelTemplatesFolderId');
-
-      if (folderId) {
-        try {
-          await window.gapi.client.drive.files.get({ fileId: folderId });
-          return folderId;
-        } catch {
-          folderId = null;
-        }
-      }
-
-      const metadata = {
-        name: 'BYD CRM - Excel Templates',
-        mimeType: 'application/vnd.google-apps.folder',
-      };
-
-      const response = await window.gapi.client.drive.files.create({
-        resource: metadata,
-        fields: 'id',
-      });
-
-      folderId = response.result.id;
-      localStorage.setItem('excelTemplatesFolderId', folderId);
-      return folderId;
+      const storageService = getStorageService();
+      const folder = await storageService.getOrCreateExcelTemplatesFolder();
+      return folder.id;
     } catch (error) {
       console.error('Error getting/creating Excel templates folder:', error);
       return null;
@@ -187,7 +140,7 @@ class TemplateExportService {
 
   /**
    * Export templates with master files as ZIP
-   * Downloads master files from Google Drive and packages them
+   * Downloads master files from cloud storage and packages them
    */
   async exportWithMasterFiles(documentTemplates, excelTemplates, type = 'all', onProgress = null) {
     const zip = new JSZip();
@@ -556,7 +509,7 @@ class TemplateExportService {
 
   /**
    * Import templates with master files from ZIP
-   * Uploads master files to Google Drive and links them
+   * Uploads master files to cloud storage and links them
    */
   async importWithMasterFiles(data, existingDocTemplates, existingExcelTemplates, onProgress = null) {
     const results = {
@@ -598,7 +551,7 @@ class TemplateExportService {
               { type: 'application/pdf' }
             );
 
-            // Use driveService to upload document background
+            // Use storage service to upload document background
             const fileId = await this.uploadDocumentBackgroundFile(file);
 
             if (fileId) {
@@ -645,7 +598,7 @@ class TemplateExportService {
                 { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }
               );
 
-              const fileId = await this.uploadFileToGoogleDrive(file, excelFolderId);
+              const fileId = await this.uploadFileToDrive(file, excelFolderId);
 
               if (fileId) {
                 template.driveFileId = fileId;
@@ -672,88 +625,18 @@ class TemplateExportService {
   }
 
   /**
-   * Upload document background file to Google Drive
+   * Upload document background file to cloud storage
    */
   async uploadDocumentBackgroundFile(file) {
     try {
-      // Get or create BYD_CRM_Data folder
-      let dataFolderId = localStorage.getItem('bydCrmDataFolderId');
+      const storageService = getStorageService();
 
-      if (!dataFolderId) {
-        // Search for existing folder
-        const searchResponse = await window.gapi.client.drive.files.list({
-          q: "name='BYD_CRM_Data' and mimeType='application/vnd.google-apps.folder' and trashed=false",
-          fields: 'files(id, name)',
-        });
-
-        if (searchResponse.result.files && searchResponse.result.files.length > 0) {
-          dataFolderId = searchResponse.result.files[0].id;
-        } else {
-          // Create the folder
-          const createResponse = await window.gapi.client.drive.files.create({
-            resource: {
-              name: 'BYD_CRM_Data',
-              mimeType: 'application/vnd.google-apps.folder',
-            },
-            fields: 'id',
-          });
-          dataFolderId = createResponse.result.id;
-        }
-        localStorage.setItem('bydCrmDataFolderId', dataFolderId);
-      }
-
-      // Get or create Document Templates folder inside BYD_CRM_Data
-      let docFolderId = localStorage.getItem('documentTemplatesFolderId');
-
-      if (!docFolderId) {
-        const searchResponse = await window.gapi.client.drive.files.list({
-          q: `name='Document Templates' and '${dataFolderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
-          fields: 'files(id, name)',
-        });
-
-        if (searchResponse.result.files && searchResponse.result.files.length > 0) {
-          docFolderId = searchResponse.result.files[0].id;
-        } else {
-          const createResponse = await window.gapi.client.drive.files.create({
-            resource: {
-              name: 'Document Templates',
-              mimeType: 'application/vnd.google-apps.folder',
-              parents: [dataFolderId],
-            },
-            fields: 'id',
-          });
-          docFolderId = createResponse.result.id;
-        }
-        localStorage.setItem('documentTemplatesFolderId', docFolderId);
-      }
-
-      // Get or create Background Images folder
-      let bgFolderId = localStorage.getItem('documentBgFolderId');
-
-      if (!bgFolderId) {
-        const searchResponse = await window.gapi.client.drive.files.list({
-          q: `name='Background Images' and '${docFolderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
-          fields: 'files(id, name)',
-        });
-
-        if (searchResponse.result.files && searchResponse.result.files.length > 0) {
-          bgFolderId = searchResponse.result.files[0].id;
-        } else {
-          const createResponse = await window.gapi.client.drive.files.create({
-            resource: {
-              name: 'Background Images',
-              mimeType: 'application/vnd.google-apps.folder',
-              parents: [docFolderId],
-            },
-            fields: 'id',
-          });
-          bgFolderId = createResponse.result.id;
-        }
-        localStorage.setItem('documentBgFolderId', bgFolderId);
-      }
+      // Get document templates folder
+      const folder = await storageService.getOrCreateDocumentTemplatesFolder();
 
       // Upload the file
-      return await this.uploadFileToGoogleDrive(file, bgFolderId);
+      const result = await storageService.uploadFile(folder.id, file.name, file, file.type);
+      return result.id;
     } catch (error) {
       console.error('Error uploading document background file:', error);
       throw error;
@@ -801,10 +684,10 @@ class TemplateExportService {
   }
 
   /**
-   * Check if signed in to Google
+   * Check if signed in to cloud storage
    */
   isSignedIn() {
-    return !!authService.getAccessToken();
+    return getAuthService().isSignedIn();
   }
 }
 
