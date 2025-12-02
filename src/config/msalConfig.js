@@ -2,7 +2,7 @@
  * Microsoft Authentication Library (MSAL) Configuration
  *
  * Azure AD Application Registration Details:
- * - Application (client) ID: f902f47e-96c8-4d40-9824-db1dd5fe11b7
+ * - Application (client) ID: a8827ae1-8d14-45fe-b6cc-c2aabd5f9b86
  *
  * PERSONAL ACCOUNTS ONLY:
  * Using "consumers" authority to allow only personal Microsoft accounts
@@ -27,7 +27,7 @@ const getRedirectUri = () => {
 export const msalConfig = {
   auth: {
     // Your Azure AD Application (client) ID
-    clientId: 'f902f47e-96c8-4d40-9824-db1dd5fe11b7',
+    clientId: 'a8827ae1-8d14-45fe-b6cc-c2aabd5f9b86',
 
     // PERSONAL ACCOUNTS ONLY - uses "consumers" authority
     // This allows personal Microsoft accounts (outlook.com, hotmail.com, live.com, etc.)
