@@ -139,17 +139,8 @@ function CustomerDetails() {
 
   // Document management hooks
   const documentManager = useDocumentManager(customer, isSignedIn, toast);
-  const dragDrop = useDragDrop(
-    documentManager.moveDocument,
-    documentManager.currentFolderId,
-    documentManager.refresh,
-    toast
-  );
+  const dragDrop = useDragDrop(documentManager.moveDocument);
   const touchMenu = useTouchMenu();
-
-  // Mobile folder menu state for document moving
-  const [showFolderMenu, setShowFolderMenu] = useState(false);
-  const [selectedFileToMove, setSelectedFileToMove] = useState(null);
 
   // Initialize documents when tab changes or customer changes
   useEffect(() => {
@@ -535,6 +526,13 @@ function CustomerDetails() {
               onTouchStart={touchMenu.handleTouchStart}
               onTouchMove={touchMenu.handleTouchMove}
               onTouchEnd={touchMenu.handleTouchEnd}
+              // Mobile action menu props
+              showActionMenu={touchMenu.showActionMenu}
+              showFolderMenu={touchMenu.showFolderMenu}
+              selectedFile={touchMenu.selectedFile}
+              onCloseActionMenu={touchMenu.closeActionMenu}
+              onCloseAllMenus={touchMenu.closeAllMenus}
+              onMoveAction={touchMenu.handleMoveAction}
             />
           )}
 

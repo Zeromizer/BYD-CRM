@@ -1331,6 +1331,118 @@
   color: #dc2626;
 }
 
+.folder-menu-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  color: var(--color-text-tertiary);
+  padding: 20px;
+  font-style: italic;
+}
+
+/* Mobile Action Menu */
+.mobile-action-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+  animation: fadeIn 0.2s ease;
+}
+
+.mobile-action-menu {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--color-card-background);
+  border-radius: 20px 20px 0 0;
+  padding: 16px 16px 24px;
+  z-index: 1000;
+  animation: slideUp 0.3s ease;
+  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.15);
+}
+
+.mobile-action-header {
+  text-align: center;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--color-border-light);
+  margin-bottom: 8px;
+}
+
+.mobile-action-filename {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  word-break: break-word;
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mobile-action-options {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mobile-action-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  padding: 16px 20px;
+  background: transparent;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--color-text-on-card);
+  text-align: left;
+  transition: background 0.15s ease;
+}
+
+.mobile-action-item:active {
+  background: var(--color-background-tertiary);
+}
+
+.mobile-action-icon {
+  font-size: 20px;
+  width: 28px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.mobile-action-danger {
+  color: var(--color-error);
+}
+
+.mobile-action-danger:active {
+  background: #fee2e2;
+}
+
+.mobile-action-cancel {
+  width: 100%;
+  padding: 16px;
+  margin-top: 8px;
+  background: var(--color-background-tertiary);
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.mobile-action-cancel:active {
+  background: var(--color-border-light);
+}
+
 /* Drag feedback */
 .document-item.dragging {
   opacity: 0.5;

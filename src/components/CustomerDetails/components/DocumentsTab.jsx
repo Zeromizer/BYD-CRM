@@ -15,7 +15,6 @@ function DocumentsTab({
   hasDriveFolder,
   // Document actions
   onLoadDocuments,
-  onNavigateToFolder,
   onNavigateToBreadcrumb,
   onItemClick,
   onDeleteDocument,
@@ -39,6 +38,13 @@ function DocumentsTab({
   onTouchStart,
   onTouchMove,
   onTouchEnd,
+  // Mobile action menu props
+  showActionMenu,
+  showFolderMenu,
+  selectedFile,
+  onCloseActionMenu,
+  onCloseAllMenus,
+  onMoveAction,
 }) {
   // Desktop context menu state
   const [openMenuId, setOpenMenuId] = useState(null);
@@ -74,6 +80,43 @@ function DocumentsTab({
     setOpenMenuId(null);
     onDeleteDocument(item);
   }, [onDeleteDocument]);
+
+  // Mobile action menu handlers
+  const handleMobileRename = useCallback(() => {
+    if (selectedFile) {
+      setRenamingItem(selectedFile);
+      setRenameValue(selectedFile.name);
+      setShowRenameModal(true);
+      onCloseActionMenu?.();
+    }
+  }, [selectedFile, onCloseActionMenu]);
+
+  const handleMobileDelete = useCallback(() => {
+    if (selectedFile) {
+      onCloseActionMenu?.();
+      onDeleteDocument(selectedFile);
+    }
+  }, [selectedFile, onCloseActionMenu, onDeleteDocument]);
+
+  const handleMobileMove = useCallback(() => {
+    onMoveAction?.();
+  }, [onMoveAction]);
+
+  // Handle folder selection for move operation
+  const handleFolderSelect = useCallback(async (targetFolder) => {
+    if (selectedFile && targetFolder) {
+      await onMoveDocument(selectedFile, targetFolder.id);
+      onCloseAllMenus?.();
+    }
+  }, [selectedFile, onMoveDocument, onCloseAllMenus]);
+
+  // Get available folders for move menu (exclude the file being moved)
+  const availableFolders = documents.filter(
+    (item) => isFolder(item.mimeType) && item.id !== selectedFile?.id
+  );
+
+  // Get parent folder for "move to parent" option
+  const parentFolder = folderPath.length > 1 ? folderPath[folderPath.length - 2] : null;
 
   // Close menu when clicking outside
   const handleCloseMenu = useCallback(() => {
@@ -235,6 +278,77 @@ function DocumentsTab({
           </div>
         </div>
       </Modal>
+
+      {/* Mobile Action Menu */}
+      {showActionMenu && selectedFile && (
+        <>
+          <div className="mobile-action-backdrop" onClick={onCloseActionMenu} />
+          <div className="mobile-action-menu">
+            <div className="mobile-action-header">
+              <span className="mobile-action-filename">{selectedFile.name}</span>
+            </div>
+            <div className="mobile-action-options">
+              <button className="mobile-action-item" onClick={handleMobileMove}>
+                <span className="mobile-action-icon">📁</span>
+                <span>Move to folder</span>
+              </button>
+              <button className="mobile-action-item" onClick={handleMobileRename}>
+                <span className="mobile-action-icon">✏️</span>
+                <span>Rename</span>
+              </button>
+              <button className="mobile-action-item mobile-action-danger" onClick={handleMobileDelete}>
+                <span className="mobile-action-icon">🗑️</span>
+                <span>Delete</span>
+              </button>
+            </div>
+            <button className="mobile-action-cancel" onClick={onCloseActionMenu}>
+              Cancel
+            </button>
+          </div>
+        </>
+      )}
+
+      {/* Mobile Folder Selection Menu */}
+      {showFolderMenu && selectedFile && (
+        <>
+          <div className="folder-menu-backdrop" onClick={onCloseAllMenus} />
+          <div className="folder-menu">
+            <h3>Move "{selectedFile.name}" to...</h3>
+            <div className="folder-menu-grid">
+              {/* Parent folder option */}
+              {parentFolder && (
+                <button
+                  className="folder-menu-item folder-menu-parent"
+                  onClick={() => handleFolderSelect(parentFolder)}
+                >
+                  <span className="folder-menu-icon">⬆️</span>
+                  <span className="folder-menu-name">Parent folder</span>
+                </button>
+              )}
+
+              {/* Available folders in current directory */}
+              {availableFolders.map((folder) => (
+                <button
+                  key={folder.id}
+                  className="folder-menu-item"
+                  onClick={() => handleFolderSelect(folder)}
+                >
+                  <span className="folder-menu-icon">📁</span>
+                  <span className="folder-menu-name">{folder.name}</span>
+                </button>
+              ))}
+
+              {/* Empty state if no folders available */}
+              {!parentFolder && availableFolders.length === 0 && (
+                <p className="folder-menu-empty">No folders available to move to</p>
+              )}
+            </div>
+            <button className="mobile-action-cancel" onClick={onCloseAllMenus}>
+              Cancel
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }
