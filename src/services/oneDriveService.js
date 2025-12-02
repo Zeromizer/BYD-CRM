@@ -1408,9 +1408,12 @@ class OneDriveService {
 
   /**
    * Sync document templates with OneDrive
-   * Merges local templates with Drive templates (Drive is source of truth)
-   * FIXED: Only saves back to Drive if there are actual local-only templates to add
-   * This prevents duplicate creation from race conditions
+   * Merges local templates with Drive templates with intelligent conflict resolution
+   *
+   * FIXES for multi-device sync issues:
+   * 1. Deduplication: Detects templates with same name but different IDs (keeps the newer one)
+   * 2. Conflict resolution: When same ID exists with different content, keeps the newer version
+   * 3. Prevents unnecessary writes to avoid race conditions
    */
   async syncDocumentTemplates(localTemplates) {
     try {
@@ -1423,29 +1426,104 @@ class OneDriveService {
         ? (localTemplates.templates || localTemplates)
         : {};
 
-      // Merge: Start with drive templates (source of truth), then add local-only templates
-      const merged = { ...driveTemplates };
+      // Step 1: Build a name-to-templates map for deduplication
+      // This helps detect duplicate templates (same name, different IDs)
+      const templatesByName = new Map();
 
-      // Track if we have local-only templates that need to be saved to Drive
-      let hasLocalOnlyTemplates = false;
-
-      // Add local templates that don't exist in Drive
-      for (const [id, template] of Object.entries(safeLocalTemplates)) {
-        if (!driveTemplates[id] && template && typeof template === 'object') {
-          // This template exists locally but not in Drive - add it
-          merged[id] = {
-            ...template,
-            id: id,
-          };
-          hasLocalOnlyTemplates = true;
+      // First, add all Drive templates to the map
+      for (const [id, template] of Object.entries(driveTemplates)) {
+        if (template && typeof template === 'object' && template.name) {
+          const name = template.name.toLowerCase().trim();
+          if (!templatesByName.has(name)) {
+            templatesByName.set(name, []);
+          }
+          templatesByName.get(name).push({ id, template, source: 'drive' });
         }
       }
 
-      // Only save back to Drive if we have local-only templates to add
-      // This prevents unnecessary writes and potential race conditions
-      if (hasLocalOnlyTemplates) {
+      // Then, add local templates to the map
+      for (const [id, template] of Object.entries(safeLocalTemplates)) {
+        if (template && typeof template === 'object' && template.name) {
+          const name = template.name.toLowerCase().trim();
+          if (!templatesByName.has(name)) {
+            templatesByName.set(name, []);
+          }
+          // Only add if this ID doesn't already exist in the map
+          const existing = templatesByName.get(name);
+          if (!existing.some(t => t.id === id)) {
+            templatesByName.get(name).push({ id, template, source: 'local' });
+          }
+        }
+      }
+
+      // Step 2: Deduplicate and merge
+      // For each template name, keep only the newest version
+      const merged = {};
+      let needsSave = false;
+      const deduplicatedIds = new Set(); // Track IDs that were removed due to deduplication
+
+      for (const [name, templates] of templatesByName.entries()) {
+        if (templates.length === 1) {
+          // No duplicates, keep as-is
+          const { id, template } = templates[0];
+          merged[id] = { ...template, id };
+        } else {
+          // Multiple templates with same name - keep the newest one
+          let newest = templates[0];
+          for (const t of templates.slice(1)) {
+            const newestTime = new Date(newest.template.updatedAt || newest.template.createdAt || 0).getTime();
+            const currentTime = new Date(t.template.updatedAt || t.template.createdAt || 0).getTime();
+
+            if (currentTime > newestTime) {
+              // Mark the older one as deduplicated
+              deduplicatedIds.add(newest.id);
+              newest = t;
+            } else {
+              deduplicatedIds.add(t.id);
+            }
+          }
+
+          merged[newest.id] = { ...newest.template, id: newest.id };
+
+          // If we removed duplicates that existed in Drive, we need to save
+          for (const t of templates) {
+            if (t.id !== newest.id && driveTemplates[t.id]) {
+              needsSave = true;
+              console.log(`OneDrive: Deduplicating template "${name}" - keeping ${newest.id}, removing ${t.id}`);
+            }
+          }
+        }
+      }
+
+      // Step 3: Add local-only templates (not in Drive and not deduplicated)
+      for (const [id, template] of Object.entries(safeLocalTemplates)) {
+        if (!driveTemplates[id] && !merged[id] && !deduplicatedIds.has(id) && template && typeof template === 'object') {
+          merged[id] = { ...template, id };
+          needsSave = true;
+          console.log(`OneDrive: Adding local-only template ${id}`);
+        }
+      }
+
+      // Step 4: Check for templates that exist in both places with different content
+      // Keep the newer version based on updatedAt timestamp
+      for (const [id, localTemplate] of Object.entries(safeLocalTemplates)) {
+        if (driveTemplates[id] && merged[id]) {
+          const driveTime = new Date(driveTemplates[id].updatedAt || driveTemplates[id].createdAt || 0).getTime();
+          const localTime = new Date(localTemplate.updatedAt || localTemplate.createdAt || 0).getTime();
+
+          if (localTime > driveTime) {
+            // Local is newer, update the merged version
+            merged[id] = { ...localTemplate, id };
+            needsSave = true;
+            console.log(`OneDrive: Local template ${id} is newer, updating Drive`);
+          }
+        }
+      }
+
+      // Only save back to Drive if there are changes
+      if (needsSave) {
         await this.saveDocumentTemplateToDrive(merged);
-        console.log('OneDrive: Saved local-only templates to Drive');
+        console.log('OneDrive: Saved merged templates to Drive');
       }
 
       return merged;

@@ -12,6 +12,21 @@ import userStorage from '../services/userStorage';
  * - Template CRUD operations
  */
 
+/**
+ * Generate a unique template ID using crypto.randomUUID()
+ * This prevents ID collisions when multiple devices create templates simultaneously
+ * Falls back to timestamp + random string if crypto.randomUUID is not available
+ */
+const generateTemplateId = () => {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return `template_${crypto.randomUUID()}`;
+  }
+  // Fallback for older browsers: timestamp + random string
+  const timestamp = Date.now().toString(36);
+  const randomStr = Math.random().toString(36).substring(2, 10);
+  return `template_${timestamp}_${randomStr}`;
+};
+
 const useDocumentStore = create((set, get) => ({
   // State
   templates: {},
@@ -145,7 +160,7 @@ const useDocumentStore = create((set, get) => ({
     try {
       set({ loading: true, error: null });
 
-      const templateId = `template_${Date.now()}`;
+      const templateId = generateTemplateId();
       const newTemplate = {
         id: templateId,
         name: templateData.name,
