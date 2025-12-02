@@ -56,15 +56,17 @@ function DocumentManager() {
   // Get templates as array
   const templatesArray = Object.values(templates);
 
-  // Filter templates
+  // Filter templates (with defensive checks for corrupted data)
   const filteredTemplates = templatesArray
     .filter((t) => {
       // Search filter
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
+        const name = t.name || '';
+        const category = t.category || '';
         return (
-          t.name.toLowerCase().includes(query) ||
-          t.category.toLowerCase().includes(query)
+          name.toLowerCase().includes(query) ||
+          category.toLowerCase().includes(query)
         );
       }
       return true;
@@ -74,10 +76,17 @@ function DocumentManager() {
       if (filterCategory === 'all') return true;
       return t.category === filterCategory;
     })
-    .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+    .sort((a, b) => {
+      const dateA = new Date(a.updatedAt);
+      const dateB = new Date(b.updatedAt);
+      // Handle invalid dates by treating them as oldest
+      const timeA = isNaN(dateA.getTime()) ? 0 : dateA.getTime();
+      const timeB = isNaN(dateB.getTime()) ? 0 : dateB.getTime();
+      return timeB - timeA;
+    });
 
-  // Get unique categories
-  const categories = ['all', ...new Set(templatesArray.map((t) => t.category))];
+  // Get unique categories (filter out undefined/null)
+  const categories = ['all', ...new Set(templatesArray.map((t) => t.category).filter(Boolean))];
 
   // Handle file selection
   const handleFileSelect = (e) => {
@@ -161,9 +170,15 @@ function DocumentManager() {
 
   // Handle delete template
   const handleDelete = async (template) => {
-    if (!window.confirm(`Delete template "${template.name}"?`)) return;
+    const templateName = template.name || 'Unnamed Template';
+    if (!window.confirm(`Delete template "${templateName}"?`)) return;
 
     try {
+      // Ensure we have a valid template ID
+      if (!template.id) {
+        alert('Cannot delete: Template has no ID');
+        return;
+      }
       await deleteTemplate(template.id);
       alert('Template deleted successfully');
     } catch (err) {
@@ -548,11 +563,23 @@ function TemplateCard({ template, onEditFields, onDelete, onChangeMasterFile }) 
   const hasFields = fieldCount > 0;
   const hasMasterFile = !!template.fileId;
 
+  // Handle missing or invalid data gracefully
+  const templateName = template.name || 'Unnamed Template';
+  const templateCategory = template.category || 'uncategorized';
+
+  // Format date safely
+  const formatDate = (dateStr) => {
+    if (!dateStr) return 'Unknown';
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return 'Invalid Date';
+    return date.toLocaleDateString();
+  };
+
   return (
     <div className="template-card">
       <div className="template-card-header">
-        <h3>{template.name}</h3>
-        <span className="category-badge">{template.category}</span>
+        <h3>{templateName}</h3>
+        <span className="category-badge">{templateCategory}</span>
       </div>
 
       <div className="template-card-body">
@@ -572,7 +599,7 @@ function TemplateCard({ template, onEditFields, onDelete, onChangeMasterFile }) 
           <div className="info-row">
             <span className="info-label">Last Updated:</span>
             <span className="info-value">
-              {new Date(template.updatedAt).toLocaleDateString()}
+              {formatDate(template.updatedAt)}
             </span>
           </div>
         </div>

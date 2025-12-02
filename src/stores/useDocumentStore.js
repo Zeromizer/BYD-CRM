@@ -37,7 +37,18 @@ const useDocumentStore = create((set, get) => ({
 
       if (stored) {
         const templates = JSON.parse(stored);
-        set({ templates });
+        // Ensure each template has a valid ID matching its key
+        const validatedTemplates = {};
+        for (const [key, template] of Object.entries(templates)) {
+          if (template && typeof template === 'object') {
+            // Ensure id property matches the key
+            validatedTemplates[key] = {
+              ...template,
+              id: template.id || key,
+            };
+          }
+        }
+        set({ templates: validatedTemplates });
       }
     } catch (error) {
       set({ error: error.message });
