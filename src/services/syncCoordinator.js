@@ -1,7 +1,7 @@
 /**
  * Sync Coordinator
  * Manages parallel syncing of all data types with progress tracking
- * OPTIMIZED Phase 2: Includes warmup for parallel folder ID resolution
+ * OPTIMIZED Phase 2+3: Includes warmup with caching and performance timing
  */
 
 import useCustomerStore from '../stores/useCustomerStore';
@@ -14,6 +14,7 @@ class SyncCoordinator {
     this.progressCallbacks = [];
     this.lastSyncTime = null;
     this.syncCooldownMs = 60000; // 1 minute cooldown between syncs
+    this.lastSyncDuration = null; // OPTIMIZATION: Track sync performance
   }
 
   /**
@@ -75,10 +76,13 @@ class SyncCoordinator {
       this.notifyProgress({ ...progress });
     };
 
+    const syncStartTime = Date.now();
+
     try {
-      // OPTIMIZATION Phase 2: Warmup - preload all folder IDs in parallel before sync
-      // This prevents sequential folder resolution during individual sync operations
+      // OPTIMIZATION Phase 2+3: Warmup - preload folder IDs (uses cache on subsequent syncs)
+      const warmupStart = Date.now();
       await getStorageService().warmup();
+      console.log(`Sync warmup: ${Date.now() - warmupStart}ms`);
 
       // Start all syncs in parallel
       const syncPromises = [
@@ -125,13 +129,37 @@ class SyncCoordinator {
       // Wait for all syncs to complete
       await Promise.all(syncPromises);
 
-      // Update last sync time on successful completion
+      // Update last sync time and duration on successful completion
       this.lastSyncTime = Date.now();
+      this.lastSyncDuration = Date.now() - syncStartTime;
+      console.log(`Total sync completed in ${this.lastSyncDuration}ms`);
       return true;
     } catch {
       // Don't throw - some syncs may have succeeded
+      this.lastSyncDuration = Date.now() - syncStartTime;
       return false;
     }
+  }
+
+  /**
+   * Get the last sync duration in milliseconds
+   */
+  getLastSyncDuration() {
+    return this.lastSyncDuration;
+  }
+
+  /**
+   * Force a full refresh (invalidates all caches before sync)
+   * Use when user manually triggers refresh or after long idle period
+   */
+  async forceFullRefresh(isSignedIn) {
+    // Invalidate all caches
+    const storageService = getStorageService();
+    storageService.invalidateIndexCache?.();
+    storageService.hasWarmedUp = false;
+
+    // Force sync with full warmup
+    return this.syncAll(isSignedIn, true);
   }
 
   /**
