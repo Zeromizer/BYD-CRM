@@ -17,7 +17,7 @@ const useExcelStore = create((set, get) => ({
    */
   loadFromLocalStorage: () => {
     try {
-      const userEmail = localStorage.getItem('googleUserEmail');
+      const userEmail = userStorage.getUserEmail();
 
       // Try to load from user-specific storage first
       if (userEmail) {
@@ -46,7 +46,7 @@ const useExcelStore = create((set, get) => ({
   saveToLocalStorage: () => {
     try {
       const { excelTemplates } = get();
-      const userEmail = localStorage.getItem('googleUserEmail');
+      const userEmail = userStorage.getUserEmail();
 
       if (userEmail) {
         // Save to user-specific storage
@@ -60,7 +60,7 @@ const useExcelStore = create((set, get) => ({
     }
   },
 
-  // Sync Excel templates with Google Drive
+  // Sync Excel templates with cloud storage
   syncWithDrive: async () => {
     try {
       set({ isLoading: true, error: null });
@@ -79,7 +79,7 @@ const useExcelStore = create((set, get) => ({
 
       return synced;
     } catch (error) {
-      set({ error: 'Failed to sync with Google Drive', isLoading: false });
+      set({ error: 'Failed to sync with cloud storage', isLoading: false });
       throw error;
     }
   },
@@ -225,7 +225,7 @@ const useExcelStore = create((set, get) => ({
    * Clears both user-specific and legacy storage
    */
   clearAllData: () => {
-    const userEmail = localStorage.getItem('googleUserEmail');
+    const userEmail = userStorage.getUserEmail();
 
     set({
       excelTemplates: {},

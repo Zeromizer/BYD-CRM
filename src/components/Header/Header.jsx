@@ -70,7 +70,7 @@ function Header() {
   const handleAuth = () => {
     if (isSignedIn) {
       // If signed in, sign out
-      if (window.confirm('Are you sure you want to disconnect from Google Drive?')) {
+      if (window.confirm('Are you sure you want to disconnect from OneDrive?')) {
         signOut();
       }
     } else {
@@ -81,7 +81,7 @@ function Header() {
 
   const handleForceSync = async () => {
     if (!isSignedIn) {
-      alert('Please connect to Google Drive first');
+      alert('Please connect to OneDrive first');
       return;
     }
 
@@ -130,7 +130,7 @@ function Header() {
           <button
             className={`auth-button ${isSignedIn ? 'connected' : ''}`}
             onClick={handleAuth}
-            title={isSignedIn ? 'Connected to Google Drive - Click to disconnect' : 'Click to connect to Google Drive'}
+            title={isSignedIn ? 'Connected to OneDrive - Click to disconnect' : 'Click to connect to OneDrive'}
           >
             <span className="status-dot"></span>
             <span>{isSignedIn ? 'Connected' : 'Connect Drive'}</span>

@@ -121,7 +121,7 @@ function TemplateExportImport({ isOpen, onClose }) {
           saveDocTemplates(importResults.documentTemplates.merged);
           loadDocTemplates();
 
-          // Sync each imported document template to Google Drive
+          // Sync each imported document template to cloud storage
           for (const item of importResults.documentTemplates.imported) {
             queueDocSync(item.templateId);
           }
@@ -160,7 +160,7 @@ function TemplateExportImport({ isOpen, onClose }) {
           saveDocTemplates(docResult.merged);
           loadDocTemplates();
 
-          // Sync each imported document template to Google Drive
+          // Sync each imported document template to cloud storage
           for (const item of docResult.imported) {
             queueDocSync(item.templateId);
           }
@@ -261,7 +261,7 @@ function TemplateExportImport({ isOpen, onClose }) {
       return (
         <div className="progress-indicator">
           <div className="progress-spinner"></div>
-          <p>Uploading master files to Google Drive...</p>
+          <p>Uploading master files to OneDrive...</p>
         </div>
       );
     }
@@ -443,7 +443,7 @@ function TemplateExportImport({ isOpen, onClose }) {
 
             {!isSignedIn && hasMasterFiles && (
               <div className="export-note warning">
-                <strong>Sign in to Google Drive</strong>
+                <strong>Sign in to OneDrive</strong>
                 <p>Sign in to export templates with master files. Without signing in, only template configurations (JSON) can be exported.</p>
               </div>
             )}
@@ -467,8 +467,8 @@ function TemplateExportImport({ isOpen, onClose }) {
               <p>Import templates from a JSON or ZIP file exported from another account.</p>
               <p className="hint">
                 {isSignedIn
-                  ? 'ZIP files with master files will be automatically uploaded to your Google Drive.'
-                  : 'Sign in to Google Drive to import ZIP files with master files.'}
+                  ? 'ZIP files with master files will be automatically uploaded to your OneDrive.'
+                  : 'Sign in to OneDrive to import ZIP files with master files.'}
               </p>
             </div>
 
@@ -496,8 +496,8 @@ function TemplateExportImport({ isOpen, onClose }) {
                     <p className="file-type-info zip">
                       <strong>ZIP File Detected</strong>
                       {isSignedIn
-                        ? ' - Master files will be automatically uploaded to Google Drive'
-                        : ' - Sign in to Google Drive to upload master files'}
+                        ? ' - Master files will be automatically uploaded to OneDrive'
+                        : ' - Sign in to OneDrive to upload master files'}
                     </p>
                   ) : (
                     <p className="file-type-info json">
@@ -527,7 +527,7 @@ function TemplateExportImport({ isOpen, onClose }) {
 
                 {importFile.name.endsWith('.zip') && !isSignedIn && (
                   <div className="import-warning">
-                    Please sign in to Google Drive to import ZIP files with master files.
+                    Please sign in to OneDrive to import ZIP files with master files.
                   </div>
                 )}
               </>
@@ -559,7 +559,7 @@ function TemplateExportImport({ isOpen, onClose }) {
                 ))}
                 <div className="result-note success">
                   <strong>Import Complete!</strong>
-                  <p>Your templates are ready to use. Master files have been uploaded to your Google Drive.</p>
+                  <p>Your templates are ready to use. Master files have been uploaded to your OneDrive.</p>
                 </div>
               </div>
             )}

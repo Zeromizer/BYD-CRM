@@ -19,9 +19,10 @@ const STORAGE_KEYS = {
   OLD_CUSTOMERS: 'bydCRM',
   OLD_EXCEL: 'excelTemplates',
 
-  // User tracking
+  // User tracking - storage-agnostic key (works for both Google and Microsoft)
   CURRENT_DATA_OWNER: 'currentDataOwner',
-  GOOGLE_USER_EMAIL: 'googleUserEmail',
+  USER_EMAIL: 'userEmail', // New storage-agnostic key
+  GOOGLE_USER_EMAIL: 'googleUserEmail', // Legacy key for migration
 
   // Prefixes for user-specific keys
   CUSTOMERS_PREFIX: 'bydCRM_',
@@ -39,6 +40,42 @@ const STORAGE_KEYS = {
 function normalizeEmail(email) {
   if (!email) return null;
   return email.toLowerCase().trim();
+}
+
+/**
+ * Get user email from localStorage (storage-agnostic)
+ * Checks new key first, falls back to legacy Google key
+ */
+function getUserEmail() {
+  // Try new storage-agnostic key first
+  const userEmail = localStorage.getItem(STORAGE_KEYS.USER_EMAIL);
+  if (userEmail) return userEmail;
+
+  // Fall back to legacy Google key for migration
+  return localStorage.getItem(STORAGE_KEYS.GOOGLE_USER_EMAIL);
+}
+
+/**
+ * Set user email in localStorage (storage-agnostic)
+ * Sets both new and legacy keys for compatibility
+ */
+function setUserEmail(email) {
+  if (email) {
+    localStorage.setItem(STORAGE_KEYS.USER_EMAIL, email);
+    // Also set legacy key for backward compatibility during transition
+    localStorage.setItem(STORAGE_KEYS.GOOGLE_USER_EMAIL, email);
+  } else {
+    localStorage.removeItem(STORAGE_KEYS.USER_EMAIL);
+    localStorage.removeItem(STORAGE_KEYS.GOOGLE_USER_EMAIL);
+  }
+}
+
+/**
+ * Clear user email from localStorage
+ */
+function clearUserEmail() {
+  localStorage.removeItem(STORAGE_KEYS.USER_EMAIL);
+  localStorage.removeItem(STORAGE_KEYS.GOOGLE_USER_EMAIL);
 }
 
 /**
@@ -333,6 +370,9 @@ const userStorage = {
   STORAGE_KEYS,
   normalizeEmail,
   getUserKey,
+  getUserEmail,
+  setUserEmail,
+  clearUserEmail,
   getCurrentDataOwner,
   setCurrentDataOwner,
   hasLegacyData,

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { getStorageService } from '../services/storageServiceSelector';
+import userStorage from '../services/userStorage';
 
 /**
  * Document Store - State management for document templates
@@ -7,7 +8,7 @@ import { getStorageService } from '../services/storageServiceSelector';
  * Manages:
  * - Document templates (forms)
  * - Field configurations
- * - Google Drive sync
+ * - Cloud storage sync (Google Drive or OneDrive)
  * - Template CRUD operations
  */
 
@@ -22,11 +23,11 @@ const useDocumentStore = create((set, get) => ({
 
   /**
    * Load templates from localStorage
-   * Uses googleUserEmail key for consistency with rest of app
+   * Uses userStorage for consistent email key management
    */
   loadFromLocalStorage: () => {
     try {
-      const userEmail = localStorage.getItem('googleUserEmail');
+      const userEmail = userStorage.getUserEmail();
       if (!userEmail) {
         return;
       }
@@ -45,11 +46,11 @@ const useDocumentStore = create((set, get) => ({
 
   /**
    * Save templates to localStorage
-   * Uses googleUserEmail key for consistency with rest of app
+   * Uses userStorage for consistent email key management
    */
   saveToLocalStorage: (templates) => {
     try {
-      const userEmail = localStorage.getItem('googleUserEmail');
+      const userEmail = userStorage.getUserEmail();
       if (!userEmail) {
         return;
       }
@@ -62,8 +63,8 @@ const useDocumentStore = create((set, get) => ({
   },
 
   /**
-   * Sync template to Google Drive
-   * Uses the centralized driveService method for consistency
+   * Sync template to cloud storage
+   * Uses the centralized storageService method for consistency
    */
   syncTemplateToDrive: async (templateId) => {
     const { templates } = get();
@@ -205,7 +206,7 @@ const useDocumentStore = create((set, get) => ({
   },
 
   /**
-   * Delete template from both localStorage and Google Drive
+   * Delete template from both localStorage and cloud storage
    */
   deleteTemplate: async (templateId) => {
     try {
@@ -219,11 +220,11 @@ const useDocumentStore = create((set, get) => ({
       set({ templates: updatedTemplates, loading: false });
       get().saveToLocalStorage(updatedTemplates);
 
-      // Delete from Google Drive
+      // Delete from cloud storage
       try {
         await getStorageService().deleteDocumentTemplateFromDrive(templateId);
       } catch {
-        // Don't throw - local deletion succeeded, Drive deletion is best-effort
+        // Don't throw - local deletion succeeded, cloud deletion is best-effort
       }
 
       return true;
@@ -279,14 +280,14 @@ const useDocumentStore = create((set, get) => ({
   },
 
   /**
-   * Load templates from Google Drive
-   * Uses driveService for consistent folder location
+   * Load templates from cloud storage
+   * Uses storageService for consistent folder location
    */
   loadFromDrive: async () => {
     try {
       set({ loading: true, error: null });
 
-      // Use driveService to load templates (ensures correct folder location)
+      // Use storageService to load templates (ensures correct folder location)
       const templates = await getStorageService().loadDocumentTemplatesFromDrive();
 
       set({ templates, loading: false });
@@ -300,7 +301,7 @@ const useDocumentStore = create((set, get) => ({
   },
 
   /**
-   * Sync templates with Google Drive
+   * Sync templates with cloud storage
    * IMPORTANT: Loads from localStorage first before syncing to prevent data loss
    * This is the primary sync function that should be called on app init
    * Uses getStorageService().syncDocumentTemplates for consistent behavior with forms/excel
@@ -316,7 +317,7 @@ const useDocumentStore = create((set, get) => ({
 
       const localTemplates = get().templates;
 
-      // Use driveService for sync (ensures correct folder location in BYD_CRM_Data)
+      // Use storageService for sync (ensures correct folder location)
       const mergedTemplates = await getStorageService().syncDocumentTemplates(localTemplates);
 
       // Update state and localStorage
@@ -329,7 +330,7 @@ const useDocumentStore = create((set, get) => ({
 
       return mergedTemplates;
     } catch {
-      set({ error: 'Failed to sync with Google Drive', loading: false });
+      set({ error: 'Failed to sync with cloud storage', loading: false });
       // Don't throw - return local templates as fallback (same pattern as forms/excel)
       return get().templates;
     }
