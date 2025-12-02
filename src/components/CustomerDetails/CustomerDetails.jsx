@@ -460,6 +460,7 @@ function CustomerDetails() {
               expandedGuarantors={guarantorsHook.expandedGuarantors}
               hasChanges={detailsForm.hasChanges}
               hasGuarantorChanges={guarantorsHook.hasChanges}
+              isSubmitting={isSubmitting}
               onFieldChange={detailsForm.handleChange}
               onGuarantorChange={guarantorsHook.updateGuarantor}
               onAddGuarantor={guarantorsHook.addGuarantor}
@@ -478,6 +479,7 @@ function CustomerDetails() {
             <ProposalTab
               formData={proposalForm.formData}
               hasChanges={proposalForm.hasChanges}
+              isSubmitting={isSubmitting}
               onFieldChange={proposalForm.handleChange}
               onSave={handleProposalSave}
               onCancel={proposalForm.resetForm}
@@ -491,6 +493,7 @@ function CustomerDetails() {
               customerNric={customer.nric}
               customerPhone={customer.phone}
               hasChanges={vsaForm.hasChanges}
+              isSubmitting={isSubmitting}
               onFieldChange={vsaForm.handleChange}
               onSave={handleVsaSave}
               onCancel={vsaForm.resetForm}
