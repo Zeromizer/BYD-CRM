@@ -570,6 +570,55 @@ class DriveService {
   }
 
   /**
+   * Upload an image to a folder from base64 data
+   * Used for ID photo uploads in CustomerList
+   *
+   * @param {string} base64Data - The base64 encoded image data (without data URL prefix)
+   * @param {string} filename - The filename for the image
+   * @param {string} folderId - The target folder ID
+   * @param {string} mimeType - The MIME type (default: 'image/jpeg')
+   * @returns {Object} - The uploaded file metadata
+   */
+  async uploadImageToFolder(base64Data, filename, folderId, mimeType = 'image/jpeg') {
+    try {
+      const boundary = '-------314159265358979323846';
+      const delimiter = "\r\n--" + boundary + "\r\n";
+      const closeDelim = "\r\n--" + boundary + "--";
+
+      const metadata = {
+        name: filename,
+        mimeType: mimeType,
+        parents: [folderId]
+      };
+
+      const multipartRequestBody =
+        delimiter +
+        'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
+        JSON.stringify(metadata) +
+        delimiter +
+        'Content-Type: ' + mimeType + '\r\n' +
+        'Content-Transfer-Encoding: base64\r\n\r\n' +
+        base64Data +
+        closeDelim;
+
+      const response = await window.gapi.client.request({
+        path: '/upload/drive/v3/files',
+        method: 'POST',
+        params: { uploadType: 'multipart' },
+        headers: {
+          'Content-Type': 'multipart/related; boundary="' + boundary + '"'
+        },
+        body: multipartRequestBody
+      });
+
+      return response.result;
+    } catch (error) {
+      console.error('Error uploading image to folder:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Get file content as text
    */
   async getFileContent(fileId) {

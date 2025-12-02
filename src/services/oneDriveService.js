@@ -87,33 +87,40 @@ class OneDriveService {
 
   /**
    * Get or create a folder
+   * Returns the folder ID string for consistency with Google Drive service
+   *
+   * @param {string} folderName - The name of the folder to get or create
+   * @param {string} parentFolderId - The parent folder ID (defaults to 'root')
+   * @returns {string} - The folder ID
    */
-  async getOrCreateFolder(parentId, folderName) {
-    const cacheKey = `${parentId}:${folderName}`;
+  async getOrCreateFolder(folderName, parentFolderId = 'root') {
+    const cacheKey = `${parentFolderId}:${folderName}`;
 
     // Check cache first
     if (this.folderIdCache[cacheKey]) {
-      return this.folderIdCache[cacheKey];
+      // Return just the ID for consistency with Google Drive
+      const cached = this.folderIdCache[cacheKey];
+      return typeof cached === 'string' ? cached : cached.id;
     }
 
     try {
       // Try to find existing folder
-      const parentPath = parentId === 'root'
+      const parentPath = parentFolderId === 'root'
         ? '/me/drive/root/children'
-        : `/me/drive/items/${parentId}/children`;
+        : `/me/drive/items/${parentFolderId}/children`;
 
       const result = await this.request(`${parentPath}?$filter=name eq '${encodeURIComponent(folderName)}'`);
 
       if (result.value && result.value.length > 0) {
         const folder = result.value[0];
-        this.folderIdCache[cacheKey] = folder;
-        return folder;
+        this.folderIdCache[cacheKey] = folder.id;
+        return folder.id;
       }
 
       // Create folder if not exists
-      const newFolder = await this.createFolder(parentId, folderName);
-      this.folderIdCache[cacheKey] = newFolder;
-      return newFolder;
+      const newFolder = await this.createFolder(parentFolderId, folderName);
+      this.folderIdCache[cacheKey] = newFolder.id;
+      return newFolder.id;
     } catch (error) {
       console.error(`Error getting/creating folder "${folderName}":`, error);
       throw error;
@@ -468,12 +475,12 @@ class OneDriveService {
     console.log('Initializing OneDrive CRM folder structure...');
 
     // Create root folder
-    const rootFolder = await this.getOrCreateFolder('root', ONEDRIVE_FOLDER_NAMES.ROOT);
-    this.rootFolderId = rootFolder.id;
+    const rootFolderId = await this.getOrCreateFolder(ONEDRIVE_FOLDER_NAMES.ROOT, 'root');
+    this.rootFolderId = rootFolderId;
 
     // Create subfolders
     const folderIds = {
-      root: rootFolder.id,
+      root: rootFolderId,
     };
 
     const subfolders = [
@@ -484,8 +491,8 @@ class OneDriveService {
     ];
 
     for (const { key, name } of subfolders) {
-      const folder = await this.getOrCreateFolder(rootFolder.id, name);
-      folderIds[key] = folder.id;
+      const folderId = await this.getOrCreateFolder(name, rootFolderId);
+      folderIds[key] = folderId;
     }
 
     // Cache folder IDs
@@ -560,7 +567,7 @@ class OneDriveService {
    */
   async createCustomerFolder(customerId) {
     const folderIds = await this.getFolderIds();
-    return this.getOrCreateFolder(folderIds.customersData, customerId);
+    return this.getOrCreateFolder(customerId, folderIds.customersData);
   }
 
   /**
@@ -570,10 +577,10 @@ class OneDriveService {
     const folderIds = await this.getFolderIds();
 
     // Create customer folder
-    const customerFolder = await this.getOrCreateFolder(folderIds.customersData, customer.id);
+    const customerFolderId = await this.getOrCreateFolder(customer.id, folderIds.customersData);
 
     // Save customer.json
-    await this.uploadFile(customerFolder.id, ONEDRIVE_DATA_FILES.CUSTOMER_DETAILS, customer);
+    await this.uploadFile(customerFolderId, ONEDRIVE_DATA_FILES.CUSTOMER_DETAILS, customer);
 
     // Update customer index
     const index = await this.loadCustomerIndex();
@@ -585,7 +592,7 @@ class OneDriveService {
       phone: customer.phone || '',
       email: customer.email || '',
       lastModified: new Date().toISOString(),
-      folderId: customerFolder.id,
+      folderId: customerFolderId,
     };
 
     if (existingIdx >= 0) {
@@ -598,7 +605,7 @@ class OneDriveService {
     index.lastModified = new Date().toISOString();
     await this.saveCustomerIndex(index);
 
-    return customerFolder;
+    return { id: customerFolderId };
   }
 
   /**
@@ -646,8 +653,8 @@ class OneDriveService {
    */
   async createCustomerDocumentFolder(customerId, subfolderName) {
     const folderIds = await this.getFolderIds();
-    const customerFolder = await this.getOrCreateFolder(folderIds.customersData, customerId);
-    return this.getOrCreateFolder(customerFolder.id, subfolderName);
+    const customerFolderId = await this.getOrCreateFolder(customerId, folderIds.customersData);
+    return this.getOrCreateFolder(subfolderName, customerFolderId);
   }
 
   // ============================================================
@@ -785,6 +792,37 @@ class OneDriveService {
     return images;
   }
 
+  /**
+   * Upload an image to a folder from base64 data
+   * Used for ID photo uploads in CustomerList
+   *
+   * @param {string} base64Data - The base64 encoded image data (without data URL prefix)
+   * @param {string} filename - The filename for the image
+   * @param {string} folderId - The target folder ID
+   * @param {string} mimeType - The MIME type (default: 'image/jpeg')
+   * @returns {Object} - The uploaded file metadata
+   */
+  async uploadImageToFolder(base64Data, filename, folderId, mimeType = 'image/jpeg') {
+    try {
+      // Convert base64 to Blob
+      const byteCharacters = atob(base64Data);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      const blob = new Blob([byteArray], { type: mimeType });
+
+      // Upload using the existing uploadFileToFolder method
+      const fileId = await this.uploadFileToFolder(filename, blob, folderId);
+
+      return { id: fileId, name: filename };
+    } catch (error) {
+      console.error('Error uploading image to folder:', error);
+      throw error;
+    }
+  }
+
   // ============================================================
   // Compatibility Methods (matching Google Drive service API)
   // ============================================================
@@ -804,13 +842,22 @@ class OneDriveService {
       .replace(/\s+/g, ' ')          // Normalize spaces
       .trim()
       || customerId;                 // Fallback to ID if name is empty
-    const customerFolder = await this.getOrCreateFolder(folderIds.customersData, sanitizedName);
+    const customerFolderId = await this.getOrCreateFolder(sanitizedName, folderIds.customersData);
+
+    // Get folder details to retrieve webUrl
+    let folderUrl = null;
+    try {
+      const folderDetails = await this.getFolder(customerFolderId);
+      folderUrl = folderDetails.webUrl || null;
+    } catch (error) {
+      console.warn('Could not fetch folder URL:', error);
+    }
 
     // Subfolders (NIRC, Test Drive, etc.) are created on demand when needed
 
     return {
-      folderId: customerFolder.id,
-      folderUrl: customerFolder.webUrl || null,
+      folderId: customerFolderId,
+      folderUrl: folderUrl,
     };
   }
 
