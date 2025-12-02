@@ -687,6 +687,7 @@ class OneDriveService {
   /**
    * Create customer folder structure
    * Matches Google Drive service API
+   * Only creates the main customer folder - subfolders are created on demand by other features
    */
   async createCustomerFolderStructure(customerName, customerId) {
     const folderIds = await this.getFolderIds();
@@ -700,11 +701,7 @@ class OneDriveService {
       || customerId;                 // Fallback to ID if name is empty
     const customerFolder = await this.getOrCreateFolder(folderIds.customersData, sanitizedName);
 
-    // Create subfolders
-    const subfolders = ONEDRIVE_FOLDER_NAMES.DOCUMENT_SUBFOLDERS || [];
-    for (const subfolder of subfolders) {
-      await this.getOrCreateFolder(customerFolder.id, subfolder);
-    }
+    // Subfolders (NIRC, Test Drive, etc.) are created on demand when needed
 
     return {
       folderId: customerFolder.id,
