@@ -347,26 +347,31 @@ const useCustomerStore = create((set, get) => ({
       set({ isSyncing: true });
       const { customers } = get();
 
-      // Save each customer to their individual folder + update index
-      const indexData = [];
-      for (const customer of customers) {
-        if (customer.driveFolderId) {
-          // Save individual customer.json
-          await getStorageService().saveCustomerData(customer, customer.driveFolderId);
+      // OPTIMIZATION: Save all customers in parallel instead of sequentially
+      const customersWithFolders = customers.filter(c => c.driveFolderId);
 
-          // Build index entry
-          indexData.push({
-            id: customer.id,
-            name: customer.name,
-            vsaNo: customer.vsaNo,
-            driveFolderId: customer.driveFolderId,
-            driveFolderLink: customer.driveFolderLink,
-            lastModified: new Date().toISOString(),
-          });
-        }
+      // Save all customer data files in parallel (batched to prevent overwhelming the API)
+      const BATCH_SIZE = 10;
+      for (let i = 0; i < customersWithFolders.length; i += BATCH_SIZE) {
+        const batch = customersWithFolders.slice(i, i + BATCH_SIZE);
+        await Promise.all(
+          batch.map(customer =>
+            getStorageService().saveCustomerData(customer, customer.driveFolderId)
+          )
+        );
       }
 
-      // Save the index
+      // Build index data after all saves complete
+      const indexData = customersWithFolders.map(customer => ({
+        id: customer.id,
+        name: customer.name,
+        vsaNo: customer.vsaNo,
+        driveFolderId: customer.driveFolderId,
+        driveFolderLink: customer.driveFolderLink,
+        lastModified: new Date().toISOString(),
+      }));
+
+      // Save the index once
       if (indexData.length > 0) {
         await getStorageService().saveCustomersIndex(indexData);
       }

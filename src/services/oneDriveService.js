@@ -16,6 +16,17 @@ class OneDriveService {
     // Cache folder IDs to avoid repeated lookups
     this.folderIdCache = {};
     this.rootFolderId = null;
+
+    // OPTIMIZATION: Index caching to avoid repeated API calls
+    this.indexCache = null;
+    this.indexCacheExpiry = null;
+    this.INDEX_CACHE_TTL = 30000; // 30 seconds cache TTL
+
+    // OPTIMIZATION: Request deduplication - prevent concurrent identical requests
+    this.pendingRequests = new Map();
+
+    // OPTIMIZATION: Track warmup state to skip validation on subsequent syncs
+    this.hasWarmedUp = false;
   }
 
   // ============================================================
@@ -71,13 +82,44 @@ class OneDriveService {
   }
 
   /**
-   * Clear cached folder IDs
+   * Clear cached folder IDs and other caches
    */
   clearCache() {
     this.folderIdCache = {};
     this.rootFolderId = null;
+    this.indexCache = null;
+    this.indexCacheExpiry = null;
+    this.hasWarmedUp = false;
+    this.pendingRequests.clear();
     localStorage.removeItem('onedrive_folder_ids');
     console.log('OneDrive cache cleared');
+  }
+
+  /**
+   * OPTIMIZATION: Deduplicated request - prevents concurrent identical API calls
+   * If a request to the same endpoint is already in progress, returns the same promise
+   */
+  async deduplicatedRequest(endpoint, options = {}) {
+    // Only deduplicate GET requests (reads)
+    const isReadRequest = !options.method || options.method === 'GET';
+    const cacheKey = isReadRequest ? endpoint : null;
+
+    if (cacheKey && this.pendingRequests.has(cacheKey)) {
+      // Return existing promise for identical concurrent request
+      return this.pendingRequests.get(cacheKey);
+    }
+
+    const requestPromise = this.request(endpoint, options).finally(() => {
+      if (cacheKey) {
+        this.pendingRequests.delete(cacheKey);
+      }
+    });
+
+    if (cacheKey) {
+      this.pendingRequests.set(cacheKey, requestPromise);
+    }
+
+    return requestPromise;
   }
 
   // ============================================================
@@ -375,8 +417,9 @@ class OneDriveService {
     const results = new Map();
     const uniqueIds = [...new Set(folderIds.filter(id => id && id !== 'root'))];
 
-    // Validate in parallel with a concurrency limit
-    const BATCH_SIZE = 5;
+    // OPTIMIZATION: Increased batch size from 5 to 15 for faster validation
+    // Microsoft Graph API handles concurrent requests well
+    const BATCH_SIZE = 15;
     for (let i = 0; i < uniqueIds.length; i += BATCH_SIZE) {
       const batch = uniqueIds.slice(i, i + BATCH_SIZE);
       const batchResults = await Promise.all(
@@ -537,28 +580,58 @@ class OneDriveService {
 
   /**
    * Save customer index
+   * OPTIMIZATION: Invalidates index cache after save
    */
   async saveCustomerIndex(indexData) {
     const folderIds = await this.getFolderIds();
-    return this.uploadFile(
+    const result = await this.uploadFile(
       folderIds.root,
       ONEDRIVE_DATA_FILES.CUSTOMERS_INDEX,
       indexData
     );
+
+    // Update cache with new data
+    this.indexCache = indexData;
+    this.indexCacheExpiry = Date.now() + this.INDEX_CACHE_TTL;
+
+    return result;
   }
 
   /**
    * Load customer index
+   * OPTIMIZATION: Returns cached index if available and not expired
    */
   async loadCustomerIndex() {
+    // Check cache first
+    if (this.indexCache && this.indexCacheExpiry && Date.now() < this.indexCacheExpiry) {
+      return this.indexCache;
+    }
+
     const folderIds = await this.getFolderIds();
     const file = await this.findFile(folderIds.root, ONEDRIVE_DATA_FILES.CUSTOMERS_INDEX);
 
     if (!file) {
-      return { customers: [], lastModified: null };
+      const emptyIndex = { customers: [], lastModified: null };
+      this.indexCache = emptyIndex;
+      this.indexCacheExpiry = Date.now() + this.INDEX_CACHE_TTL;
+      return emptyIndex;
     }
 
-    return this.downloadFileAsJson(file.id);
+    const index = await this.downloadFileAsJson(file.id);
+
+    // Cache the result
+    this.indexCache = index;
+    this.indexCacheExpiry = Date.now() + this.INDEX_CACHE_TTL;
+
+    return index;
+  }
+
+  /**
+   * Invalidate index cache (call when external changes might have occurred)
+   */
+  invalidateIndexCache() {
+    this.indexCache = null;
+    this.indexCacheExpiry = null;
   }
 
   /**
@@ -1323,10 +1396,22 @@ class OneDriveService {
   /**
    * Warmup - preload and validate folder IDs
    * Called by syncCoordinator before sync operations
-   * Validates that cached folder IDs are still valid, reinitializes if not
+   * OPTIMIZATION: Skips validation on subsequent syncs (only validates on first warmup)
+   *
+   * @param {boolean} force - Force full validation even if already warmed up
    */
-  async warmup() {
-    console.log('OneDrive warmup: preloading folder IDs...');
+  async warmup(force = false) {
+    // OPTIMIZATION: Skip validation if already warmed up (unless forced)
+    if (this.hasWarmedUp && !force) {
+      console.log('OneDrive warmup: using cached folder IDs (fast path)');
+
+      // Just ensure folder IDs are available (no validation)
+      await this.getFolderIds(true); // true = skip validation
+      return;
+    }
+
+    console.log('OneDrive warmup: preloading folder IDs with validation...');
+    const startTime = Date.now();
 
     // Get folder IDs with validation (will reinitialize if root folder is invalid)
     const folderIds = await this.getFolderIds(false); // false = validate
@@ -1346,7 +1431,10 @@ class OneDriveService {
       await this.initializeCrmStructure();
     }
 
-    console.log('OneDrive warmup complete');
+    // Mark as warmed up for subsequent syncs
+    this.hasWarmedUp = true;
+
+    console.log(`OneDrive warmup complete (${Date.now() - startTime}ms)`);
   }
 
   /**
