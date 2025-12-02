@@ -139,39 +139,9 @@ function CustomerList() {
     }
   };
 
-  // Helper function to upload ID image to Google Drive
+  // Helper function to upload ID image using the storage service abstraction
   const uploadIDImage = async (base64Data, filename, folderId) => {
-    const boundary = '-------314159265358979323846';
-    const delimiter = "\r\n--" + boundary + "\r\n";
-    const close_delim = "\r\n--" + boundary + "--";
-
-    const metadata = {
-      name: filename,
-      mimeType: 'image/jpeg',
-      parents: [folderId]
-    };
-
-    const multipartRequestBody =
-      delimiter +
-      'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
-      JSON.stringify(metadata) +
-      delimiter +
-      'Content-Type: image/jpeg\r\n' +
-      'Content-Transfer-Encoding: base64\r\n\r\n' +
-      base64Data +
-      close_delim;
-
-    const request = window.gapi.client.request({
-      path: '/upload/drive/v3/files',
-      method: 'POST',
-      params: { uploadType: 'multipart' },
-      headers: {
-        'Content-Type': 'multipart/related; boundary="' + boundary + '"'
-      },
-      body: multipartRequestBody
-    });
-
-    return request;
+    return getStorageService().uploadImageToFolder(base64Data, filename, folderId);
   };
 
   return (
