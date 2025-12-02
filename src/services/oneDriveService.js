@@ -997,6 +997,46 @@ class OneDriveService {
   }
 
   /**
+   * Search for a customer folder by name in the Customers Data folder
+   * @param {string} customerName - The customer name to search for
+   * @returns {Object|null} - { folderId, folderUrl } or null if not found
+   */
+  async findCustomerFolderByName(customerName) {
+    try {
+      const folderIds = await this.getFolderIds();
+      const customersDataFolderId = folderIds.customersData;
+
+      if (!customersDataFolderId) {
+        console.warn('OneDrive: Customers data folder not found');
+        return null;
+      }
+
+      // List all folders in the customers data folder
+      const items = await this.listFolder(customersDataFolderId);
+
+      // Search for folder with matching name (case-insensitive)
+      const normalizedSearchName = customerName.toLowerCase().trim();
+      const matchingFolder = items.find(item =>
+        item.folder && item.name.toLowerCase().trim() === normalizedSearchName
+      );
+
+      if (matchingFolder) {
+        console.log(`OneDrive: Found existing folder for "${customerName}":`, matchingFolder.id);
+        return {
+          folderId: matchingFolder.id,
+          folderUrl: matchingFolder.webUrl || null,
+        };
+      }
+
+      console.log(`OneDrive: No folder found for "${customerName}"`);
+      return null;
+    } catch (error) {
+      console.error(`OneDrive: Error searching for folder "${customerName}":`, error);
+      return null;
+    }
+  }
+
+  /**
    * Import customers from OneDrive folders
    * Scans the BYD Customers Data folder and reads customer.json from each subfolder
    * @returns {Object} - { customers: Array, imported: number, errors: Array }
