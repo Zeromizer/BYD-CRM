@@ -47,7 +47,7 @@ function PrintManager({ isOpen, onClose, customer }) {
 
   // Get all templates, sorted alphabetically/numerically
   const templateArray = Object.values(templates).sort((a, b) => {
-    return a.name.localeCompare(b.name, undefined, {
+    return (a.name || '').localeCompare(b.name || '', undefined, {
       numeric: true,
       sensitivity: 'base'
     });
