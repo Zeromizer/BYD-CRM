@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
-import { getStorageService, isUsingOneDrive } from '../services/storageServiceSelector';
+import { getStorageService } from '../services/storageServiceSelector';
 import userStorage from '../services/userStorage';
 import { getDefaultChecklistState } from '../constants/milestones';
 
@@ -561,38 +561,7 @@ const useCustomerStore = create((set, get) => ({
       }
 
       // Load index from Drive (lightweight, fast)
-      let driveIndex = await getStorageService().loadCustomersIndex();
-
-      // OneDrive: Check if we need to import from folders
-      // This handles cases where customers were manually uploaded to OneDrive
-      if (isUsingOneDrive()) {
-        try {
-          // Get the folder IDs and list customer folders
-          const folderIds = await getStorageService().getFolderIds(true);
-          if (folderIds.customersData) {
-            const items = await getStorageService().listFolder(folderIds.customersData);
-            const customerFolders = items.filter(item => item.folder);
-
-            console.log(`OneDrive: Found ${customerFolders.length} folders, index has ${driveIndex.length} entries`);
-
-            // If there are more folders than index entries, import missing ones
-            if (customerFolders.length > driveIndex.length) {
-              console.log('OneDrive: More folders than index entries, importing from folders...');
-              const importResult = await getStorageService().rebuildCustomersIndexFromFolders();
-              if (importResult.customers.length > 0) {
-                console.log(`Imported ${importResult.customers.length} customers from OneDrive folders`);
-                // Use the imported customers directly
-                set({ customers: importResult.customers });
-                get().saveToLocalStorage();
-                set({ isSyncing: false });
-                return;
-              }
-            }
-          }
-        } catch (importError) {
-          console.error('Failed to check/import from folders:', importError);
-        }
-      }
+      const driveIndex = await getStorageService().loadCustomersIndex();
 
       // If index is empty, we're done
       if (driveIndex.length === 0) {
@@ -823,42 +792,6 @@ const useCustomerStore = create((set, get) => ({
       return customerData;
     } catch {
       return null;
-    }
-  },
-
-  /**
-   * Force import customers from OneDrive folders
-   * Useful when customers have been manually uploaded to OneDrive
-   */
-  forceImportFromFolders: async (isSignedIn) => {
-    if (!isSignedIn || !isUsingOneDrive()) {
-      return { success: false, message: 'OneDrive not available' };
-    }
-
-    try {
-      set({ isSyncing: true });
-      console.log('Force importing customers from OneDrive folders...');
-
-      const importResult = await getStorageService().rebuildCustomersIndexFromFolders();
-
-      if (importResult.customers.length > 0) {
-        set({ customers: importResult.customers });
-        get().saveToLocalStorage();
-        console.log(`Force import complete: ${importResult.customers.length} customers imported`);
-        set({ isSyncing: false });
-        return {
-          success: true,
-          imported: importResult.customers.length,
-          errors: importResult.results.errors,
-        };
-      }
-
-      set({ isSyncing: false });
-      return { success: true, imported: 0, message: 'No customers found in folders' };
-    } catch (error) {
-      console.error('Force import failed:', error);
-      set({ isSyncing: false });
-      return { success: false, message: error.message };
     }
   },
 }));
