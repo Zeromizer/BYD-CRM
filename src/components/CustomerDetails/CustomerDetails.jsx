@@ -610,7 +610,7 @@ function CustomerDetails() {
 
         if (aIsFolder && !bIsFolder) return -1;
         if (!aIsFolder && bIsFolder) return 1;
-        return a.name.localeCompare(b.name);
+        return (a.name || '').localeCompare(b.name || '');
       });
 
       setDocuments(allFiles);
