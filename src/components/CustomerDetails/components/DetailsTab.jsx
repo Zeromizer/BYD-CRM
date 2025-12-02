@@ -204,9 +204,7 @@ function DetailsTab({
           )}
         </div>
 
-        {guarantors.length === 0 ? (
-          <p className="empty-state-text">No guarantors added. Click "+ Add Guarantor" to add one.</p>
-        ) : (
+        {guarantors.length > 0 && (
           <div className="guarantors-list">
             {guarantors.map((guarantor, index) => (
               <div key={index} className="guarantor-card">
