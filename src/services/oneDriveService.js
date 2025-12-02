@@ -1306,7 +1306,8 @@ class OneDriveService {
   /**
    * Sync Excel templates with OneDrive
    * Merges local templates with Drive templates (Drive is source of truth)
-   * FIXED: Properly handles format and preserves local templates
+   * FIXED: Only saves back to Drive if there are actual local-only templates to add
+   * This prevents duplicate creation from race conditions
    */
   async syncExcel(localTemplates) {
     try {
@@ -1319,23 +1320,29 @@ class OneDriveService {
         ? (localTemplates.templates || localTemplates)
         : {};
 
-      // Merge: Start with local templates, then overlay Drive templates
-      // Drive is source of truth, but we preserve local-only templates
-      const merged = { ...safeLocalTemplates };
+      // Merge: Start with drive templates (source of truth), then add local-only templates
+      const merged = { ...driveTemplates };
 
-      // Add/update from Drive (Drive data takes precedence)
-      for (const [id, template] of Object.entries(driveTemplates)) {
-        // Only use drive template if it has valid data
-        if (template && typeof template === 'object' && (template.name || template.fieldMappings)) {
+      // Track if we have local-only templates that need to be saved to Drive
+      let hasLocalOnlyTemplates = false;
+
+      // Add local templates that don't exist in Drive
+      for (const [id, template] of Object.entries(safeLocalTemplates)) {
+        if (!driveTemplates[id] && template && typeof template === 'object') {
+          // This template exists locally but not in Drive - add it
           merged[id] = {
-            ...merged[id], // Keep any local-only fields
-            ...template,   // Override with drive data
+            ...template,
           };
+          hasLocalOnlyTemplates = true;
         }
       }
 
-      // Save merged back to Drive (will be wrapped in { templates: {...} } format)
-      await this.saveExcelTemplates(merged);
+      // Only save back to Drive if we have local-only templates to add
+      // This prevents unnecessary writes and potential race conditions
+      if (hasLocalOnlyTemplates) {
+        await this.saveExcelTemplates(merged);
+        console.log('OneDrive: Saved local-only Excel templates to Drive');
+      }
 
       return merged;
     } catch (error) {
@@ -1355,7 +1362,8 @@ class OneDriveService {
   /**
    * Sync document templates with OneDrive
    * Merges local templates with Drive templates (Drive is source of truth)
-   * FIXED: Properly handles format and preserves local templates
+   * FIXED: Only saves back to Drive if there are actual local-only templates to add
+   * This prevents duplicate creation from race conditions
    */
   async syncDocumentTemplates(localTemplates) {
     try {
@@ -1368,24 +1376,30 @@ class OneDriveService {
         ? (localTemplates.templates || localTemplates)
         : {};
 
-      // Merge: Start with local templates, then overlay Drive templates
-      // Drive is source of truth, but we preserve local-only templates
-      const merged = { ...safeLocalTemplates };
+      // Merge: Start with drive templates (source of truth), then add local-only templates
+      const merged = { ...driveTemplates };
 
-      // Add/update from Drive (Drive data takes precedence)
-      for (const [id, template] of Object.entries(driveTemplates)) {
-        // Only use drive template if it has valid data
-        if (template && typeof template === 'object' && (template.name || template.id)) {
+      // Track if we have local-only templates that need to be saved to Drive
+      let hasLocalOnlyTemplates = false;
+
+      // Add local templates that don't exist in Drive
+      for (const [id, template] of Object.entries(safeLocalTemplates)) {
+        if (!driveTemplates[id] && template && typeof template === 'object') {
+          // This template exists locally but not in Drive - add it
           merged[id] = {
-            ...merged[id], // Keep any local-only fields
-            ...template,   // Override with drive data
-            id: id,        // Ensure ID is set
+            ...template,
+            id: id,
           };
+          hasLocalOnlyTemplates = true;
         }
       }
 
-      // Save merged back to Drive (will be wrapped in { templates: {...} } format)
-      await this.saveDocumentTemplateToDrive(merged);
+      // Only save back to Drive if we have local-only templates to add
+      // This prevents unnecessary writes and potential race conditions
+      if (hasLocalOnlyTemplates) {
+        await this.saveDocumentTemplateToDrive(merged);
+        console.log('OneDrive: Saved local-only templates to Drive');
+      }
 
       return merged;
     } catch (error) {
