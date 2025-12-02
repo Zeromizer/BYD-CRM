@@ -3,8 +3,6 @@
  *
  * Handles authentication with Microsoft identity platform using MSAL.js
  * Provides login, logout, token management, and user info retrieval.
- *
- * Equivalent to authService.js but for Microsoft/OneDrive instead of Google Drive.
  */
 
 import { PublicClientApplication, InteractionRequiredAuthError } from '@azure/msal-browser';

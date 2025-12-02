@@ -246,7 +246,7 @@ function ExcelPopulateModal({ isOpen, onClose, customer }) {
           const uploadResult = await excelService.uploadFileToDrive(file, customerFolderId, fileName);
           console.log('✅ Upload complete! File ID:', uploadResult.id);
 
-          toast.success('Excel file saved to Google Drive');
+          toast.success('Excel file saved to OneDrive');
         } catch (error) {
           console.error('❌ Error saving to Drive:', error);
           // Download if Drive save failed
@@ -385,7 +385,7 @@ function ExcelPopulateModal({ isOpen, onClose, customer }) {
                   onChange={(e) => setSaveToDrive(e.target.checked)}
                   disabled={processing}
                 />
-                <span>Save to Google Drive (customer folder)</span>
+                <span>Save to OneDrive (customer folder)</span>
               </label>
             </div>
           )}

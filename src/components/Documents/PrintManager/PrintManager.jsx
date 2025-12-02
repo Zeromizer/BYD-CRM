@@ -18,7 +18,7 @@ import './PrintManager.css';
  * - Double-sided printing with back page images (4 quarters)
  * - PDF generation with perfect quality
  * - Preview before printing
- * - Save to Google Drive
+ * - Save to OneDrive
  * - Download as PDF
  */
 function PrintManager({ isOpen, onClose, customer }) {
@@ -98,7 +98,7 @@ function PrintManager({ isOpen, onClose, customer }) {
 
   const handleProceedToImages = () => {
     if (!customer.driveFolderId) {
-      toast.warning('Customer does not have a Google Drive folder. Cannot select images.');
+      toast.warning('Customer does not have a OneDrive folder. Cannot select images.');
       return;
     }
 
@@ -118,7 +118,7 @@ function PrintManager({ isOpen, onClose, customer }) {
     }
 
     if (!isSignedIn) {
-      toast.warning('Please sign in to Google Drive to access templates');
+      toast.warning('Please sign in to OneDrive to access templates');
       return;
     }
 
@@ -284,7 +284,7 @@ function PrintManager({ isOpen, onClose, customer }) {
       await getStorageService().uploadFile(filename, blob, customerFolderId);
       console.log('✅ PDF uploaded successfully');
 
-      toast.success(`PDF saved to Google Drive: ${customer.name}`);
+      toast.success(`PDF saved to OneDrive: ${customer.name}`);
       onClose();
     } catch (err) {
       console.error('❌ Error saving to Drive:', err);
@@ -318,7 +318,7 @@ function PrintManager({ isOpen, onClose, customer }) {
 
         {!isSignedIn && (
           <div className="warning-banner">
-            ⚠️ Please sign in to Google Drive to access document templates
+            ⚠️ Please sign in to OneDrive to access document templates
           </div>
         )}
 

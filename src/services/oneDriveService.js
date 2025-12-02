@@ -2,7 +2,6 @@
  * OneDrive Service
  *
  * Handles all file operations with Microsoft OneDrive via Microsoft Graph API.
- * This is the OneDrive equivalent of driveService.js for Google Drive.
  *
  * API Reference: https://docs.microsoft.com/graph/api/resources/onedrive
  */

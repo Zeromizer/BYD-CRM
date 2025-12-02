@@ -1,51 +1,32 @@
 /**
- * Unified Storage Service Selector
+ * Storage Service - OneDrive
  *
- * This module exports the appropriate storage and auth services
- * based on the current storage provider configuration.
- *
- * Usage:
- *   import { storageService, authService } from '../services/storageServiceSelector';
- *
- * This allows seamless switching between Google Drive and OneDrive
- * without changing imports throughout the codebase.
+ * This module exports the OneDrive storage and auth services.
+ * Provides a unified interface for cloud storage operations.
  */
 
-import googleDriveService from './driveService';
 import oneDriveService from './oneDriveService';
-import googleAuthService from './authService';
 import msAuthService from './msAuthService';
-import { isUsingOneDrive } from '../config/storageConfig';
 
 /**
- * Get the appropriate storage service based on configuration
+ * Get the storage service
  */
-export const getStorageService = () => {
-  return isUsingOneDrive() ? oneDriveService : googleDriveService;
-};
+export const getStorageService = () => oneDriveService;
 
 /**
- * Get the appropriate auth service based on configuration
+ * Get the auth service
  */
-export const getAuthService = () => {
-  return isUsingOneDrive() ? msAuthService : googleAuthService;
-};
+export const getAuthService = () => msAuthService;
 
 /**
- * Export the current storage service instance
- * Note: This is evaluated at import time, so it's based on the initial config
+ * Export the storage service instance
  */
-export const storageService = isUsingOneDrive() ? oneDriveService : googleDriveService;
+export const storageService = oneDriveService;
 
 /**
- * Export the current auth service instance
+ * Export the auth service instance
  */
-export const authService = isUsingOneDrive() ? msAuthService : googleAuthService;
-
-/**
- * Check if currently using OneDrive
- */
-export { isUsingOneDrive };
+export const authService = msAuthService;
 
 // Default export for convenience
 export default {
@@ -53,5 +34,4 @@ export default {
   getAuthService,
   storageService,
   authService,
-  isUsingOneDrive,
 };

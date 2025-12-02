@@ -1,21 +1,14 @@
 import { create } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
-import googleAuthService from '../services/authService';
 import msAuthService from '../services/msAuthService';
-import driveService from '../services/driveService';
 import oneDriveService from '../services/oneDriveService';
 import userStorage from '../services/userStorage';
 import useCustomerStore from './useCustomerStore';
 import useExcelStore from './useExcelStore';
-import { isUsingOneDrive } from '../config/storageConfig';
-
-// Get the appropriate auth and drive services based on storage provider
-const getAuthService = () => isUsingOneDrive() ? msAuthService : googleAuthService;
-const getDriveService = () => isUsingOneDrive() ? oneDriveService : driveService;
 
 /**
  * Authentication Store
- * Manages authentication state for cloud storage (Google Drive or OneDrive)
+ * Manages authentication state for OneDrive cloud storage
  */
 const useAuthStore = create((set, get) => ({
   // State
@@ -52,8 +45,7 @@ const useAuthStore = create((set, get) => ({
       }
 
       // Subscribe to auth changes
-      const authService = getAuthService();
-      authService.onAuthChange(async (isSignedIn) => {
+      msAuthService.onAuthChange(async (isSignedIn) => {
         const previousSignInState = get().isSignedIn;
         const previousUserEmail = get().currentUserEmail;
         const currentDataOwner = userStorage.getCurrentDataOwner();
@@ -61,11 +53,7 @@ const useAuthStore = create((set, get) => ({
         // Get current user email if signed in (await to ensure we have it)
         let currentUserEmail = null;
         if (isSignedIn) {
-          currentUserEmail = authService.getUserEmail();
-          // If not cached, fetch it now (Google Drive only has this method)
-          if (!currentUserEmail && authService.fetchAndCacheUserEmail) {
-            currentUserEmail = await authService.fetchAndCacheUserEmail();
-          }
+          currentUserEmail = msAuthService.getUserEmail();
         }
 
         // Check if account switched (different user email)
@@ -81,7 +69,7 @@ const useAuthStore = create((set, get) => ({
           useCustomerStore.getState().clearAllData();
           useExcelStore.getState().clearAllData();
           // Clear Drive service cache to prevent using old user's folder IDs
-          getDriveService().clearCache();
+          oneDriveService.clearCache();
           // Clear the data owner since we're switching users
           userStorage.setCurrentDataOwner(null);
         }
@@ -112,10 +100,10 @@ const useAuthStore = create((set, get) => ({
       });
 
       // Initialize auth service
-      await authService.initialize();
+      await msAuthService.initialize();
 
       // Set initial state
-      const isSignedIn = authService.isSignedIn();
+      const isSignedIn = msAuthService.isSignedIn();
       set({
         isSignedIn,
         isInitialized: true,
@@ -138,7 +126,7 @@ const useAuthStore = create((set, get) => ({
   signIn: async () => {
     try {
       set({ error: null });
-      await getAuthService().signIn();
+      await msAuthService.signIn();
     } catch (error) {
       // User may have cancelled the popup - don't show error for that
       if (error !== 'popup_closed_by_user' && error?.type !== 'popup_closed') {
@@ -156,14 +144,14 @@ const useAuthStore = create((set, get) => ({
       useExcelStore.getState().clearAllData();
 
       // Clear Drive service cache
-      getDriveService().clearCache();
+      oneDriveService.clearCache();
 
       // Clear data owner tracking and user email
       userStorage.setCurrentDataOwner(null);
       userStorage.clearUserEmail();
 
       // Sign out from auth service (clears localStorage and Drive cache)
-      await getAuthService().signOut();
+      await msAuthService.signOut();
 
       // Clear auth state (including currentUserEmail for account switching detection)
       set({
@@ -181,7 +169,7 @@ const useAuthStore = create((set, get) => ({
   },
 
   getAccessToken: () => {
-    return getAuthService().getAccessToken();
+    return msAuthService.getAccessToken();
   },
 
   setFolderIds: (folderIds) => set(folderIds),
@@ -197,8 +185,8 @@ const useAuthStore = create((set, get) => ({
    */
   canLoadData: () => {
     const currentDataOwner = userStorage.getCurrentDataOwner();
-    // Check for cached user email (storage-agnostic)
-    const cachedEmail = userStorage.getUserEmail() || getAuthService().getUserEmail();
+    // Check for cached user email
+    const cachedEmail = userStorage.getUserEmail() || msAuthService.getUserEmail();
 
     // No data owner set - safe to load (fresh start or offline mode)
     if (!currentDataOwner) {

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { FolderOpen, ScanLine } from 'lucide-react';
 import useCustomerStore from '../../stores/useCustomerStore';
 import useAuthStore from '../../stores/useAuthStore';
-import { getStorageService, isUsingOneDrive } from '../../services/storageServiceSelector';
+import { getStorageService } from '../../services/storageServiceSelector';
 import Modal from '../Modal/Modal';
 import ExcelPopulateModal from '../ExcelPopulateModal/ExcelPopulateModal';
 import PrintManager from '../Documents/PrintManager/PrintManager';
@@ -572,36 +572,16 @@ function CustomerDetails() {
     setLoadingDocuments(true);
 
     try {
-      let allFiles = [];
-
-      if (isUsingOneDrive()) {
-        // OneDrive: Use storage service
-        const items = await getStorageService().listFolder(folderId);
-        allFiles = items.map(item => ({
-          id: item.id,
-          name: item.name,
-          mimeType: item.folder ? 'folder' : (item.file?.mimeType || 'application/octet-stream'),
-          size: item.size,
-          createdTime: item.createdDateTime,
-          webViewLink: item.webUrl,
-          thumbnailLink: item['@microsoft.graph.downloadUrl'],
-        }));
-      } else {
-        // Google Drive: Use GAPI
-        let pageToken = null;
-        do {
-          const response = await window.gapi.client.drive.files.list({
-            q: `'${folderId}' in parents and trashed=false`,
-            fields: 'nextPageToken, files(id, name, mimeType, size, createdTime, webViewLink, iconLink, thumbnailLink)',
-            pageSize: 1000,
-            pageToken: pageToken,
-          });
-
-          const files = response.result.files || [];
-          allFiles = allFiles.concat(files);
-          pageToken = response.result.nextPageToken;
-        } while (pageToken);
-      }
+      const items = await getStorageService().listFolder(folderId);
+      let allFiles = items.map(item => ({
+        id: item.id,
+        name: item.name,
+        mimeType: item.folder ? 'folder' : (item.file?.mimeType || 'application/octet-stream'),
+        size: item.size,
+        createdTime: item.createdDateTime,
+        webViewLink: item.webUrl,
+        thumbnailLink: item['@microsoft.graph.downloadUrl'],
+      }));
 
       // Sort folders first, then files, both alphabetically
       allFiles.sort((a, b) => {
@@ -664,13 +644,7 @@ function CustomerDetails() {
     if (!confirmDelete) return;
 
     try {
-      if (isUsingOneDrive()) {
-        await getStorageService().deleteFile(doc.id);
-      } else {
-        await window.gapi.client.drive.files.delete({
-          fileId: doc.id
-        });
-      }
+      await getStorageService().deleteFile(doc.id);
 
       // Refresh the current folder
       await loadCustomerDocuments(currentFolderId);
@@ -722,15 +696,7 @@ function CustomerDetails() {
     }
 
     try {
-      if (isUsingOneDrive()) {
-        await getStorageService().moveFile(selectedFileToMove.id, targetFolder.id);
-      } else {
-        await window.gapi.client.drive.files.update({
-          fileId: selectedFileToMove.id,
-          addParents: targetFolder.id,
-          removeParents: currentFolderId,
-        });
-      }
+      await getStorageService().moveFile(selectedFileToMove.id, targetFolder.id);
 
       await loadCustomerDocuments(currentFolderId);
       setShowFolderMenu(false);
@@ -785,16 +751,7 @@ function CustomerDetails() {
     if (!renamingItem || !renameValue.trim()) return;
 
     try {
-      if (isUsingOneDrive()) {
-        await getStorageService().renameFile(renamingItem.id, renameValue.trim());
-      } else {
-        await window.gapi.client.drive.files.update({
-          fileId: renamingItem.id,
-          resource: {
-            name: renameValue.trim()
-          }
-        });
-      }
+      await getStorageService().renameFile(renamingItem.id, renameValue.trim());
 
       // Reload documents
       const currentFolderId = folderPath.length > 0
@@ -890,15 +847,7 @@ function CustomerDetails() {
 
     try {
       // Move the file using storage service
-      if (isUsingOneDrive()) {
-        await getStorageService().moveFile(draggedFile.id, targetFolder.id);
-      } else {
-        await window.gapi.client.drive.files.update({
-          fileId: draggedFile.id,
-          addParents: targetFolder.id,
-          removeParents: currentFolderId,
-        });
-      }
+      await getStorageService().moveFile(draggedFile.id, targetFolder.id);
 
       // Refresh the current folder to show updated file list
       await loadCustomerDocuments(currentFolderId);
@@ -922,15 +871,7 @@ function CustomerDetails() {
 
     try {
       // Move the file using storage service
-      if (isUsingOneDrive()) {
-        await getStorageService().moveFile(draggedFile.id, targetFolder.id);
-      } else {
-        await window.gapi.client.drive.files.update({
-          fileId: draggedFile.id,
-          addParents: targetFolder.id,
-          removeParents: currentFolderId,
-        });
-      }
+      await getStorageService().moveFile(draggedFile.id, targetFolder.id);
 
       // Refresh the current folder to show updated file list
       await loadCustomerDocuments(currentFolderId);
@@ -1017,24 +958,9 @@ function CustomerDetails() {
           // Just delete the customer.json file, keep the folder and documents
           try {
             const fileName = 'customer.json';
-            if (isUsingOneDrive()) {
-              const customerFile = await getStorageService().findFile(customer.driveFolderId, fileName);
-              if (customerFile) {
-                await getStorageService().deleteFile(customerFile.id);
-              }
-            } else {
-              const response = await window.gapi.client.drive.files.list({
-                q: `name='${fileName}' and '${customer.driveFolderId}' in parents and trashed=false`,
-                fields: 'files(id, name)',
-                spaces: 'drive',
-              });
-
-              if (response.result.files && response.result.files.length > 0) {
-                const fileId = response.result.files[0].id;
-                await window.gapi.client.drive.files.delete({
-                  fileId: fileId
-                });
-              }
+            const customerFile = await getStorageService().findFile(customer.driveFolderId, fileName);
+            if (customerFile) {
+              await getStorageService().deleteFile(customerFile.id);
             }
           } catch {
             // Continue anyway - the customer will still be removed from the system
@@ -2414,11 +2340,11 @@ function CustomerDetails() {
             <div className="documents-section">
               {!isSignedIn ? (
                 <div className="warning-banner">
-                  <p>⚠️ Please sign in to Google Drive to view customer documents</p>
+                  <p>⚠️ Please sign in to OneDrive to view customer documents</p>
                 </div>
               ) : !customer.driveFolderId ? (
                 <div className="empty-state">
-                  <p>No Google Drive folder for this customer yet</p>
+                  <p>No OneDrive folder for this customer yet</p>
                   <p className="empty-state-hint">
                     Documents will be saved here when you generate forms or Excel files
                   </p>
@@ -2456,8 +2382,13 @@ function CustomerDetails() {
                         </button>
                         <button
                           className="breadcrumb-drive-link"
-                          onClick={() => window.open(`https://drive.google.com/drive/folders/${currentFolderId}`, '_blank')}
-                          title="Open in Google Drive"
+                          onClick={() => {
+                            const currentFolder = folderPath[folderPath.length - 1];
+                            if (currentFolder?.webViewLink) {
+                              window.open(currentFolder.webViewLink, '_blank');
+                            }
+                          }}
+                          title="Open in OneDrive"
                         >
                           📁
                         </button>
@@ -2749,11 +2680,11 @@ function CustomerDetails() {
             <div className="scanner-section">
               {!isSignedIn ? (
                 <div className="warning-banner">
-                  <p>⚠️ Please sign in to Google Drive to use the scanner</p>
+                  <p>⚠️ Please sign in to OneDrive to use the scanner</p>
                 </div>
               ) : !customer.driveFolderId ? (
                 <div className="empty-state">
-                  <p>No Google Drive folder for this customer yet</p>
+                  <p>No OneDrive folder for this customer yet</p>
                   <p className="empty-state-hint">
                     A folder will be created when you generate forms or Excel files
                   </p>
@@ -2786,7 +2717,7 @@ function CustomerDetails() {
             This action cannot be undone. All customer data will be permanently removed.
           </p>
 
-          {/* Google Drive folder deletion option */}
+          {/* OneDrive folder deletion option */}
           {isSignedIn && customer.driveFolderId && (
             <div style={{
               margin: '20px 0',
@@ -2808,7 +2739,7 @@ function CustomerDetails() {
                   style={{ marginTop: '3px' }}
                 />
                 <span style={{ flex: 1 }}>
-                  <strong>Also delete Google Drive folder and all documents</strong>
+                  <strong>Also delete OneDrive folder and all documents</strong>
                   <br />
                   <small style={{ color: '#856404' }}>
                     This will permanently delete all files including NRIC, Test Drive photos, VSA forms, etc.
