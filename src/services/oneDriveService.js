@@ -321,6 +321,32 @@ class OneDriveService {
   }
 
   /**
+   * Rename a file or folder
+   * @param {string} itemId - The file/folder ID to rename
+   * @param {string} newName - The new name for the item
+   */
+  async renameFile(itemId, newName) {
+    return this.request(`/me/drive/items/${itemId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ name: newName }),
+    });
+  }
+
+  /**
+   * Move a file or folder to a new parent
+   * @param {string} itemId - The file/folder ID to move
+   * @param {string} newParentId - The new parent folder ID
+   */
+  async moveFile(itemId, newParentId) {
+    return this.request(`/me/drive/items/${itemId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        parentReference: { id: newParentId }
+      }),
+    });
+  }
+
+  /**
    * Validate folder ID exists
    * @param {string} folderId - The folder ID to validate
    * @returns {boolean} - True if folder exists, false otherwise
