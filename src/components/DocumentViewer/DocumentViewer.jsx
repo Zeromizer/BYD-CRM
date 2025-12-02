@@ -1,10 +1,13 @@
 import { useState, useEffect, memo } from 'react';
 import Modal from '../Modal/Modal';
+import { isUsingOneDrive } from '../../config/storageConfig';
+import oneDriveService from '../../services/oneDriveService';
 import './DocumentViewer.css';
 
 const DocumentViewer = memo(function DocumentViewer({ isOpen, onClose, document }) {
   const [loading, setLoading] = useState(true);
   const [imageUrl, setImageUrl] = useState(null);
+  const [embedUrl, setEmbedUrl] = useState(null);
   const [error, setError] = useState(null);
   const [iframeLoaded, setIframeLoaded] = useState(false);
 
@@ -26,7 +29,7 @@ const DocumentViewer = memo(function DocumentViewer({ isOpen, onClose, document 
     mimeType?.includes('powerpoint') ||
     mimeType === 'application/vnd.openxmlformats-officedocument.presentationml.presentation';
 
-  // Check if file can be previewed with Google Drive embed
+  // Check if file can be previewed with embed
   const canEmbedPreview = (mimeType) => {
     return isPdfFile(mimeType) ||
            isSpreadsheet(mimeType) ||
@@ -40,6 +43,7 @@ const DocumentViewer = memo(function DocumentViewer({ isOpen, onClose, document 
       setLoading(true);
       setError(null);
       setImageUrl(null);
+      setEmbedUrl(null);
       setIframeLoaded(false);
 
       // Try to load image files directly
@@ -47,7 +51,7 @@ const DocumentViewer = memo(function DocumentViewer({ isOpen, onClose, document 
         loadImageFile();
       } else if (canEmbedPreview(document.mimeType)) {
         // For embeddable files, we'll use iframe - set loading false when iframe loads
-        setLoading(true);
+        loadEmbedUrl();
       } else {
         setLoading(false);
       }
@@ -56,30 +60,52 @@ const DocumentViewer = memo(function DocumentViewer({ isOpen, onClose, document 
 
   if (!document) return null;
 
+  // Load embed URL (different for Google Drive vs OneDrive)
+  const loadEmbedUrl = async () => {
+    if (isUsingOneDrive()) {
+      try {
+        const url = await oneDriveService.getPreviewUrl(document.id);
+        setEmbedUrl(url);
+      } catch (err) {
+        console.error('Failed to get OneDrive preview URL:', err);
+        setEmbedUrl(null);
+      }
+    } else {
+      // Google Drive embed URL
+      setEmbedUrl(`https://drive.google.com/file/d/${document.id}/preview`);
+    }
+  };
+
   const loadImageFile = async () => {
     try {
-      // Get the access token
-      const token = window.gapi.auth.getToken();
-      if (!token) {
-        throw new Error('No access token available');
-      }
+      let blob;
 
-      // Fetch the file using the Drive API download URL
-      const response = await fetch(
-        `https://www.googleapis.com/drive/v3/files/${document.id}?alt=media`,
-        {
-          headers: {
-            Authorization: `Bearer ${token.access_token}`,
-          },
+      if (isUsingOneDrive()) {
+        // OneDrive: use oneDriveService
+        blob = await oneDriveService.downloadFileAsBlob(document.id);
+      } else {
+        // Google Drive: use existing method
+        const token = window.gapi.auth.getToken();
+        if (!token) {
+          throw new Error('No access token available');
         }
-      );
 
-      if (!response.ok) {
-        throw new Error(`Failed to fetch file: ${response.status}`);
+        const response = await fetch(
+          `https://www.googleapis.com/drive/v3/files/${document.id}?alt=media`,
+          {
+            headers: {
+              Authorization: `Bearer ${token.access_token}`,
+            },
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch file: ${response.status}`);
+        }
+
+        blob = await response.blob();
       }
 
-      // Convert response to blob
-      const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       setImageUrl(url);
       setLoading(false);
@@ -94,6 +120,9 @@ const DocumentViewer = memo(function DocumentViewer({ isOpen, onClose, document 
       window.open(document.webViewLink, '_blank');
     }
   };
+
+  // Get storage provider name for UI
+  const getStorageProviderName = () => isUsingOneDrive() ? 'OneDrive' : 'Google Drive';
 
   const handleIframeLoad = () => {
     setIframeLoaded(true);
@@ -125,11 +154,6 @@ const DocumentViewer = memo(function DocumentViewer({ isOpen, onClose, document 
     return '📎';
   };
 
-  // Google Drive embed URL for preview
-  const getEmbedUrl = () => {
-    return `https://drive.google.com/file/d/${document.id}/preview`;
-  };
-
   const showEmbedPreview = canEmbedPreview(document.mimeType);
 
   return (
@@ -149,7 +173,7 @@ const DocumentViewer = memo(function DocumentViewer({ isOpen, onClose, document 
             <div className="viewer-error">
               <p>{error}</p>
               <button className="btn btn-primary" onClick={handleOpenInDrive}>
-                Open in Google Drive
+                Open in {getStorageProviderName()}
               </button>
             </div>
           )}
@@ -161,10 +185,10 @@ const DocumentViewer = memo(function DocumentViewer({ isOpen, onClose, document 
             </div>
           )}
 
-          {/* Google Drive Embed Preview (PDF, Excel, Word, etc.) */}
-          {!error && showEmbedPreview && (
+          {/* Embed Preview (PDF, Excel, Word, etc.) - Works for both Google Drive and OneDrive */}
+          {!error && showEmbedPreview && embedUrl && (
             <iframe
-              src={getEmbedUrl()}
+              src={embedUrl}
               className="document-viewer-frame"
               onLoad={handleIframeLoad}
               title={document.name}
@@ -180,10 +204,10 @@ const DocumentViewer = memo(function DocumentViewer({ isOpen, onClose, document 
               <h3>{document.name}</h3>
               <p className="file-type-label">{getFileTypeLabel()}</p>
               <p className="fallback-message">
-                Preview not available for this file type. Click below to view in Google Drive.
+                Preview not available for this file type. Click below to view in {getStorageProviderName()}.
               </p>
               <button className="btn btn-primary" onClick={handleOpenInDrive}>
-                Open in Google Drive
+                Open in {getStorageProviderName()}
               </button>
             </div>
           )}
@@ -194,7 +218,7 @@ const DocumentViewer = memo(function DocumentViewer({ isOpen, onClose, document 
           <div className="document-viewer-actions">
             <button className="btn btn-secondary" onClick={handleOpenInDrive}>
               <span className="btn-icon">↗️</span>
-              Open in Google Drive
+              Open in {getStorageProviderName()}
             </button>
           </div>
         )}

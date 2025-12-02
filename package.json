@@ -11,6 +11,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@azure/msal-browser": "^4.26.2",
     "buffer": "^6.0.3",
     "jspdf": "^3.0.4",
     "jszip": "^3.10.1",
