@@ -293,11 +293,11 @@ const DocumentItem = memo(function DocumentItem({
 
       {/* Info */}
       <div className="document-info">
-        <span className="document-name">{item.name}</span>
-        <span className="document-meta">
+        <h4>{item.name}</h4>
+        <p>
           {!itemIsFolder && formatFileSize(item.size)}
           {item.createdTime && ` • ${formatDate(item.createdTime)}`}
-        </span>
+        </p>
       </div>
 
       {/* Actions Menu */}
