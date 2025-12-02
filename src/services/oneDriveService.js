@@ -1,0 +1,686 @@
+/**
+ * OneDrive Service
+ *
+ * Handles all file operations with Microsoft OneDrive via Microsoft Graph API.
+ * This is the OneDrive equivalent of driveService.js for Google Drive.
+ *
+ * API Reference: https://docs.microsoft.com/graph/api/resources/onedrive
+ */
+
+import msAuthService from './msAuthService';
+import { ONEDRIVE_FOLDER_NAMES, ONEDRIVE_DATA_FILES } from '../config/msalConfig';
+
+const GRAPH_BASE_URL = 'https://graph.microsoft.com/v1.0';
+
+class OneDriveService {
+  constructor() {
+    // Cache folder IDs to avoid repeated lookups
+    this.folderIdCache = {};
+    this.rootFolderId = null;
+  }
+
+  // ============================================================
+  // Helper Methods
+  // ============================================================
+
+  /**
+   * Get authorization headers with current access token
+   */
+  async getHeaders(contentType = 'application/json') {
+    const token = await msAuthService.getAccessToken();
+    const headers = {
+      Authorization: `Bearer ${token}`,
+    };
+    if (contentType) {
+      headers['Content-Type'] = contentType;
+    }
+    return headers;
+  }
+
+  /**
+   * Make authenticated request to Microsoft Graph API
+   */
+  async request(endpoint, options = {}) {
+    const headers = await this.getHeaders(options.contentType);
+
+    const response = await fetch(`${GRAPH_BASE_URL}${endpoint}`, {
+      ...options,
+      headers: {
+        ...headers,
+        ...options.headers,
+      },
+    });
+
+    // Handle 204 No Content
+    if (response.status === 204) {
+      return null;
+    }
+
+    // Handle errors
+    if (!response.ok) {
+      let errorMessage = `Request failed with status ${response.status}`;
+      try {
+        const error = await response.json();
+        errorMessage = error.error?.message || errorMessage;
+      } catch {
+        // Ignore JSON parse errors
+      }
+      throw new Error(errorMessage);
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Clear cached folder IDs
+   */
+  clearCache() {
+    this.folderIdCache = {};
+    this.rootFolderId = null;
+    localStorage.removeItem('onedrive_folder_ids');
+    console.log('OneDrive cache cleared');
+  }
+
+  // ============================================================
+  // Folder Operations
+  // ============================================================
+
+  /**
+   * Get or create a folder
+   */
+  async getOrCreateFolder(parentId, folderName) {
+    const cacheKey = `${parentId}:${folderName}`;
+
+    // Check cache first
+    if (this.folderIdCache[cacheKey]) {
+      return this.folderIdCache[cacheKey];
+    }
+
+    try {
+      // Try to find existing folder
+      const parentPath = parentId === 'root'
+        ? '/me/drive/root/children'
+        : `/me/drive/items/${parentId}/children`;
+
+      const result = await this.request(`${parentPath}?$filter=name eq '${encodeURIComponent(folderName)}'`);
+
+      if (result.value && result.value.length > 0) {
+        const folder = result.value[0];
+        this.folderIdCache[cacheKey] = folder;
+        return folder;
+      }
+
+      // Create folder if not exists
+      const newFolder = await this.createFolder(parentId, folderName);
+      this.folderIdCache[cacheKey] = newFolder;
+      return newFolder;
+    } catch (error) {
+      console.error(`Error getting/creating folder "${folderName}":`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Create a new folder
+   */
+  async createFolder(parentId, folderName) {
+    const parentPath = parentId === 'root'
+      ? '/me/drive/root/children'
+      : `/me/drive/items/${parentId}/children`;
+
+    return this.request(parentPath, {
+      method: 'POST',
+      body: JSON.stringify({
+        name: folderName,
+        folder: {},
+        '@microsoft.graph.conflictBehavior': 'fail',
+      }),
+    });
+  }
+
+  /**
+   * List items in a folder
+   */
+  async listFolder(folderId) {
+    const path = folderId === 'root'
+      ? '/me/drive/root/children'
+      : `/me/drive/items/${folderId}/children`;
+
+    const result = await this.request(path);
+    return result.value || [];
+  }
+
+  /**
+   * Find a folder by name within a parent folder
+   */
+  async findFolder(parentId, folderName) {
+    const items = await this.listFolder(parentId);
+    return items.find(item => item.folder && item.name === folderName);
+  }
+
+  /**
+   * Get folder by ID
+   */
+  async getFolder(folderId) {
+    return this.request(`/me/drive/items/${folderId}`);
+  }
+
+  /**
+   * Delete a folder
+   */
+  async deleteFolder(folderId) {
+    return this.request(`/me/drive/items/${folderId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // ============================================================
+  // File Operations
+  // ============================================================
+
+  /**
+   * Upload a file (for files < 4MB)
+   */
+  async uploadFile(folderId, fileName, content, contentType = 'application/json') {
+    const path = `/me/drive/items/${folderId}:/${encodeURIComponent(fileName)}:/content`;
+    const token = await msAuthService.getAccessToken();
+
+    const body = contentType === 'application/json' && typeof content === 'object'
+      ? JSON.stringify(content)
+      : content;
+
+    const response = await fetch(`${GRAPH_BASE_URL}${path}`, {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': contentType,
+      },
+      body,
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error?.message || 'Upload failed');
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Upload file to root folder by path
+   */
+  async uploadFileToRoot(filePath, content, contentType = 'application/json') {
+    const path = `/me/drive/root:/${encodeURIComponent(filePath)}:/content`;
+    const token = await msAuthService.getAccessToken();
+
+    const body = contentType === 'application/json' && typeof content === 'object'
+      ? JSON.stringify(content)
+      : content;
+
+    const response = await fetch(`${GRAPH_BASE_URL}${path}`, {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': contentType,
+      },
+      body,
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error?.message || 'Upload failed');
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Download file content (raw response)
+   */
+  async downloadFile(fileId) {
+    const token = await msAuthService.getAccessToken();
+
+    const response = await fetch(`${GRAPH_BASE_URL}/me/drive/items/${fileId}/content`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Download failed: ${response.status}`);
+    }
+
+    return response;
+  }
+
+  /**
+   * Download file as JSON
+   */
+  async downloadFileAsJson(fileId) {
+    const response = await this.downloadFile(fileId);
+    return response.json();
+  }
+
+  /**
+   * Download file as text
+   */
+  async downloadFileAsText(fileId) {
+    const response = await this.downloadFile(fileId);
+    return response.text();
+  }
+
+  /**
+   * Download file as Blob (for images/PDFs)
+   */
+  async downloadFileAsBlob(fileId) {
+    const response = await this.downloadFile(fileId);
+    return response.blob();
+  }
+
+  /**
+   * Get file metadata
+   */
+  async getFileMetadata(fileId) {
+    return this.request(`/me/drive/items/${fileId}`);
+  }
+
+  /**
+   * Update file content
+   */
+  async updateFile(fileId, content, contentType = 'application/json') {
+    const token = await msAuthService.getAccessToken();
+
+    const body = contentType === 'application/json' && typeof content === 'object'
+      ? JSON.stringify(content)
+      : content;
+
+    const response = await fetch(`${GRAPH_BASE_URL}/me/drive/items/${fileId}/content`, {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': contentType,
+      },
+      body,
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error?.message || 'Update failed');
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Delete a file
+   */
+  async deleteFile(fileId) {
+    return this.request(`/me/drive/items/${fileId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  /**
+   * Find file by name in a folder
+   */
+  async findFile(folderId, fileName) {
+    const items = await this.listFolder(folderId);
+    return items.find(item => !item.folder && item.name === fileName);
+  }
+
+  // ============================================================
+  // Preview & Embed
+  // ============================================================
+
+  /**
+   * Get preview URL for a file (for embedding in iframe)
+   */
+  async getPreviewUrl(fileId) {
+    try {
+      const result = await this.request(`/me/drive/items/${fileId}/preview`, {
+        method: 'POST',
+        body: JSON.stringify({}),
+      });
+      return result.getUrl;
+    } catch (error) {
+      console.error('Error getting preview URL:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get thumbnail URL for an image
+   */
+  async getThumbnailUrl(fileId, size = 'medium') {
+    try {
+      const result = await this.request(`/me/drive/items/${fileId}/thumbnails`);
+      if (result.value && result.value.length > 0) {
+        return result.value[0][size]?.url;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error getting thumbnail:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Create sharing link for a file
+   */
+  async createSharingLink(fileId, type = 'view', scope = 'organization') {
+    const result = await this.request(`/me/drive/items/${fileId}/createLink`, {
+      method: 'POST',
+      body: JSON.stringify({
+        type, // 'view' or 'edit'
+        scope, // 'anonymous', 'organization', or 'users'
+      }),
+    });
+    return result.link;
+  }
+
+  // ============================================================
+  // Search
+  // ============================================================
+
+  /**
+   * Search for files in OneDrive
+   */
+  async searchFiles(query) {
+    const result = await this.request(`/me/drive/root/search(q='${encodeURIComponent(query)}')`);
+    return result.value || [];
+  }
+
+  // ============================================================
+  // CRM-Specific Methods (Matching Google Drive Structure)
+  // ============================================================
+
+  /**
+   * Initialize CRM folder structure
+   * Creates the same folder hierarchy as Google Drive
+   */
+  async initializeCrmStructure() {
+    console.log('Initializing OneDrive CRM folder structure...');
+
+    // Create root folder
+    const rootFolder = await this.getOrCreateFolder('root', ONEDRIVE_FOLDER_NAMES.ROOT);
+    this.rootFolderId = rootFolder.id;
+
+    // Create subfolders
+    const folderIds = {
+      root: rootFolder.id,
+    };
+
+    const subfolders = [
+      { key: 'customersData', name: ONEDRIVE_FOLDER_NAMES.CUSTOMERS_DATA },
+      { key: 'forms', name: ONEDRIVE_FOLDER_NAMES.FORMS },
+      { key: 'excelTemplates', name: ONEDRIVE_FOLDER_NAMES.EXCEL_TEMPLATES },
+      { key: 'documentTemplates', name: ONEDRIVE_FOLDER_NAMES.DOCUMENT_TEMPLATES },
+    ];
+
+    for (const { key, name } of subfolders) {
+      const folder = await this.getOrCreateFolder(rootFolder.id, name);
+      folderIds[key] = folder.id;
+    }
+
+    // Cache folder IDs
+    localStorage.setItem('onedrive_folder_ids', JSON.stringify(folderIds));
+    console.log('OneDrive CRM folder structure initialized:', folderIds);
+
+    return folderIds;
+  }
+
+  /**
+   * Get cached folder IDs or initialize structure
+   */
+  async getFolderIds() {
+    const cached = localStorage.getItem('onedrive_folder_ids');
+    if (cached) {
+      try {
+        return JSON.parse(cached);
+      } catch {
+        // Invalid cache, re-initialize
+      }
+    }
+    return this.initializeCrmStructure();
+  }
+
+  // ============================================================
+  // Customer Data Operations
+  // ============================================================
+
+  /**
+   * Save customer index
+   */
+  async saveCustomerIndex(indexData) {
+    const folderIds = await this.getFolderIds();
+    return this.uploadFile(
+      folderIds.root,
+      ONEDRIVE_DATA_FILES.CUSTOMERS_INDEX,
+      indexData
+    );
+  }
+
+  /**
+   * Load customer index
+   */
+  async loadCustomerIndex() {
+    const folderIds = await this.getFolderIds();
+    const file = await this.findFile(folderIds.root, ONEDRIVE_DATA_FILES.CUSTOMERS_INDEX);
+
+    if (!file) {
+      return { customers: [], lastModified: null };
+    }
+
+    return this.downloadFileAsJson(file.id);
+  }
+
+  /**
+   * Create customer folder
+   */
+  async createCustomerFolder(customerId) {
+    const folderIds = await this.getFolderIds();
+    return this.getOrCreateFolder(folderIds.customersData, customerId);
+  }
+
+  /**
+   * Save customer data
+   */
+  async saveCustomer(customer) {
+    const folderIds = await this.getFolderIds();
+
+    // Create customer folder
+    const customerFolder = await this.getOrCreateFolder(folderIds.customersData, customer.id);
+
+    // Save customer.json
+    await this.uploadFile(customerFolder.id, ONEDRIVE_DATA_FILES.CUSTOMER_DETAILS, customer);
+
+    // Update customer index
+    const index = await this.loadCustomerIndex();
+    const existingIdx = index.customers?.findIndex(c => c.id === customer.id) ?? -1;
+
+    const customerSummary = {
+      id: customer.id,
+      name: customer.name || '',
+      phone: customer.phone || '',
+      email: customer.email || '',
+      lastModified: new Date().toISOString(),
+      folderId: customerFolder.id,
+    };
+
+    if (existingIdx >= 0) {
+      index.customers[existingIdx] = customerSummary;
+    } else {
+      index.customers = index.customers || [];
+      index.customers.push(customerSummary);
+    }
+
+    index.lastModified = new Date().toISOString();
+    await this.saveCustomerIndex(index);
+
+    return customerFolder;
+  }
+
+  /**
+   * Load customer data
+   */
+  async loadCustomer(customerId) {
+    const folderIds = await this.getFolderIds();
+
+    // Find customer folder
+    const customerFolder = await this.findFolder(folderIds.customersData, customerId);
+    if (!customerFolder) {
+      return null;
+    }
+
+    // Load customer.json
+    const customerFile = await this.findFile(customerFolder.id, ONEDRIVE_DATA_FILES.CUSTOMER_DETAILS);
+    if (!customerFile) {
+      return null;
+    }
+
+    return this.downloadFileAsJson(customerFile.id);
+  }
+
+  /**
+   * Delete customer
+   */
+  async deleteCustomer(customerId) {
+    const folderIds = await this.getFolderIds();
+
+    // Delete customer folder
+    const customerFolder = await this.findFolder(folderIds.customersData, customerId);
+    if (customerFolder) {
+      await this.deleteFolder(customerFolder.id);
+    }
+
+    // Update index
+    const index = await this.loadCustomerIndex();
+    index.customers = (index.customers || []).filter(c => c.id !== customerId);
+    index.lastModified = new Date().toISOString();
+    await this.saveCustomerIndex(index);
+  }
+
+  /**
+   * Create document subfolder for customer
+   */
+  async createCustomerDocumentFolder(customerId, subfolderName) {
+    const folderIds = await this.getFolderIds();
+    const customerFolder = await this.getOrCreateFolder(folderIds.customersData, customerId);
+    return this.getOrCreateFolder(customerFolder.id, subfolderName);
+  }
+
+  // ============================================================
+  // Template Operations
+  // ============================================================
+
+  /**
+   * Save form templates
+   */
+  async saveFormTemplates(templates) {
+    const folderIds = await this.getFolderIds();
+    return this.uploadFile(folderIds.root, ONEDRIVE_DATA_FILES.FORMS, templates);
+  }
+
+  /**
+   * Load form templates
+   */
+  async loadFormTemplates() {
+    const folderIds = await this.getFolderIds();
+    const file = await this.findFile(folderIds.root, ONEDRIVE_DATA_FILES.FORMS);
+
+    if (!file) {
+      return { templates: {} };
+    }
+
+    return this.downloadFileAsJson(file.id);
+  }
+
+  /**
+   * Save Excel templates
+   */
+  async saveExcelTemplates(templates) {
+    const folderIds = await this.getFolderIds();
+    return this.uploadFile(folderIds.root, ONEDRIVE_DATA_FILES.EXCEL, templates);
+  }
+
+  /**
+   * Load Excel templates
+   */
+  async loadExcelTemplates() {
+    const folderIds = await this.getFolderIds();
+    const file = await this.findFile(folderIds.root, ONEDRIVE_DATA_FILES.EXCEL);
+
+    if (!file) {
+      return { templates: {} };
+    }
+
+    return this.downloadFileAsJson(file.id);
+  }
+
+  /**
+   * Upload template file (PDF/image)
+   */
+  async uploadTemplateFile(folderKey, fileName, blob, mimeType) {
+    const folderIds = await this.getFolderIds();
+    const folderId = folderIds[folderKey] || folderIds.forms;
+
+    const token = await msAuthService.getAccessToken();
+    const path = `/me/drive/items/${folderId}:/${encodeURIComponent(fileName)}:/content`;
+
+    const response = await fetch(`${GRAPH_BASE_URL}${path}`, {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': mimeType,
+      },
+      body: blob,
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error?.message || 'Template upload failed');
+    }
+
+    return response.json();
+  }
+
+  // ============================================================
+  // Image Operations (for document rendering)
+  // ============================================================
+
+  /**
+   * Fetch image from OneDrive as blob
+   * Used by documentRenderer for form templates
+   */
+  async fetchImageAsBlob(fileId) {
+    return this.downloadFileAsBlob(fileId);
+  }
+
+  /**
+   * List all images in a folder recursively
+   */
+  async listAllImagesRecursively(folderId) {
+    const images = [];
+
+    const processFolder = async (currentFolderId) => {
+      const items = await this.listFolder(currentFolderId);
+
+      for (const item of items) {
+        if (item.folder) {
+          // Recurse into subfolders
+          await processFolder(item.id);
+        } else if (item.file?.mimeType?.startsWith('image/')) {
+          images.push(item);
+        }
+      }
+    };
+
+    await processFolder(folderId);
+    return images;
+  }
+}
+
+// Create singleton instance
+const oneDriveService = new OneDriveService();
+
+export default oneDriveService;
