@@ -972,6 +972,100 @@ class OneDriveService {
   }
 
   /**
+   * Import customers from OneDrive folders
+   * Scans the BYD Customers Data folder and reads customer.json from each subfolder
+   * @returns {Object} - { customers: Array, imported: number, errors: Array }
+   */
+  async importCustomersFromFolders() {
+    console.log('OneDrive: Importing customers from folders...');
+    const customers = [];
+    const errors = [];
+    let imported = 0;
+
+    try {
+      const folderIds = await this.getFolderIds();
+      const customersDataFolderId = folderIds.customersData;
+
+      if (!customersDataFolderId) {
+        throw new Error('Customers data folder not found');
+      }
+
+      // List all folders in the customers data folder
+      const items = await this.listFolder(customersDataFolderId);
+      const customerFolders = items.filter(item => item.folder);
+
+      console.log(`OneDrive: Found ${customerFolders.length} customer folders`);
+
+      // Process each folder
+      for (const folder of customerFolders) {
+        try {
+          // Try to find and read customer.json
+          const customerFile = await this.findFile(folder.id, ONEDRIVE_DATA_FILES.CUSTOMER_DETAILS);
+
+          if (customerFile) {
+            const customerData = await this.downloadFileAsJson(customerFile.id);
+
+            // Add folder reference to customer data
+            const customer = {
+              ...customerData,
+              driveFolderId: folder.id,
+              driveFolderLink: folder.webUrl,
+            };
+
+            customers.push(customer);
+            imported++;
+            console.log(`OneDrive: Imported customer "${customer.name || folder.name}" from folder`);
+          } else {
+            console.warn(`OneDrive: No customer.json found in folder "${folder.name}"`);
+            errors.push({ folder: folder.name, error: 'No customer.json file found' });
+          }
+        } catch (error) {
+          console.error(`OneDrive: Error reading folder "${folder.name}":`, error);
+          errors.push({ folder: folder.name, error: error.message });
+        }
+      }
+
+      console.log(`OneDrive: Import complete - imported: ${imported}, errors: ${errors.length}`);
+      return { customers, imported, errors };
+    } catch (error) {
+      console.error('OneDrive: Import failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Rebuild customers index from OneDrive folders
+   * Imports all customers from folders and updates the index
+   * @returns {Object} - { customers: Array, results: { imported, errors } }
+   */
+  async rebuildCustomersIndexFromFolders() {
+    console.log('OneDrive: Rebuilding customers index from folders...');
+
+    // Import all customers from folders
+    const { customers, imported, errors } = await this.importCustomersFromFolders();
+
+    if (customers.length > 0) {
+      // Build index entries
+      const indexEntries = customers.map(customer => ({
+        id: customer.id,
+        name: customer.name || '',
+        phone: customer.phone || '',
+        email: customer.email || '',
+        vsaNo: customer.vsaNo || '',
+        driveFolderId: customer.driveFolderId,
+        driveFolderLink: customer.driveFolderLink,
+        lastModified: customer.lastModified || new Date().toISOString(),
+      }));
+
+      // Save the new index
+      await this.saveCustomersIndex(indexEntries);
+      console.log(`OneDrive: Saved index with ${indexEntries.length} customers`);
+    }
+
+    return { customers, results: { imported, errors: errors.length } };
+  }
+
+  /**
    * Get or create document templates folder
    */
   async getOrCreateDocumentTemplatesFolder() {
