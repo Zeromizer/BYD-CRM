@@ -1,4 +1,4 @@
-import { getAuthService, getStorageService, isUsingOneDrive } from './storageServiceSelector';
+import { getStorageService } from './storageServiceSelector';
 
 /**
  * DocumentRenderer - Unified Canvas Renderer for Print-First Design
@@ -30,39 +30,14 @@ class DocumentRenderer {
   }
 
   /**
-   * Fetch image from cloud storage (Google Drive or OneDrive)
+   * Fetch image from OneDrive storage
    */
   async fetchImageFromDrive(fileId) {
     try {
-      if (isUsingOneDrive()) {
-        // OneDrive: Use storage service to download file as blob
-        const blob = await getStorageService().downloadFileAsBlob(fileId);
-        return blob;
-      } else {
-        // Google Drive: Use traditional fetch with auth token
-        const token = getAuthService().getAccessToken();
-        if (!token) {
-          throw new Error('No access token available. Please sign in.');
-        }
-
-        const response = await fetch(
-          `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error(`Failed to fetch image: ${response.status}`);
-        }
-
-        const blob = await response.blob();
-        return blob;
-      }
+      const blob = await getStorageService().downloadFileAsBlob(fileId);
+      return blob;
     } catch (error) {
-      console.error('Error fetching image from Drive:', error);
+      console.error('Error fetching image from OneDrive:', error);
       throw error;
     }
   }
@@ -199,7 +174,7 @@ class DocumentRenderer {
   /**
    * Render back page with 4 images in quarters (for double-sided forms)
    *
-   * @param {Array} imageFileIds - Array of up to 4 Google Drive file IDs for images
+   * @param {Array} imageFileIds - Array of up to 4 OneDrive file IDs for images
    * @param {Object} options - Rendering options (width, height, dpi)
    * @returns {Object} - Rendered canvas and data URL
    */

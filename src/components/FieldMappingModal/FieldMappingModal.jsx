@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import useAuthStore from '../../stores/useAuthStore';
-import { getAuthService, getStorageService, isUsingOneDrive } from '../../services/storageServiceSelector';
+import { getStorageService } from '../../services/storageServiceSelector';
 import Modal from '../Modal/Modal';
 import './FieldMappingModal.css';
 
@@ -189,44 +189,16 @@ function FieldMappingModal({ isOpen, onClose, formType, template, onSave }) {
     }
 
     if (!isSignedIn) {
-      alert('Please sign in to Google Drive first to configure form fields.');
+      alert('Please sign in to OneDrive first to configure form fields.');
       return;
     }
 
     setLoading(true);
 
     try {
-      console.log('Loading form image from Drive:', template.fileId);
+      console.log('Loading form image from OneDrive:', template.fileId);
 
-      let blob;
-      if (isUsingOneDrive()) {
-        // OneDrive: Use storage service
-        blob = await getStorageService().downloadFileAsBlob(template.fileId);
-      } else {
-        // Google Drive: Use traditional fetch with auth token
-        const token = getAuthService().getAccessToken();
-
-        if (!token) {
-          throw new Error('No access token available. Please sign in again.');
-        }
-
-        const response = await fetch(
-          `https://www.googleapis.com/drive/v3/files/${template.fileId}?alt=media`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('Drive API error:', response.status, errorText);
-          throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
-        }
-
-        blob = await response.blob();
-      }
+      const blob = await getStorageService().downloadFileAsBlob(template.fileId);
 
       const url = URL.createObjectURL(blob);
       setImageUrl(url);

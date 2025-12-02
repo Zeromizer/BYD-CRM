@@ -4,7 +4,7 @@ import documentRenderer from '../../../services/documentRenderer';
 import './ImageSelector.css';
 
 /**
- * ImageSelector - Select images from customer's Google Drive folder
+ * ImageSelector - Select images from customer's OneDrive folder
  *
  * Used for selecting up to 4 images for the back page of double-sided forms
  */
@@ -83,7 +83,7 @@ function ImageSelector({ customerFolderId, selectedImages = [], onSelectionChang
     return (
       <div className="image-selector-empty">
         <p>No images found in customer folder</p>
-        <p className="hint">Upload images to the customer's Google Drive folder first</p>
+        <p className="hint">Upload images to the customer's OneDrive folder first</p>
       </div>
     );
   }

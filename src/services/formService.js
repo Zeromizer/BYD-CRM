@@ -1,4 +1,4 @@
-import authService from './authService';
+import { getStorageService } from './storageServiceSelector';
 
 /**
  * Escape HTML special characters to prevent XSS
@@ -117,25 +117,11 @@ class FormService {
   }
 
   /**
-   * Fetch form image from Google Drive
+   * Fetch form image from OneDrive
    */
   async fetchFormImage(fileId) {
     try {
-      const token = authService.getAccessToken();
-      const response = await fetch(
-        `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch image from Drive');
-      }
-
-      const blob = await response.blob();
+      const blob = await getStorageService().downloadFileAsBlob(fileId);
 
       // Convert blob to base64
       return new Promise((resolve, reject) => {
@@ -147,7 +133,7 @@ class FormService {
         reader.readAsDataURL(blob);
       });
     } catch (error) {
-      console.error('Error fetching form image from Drive:', error);
+      console.error('Error fetching form image from OneDrive:', error);
       throw error;
     }
   }
@@ -313,7 +299,7 @@ class FormService {
         </style>
       </head>
       <body>
-        <button class="print-btn no-print" onclick="window.print()">🖨️ Print Form</button>
+        <button class="print-btn no-print" onclick="window.print()">Print Form</button>
         <div class="page">
           <img src="${renderedFormBase64}" alt="${safeFormName}">
         </div>

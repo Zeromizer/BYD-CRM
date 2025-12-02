@@ -10,7 +10,6 @@ import {
   TEXT_ALIGNMENTS,
 } from '../../../services/fieldMapper';
 import documentRenderer from '../../../services/documentRenderer';
-import authService from '../../../services/authService';
 import './FormEditor.css';
 
 /**

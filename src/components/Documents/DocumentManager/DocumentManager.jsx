@@ -14,7 +14,7 @@ import './DocumentManager.css';
  * - View and manage existing templates
  * - Configure field mappings
  * - Delete templates
- * - Sync with Google Drive
+ * - Sync with OneDrive
  */
 function DocumentManager() {
   const {

@@ -9,7 +9,7 @@ import { getDefaultChecklistState } from '../constants/milestones';
  * Manages customer data, selection, and CRUD operations
  *
  * Multi-user support: Data is stored per-user using email-based keys
- * Syncs with cloud storage (Google Drive or OneDrive) when signed in
+ * Syncs with OneDrive cloud storage when signed in
  */
 const useCustomerStore = create((set, get) => ({
   // State
@@ -53,7 +53,7 @@ const useCustomerStore = create((set, get) => ({
   },
 
   /**
-   * Add customer and create Google Drive folder structure
+   * Add customer and create OneDrive folder structure
    * SIMPLIFIED: Create folder FIRST, then add customer WITH folder IDs
    */
   addCustomerWithFolder: async (customerData, isSignedIn) => {
@@ -324,7 +324,7 @@ const useCustomerStore = create((set, get) => ({
   },
 
   /**
-   * Sync customers from Google Drive to localStorage (HYBRID)
+   * Sync customers from OneDrive to localStorage (HYBRID)
    */
   syncFromDrive: async (isSignedIn) => {
     // Use hybrid sync method
@@ -332,7 +332,7 @@ const useCustomerStore = create((set, get) => ({
   },
 
   /**
-   * Save customers to both localStorage and Google Drive (HYBRID)
+   * Save customers to both localStorage and OneDrive (HYBRID)
    */
   syncToDrive: async (isSignedIn) => {
     // Always save to localStorage
@@ -409,7 +409,7 @@ const useCustomerStore = create((set, get) => ({
   /**
    * Repair customer folder references after folder deletion/restoration
    *
-   * @param {boolean} isSignedIn - Whether user is signed in to Google Drive
+   * @param {boolean} isSignedIn - Whether user is signed in to OneDrive
    * @param {boolean} forceRescan - If true, skip validation and always search by name
    */
   repairCustomerFolders: async (isSignedIn, forceRescan = false) => {
