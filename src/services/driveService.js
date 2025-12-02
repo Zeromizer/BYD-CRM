@@ -1759,31 +1759,132 @@ class DriveService {
 
   /**
    * Sync document templates: merge localStorage and Drive data
-   * Drive is source of truth, but local-only templates are uploaded
+   * Includes deduplication and conflict resolution for multi-device sync
+   *
+   * FIXES for multi-device sync issues:
+   * 1. Deduplication: Detects templates with same name but different IDs (keeps the newer one)
+   * 2. Conflict resolution: When same ID exists with different content, keeps the newer version
+   * 3. Prevents unnecessary writes to avoid race conditions
    */
   async syncDocumentTemplates(localTemplates) {
     try {
       const driveTemplates = await this.loadDocumentTemplatesFromDrive();
 
-      // Merge: Drive is source of truth, add any local-only templates
-      const merged = { ...driveTemplates };
+      // Ensure localTemplates is an object
+      const safeLocalTemplates = localTemplates && typeof localTemplates === 'object'
+        ? localTemplates
+        : {};
 
-      // Add local templates that don't exist in Drive and queue them for sync
-      const localOnlyTemplates = [];
-      Object.entries(localTemplates).forEach(([id, template]) => {
-        if (!driveTemplates[id]) {
-          merged[id] = template;
-          localOnlyTemplates.push(template);
+      // Step 1: Build a name-to-templates map for deduplication
+      const templatesByName = new Map();
+
+      // First, add all Drive templates to the map
+      for (const [id, template] of Object.entries(driveTemplates)) {
+        if (template && typeof template === 'object' && template.name) {
+          const name = template.name.toLowerCase().trim();
+          if (!templatesByName.has(name)) {
+            templatesByName.set(name, []);
+          }
+          templatesByName.get(name).push({ id, template, source: 'drive' });
         }
-      });
+      }
 
-      // Upload local-only templates to Drive
-      for (const template of localOnlyTemplates) {
+      // Then, add local templates to the map
+      for (const [id, template] of Object.entries(safeLocalTemplates)) {
+        if (template && typeof template === 'object' && template.name) {
+          const name = template.name.toLowerCase().trim();
+          if (!templatesByName.has(name)) {
+            templatesByName.set(name, []);
+          }
+          const existing = templatesByName.get(name);
+          if (!existing.some(t => t.id === id)) {
+            templatesByName.get(name).push({ id, template, source: 'local' });
+          }
+        }
+      }
+
+      // Step 2: Deduplicate and merge - keep only the newest version for each name
+      const merged = {};
+      const templatesToUpload = [];
+      const templatesToDelete = [];
+      const deduplicatedIds = new Set();
+
+      for (const [name, templates] of templatesByName.entries()) {
+        if (templates.length === 1) {
+          const { id, template, source } = templates[0];
+          merged[id] = { ...template, id };
+          if (source === 'local' && !driveTemplates[id]) {
+            templatesToUpload.push(merged[id]);
+          }
+        } else {
+          // Multiple templates with same name - keep the newest one
+          let newest = templates[0];
+          for (const t of templates.slice(1)) {
+            const newestTime = new Date(newest.template.updatedAt || newest.template.createdAt || 0).getTime();
+            const currentTime = new Date(t.template.updatedAt || t.template.createdAt || 0).getTime();
+
+            if (currentTime > newestTime) {
+              deduplicatedIds.add(newest.id);
+              if (driveTemplates[newest.id]) {
+                templatesToDelete.push(newest.id);
+              }
+              newest = t;
+            } else {
+              deduplicatedIds.add(t.id);
+              if (driveTemplates[t.id]) {
+                templatesToDelete.push(t.id);
+              }
+            }
+          }
+
+          merged[newest.id] = { ...newest.template, id: newest.id };
+          if (newest.source === 'local' && !driveTemplates[newest.id]) {
+            templatesToUpload.push(merged[newest.id]);
+          }
+
+          console.log(`GoogleDrive: Deduplicating template "${name}" - keeping ${newest.id}`);
+        }
+      }
+
+      // Step 3: Add any remaining local-only templates
+      for (const [id, template] of Object.entries(safeLocalTemplates)) {
+        if (!driveTemplates[id] && !merged[id] && !deduplicatedIds.has(id) && template && typeof template === 'object') {
+          merged[id] = { ...template, id };
+          templatesToUpload.push(merged[id]);
+        }
+      }
+
+      // Step 4: Check for templates with same ID but newer local content
+      for (const [id, localTemplate] of Object.entries(safeLocalTemplates)) {
+        if (driveTemplates[id] && merged[id]) {
+          const driveTime = new Date(driveTemplates[id].updatedAt || driveTemplates[id].createdAt || 0).getTime();
+          const localTime = new Date(localTemplate.updatedAt || localTemplate.createdAt || 0).getTime();
+
+          if (localTime > driveTime) {
+            merged[id] = { ...localTemplate, id };
+            templatesToUpload.push(merged[id]);
+            console.log(`GoogleDrive: Local template ${id} is newer, updating Drive`);
+          }
+        }
+      }
+
+      // Upload local-only or newer templates to Drive
+      for (const template of templatesToUpload) {
         try {
           await this.saveDocumentTemplateToDrive(template);
-          console.log(`Synced local document template to Drive: ${template.id}`);
+          console.log(`Synced document template to Drive: ${template.id}`);
         } catch (error) {
-          console.error(`Failed to sync local template ${template.id} to Drive:`, error);
+          console.error(`Failed to sync template ${template.id} to Drive:`, error);
+        }
+      }
+
+      // Delete duplicates from Drive
+      for (const templateId of templatesToDelete) {
+        try {
+          await this.deleteDocumentTemplateFromDrive(templateId);
+          console.log(`Deleted duplicate template from Drive: ${templateId}`);
+        } catch (error) {
+          console.error(`Failed to delete duplicate template ${templateId}:`, error);
         }
       }
 
@@ -1791,7 +1892,6 @@ class DriveService {
       return merged;
     } catch (error) {
       console.error('Failed to sync document templates:', error);
-      // Return local templates as fallback (same pattern as forms/excel)
       return localTemplates;
     }
   }
