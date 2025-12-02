@@ -691,9 +691,14 @@ class OneDriveService {
   async createCustomerFolderStructure(customerName, customerId) {
     const folderIds = await this.getFolderIds();
 
-    // Create customer folder using customer ID as folder name
-    const folderName = `${customerId}`;
-    const customerFolder = await this.getOrCreateFolder(folderIds.customersData, folderName);
+    // Create customer folder using customer name
+    // Sanitize name to remove characters not allowed in folder names
+    const sanitizedName = (customerName || customerId)
+      .replace(/[<>:"/\\|?*]/g, '') // Remove invalid characters
+      .replace(/\s+/g, ' ')          // Normalize spaces
+      .trim()
+      || customerId;                 // Fallback to ID if name is empty
+    const customerFolder = await this.getOrCreateFolder(folderIds.customersData, sanitizedName);
 
     // Create subfolders
     const subfolders = ONEDRIVE_FOLDER_NAMES.DOCUMENT_SUBFOLDERS || [];
