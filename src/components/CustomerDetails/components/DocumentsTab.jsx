@@ -1,0 +1,327 @@
+import { memo, useCallback, useState } from 'react';
+import { isFolder, isImage, getFileIcon } from '../../../utils/fileHelpers';
+import { formatFileSize, formatDate } from '../../../utils/formatters';
+import Modal from '../../Modal/Modal';
+
+/**
+ * DocumentsTab - Customer documents browser with drag-drop support
+ */
+function DocumentsTab({
+  documents,
+  loadingDocuments,
+  currentFolderId,
+  folderPath,
+  isSignedIn,
+  hasDriveFolder,
+  // Document actions
+  onLoadDocuments,
+  onNavigateToFolder,
+  onNavigateToBreadcrumb,
+  onItemClick,
+  onDeleteDocument,
+  onMoveDocument,
+  onRenameDocument,
+  onOpenInDrive,
+  // Drag and drop props
+  draggedFile,
+  dropTargetFolder,
+  dropTargetBreadcrumb,
+  isDragMode,
+  onDragStart,
+  onDragEnd,
+  onDragOver,
+  onDragLeave,
+  onDrop,
+  onBreadcrumbDragOver,
+  onBreadcrumbDragLeave,
+  onBreadcrumbDrop,
+  // Touch menu props
+  onTouchStart,
+  onTouchMove,
+  onTouchEnd,
+}) {
+  // Desktop context menu state
+  const [openMenuId, setOpenMenuId] = useState(null);
+  const [showRenameModal, setShowRenameModal] = useState(false);
+  const [renamingItem, setRenamingItem] = useState(null);
+  const [renameValue, setRenameValue] = useState('');
+
+  // Handle context menu toggle
+  const handleMenuToggle = useCallback((e, item) => {
+    e.stopPropagation();
+    setOpenMenuId(openMenuId === item.id ? null : item.id);
+  }, [openMenuId]);
+
+  // Handle rename
+  const handleRename = useCallback((item) => {
+    setRenamingItem(item);
+    setRenameValue(item.name);
+    setShowRenameModal(true);
+    setOpenMenuId(null);
+  }, []);
+
+  const handleRenameSubmit = useCallback(async () => {
+    if (renamingItem && renameValue.trim()) {
+      await onRenameDocument(renamingItem, renameValue.trim());
+      setShowRenameModal(false);
+      setRenamingItem(null);
+      setRenameValue('');
+    }
+  }, [renamingItem, renameValue, onRenameDocument]);
+
+  // Handle delete from menu
+  const handleDelete = useCallback((item) => {
+    setOpenMenuId(null);
+    onDeleteDocument(item);
+  }, [onDeleteDocument]);
+
+  // Close menu when clicking outside
+  const handleCloseMenu = useCallback(() => {
+    setOpenMenuId(null);
+  }, []);
+
+  // Not signed in state
+  if (!isSignedIn) {
+    return (
+      <div className="tab-content documents-tab">
+        <div className="empty-state">
+          <p>Please sign in to OneDrive to view customer documents</p>
+        </div>
+      </div>
+    );
+  }
+
+  // No drive folder state
+  if (!hasDriveFolder) {
+    return (
+      <div className="tab-content documents-tab">
+        <div className="empty-state">
+          <p>No OneDrive folder for this customer yet</p>
+          <p className="empty-state-hint">A folder will be created when you save the customer.</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="tab-content documents-tab" onClick={handleCloseMenu}>
+      {/* Breadcrumb Navigation */}
+      {folderPath.length > 0 && (
+        <div className="breadcrumb-nav">
+          <div className="breadcrumb-items">
+            {folderPath.map((folder, index) => (
+              <span
+                key={folder.id}
+                className={`breadcrumb-item ${index === folderPath.length - 1 ? 'active' : ''} ${dropTargetBreadcrumb === index ? 'drop-target' : ''}`}
+                onClick={() => index < folderPath.length - 1 && onNavigateToBreadcrumb(index)}
+                onDragOver={(e) => onBreadcrumbDragOver(e, index)}
+                onDragLeave={onBreadcrumbDragLeave}
+                onDrop={(e) => onBreadcrumbDrop(e, folder)}
+              >
+                {index > 0 && <span className="breadcrumb-separator">/</span>}
+                {folder.name}
+              </span>
+            ))}
+          </div>
+          <div className="breadcrumb-actions">
+            <button
+              className="breadcrumb-refresh"
+              onClick={() => onLoadDocuments(currentFolderId)}
+              title="Refresh folder contents"
+              disabled={loadingDocuments}
+            >
+              {loadingDocuments ? '⟳' : '🔄'}
+            </button>
+            <button
+              className="breadcrumb-drive-link"
+              onClick={onOpenInDrive}
+              title="Open in OneDrive"
+            >
+              📁
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Loading State */}
+      {loadingDocuments ? (
+        <div className="loading-state">
+          <div className="loading"></div>
+          <p>Loading documents...</p>
+        </div>
+      ) : documents.length === 0 ? (
+        <div className="empty-state">
+          <p>No documents found</p>
+          <p className="empty-state-hint">Documents you generate will appear here</p>
+        </div>
+      ) : (
+        <div className="documents-list">
+          {documents.map((item) => (
+            <DocumentItem
+              key={item.id}
+              item={item}
+              isMenuOpen={openMenuId === item.id}
+              isDropTarget={dropTargetFolder === item.id}
+              isDragging={draggedFile?.id === item.id}
+              onItemClick={onItemClick}
+              onMenuToggle={handleMenuToggle}
+              onRename={handleRename}
+              onDelete={handleDelete}
+              onDragStart={onDragStart}
+              onDragEnd={onDragEnd}
+              onDragOver={onDragOver}
+              onDragLeave={onDragLeave}
+              onDrop={onDrop}
+              onTouchStart={onTouchStart}
+              onTouchMove={onTouchMove}
+              onTouchEnd={onTouchEnd}
+            />
+          ))}
+
+          {/* Trash Drop Zone (visible during drag) */}
+          {isDragMode && (
+            <div
+              className="trash-drop-zone"
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                if (draggedFile) {
+                  onDeleteDocument(draggedFile);
+                  onDragEnd();
+                }
+              }}
+            >
+              🗑️ Drop here to delete
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Rename Modal */}
+      <Modal
+        isOpen={showRenameModal}
+        onClose={() => {
+          setShowRenameModal(false);
+          setRenamingItem(null);
+          setRenameValue('');
+        }}
+        title="Rename"
+        size="small"
+      >
+        <div className="rename-modal">
+          <input
+            type="text"
+            value={renameValue}
+            onChange={(e) => setRenameValue(e.target.value)}
+            autoFocus
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleRenameSubmit();
+              if (e.key === 'Escape') setShowRenameModal(false);
+            }}
+          />
+          <div className="modal-actions">
+            <button
+              className="btn btn-secondary"
+              onClick={() => setShowRenameModal(false)}
+            >
+              Cancel
+            </button>
+            <button className="btn btn-primary" onClick={handleRenameSubmit}>
+              Rename
+            </button>
+          </div>
+        </div>
+      </Modal>
+    </div>
+  );
+}
+
+/**
+ * DocumentItem - Individual file/folder row
+ */
+const DocumentItem = memo(function DocumentItem({
+  item,
+  isMenuOpen,
+  isDropTarget,
+  isDragging,
+  onItemClick,
+  onMenuToggle,
+  onRename,
+  onDelete,
+  onDragStart,
+  onDragEnd,
+  onDragOver,
+  onDragLeave,
+  onDrop,
+  onTouchStart,
+  onTouchMove,
+  onTouchEnd,
+}) {
+  const itemIsFolder = isFolder(item.mimeType);
+  const itemIsImage = isImage(item.mimeType);
+  const isProtected = item.name === 'customer.json';
+
+  const handleClick = useCallback(() => {
+    onItemClick(item);
+  }, [item, onItemClick]);
+
+  return (
+    <div
+      className={`document-item ${itemIsFolder ? 'folder' : 'file'} ${isDropTarget ? 'drop-target' : ''} ${isDragging ? 'dragging' : ''}`}
+      draggable={!isProtected}
+      onClick={handleClick}
+      onDragStart={(e) => onDragStart(e, item)}
+      onDragEnd={onDragEnd}
+      onDragOver={(e) => itemIsFolder && onDragOver(e, item)}
+      onDragLeave={onDragLeave}
+      onDrop={(e) => itemIsFolder && onDrop(e, item)}
+      onTouchStart={(e) => onTouchStart(e, item)}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+    >
+      {/* Icon/Thumbnail */}
+      <div className="document-icon">
+        {itemIsImage && item.thumbnailLink ? (
+          <img src={item.thumbnailLink} alt={item.name} className="thumbnail" />
+        ) : (
+          <span className="icon">{getFileIcon(item.mimeType)}</span>
+        )}
+      </div>
+
+      {/* Info */}
+      <div className="document-info">
+        <span className="document-name">{item.name}</span>
+        <span className="document-meta">
+          {!itemIsFolder && formatFileSize(item.size)}
+          {item.createdTime && ` • ${formatDate(item.createdTime)}`}
+        </span>
+      </div>
+
+      {/* Actions Menu */}
+      {!isProtected && (
+        <div className="document-actions">
+          <button
+            className="menu-toggle"
+            onClick={(e) => onMenuToggle(e, item)}
+          >
+            ⋮
+          </button>
+
+          {isMenuOpen && (
+            <div className="context-menu" onClick={(e) => e.stopPropagation()}>
+              <button onClick={() => onRename(item)}>Rename</button>
+              <button className="danger" onClick={() => onDelete(item)}>
+                Delete
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+});
+
+export default memo(DocumentsTab);
