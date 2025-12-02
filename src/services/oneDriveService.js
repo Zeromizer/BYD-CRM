@@ -678,6 +678,200 @@ class OneDriveService {
     await processFolder(folderId);
     return images;
   }
+
+  // ============================================================
+  // Compatibility Methods (matching Google Drive service API)
+  // ============================================================
+
+  /**
+   * Create customer folder structure
+   * Matches Google Drive service API
+   */
+  async createCustomerFolderStructure(customerName, customerId) {
+    const folderIds = await this.getFolderIds();
+
+    // Create customer folder using customer ID as folder name
+    const folderName = `${customerId}`;
+    const customerFolder = await this.getOrCreateFolder(folderIds.customersData, folderName);
+
+    // Create subfolders
+    const subfolders = ONEDRIVE_FOLDER_NAMES.DOCUMENT_SUBFOLDERS || [];
+    for (const subfolder of subfolders) {
+      await this.getOrCreateFolder(customerFolder.id, subfolder);
+    }
+
+    return {
+      folderId: customerFolder.id,
+      folderUrl: customerFolder.webUrl || null,
+    };
+  }
+
+  /**
+   * Load customers index (alias for loadCustomerIndex)
+   */
+  async loadCustomersIndex() {
+    const result = await this.loadCustomerIndex();
+    // Return array format expected by stores
+    return result.customers || [];
+  }
+
+  /**
+   * Save customers index (alias for saveCustomerIndex)
+   */
+  async saveCustomersIndex(indexData) {
+    return this.saveCustomerIndex({ customers: indexData, lastModified: new Date().toISOString() });
+  }
+
+  /**
+   * Save customer data to folder
+   */
+  async saveCustomerData(customer, folderId) {
+    return this.uploadFile(folderId, ONEDRIVE_DATA_FILES.CUSTOMER_DETAILS, customer);
+  }
+
+  /**
+   * Load customer data from folder
+   */
+  async loadCustomerData(customerId, folderId) {
+    try {
+      const customerFile = await this.findFile(folderId, ONEDRIVE_DATA_FILES.CUSTOMER_DETAILS);
+      if (!customerFile) {
+        return null;
+      }
+      return this.downloadFileAsJson(customerFile.id);
+    } catch (error) {
+      console.error('Failed to load customer data:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Check if migration is needed
+   * For OneDrive, we don't need migration (fresh start)
+   */
+  async checkMigrationNeeded() {
+    return false;
+  }
+
+  /**
+   * Migrate to hybrid structure
+   * For OneDrive, this is a no-op since we start fresh
+   */
+  async migrateToHybridStructure(customers) {
+    return {
+      success: true,
+      customers,
+      results: { migrated: 0, skipped: customers.length },
+    };
+  }
+
+  /**
+   * Repair customer folder references
+   * Stub for compatibility
+   */
+  async repairCustomerFolderReferences(customers, forceRescan = false) {
+    return {
+      customers,
+      results: { repaired: 0, failed: 0 },
+    };
+  }
+
+  /**
+   * Create missing customer folders
+   * Stub for compatibility
+   */
+  async createMissingCustomerFolders(customers) {
+    const updatedCustomers = [];
+    let created = 0;
+    const errors = [];
+
+    for (const customer of customers) {
+      if (!customer.driveFolderId) {
+        try {
+          const folderInfo = await this.createCustomerFolderStructure(customer.name, customer.id);
+          updatedCustomers.push({
+            ...customer,
+            driveFolderId: folderInfo.folderId,
+            driveFolderLink: folderInfo.folderUrl,
+          });
+          created++;
+        } catch (error) {
+          errors.push({ id: customer.id, error: error.message });
+          updatedCustomers.push(customer);
+        }
+      } else {
+        updatedCustomers.push(customer);
+      }
+    }
+
+    return { customers: updatedCustomers, created, errors };
+  }
+
+  /**
+   * Get or create document templates folder
+   */
+  async getOrCreateDocumentTemplatesFolder() {
+    const folderIds = await this.getFolderIds();
+    return { id: folderIds.documentTemplates };
+  }
+
+  /**
+   * Save document templates to Drive
+   */
+  async saveDocumentTemplateToDrive(templates) {
+    const folderIds = await this.getFolderIds();
+    return this.uploadFile(folderIds.root, 'document_templates.json', templates);
+  }
+
+  /**
+   * Load document templates from Drive
+   */
+  async loadDocumentTemplatesFromDrive() {
+    const folderIds = await this.getFolderIds();
+    const file = await this.findFile(folderIds.root, 'document_templates.json');
+
+    if (!file) {
+      return { templates: {} };
+    }
+
+    return this.downloadFileAsJson(file.id);
+  }
+
+  /**
+   * Get or create Excel templates folder
+   */
+  async getOrCreateExcelTemplatesFolder() {
+    const folderIds = await this.getFolderIds();
+    return { id: folderIds.excelTemplates };
+  }
+
+  /**
+   * Save Excel templates to Drive
+   */
+  async saveExcelTemplatesToDrive(templates) {
+    return this.saveExcelTemplates(templates);
+  }
+
+  /**
+   * Load Excel templates from Drive
+   */
+  async loadExcelTemplatesFromDrive() {
+    return this.loadExcelTemplates();
+  }
+
+  /**
+   * Upload file to Drive (generic method used by various stores)
+   */
+  async uploadFileToDrive(folderId, fileName, content, mimeType = 'application/json') {
+    return this.uploadFile(folderId, fileName, content, mimeType);
+  }
+
+  /**
+   * List files in folder (alias for listFolder)
+   */
+  async listFilesInFolder(folderId) {
+    return this.listFolder(folderId);
+  }
 }
 
 // Create singleton instance

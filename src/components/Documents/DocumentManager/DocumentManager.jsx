@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import useDocumentStore from '../../../stores/useDocumentStore';
 import useAuthStore from '../../../stores/useAuthStore';
-import driveService from '../../../services/driveService';
+import { getStorageService } from '../../../services/storageServiceSelector';
 import FormEditor from '../FormEditor/FormEditor';
 import Modal from '../../Modal/Modal';
 import './DocumentManager.css';
@@ -107,7 +107,7 @@ function DocumentManager() {
 
     try {
       // Upload file to Google Drive (use the correct folder inside BYD CRM root)
-      const folderId = await driveService.getOrCreateDocumentTemplatesFolder();
+      const folderId = await getStorageService().getOrCreateDocumentTemplatesFolder();
 
       // Generate unique filename
       const timestamp = Date.now();
@@ -117,7 +117,7 @@ function DocumentManager() {
 
       setUploadProgress(30);
 
-      const fileId = await driveService.uploadFile(
+      const fileId = await getStorageService().uploadFile(
         filename,
         uploadingFile,
         folderId
@@ -194,7 +194,7 @@ function DocumentManager() {
     try {
       const template = templates[currentTemplateId];
       // Use the correct folder inside BYD CRM root
-      const folderId = await driveService.getOrCreateDocumentTemplatesFolder();
+      const folderId = await getStorageService().getOrCreateDocumentTemplatesFolder();
 
       // Delete old file if exists
       if (template.fileId) {
@@ -214,7 +214,7 @@ function DocumentManager() {
       }`;
 
       // Upload new file
-      const fileId = await driveService.uploadFile(
+      const fileId = await getStorageService().uploadFile(
         filename,
         masterFileToUpload,
         folderId

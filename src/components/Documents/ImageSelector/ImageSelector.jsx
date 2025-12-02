@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import driveService from '../../../services/driveService';
+import { getStorageService } from '../../../services/storageServiceSelector';
 import documentRenderer from '../../../services/documentRenderer';
 import './ImageSelector.css';
 
@@ -26,7 +26,7 @@ function ImageSelector({ customerFolderId, selectedImages = [], onSelectionChang
 
     try {
       // Recursively list all images from customer folder and all subfolders
-      const imageFiles = await driveService.listAllImagesRecursively(customerFolderId);
+      const imageFiles = await getStorageService().listAllImagesRecursively(customerFolderId);
 
       console.log(`Found ${imageFiles.length} images in customer folder (including subfolders)`);
       setImages(imageFiles);

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Plus } from 'lucide-react';
 import useCustomerStore from '../../stores/useCustomerStore';
 import useAuthStore from '../../stores/useAuthStore';
-import driveService from '../../services/driveService';
+import { getStorageService } from '../../services/storageServiceSelector';
 import Modal from '../Modal/Modal';
 import CustomerForm from '../CustomerForm/CustomerForm';
 import { MILESTONES, isMilestoneComplete } from '../../constants/milestones';
@@ -74,7 +74,7 @@ function CustomerList() {
 
       // Prepare NRIC uploads
       if (scannedIDImages.front || scannedIDImages.back) {
-        const nricFolderPromise = driveService.getOrCreateFolder('NRIC', customer.driveFolderId);
+        const nricFolderPromise = getStorageService().getOrCreateFolder('NRIC', customer.driveFolderId);
 
         uploadPromises.push(
           nricFolderPromise.then(async (nricFolderId) => {
@@ -94,7 +94,7 @@ function CustomerList() {
 
       // Prepare License uploads (in parallel with NRIC)
       if (scannedIDImages.licenseFront || scannedIDImages.licenseBack) {
-        const licenseFolderPromise = driveService.getOrCreateFolder('Driving License', customer.driveFolderId);
+        const licenseFolderPromise = getStorageService().getOrCreateFolder('Driving License', customer.driveFolderId);
 
         uploadPromises.push(
           licenseFolderPromise.then(async (licenseFolderId) => {

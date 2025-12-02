@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import driveService from '../services/driveService';
+import { getStorageService } from '../services/storageServiceSelector';
 
 /**
  * Document Store - State management for document templates
@@ -84,7 +84,7 @@ const useDocumentStore = create((set, get) => ({
       };
 
       // Use driveService method which ensures correct folder location
-      await driveService.saveDocumentTemplateToDrive(templateData);
+      await getStorageService().saveDocumentTemplateToDrive(templateData);
     } catch (error) {
       throw error;
     }
@@ -221,7 +221,7 @@ const useDocumentStore = create((set, get) => ({
 
       // Delete from Google Drive
       try {
-        await driveService.deleteDocumentTemplateFromDrive(templateId);
+        await getStorageService().deleteDocumentTemplateFromDrive(templateId);
       } catch {
         // Don't throw - local deletion succeeded, Drive deletion is best-effort
       }
@@ -287,7 +287,7 @@ const useDocumentStore = create((set, get) => ({
       set({ loading: true, error: null });
 
       // Use driveService to load templates (ensures correct folder location)
-      const templates = await driveService.loadDocumentTemplatesFromDrive();
+      const templates = await getStorageService().loadDocumentTemplatesFromDrive();
 
       set({ templates, loading: false });
       get().saveToLocalStorage(templates);
@@ -303,7 +303,7 @@ const useDocumentStore = create((set, get) => ({
    * Sync templates with Google Drive
    * IMPORTANT: Loads from localStorage first before syncing to prevent data loss
    * This is the primary sync function that should be called on app init
-   * Uses driveService.syncDocumentTemplates for consistent behavior with forms/excel
+   * Uses getStorageService().syncDocumentTemplates for consistent behavior with forms/excel
    */
   syncWithDrive: async () => {
     try {
@@ -317,7 +317,7 @@ const useDocumentStore = create((set, get) => ({
       const localTemplates = get().templates;
 
       // Use driveService for sync (ensures correct folder location in BYD_CRM_Data)
-      const mergedTemplates = await driveService.syncDocumentTemplates(localTemplates);
+      const mergedTemplates = await getStorageService().syncDocumentTemplates(localTemplates);
 
       // Update state and localStorage
       set({
