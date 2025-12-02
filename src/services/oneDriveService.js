@@ -366,13 +366,14 @@ class OneDriveService {
 
   /**
    * Create sharing link for a file
+   * Note: Personal accounts only support 'anonymous' scope
    */
-  async createSharingLink(fileId, type = 'view', scope = 'organization') {
+  async createSharingLink(fileId, type = 'view', scope = 'anonymous') {
     const result = await this.request(`/me/drive/items/${fileId}/createLink`, {
       method: 'POST',
       body: JSON.stringify({
         type, // 'view' or 'edit'
-        scope, // 'anonymous', 'organization', or 'users'
+        scope, // 'anonymous' for personal accounts (organization not supported)
       }),
     });
     return result.link;

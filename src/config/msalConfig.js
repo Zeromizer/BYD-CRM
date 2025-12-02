@@ -3,8 +3,12 @@
  *
  * Azure AD Application Registration Details:
  * - Application (client) ID: f902f47e-96c8-4d40-9824-db1dd5fe11b7
- * - Directory (tenant) ID: 9362e654-80ce-4843-bc69-1cbc12803829
- * - Primary domain: shawnlycgmail.onmicrosoft.com
+ *
+ * PERSONAL ACCOUNTS ONLY:
+ * Using "consumers" authority to allow only personal Microsoft accounts
+ * (outlook.com, hotmail.com, live.com, personal accounts)
+ *
+ * This does NOT require SharePoint Online license - uses personal OneDrive storage.
  */
 
 // Determine redirect URI based on environment
@@ -25,9 +29,10 @@ export const msalConfig = {
     // Your Azure AD Application (client) ID
     clientId: 'f902f47e-96c8-4d40-9824-db1dd5fe11b7',
 
-    // Single tenant - only your organization
-    // Format: https://login.microsoftonline.com/{tenant-id}
-    authority: 'https://login.microsoftonline.com/9362e654-80ce-4843-bc69-1cbc12803829',
+    // PERSONAL ACCOUNTS ONLY - uses "consumers" authority
+    // This allows personal Microsoft accounts (outlook.com, hotmail.com, live.com, etc.)
+    // Does NOT require SharePoint Online license
+    authority: 'https://login.microsoftonline.com/consumers',
 
     // Redirect URI - must match what's registered in Azure portal
     redirectUri: getRedirectUri(),
@@ -62,12 +67,12 @@ export const msalConfig = {
   },
 };
 
-// Scopes for Microsoft Graph API - OneDrive access
+// Scopes for Microsoft Graph API - OneDrive Personal access
+// Note: Personal accounts only need Files.ReadWrite (not Files.ReadWrite.All)
 export const loginRequest = {
   scopes: [
-    'User.Read',           // Read user profile
-    'Files.ReadWrite',     // Read and write user's files
-    'Files.ReadWrite.All', // Read and write all files user can access
+    'User.Read',       // Read user profile
+    'Files.ReadWrite', // Read and write user's OneDrive files
   ],
 };
 
