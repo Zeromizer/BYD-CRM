@@ -65,10 +65,16 @@ const DocumentViewer = memo(function DocumentViewer({ isOpen, onClose, document 
     if (isUsingOneDrive()) {
       try {
         const url = await oneDriveService.getPreviewUrl(document.id);
-        setEmbedUrl(url);
+        if (url) {
+          setEmbedUrl(url);
+        } else {
+          // Preview not available, show fallback
+          setLoading(false);
+        }
       } catch (err) {
         console.error('Failed to get OneDrive preview URL:', err);
         setEmbedUrl(null);
+        setLoading(false);
       }
     } else {
       // Google Drive embed URL
