@@ -188,7 +188,7 @@ export function useDocumentManager(customer, isSignedIn, toast) {
 /**
  * Hook for drag and drop document operations
  */
-export function useDragDrop(moveDocument, currentFolderId, refresh, toast) {
+export function useDragDrop(moveDocument) {
   const [draggedFile, setDraggedFile] = useState(null);
   const [dropTargetFolder, setDropTargetFolder] = useState(null);
   const [dropTargetBreadcrumb, setDropTargetBreadcrumb] = useState(null);
@@ -290,23 +290,27 @@ export function useDragDrop(moveDocument, currentFolderId, refresh, toast) {
 
 /**
  * Hook for mobile touch menu operations
+ * Supports long-press to show action menu with Move, Delete, Rename options
  */
 export function useTouchMenu() {
+  const [showActionMenu, setShowActionMenu] = useState(false);
   const [showFolderMenu, setShowFolderMenu] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const longPressTimerRef = useRef(null);
 
   const handleTouchStart = useCallback((e, item) => {
-    // Prevent dragging customer.json files
+    // Prevent actions on protected files
     if (item.name === 'customer.json') {
       return;
     }
 
-    e.preventDefault();
-
     longPressTimerRef.current = setTimeout(() => {
+      // Trigger haptic feedback if available
+      if (navigator.vibrate) {
+        navigator.vibrate(50);
+      }
       setSelectedFile(item);
-      setShowFolderMenu(true);
+      setShowActionMenu(true);
     }, 500);
   }, []);
 
@@ -324,18 +328,33 @@ export function useTouchMenu() {
     }
   }, []);
 
-  const closeMenu = useCallback(() => {
+  const closeActionMenu = useCallback(() => {
+    setShowActionMenu(false);
+    setSelectedFile(null);
+  }, []);
+
+  const closeAllMenus = useCallback(() => {
+    setShowActionMenu(false);
     setShowFolderMenu(false);
     setSelectedFile(null);
   }, []);
 
+  // Action handlers
+  const handleMoveAction = useCallback(() => {
+    setShowActionMenu(false);
+    setShowFolderMenu(true);
+  }, []);
+
   return {
+    showActionMenu,
     showFolderMenu,
     selectedFile,
     handleTouchStart,
     handleTouchMove,
     handleTouchEnd,
-    closeMenu,
+    closeActionMenu,
+    closeAllMenus,
+    handleMoveAction,
     setShowFolderMenu,
     setSelectedFile,
   };
