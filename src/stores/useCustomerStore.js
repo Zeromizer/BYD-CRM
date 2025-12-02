@@ -563,36 +563,38 @@ const useCustomerStore = create((set, get) => ({
       // Load index from Drive (lightweight, fast)
       let driveIndex = await getStorageService().loadCustomersIndex();
 
-      // If index is empty, try to import from folders (OneDrive only)
-      if (driveIndex.length === 0 && isUsingOneDrive()) {
-        console.log('Index is empty, attempting to import customers from OneDrive folders...');
+      // OneDrive: Check if we need to import from folders
+      // This handles cases where customers were manually uploaded to OneDrive
+      if (isUsingOneDrive()) {
         try {
-          const importResult = await getStorageService().rebuildCustomersIndexFromFolders();
-          if (importResult.customers.length > 0) {
-            console.log(`Imported ${importResult.customers.length} customers from OneDrive folders`);
-            // Update driveIndex with imported customers
-            driveIndex = importResult.customers.map(c => ({
-              id: c.id,
-              name: c.name || '',
-              phone: c.phone || '',
-              email: c.email || '',
-              vsaNo: c.vsaNo || '',
-              driveFolderId: c.driveFolderId,
-              driveFolderLink: c.driveFolderLink,
-              lastModified: c.lastModified || new Date().toISOString(),
-            }));
-            // Also set the full customer data since we already have it
-            set({ customers: importResult.customers });
-            get().saveToLocalStorage();
-            set({ isSyncing: false });
-            return;
+          // Get the folder IDs and list customer folders
+          const folderIds = await getStorageService().getFolderIds(true);
+          if (folderIds.customersData) {
+            const items = await getStorageService().listFolder(folderIds.customersData);
+            const customerFolders = items.filter(item => item.folder);
+
+            console.log(`OneDrive: Found ${customerFolders.length} folders, index has ${driveIndex.length} entries`);
+
+            // If there are more folders than index entries, import missing ones
+            if (customerFolders.length > driveIndex.length) {
+              console.log('OneDrive: More folders than index entries, importing from folders...');
+              const importResult = await getStorageService().rebuildCustomersIndexFromFolders();
+              if (importResult.customers.length > 0) {
+                console.log(`Imported ${importResult.customers.length} customers from OneDrive folders`);
+                // Use the imported customers directly
+                set({ customers: importResult.customers });
+                get().saveToLocalStorage();
+                set({ isSyncing: false });
+                return;
+              }
+            }
           }
         } catch (importError) {
-          console.error('Failed to import from folders:', importError);
+          console.error('Failed to check/import from folders:', importError);
         }
       }
 
-      // If index is still empty, we're done
+      // If index is empty, we're done
       if (driveIndex.length === 0) {
         set({ customers: [] });
         get().saveToLocalStorage();
