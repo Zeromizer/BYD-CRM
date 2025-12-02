@@ -639,10 +639,21 @@ const useCustomerStore = create((set, get) => ({
       const customer = currentCustomers.find(c => c.id === indexEntry.id);
 
       // Check if customer has full data (has more than just index fields)
-      const hasFullData = customer && (
-        customer.phone || customer.email || customer.nric ||
-        customer.vsa_makeModel || customer.proposal_model
+      // FIX: Must check for BOTH basic details AND VSA/Proposal data
+      // Previously used OR conditions, which meant having just phone/email
+      // would skip loading VSA/Proposal data from Drive
+      const hasBasicDetails = customer && (
+        customer.phone || customer.email || customer.nric
       );
+      const hasVsaData = customer && (
+        customer.vsa_makeModel || customer.vsa_variant || customer.vsa_color
+      );
+      const hasProposalData = customer && (
+        customer.proposal_model || customer.proposal_variant || customer.proposal_color
+      );
+      // Only consider data "full" if we have basic details AND at least VSA or Proposal data
+      // This ensures we always try to load complete data from Drive if VSA/Proposal is missing
+      const hasFullData = hasBasicDetails && (hasVsaData || hasProposalData);
 
       // NEW: Check if Drive has newer data than local
       const driveModified = indexEntry.lastModified ? new Date(indexEntry.lastModified).getTime() : 0;
