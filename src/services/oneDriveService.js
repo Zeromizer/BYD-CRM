@@ -323,16 +323,40 @@ class OneDriveService {
   /**
    * Validate folder ID exists
    * @param {string} folderId - The folder ID to validate
-   * @returns {boolean} - True if folder exists
-   * @throws {Error} - If folder doesn't exist
+   * @returns {boolean} - True if folder exists, false otherwise
    */
   async validateFolderId(folderId) {
     try {
       await this.request(`/me/drive/items/${folderId}`);
       return true;
-    } catch (error) {
-      throw new Error(`Folder ${folderId} not found`);
+    } catch {
+      return false;
     }
+  }
+
+  /**
+   * Batch validate multiple folder IDs efficiently
+   * @param {string[]} folderIds - Array of folder IDs to validate
+   * @returns {Map<string, boolean>} - Map of folderId -> isValid
+   */
+  async batchValidateFolderIds(folderIds) {
+    const results = new Map();
+    const uniqueIds = [...new Set(folderIds.filter(id => id && id !== 'root'))];
+
+    // Validate in parallel with a concurrency limit
+    const BATCH_SIZE = 5;
+    for (let i = 0; i < uniqueIds.length; i += BATCH_SIZE) {
+      const batch = uniqueIds.slice(i, i + BATCH_SIZE);
+      const batchResults = await Promise.all(
+        batch.map(async (id) => {
+          const isValid = await this.validateFolderId(id);
+          return [id, isValid];
+        })
+      );
+      batchResults.forEach(([id, isValid]) => results.set(id, isValid));
+    }
+
+    return results;
   }
 
   /**
@@ -447,12 +471,27 @@ class OneDriveService {
 
   /**
    * Get cached folder IDs or initialize structure
+   * @param {boolean} skipValidation - Skip validation for performance (use during warmup)
    */
-  async getFolderIds() {
+  async getFolderIds(skipValidation = false) {
     const cached = localStorage.getItem('onedrive_folder_ids');
     if (cached) {
       try {
-        return JSON.parse(cached);
+        const folderIds = JSON.parse(cached);
+
+        // Skip validation if requested (for faster cold start)
+        if (skipValidation) {
+          return folderIds;
+        }
+
+        // Validate the root folder ID exists (quick check)
+        if (folderIds.root) {
+          const rootValid = await this.validateFolderId(folderIds.root);
+          if (rootValid) {
+            return folderIds;
+          }
+          console.warn('OneDrive: Cached root folder ID is invalid, reinitializing...');
+        }
       } catch {
         // Invalid cache, re-initialize
       }
@@ -749,16 +788,39 @@ class OneDriveService {
 
   /**
    * Load customer data from folder
+   * @param {string} customerId - Customer ID for logging
+   * @param {string} folderId - OneDrive folder ID containing customer data
+   * @returns {Object|null} - Customer data or null if not found/error
    */
   async loadCustomerData(customerId, folderId) {
+    // Handle missing folder ID
+    if (!folderId) {
+      console.warn(`loadCustomerData: No folder ID provided for customer ${customerId}`);
+      return null;
+    }
+
     try {
+      // First validate the folder exists
+      const folderExists = await this.validateFolderId(folderId);
+      if (!folderExists) {
+        console.warn(`loadCustomerData: Folder ${folderId} not found for customer ${customerId} - folder may have been deleted or moved`);
+        // Return a special marker to indicate folder needs repair
+        return { _folderNotFound: true, customerId, folderId };
+      }
+
       const customerFile = await this.findFile(folderId, ONEDRIVE_DATA_FILES.CUSTOMER_DETAILS);
       if (!customerFile) {
+        console.warn(`loadCustomerData: Customer file not found in folder ${folderId} for customer ${customerId}`);
         return null;
       }
       return this.downloadFileAsJson(customerFile.id);
     } catch (error) {
-      console.error('Failed to load customer data:', error);
+      // Check for 404 errors specifically
+      if (error.message?.includes('404') || error.message?.includes('not found') || error.message?.includes('could not be found')) {
+        console.warn(`loadCustomerData: 404 error for customer ${customerId}, folder ${folderId} - ${error.message}`);
+        return { _folderNotFound: true, customerId, folderId };
+      }
+      console.error(`Failed to load customer data for ${customerId}:`, error);
       return null;
     }
   }
@@ -785,13 +847,71 @@ class OneDriveService {
 
   /**
    * Repair customer folder references
-   * Stub for compatibility
+   * Validates existing folder IDs and recreates folders for customers with invalid references
+   * @param {Array} customers - Array of customer objects
+   * @param {boolean} forceRescan - Force re-validation of all folder IDs
+   * @returns {Object} - { customers: updatedCustomers, results: { repaired, failed, skipped } }
    */
   async repairCustomerFolderReferences(customers, forceRescan = false) {
-    return {
-      customers,
-      results: { repaired: 0, failed: 0 },
-    };
+    console.log('OneDrive: Repairing customer folder references...');
+    const results = { repaired: 0, failed: 0, skipped: 0 };
+    const updatedCustomers = [];
+
+    // Collect folder IDs to validate
+    const customerFolderIds = customers
+      .filter(c => c.driveFolderId)
+      .map(c => c.driveFolderId);
+
+    // Batch validate all folder IDs
+    const validationResults = await this.batchValidateFolderIds(customerFolderIds);
+
+    for (const customer of customers) {
+      // Skip customers without folder IDs - they'll be handled by createMissingCustomerFolders
+      if (!customer.driveFolderId) {
+        updatedCustomers.push(customer);
+        results.skipped++;
+        continue;
+      }
+
+      // Check if folder ID is valid
+      const isValid = validationResults.get(customer.driveFolderId);
+
+      if (isValid && !forceRescan) {
+        // Folder exists, keep as is
+        updatedCustomers.push(customer);
+        results.skipped++;
+        continue;
+      }
+
+      // Folder doesn't exist - recreate it
+      try {
+        console.log(`OneDrive: Recreating folder for customer ${customer.id} (${customer.name})`);
+        const folderInfo = await this.createCustomerFolderStructure(customer.name, customer.id);
+
+        // Save customer data to the new folder
+        await this.saveCustomerData(customer, folderInfo.folderId);
+
+        updatedCustomers.push({
+          ...customer,
+          driveFolderId: folderInfo.folderId,
+          driveFolderLink: folderInfo.folderUrl,
+        });
+        results.repaired++;
+        console.log(`OneDrive: Repaired folder for customer ${customer.id}`);
+      } catch (error) {
+        console.error(`OneDrive: Failed to repair folder for customer ${customer.id}:`, error);
+        // Keep the customer but clear the invalid folder ID
+        updatedCustomers.push({
+          ...customer,
+          driveFolderId: null,
+          driveFolderLink: null,
+        });
+        results.failed++;
+      }
+    }
+
+    console.log(`OneDrive: Repair complete - repaired: ${results.repaired}, failed: ${results.failed}, skipped: ${results.skipped}`);
+    return { customers: updatedCustomers, results };
   }
 
   /**
@@ -896,12 +1016,31 @@ class OneDriveService {
   // ============================================================
 
   /**
-   * Warmup - preload all folder IDs in parallel
+   * Warmup - preload and validate folder IDs
    * Called by syncCoordinator before sync operations
+   * Validates that cached folder IDs are still valid, reinitializes if not
    */
   async warmup() {
     console.log('OneDrive warmup: preloading folder IDs...');
-    await this.getFolderIds();
+
+    // Get folder IDs with validation (will reinitialize if root folder is invalid)
+    const folderIds = await this.getFolderIds(false); // false = validate
+
+    // Validate all critical folder IDs exist
+    const criticalFolders = ['root', 'customersData'];
+    const foldersToValidate = criticalFolders
+      .filter(key => folderIds[key])
+      .map(key => folderIds[key]);
+
+    const validationResults = await this.batchValidateFolderIds(foldersToValidate);
+    const allValid = foldersToValidate.every(id => validationResults.get(id));
+
+    if (!allValid) {
+      console.warn('OneDrive warmup: Some critical folders are invalid, reinitializing...');
+      this.clearCache();
+      await this.initializeCrmStructure();
+    }
+
     console.log('OneDrive warmup complete');
   }
 

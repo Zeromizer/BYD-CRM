@@ -654,6 +654,10 @@ const useCustomerStore = create((set, get) => ({
         );
 
         if (fullData) {
+          // Check if folder was not found (needs repair)
+          if (fullData._folderNotFound) {
+            return { id: indexEntry.id, needsRepair: true, indexEntry };
+          }
           return { id: indexEntry.id, data: fullData };
         } else {
           return null;
@@ -666,18 +670,68 @@ const useCustomerStore = create((set, get) => ({
     // Wait for all customers to load in parallel
     const results = await Promise.all(loadPromises);
 
+    // Separate successful loads from those needing repair
+    const customersNeedingRepair = [];
+
     // Apply all loaded data to customers array
     for (const result of results) {
       if (result) {
-        currentCustomers = currentCustomers.map(c =>
-          c.id === result.id ? result.data : c
-        );
+        if (result.needsRepair) {
+          // Mark customer for repair
+          customersNeedingRepair.push(result.indexEntry);
+        } else if (result.data) {
+          currentCustomers = currentCustomers.map(c =>
+            c.id === result.id ? result.data : c
+          );
+        }
       }
     }
 
     // Update state once with all loaded data
     set({ customers: currentCustomers });
     get().saveToLocalStorage();
+
+    // Repair customers with missing folders (in background)
+    if (customersNeedingRepair.length > 0) {
+      console.warn(`Found ${customersNeedingRepair.length} customers with missing folders, triggering repair...`);
+
+      // Find the full customer objects that need repair
+      const customersToRepair = currentCustomers.filter(c =>
+        customersNeedingRepair.some(entry => entry.id === c.id)
+      );
+
+      if (customersToRepair.length > 0) {
+        try {
+          const repairResult = await getStorageService().repairCustomerFolderReferences(customersToRepair, false);
+          if (repairResult.results.repaired > 0) {
+            // Update customers with repaired folder IDs
+            let updatedCustomers = get().customers;
+            for (const repairedCustomer of repairResult.customers) {
+              updatedCustomers = updatedCustomers.map(c =>
+                c.id === repairedCustomer.id ? { ...c, driveFolderId: repairedCustomer.driveFolderId, driveFolderLink: repairedCustomer.driveFolderLink } : c
+              );
+            }
+            set({ customers: updatedCustomers });
+            get().saveToLocalStorage();
+
+            // Update the index with repaired folder IDs
+            const index = await getStorageService().loadCustomersIndex();
+            const updatedIndex = index.map(entry => {
+              const repaired = repairResult.customers.find(c => c.id === entry.id);
+              if (repaired && repaired.driveFolderId) {
+                return { ...entry, driveFolderId: repaired.driveFolderId, driveFolderLink: repaired.driveFolderLink };
+              }
+              return entry;
+            });
+            await getStorageService().saveCustomersIndex(updatedIndex);
+
+            console.log(`Repaired ${repairResult.results.repaired} customer folders`);
+          }
+        } catch (repairError) {
+          console.error('Failed to repair customer folders:', repairError);
+        }
+      }
+    }
   },
 
   /**
