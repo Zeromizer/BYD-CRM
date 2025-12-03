@@ -18,6 +18,19 @@ import { ONEDRIVE_DATA_FILES } from '../config/msalConfig';
 
 const STORAGE_KEY_PREFIX = 'bydCRM_todos_';
 
+// Counter to ensure unique IDs even within same millisecond
+let todoIdCounter = 0;
+
+// Generate unique todo ID
+function generateTodoId() {
+  const timestamp = Date.now();
+  todoIdCounter = (todoIdCounter + 1) % 1000;
+  return timestamp * 1000 + todoIdCounter;
+}
+
+// Debounce timer for sync
+let syncDebounceTimer = null;
+
 // Get user-specific storage key
 function getTodoStorageKey(email) {
   if (!email) return 'bydCRM_todos_local';
@@ -74,7 +87,7 @@ const useTodoStore = create((set, get) => ({
   // Add a new todo
   addTodo: async (todoData, email, isSignedIn = false) => {
     const newTodo = {
-      id: Date.now(),
+      id: generateTodoId(), // Use unique ID generator to prevent collisions
       text: todoData.text || '',
       completed: false,
       priority: todoData.priority || 'medium',
@@ -92,9 +105,9 @@ const useTodoStore = create((set, get) => ({
       return { todos: newTodos };
     });
 
-    // Sync to Drive if signed in
+    // Sync to Drive if signed in (debounced via scheduleSyncToDrive)
     if (isSignedIn) {
-      get().syncToDrive();
+      get().scheduleSyncToDrive();
     }
 
     return newTodo;
@@ -112,9 +125,9 @@ const useTodoStore = create((set, get) => ({
       return { todos: newTodos };
     });
 
-    // Sync to Drive if signed in
+    // Sync to Drive if signed in (debounced)
     if (isSignedIn) {
-      get().syncToDrive();
+      get().scheduleSyncToDrive();
     }
   },
 
@@ -130,9 +143,9 @@ const useTodoStore = create((set, get) => ({
       return { todos: newTodos };
     });
 
-    // Sync to Drive if signed in
+    // Sync to Drive if signed in (debounced)
     if (isSignedIn) {
-      get().syncToDrive();
+      get().scheduleSyncToDrive();
     }
   },
 
@@ -144,9 +157,9 @@ const useTodoStore = create((set, get) => ({
       return { todos: newTodos };
     });
 
-    // Sync to Drive if signed in
+    // Sync to Drive if signed in (debounced)
     if (isSignedIn) {
-      get().syncToDrive();
+      get().scheduleSyncToDrive();
     }
   },
 
@@ -158,9 +171,9 @@ const useTodoStore = create((set, get) => ({
       return { todos: newTodos };
     });
 
-    // Sync to Drive if signed in
+    // Sync to Drive if signed in (debounced)
     if (isSignedIn) {
-      get().syncToDrive();
+      get().scheduleSyncToDrive();
     }
   },
 
@@ -212,6 +225,17 @@ const useTodoStore = create((set, get) => ({
   // Sync status
   setSyncing: (isSyncing) => set({ isSyncing }),
 
+  // Schedule a debounced sync to OneDrive (waits for rapid changes to settle)
+  scheduleSyncToDrive: () => {
+    if (syncDebounceTimer) {
+      clearTimeout(syncDebounceTimer);
+    }
+    syncDebounceTimer = setTimeout(() => {
+      get().syncToDrive();
+      syncDebounceTimer = null;
+    }, 500); // Wait 500ms after last change before syncing
+  },
+
   // Sync todos to OneDrive
   syncToDrive: async () => {
     const { todos, isSyncing } = get();
@@ -228,6 +252,7 @@ const useTodoStore = create((set, get) => ({
           ONEDRIVE_DATA_FILES.TODOS,
           { todos, lastModified: new Date().toISOString() }
         );
+        console.log('Todos synced to OneDrive:', todos.length, 'todos');
       }
     } catch (error) {
       console.error('Error syncing todos to Drive:', error);
@@ -333,6 +358,7 @@ export const useTodoActions = () =>
       getCustomerMilestoneTodos: state.getCustomerMilestoneTodos,
       saveToLocalStorage: state.saveToLocalStorage,
       setTodos: state.setTodos,
+      scheduleSyncToDrive: state.scheduleSyncToDrive,
       syncToDrive: state.syncToDrive,
       syncFromDrive: state.syncFromDrive,
       syncWithDrive: state.syncWithDrive,
