@@ -4,6 +4,15 @@
  * Centralizes all field types, display names, and data extraction logic
  */
 
+import { PRZ_TYPES } from '../constants/vehicleData';
+
+// Helper to get PRZ type label from value
+const getPrzTypeLabel = (value) => {
+  if (!value) return '';
+  const found = PRZ_TYPES.find(t => t.value === value);
+  return found ? found.label : value;
+};
+
 /**
  * All available field types with display names and categories
  */
@@ -222,7 +231,7 @@ export function getCustomerDataMapping(customer) {
     yom: customer.vsa_yom || '',
     bodyColour: customer.vsa_bodyColour || '',
     upholstery: customer.vsa_upholstery || '',
-    przType: customer.vsa_przType || '',
+    przType: getPrzTypeLabel(customer.vsa_przType),
 
     // VSA Details - BYD New Car Package
     package: customer.vsa_package || '',
