@@ -184,9 +184,14 @@ function CustomerDetails() {
       updateCustomer(customer.id, updateData);
       saveToLocalStorage();
 
+      console.log('handleDetailsSave: isSignedIn=', isSignedIn, 'driveFolderId=', customer.driveFolderId);
       if (isSignedIn && customer.driveFolderId) {
         // Include all current customer data plus updates and ensure lastModified is set
+        console.log('handleDetailsSave: Calling saveCustomerToFolder...');
         await saveCustomerToFolder({ ...customer, ...updateData, lastModified }, isSignedIn);
+        console.log('handleDetailsSave: saveCustomerToFolder completed');
+      } else {
+        console.log('handleDetailsSave: Skipping OneDrive save - condition not met');
       }
 
       detailsForm.markAsSaved();
@@ -211,9 +216,14 @@ function CustomerDetails() {
       updateCustomer(customer.id, updates);
       saveToLocalStorage();
 
+      console.log('handleProposalSave: isSignedIn=', isSignedIn, 'driveFolderId=', customer.driveFolderId);
       if (isSignedIn && customer.driveFolderId) {
         // Include all current customer data plus updates and ensure lastModified is set
+        console.log('handleProposalSave: Calling saveCustomerToFolder...');
         await saveCustomerToFolder({ ...customer, ...updates, lastModified }, isSignedIn);
+        console.log('handleProposalSave: saveCustomerToFolder completed');
+      } else {
+        console.log('handleProposalSave: Skipping OneDrive save - condition not met');
       }
 
       proposalForm.markAsSaved();
@@ -237,9 +247,14 @@ function CustomerDetails() {
       updateCustomer(customer.id, updates);
       saveToLocalStorage();
 
+      console.log('handleVsaSave: isSignedIn=', isSignedIn, 'driveFolderId=', customer.driveFolderId);
       if (isSignedIn && customer.driveFolderId) {
         // Include all current customer data plus updates and ensure lastModified is set
+        console.log('handleVsaSave: Calling saveCustomerToFolder...');
         await saveCustomerToFolder({ ...customer, ...updates, lastModified }, isSignedIn);
+        console.log('handleVsaSave: saveCustomerToFolder completed');
+      } else {
+        console.log('handleVsaSave: Skipping OneDrive save - condition not met');
       }
 
       vsaForm.markAsSaved();
