@@ -95,6 +95,7 @@ const useTodoStore = create((set, get) => ({
       customerId: todoData.customerId || null, // null = global todo
       customerName: todoData.customerName || null,
       milestoneId: todoData.milestoneId || null, // Link to milestone (e.g., 'close_deal', 'registration')
+      checklistItemId: todoData.checklistItemId || null, // Link to specific checklist item for auto-check
       createdAt: new Date().toISOString(),
       lastModified: new Date().toISOString(),
     };
