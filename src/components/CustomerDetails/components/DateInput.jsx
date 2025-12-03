@@ -136,7 +136,7 @@ function DateInput({ value, onChange, disabled, id, name, placeholder = 'dd/mm/y
         tabIndex={-1}
         aria-label="Open date picker"
       >
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+        <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor">
           <path d="M4 0a1 1 0 0 1 1 1v1h6V1a1 1 0 1 1 2 0v1h1a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h1V1a1 1 0 0 1 1-1zm10 6H2v8h12V6z"/>
         </svg>
       </button>
