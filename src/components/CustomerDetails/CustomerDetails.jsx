@@ -568,6 +568,7 @@ function CustomerDetails() {
                   customerName={customer.name}
                   customerFolderId={customer.driveFolderId}
                   onScanComplete={handleScanComplete}
+                  onClose={() => setActiveTab('documents')}
                 />
               )}
             </div>
