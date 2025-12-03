@@ -286,6 +286,11 @@ class OneDriveService {
    * Download file content (raw response)
    */
   async downloadFile(fileId) {
+    // Validate fileId before making request
+    if (!fileId || typeof fileId !== 'string' || fileId.trim() === '') {
+      throw new Error('Invalid file ID. The file reference may be corrupted.');
+    }
+
     const token = await msAuthService.getAccessToken();
 
     const response = await fetch(`${GRAPH_BASE_URL}/me/drive/items/${fileId}/content`, {
@@ -295,6 +300,9 @@ class OneDriveService {
     });
 
     if (!response.ok) {
+      if (response.status === 400 || response.status === 404) {
+        throw new Error(`File not found in OneDrive (${response.status}). The file may have been deleted or moved. Please re-upload the template.`);
+      }
       throw new Error(`Download failed: ${response.status}`);
     }
 
