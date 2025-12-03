@@ -1,5 +1,5 @@
 import { memo, useCallback } from 'react';
-import { VEHICLE_MODELS, BODY_COLOURS, INSURANCE_COMPANIES } from '../../../constants/vehicleData';
+import { VEHICLE_MODELS, BODY_COLOURS, INSURANCE_COMPANIES, PRZ_TYPES } from '../../../constants/vehicleData';
 
 /**
  * VsaTab - Vehicle Sales Agreement form
@@ -82,15 +82,18 @@ function VsaTab({
           </div>
           <div className="inline-edit-item">
             <label htmlFor="vsa_przType">P/R/Z Type</label>
-            <input
-              type="text"
+            <select
               id="vsa_przType"
               name="przType"
               value={formData.przType || ''}
               onChange={handleInputChange}
-              placeholder="Enter P/R/Z type"
               disabled={isSubmitting}
-            />
+            >
+              <option value="">Select Type</option>
+              {PRZ_TYPES.map((type) => (
+                <option key={type.value} value={type.value}>{type.label}</option>
+              ))}
+            </select>
           </div>
           <div className="inline-edit-item">
             <label htmlFor="vsa_package">Package</label>
