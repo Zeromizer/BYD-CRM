@@ -1,4 +1,5 @@
 import { memo, useCallback } from 'react';
+import DateInput from './DateInput';
 
 /**
  * DetailsTab - Customer contact and personal information form
@@ -87,8 +88,7 @@ function DetailsTab({
           </div>
           <div className="inline-edit-item">
             <label htmlFor="dob">Date of Birth</label>
-            <input
-              type="date"
+            <DateInput
               id="dob"
               name="dob"
               value={formData.dob || ''}
@@ -286,8 +286,9 @@ function DetailsTab({
                       </div>
                       <div className="inline-edit-item">
                         <label>Date of Birth</label>
-                        <input
-                          type="date"
+                        <DateInput
+                          id={`guarantor-dob-${index}`}
+                          name="dob"
                           value={guarantor.dob || ''}
                           onChange={(e) => onGuarantorChange(index, 'dob', e.target.value)}
                           disabled={isSubmitting}
