@@ -226,11 +226,20 @@ class ExcelService {
    * Fetch Excel file from cloud storage (OneDrive/Google Drive)
    */
   async fetchFileFromDrive(fileId) {
+    // Validate fileId before making request
+    if (!fileId || typeof fileId !== 'string' || fileId.trim() === '') {
+      throw new Error('Invalid file ID. Please re-upload the Excel template master file.');
+    }
+
     try {
       const blob = await getStorageService().downloadFileAsBlob(fileId);
       return await blob.arrayBuffer();
     } catch (error) {
       console.error('Error fetching file from cloud storage:', error);
+      // Provide more helpful error message
+      if (error.message?.includes('400') || error.message?.includes('404')) {
+        throw new Error('Excel template file not found in OneDrive. The file may have been deleted or moved. Please re-upload the master file in Excel Integration settings.');
+      }
       throw error;
     }
   }
