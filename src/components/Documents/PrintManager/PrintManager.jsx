@@ -53,6 +53,117 @@ function PrintManager({ isOpen, onClose, customer }) {
     });
   });
 
+  // Helper to parse template name for multi-page grouping
+  // Matches patterns like "Document Name (1 of 2)", "Form (2 of 3)", etc.
+  const parseTemplateName = (name) => {
+    const match = name.match(/^(.+?)\s*\((\d+)\s+of\s+(\d+)\)$/i);
+    if (match) {
+      return {
+        baseName: match[1].trim(),
+        pageNum: parseInt(match[2]),
+        totalPages: parseInt(match[3]),
+        isMultiPage: true
+      };
+    }
+    return {
+      baseName: name,
+      pageNum: 1,
+      totalPages: 1,
+      isMultiPage: false
+    };
+  };
+
+  // Group templates by base name
+  const groupedTemplates = templateArray.reduce((groups, template) => {
+    const parsed = parseTemplateName(template.name);
+    const key = parsed.baseName;
+
+    if (!groups[key]) {
+      groups[key] = {
+        baseName: parsed.baseName,
+        templates: [],
+        totalPages: parsed.totalPages,
+        isMultiPage: parsed.isMultiPage
+      };
+    }
+
+    groups[key].templates.push({
+      ...template,
+      pageNum: parsed.pageNum
+    });
+
+    // Sort templates within group by page number
+    groups[key].templates.sort((a, b) => a.pageNum - b.pageNum);
+
+    return groups;
+  }, {});
+
+  // Convert to array and sort by base name
+  const templateGroups = Object.values(groupedTemplates).sort((a, b) => {
+    return a.baseName.localeCompare(b.baseName, undefined, {
+      numeric: true,
+      sensitivity: 'base'
+    });
+  });
+
+  // Check if a group is fully selected
+  const isGroupSelected = (group) => {
+    return group.templates.every(t => selectedTemplateIds.includes(t.id));
+  };
+
+  // Check if a group is partially selected
+  const isGroupPartiallySelected = (group) => {
+    const selectedCount = group.templates.filter(t => selectedTemplateIds.includes(t.id)).length;
+    return selectedCount > 0 && selectedCount < group.templates.length;
+  };
+
+  // Toggle entire group selection
+  const handleGroupToggle = (group) => {
+    const allIds = group.templates.map(t => t.id);
+    const allSelected = isGroupSelected(group);
+
+    if (allSelected) {
+      // Deselect all in group
+      setSelectedTemplateIds(prev => prev.filter(id => !allIds.includes(id)));
+      // Remove from double-sided config
+      const newDoubleSided = { ...doubleSidedTemplates };
+      allIds.forEach(id => delete newDoubleSided[id]);
+      setDoubleSidedTemplates(newDoubleSided);
+    } else {
+      // Select all in group (add missing ones)
+      setSelectedTemplateIds(prev => {
+        const newSelection = [...prev];
+        allIds.forEach(id => {
+          if (!newSelection.includes(id)) {
+            newSelection.push(id);
+          }
+        });
+        return newSelection;
+      });
+    }
+  };
+
+  // Toggle double-sided for entire group
+  const handleGroupDoubleSided = (group) => {
+    const allIds = group.templates.map(t => t.id);
+    // Check if any in group has double-sided enabled
+    const anyDoubleSided = allIds.some(id => doubleSidedTemplates[id]?.enabled);
+
+    const newDoubleSided = { ...doubleSidedTemplates };
+    allIds.forEach(id => {
+      newDoubleSided[id] = {
+        enabled: !anyDoubleSided,
+        images: newDoubleSided[id]?.images || []
+      };
+    });
+    setDoubleSidedTemplates(newDoubleSided);
+  };
+
+  // Check if any template in group has double-sided enabled
+  const isGroupDoubleSided = (group) => {
+    return group.templates.some(t => doubleSidedTemplates[t.id]?.enabled);
+  };
+
   const handleTemplateToggle = (templateId) => {
     if (selectedTemplateIds.includes(templateId)) {
       setSelectedTemplateIds(selectedTemplateIds.filter((id) => id !== templateId));
@@ -333,7 +444,7 @@ function PrintManager({ isOpen, onClose, customer }) {
           <div className="print-select-step">
             <h4>Select Document Templates to Print</h4>
 
-            {templateArray.length === 0 ? (
+            {templateGroups.length === 0 ? (
               <div className="empty-state">
                 <p>No document templates available</p>
                 <p className="empty-state-hint">
@@ -342,33 +453,46 @@ function PrintManager({ isOpen, onClose, customer }) {
               </div>
             ) : (
               <div className="template-selection-grid">
-                {templateArray.map((template) => {
-                  const isSelected = selectedTemplateIds.includes(template.id);
-                  const isDoubleSided = doubleSidedTemplates[template.id]?.enabled;
+                {templateGroups.map((group) => {
+                  const isSelected = isGroupSelected(group);
+                  const isPartial = isGroupPartiallySelected(group);
+                  const isDoubleSided = isGroupDoubleSided(group);
+                  const totalFields = group.templates.reduce((sum, t) =>
+                    sum + Object.keys(t.fields || {}).length, 0
+                  );
+                  const category = group.templates[0]?.category || 'uncategorized';
 
                   return (
                     <div
-                      key={template.id}
-                      className={`template-card ${isSelected ? 'selected' : ''}`}
+                      key={group.baseName}
+                      className={`template-card ${isSelected ? 'selected' : ''} ${isPartial ? 'partial' : ''}`}
                     >
                       <div
                         className="template-card-header"
-                        onClick={() => handleTemplateToggle(template.id)}
+                        onClick={() => handleGroupToggle(group)}
                       >
                         <input
                           type="checkbox"
                           checked={isSelected}
+                          ref={el => {
+                            if (el) el.indeterminate = isPartial;
+                          }}
                           onChange={() => {}}
                           onClick={(e) => e.stopPropagation()}
                         />
-                        <h4>{template.name}</h4>
+                        <h4>{group.baseName}</h4>
                       </div>
                       <div className="template-card-body">
                         <div className="template-meta">
-                          <span className="meta-badge">{template.category}</span>
-                          {Object.keys(template.fields || {}).length > 0 ? (
+                          <span className="meta-badge">{category}</span>
+                          {group.templates.length > 1 && (
+                            <span className="meta-badge meta-badge-pages">
+                              {group.templates.length} pages
+                            </span>
+                          )}
+                          {totalFields > 0 ? (
                             <span className="meta-badge">
-                              {Object.keys(template.fields || {}).length} fields
+                              {totalFields} fields
                             </span>
                           ) : (
                             <span className="meta-badge meta-badge-warning">
@@ -383,7 +507,7 @@ function PrintManager({ isOpen, onClose, customer }) {
                               <input
                                 type="checkbox"
                                 checked={isDoubleSided}
-                                onChange={() => handleToggleDoubleSided(template.id)}
+                                onChange={() => handleGroupDoubleSided(group)}
                               />
                               <span>Double-sided (add 4 ID images on back)</span>
                             </label>
@@ -399,14 +523,11 @@ function PrintManager({ isOpen, onClose, customer }) {
             {selectedTemplateIds.length > 0 && (
               <div className="selection-summary">
                 <p>
-                  <strong>{selectedTemplateIds.length}</strong> template
-                  {selectedTemplateIds.length > 1 ? 's' : ''} selected
-                  {selectedTemplateIds.length > 1 && (
-                    <span className="multi-page-note">
-                      {' '}
-                      (will create {selectedTemplateIds.length}-page PDF)
-                    </span>
-                  )}
+                  <strong>{templateGroups.filter(g => isGroupSelected(g)).length}</strong> document
+                  {templateGroups.filter(g => isGroupSelected(g)).length > 1 ? 's' : ''} selected
+                  <span className="multi-page-note">
+                    {' '}({selectedTemplateIds.length} page{selectedTemplateIds.length > 1 ? 's' : ''} total)
+                  </span>
                 </p>
               </div>
             )}

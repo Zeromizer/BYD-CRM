@@ -128,6 +128,17 @@
   color: #e65100;
 }
 
+.meta-badge-pages {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+/* Partial selection state (some pages in group selected) */
+.template-card.partial {
+  border-color: #ff9800;
+  background: #fff8e1;
+}
+
 .selection-summary {
   padding: 16px;
   background: #e8f5e9;
