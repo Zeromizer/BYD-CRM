@@ -151,6 +151,7 @@ const MilestoneTracker = memo(function MilestoneTracker({ customer, onSave }) {
         customerId: customer?.id || null,
         customerName: customer?.name || null,
         milestoneId: milestoneId,
+        checklistItemId: item.id, // Link to specific checklist item for auto-check
       }, userEmail, isSignedIn);
     });
 

@@ -312,6 +312,7 @@ const TodoSidebar = memo(function TodoSidebar() {
 
   const { userEmail, isSignedIn } = useAuthStore();
   const customers = useCustomerStore((state) => state.customers);
+  const { updateCustomer, saveToLocalStorage, saveCustomerToFolder } = useCustomerStore();
 
   // Initialize todos on mount
   useEffect(() => {
@@ -326,12 +327,42 @@ const TodoSidebar = memo(function TodoSidebar() {
     [addTodo, userEmail, isSignedIn]
   );
 
-  // Handle toggle todo
+  // Handle toggle todo - also auto-check checklist item if linked
   const handleToggleTodo = useCallback(
-    (todoId) => {
+    async (todoId) => {
+      // Find the todo to check its current state and checklist link
+      const todo = todos.find(t => t.id === todoId);
+
+      // Toggle the todo
       toggleTodo(todoId, userEmail, isSignedIn);
+
+      // If the todo is being completed (was not completed) and has checklist link
+      if (todo && !todo.completed && todo.checklistItemId && todo.customerId && todo.milestoneId) {
+        // Find the customer
+        const customer = customers.find(c => c.id === todo.customerId);
+        if (customer) {
+          // Update the checklist item to checked
+          const updatedChecklist = {
+            ...customer.checklist,
+            [todo.milestoneId]: {
+              ...(customer.checklist?.[todo.milestoneId] || {}),
+              [todo.checklistItemId]: true,
+            },
+          };
+
+          // Update customer with new checklist
+          updateCustomer(customer.id, { checklist: updatedChecklist });
+          saveToLocalStorage();
+
+          // Sync to OneDrive if signed in
+          if (isSignedIn && customer.driveFolderId) {
+            const updatedCustomer = { ...customer, checklist: updatedChecklist };
+            saveCustomerToFolder(updatedCustomer, isSignedIn);
+          }
+        }
+      }
     },
-    [toggleTodo, userEmail, isSignedIn]
+    [toggleTodo, userEmail, isSignedIn, todos, customers, updateCustomer, saveToLocalStorage, saveCustomerToFolder]
   );
 
   // Handle delete todo
