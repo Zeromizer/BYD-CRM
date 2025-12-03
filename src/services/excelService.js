@@ -1,10 +1,18 @@
 import { getStorageService, getAuthService } from './storageServiceSelector';
+import { PRZ_TYPES } from '../constants/vehicleData';
 
 /**
  * Excel Service for populating Excel templates with customer data
  *
  * NOTE: xlsx-populate is lazy-loaded to reduce initial bundle size
  */
+
+// Helper to get PRZ type label from value
+const getPrzTypeLabel = (value) => {
+  if (!value) return '';
+  const found = PRZ_TYPES.find(t => t.value === value);
+  return found ? found.label : value;
+};
 
 // Cache the xlsx-populate module after first load
 let xlsxModule = null;
@@ -91,7 +99,7 @@ class ExcelService {
       yom: customer.vsa_yom || '',
       bodyColour: customer.vsa_bodyColour || '',
       upholstery: customer.vsa_upholstery || '',
-      przType: customer.vsa_przType || '',
+      przType: getPrzTypeLabel(customer.vsa_przType),
 
       // VSA Details - BYD New Car Package
       package: customer.vsa_package || '',
