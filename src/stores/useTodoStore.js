@@ -305,13 +305,43 @@ const useTodoStore = create((set, get) => ({
             }
           }
 
+          // CRITICAL: Deduplicate by content to prevent duplicates with different IDs
+          // This can happen if todos were created before sync completed
+          const deduplicatedTodos = [];
+          const seenContent = new Set();
+
+          for (const todo of mergedTodos) {
+            // Create a content key: text + customerId + milestoneId
+            const contentKey = `${todo.text}|${todo.customerId || ''}|${todo.milestoneId || ''}`;
+
+            if (!seenContent.has(contentKey)) {
+              seenContent.add(contentKey);
+              deduplicatedTodos.push(todo);
+            } else {
+              // Duplicate content found - keep the newer one
+              const existingIndex = deduplicatedTodos.findIndex(t =>
+                `${t.text}|${t.customerId || ''}|${t.milestoneId || ''}` === contentKey
+              );
+              if (existingIndex !== -1) {
+                const existing = deduplicatedTodos[existingIndex];
+                const existingTime = new Date(existing.lastModified || 0).getTime();
+                const currentTime = new Date(todo.lastModified || 0).getTime();
+                if (currentTime > existingTime) {
+                  deduplicatedTodos[existingIndex] = todo;
+                }
+              }
+            }
+          }
+
           // Sort by createdAt (newest first)
-          mergedTodos.sort((a, b) =>
+          deduplicatedTodos.sort((a, b) =>
             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
           );
 
-          set({ todos: mergedTodos });
-          saveTodosToStorage(mergedTodos, email);
+          console.log(`Todos merged: ${localTodos.length} local + ${driveTodos.length} drive = ${deduplicatedTodos.length} final`);
+
+          set({ todos: deduplicatedTodos });
+          saveTodosToStorage(deduplicatedTodos, email);
         }
       }
     } catch (error) {
