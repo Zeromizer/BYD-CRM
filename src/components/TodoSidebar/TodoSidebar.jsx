@@ -17,6 +17,7 @@ import {
   Trash2,
   Flag,
   Milestone,
+  RefreshCw,
 } from 'lucide-react';
 import './TodoSidebar.css';
 
@@ -45,6 +46,23 @@ const FILTER_TABS = [
 // Helper to get milestone info
 const getMilestoneInfo = (milestoneId) => {
   return MILESTONES.find(m => m.id === milestoneId);
+};
+
+// Helper to get checklistItemId from todo text (fallback matching)
+const getChecklistItemIdFromText = (todo) => {
+  if (todo.checklistItemId) return todo.checklistItemId;
+  if (!todo.milestoneId) return null;
+
+  const milestone = MILESTONES.find(m => m.id === todo.milestoneId);
+  if (!milestone) return null;
+
+  const prefix = `${milestone.name}: `;
+  if (!todo.text.startsWith(prefix)) return null;
+
+  const itemLabel = todo.text.substring(prefix.length);
+  const checklistItems = CHECKLISTS[todo.milestoneId] || [];
+  const matchedItem = checklistItems.find(item => item.label === itemLabel);
+  return matchedItem?.id || null;
 };
 
 // Single Todo Item Component
@@ -300,121 +318,160 @@ const TodoSidebar = memo(function TodoSidebar() {
   const activeFilter = useActiveFilter();
   const {
     addTodo,
-    toggleTodo,
     deleteTodo,
     clearCompleted,
     toggleSidebar,
     setActiveFilter,
     initializeTodos,
-    getTodayTodos,
-    getOverdueTodos,
+    syncToDrive,
+    saveToLocalStorage: saveTodosToLocalStorage,
   } = useTodoActions();
 
   const { userEmail, isSignedIn } = useAuthStore();
   const customers = useCustomerStore((state) => state.customers);
-  const { updateCustomer, saveToLocalStorage, saveCustomerToFolder } = useCustomerStore();
+  const { updateCustomer, saveToLocalStorage: saveCustomersToLocalStorage, saveCustomerToFolder, syncAllToOneDrive } = useCustomerStore();
+
+  const [isSyncing, setIsSyncing] = useState(false);
 
   // Initialize todos on mount
   useEffect(() => {
     initializeTodos(userEmail);
   }, [userEmail, initializeTodos]);
 
+  // Derive completion status from checklist for linked todos
+  const todosWithDerivedCompletion = useMemo(() => {
+    return todos.map(todo => {
+      // Get checklistItemId (direct or via text matching)
+      const checklistItemId = getChecklistItemIdFromText(todo);
+
+      // If todo is linked to a checklist item, derive completion from checklist
+      if (checklistItemId && todo.customerId && todo.milestoneId) {
+        const customer = customers.find(c => c.id === todo.customerId);
+        if (customer?.checklist?.[todo.milestoneId]) {
+          const isCompleted = customer.checklist[todo.milestoneId][checklistItemId] || false;
+          return { ...todo, completed: isCompleted, checklistItemId };
+        }
+      }
+
+      // For non-linked todos, keep original completed state
+      return todo;
+    });
+  }, [todos, customers]);
+
   // Handle add todo
   const handleAddTodo = useCallback(
     (todoData) => {
-      addTodo(todoData, userEmail, isSignedIn);
+      // Don't sync to OneDrive on add - wait for manual sync
+      addTodo(todoData, userEmail, false);
     },
-    [addTodo, userEmail, isSignedIn]
+    [addTodo, userEmail]
   );
 
-  // Handle toggle todo - also auto-check checklist item if linked
+  // Handle toggle todo - updates checklist directly, saves to localStorage immediately
   const handleToggleTodo = useCallback(
-    async (todoId) => {
-      // Find the todo to check its current state and checklist link
-      const todo = todos.find(t => t.id === todoId);
+    (todoId) => {
+      const todo = todosWithDerivedCompletion.find(t => t.id === todoId);
+      if (!todo) return;
 
-      // Toggle the todo
-      toggleTodo(todoId, userEmail, isSignedIn);
+      const checklistItemId = getChecklistItemIdFromText(todo);
 
-      // If the todo is being completed (was not completed) and has customer + milestone link
-      if (todo && !todo.completed && todo.customerId && todo.milestoneId) {
-        // Find the customer
+      // If linked to checklist, update checklist (source of truth)
+      if (checklistItemId && todo.customerId && todo.milestoneId) {
         const customer = customers.find(c => c.id === todo.customerId);
         if (customer) {
-          let checklistItemId = todo.checklistItemId;
+          const currentState = customer.checklist?.[todo.milestoneId]?.[checklistItemId] || false;
+          const newState = !currentState;
 
-          // Fallback: if no checklistItemId, try to match by text pattern
-          // Task text format is "MilestoneName: ChecklistLabel"
-          if (!checklistItemId) {
-            const milestone = MILESTONES.find(m => m.id === todo.milestoneId);
-            if (milestone) {
-              const prefix = `${milestone.name}: `;
-              if (todo.text.startsWith(prefix)) {
-                const itemLabel = todo.text.substring(prefix.length);
-                const checklistItems = CHECKLISTS[todo.milestoneId] || [];
-                const matchedItem = checklistItems.find(item => item.label === itemLabel);
-                if (matchedItem) {
-                  checklistItemId = matchedItem.id;
-                }
-              }
-            }
-          }
+          const updatedChecklist = {
+            ...customer.checklist,
+            [todo.milestoneId]: {
+              ...(customer.checklist?.[todo.milestoneId] || {}),
+              [checklistItemId]: newState,
+            },
+          };
 
-          // If we have a checklist item ID (direct or matched), update the checklist
-          if (checklistItemId) {
-            const updatedChecklist = {
-              ...customer.checklist,
-              [todo.milestoneId]: {
-                ...(customer.checklist?.[todo.milestoneId] || {}),
-                [checklistItemId]: true,
-              },
-            };
-
-            // Update customer with new checklist
-            updateCustomer(customer.id, { checklist: updatedChecklist });
-            saveToLocalStorage();
-
-            // Sync to OneDrive if signed in
-            if (isSignedIn && customer.driveFolderId) {
-              const updatedCustomer = { ...customer, checklist: updatedChecklist };
-              saveCustomerToFolder(updatedCustomer, isSignedIn);
-            }
-          }
+          // Update customer checklist and save to localStorage immediately
+          updateCustomer(customer.id, { checklist: updatedChecklist });
+          saveCustomersToLocalStorage();
         }
+      } else {
+        // For non-linked todos, we need to track completion separately
+        // Update the todo in store and save to localStorage (not OneDrive yet)
+        const todoStore = useTodoStore.getState();
+        const newTodos = todoStore.todos.map(t =>
+          t.id === todoId
+            ? { ...t, completed: !t.completed, lastModified: new Date().toISOString() }
+            : t
+        );
+        todoStore.setTodos(newTodos);
+        saveTodosToLocalStorage(userEmail);
       }
     },
-    [toggleTodo, userEmail, isSignedIn, todos, customers, updateCustomer, saveToLocalStorage, saveCustomerToFolder]
+    [todosWithDerivedCompletion, customers, updateCustomer, saveCustomersToLocalStorage, saveTodosToLocalStorage, userEmail]
   );
 
   // Handle delete todo
   const handleDeleteTodo = useCallback(
     (todoId) => {
-      deleteTodo(todoId, userEmail, isSignedIn);
+      // Don't sync to OneDrive on delete - wait for manual sync
+      deleteTodo(todoId, userEmail, false);
     },
-    [deleteTodo, userEmail, isSignedIn]
+    [deleteTodo, userEmail]
   );
 
   // Handle clear completed
   const handleClearCompleted = useCallback(() => {
-    clearCompleted(userEmail, isSignedIn);
-  }, [clearCompleted, userEmail, isSignedIn]);
+    // Don't sync to OneDrive - wait for manual sync
+    clearCompleted(userEmail, false);
+  }, [clearCompleted, userEmail]);
 
-  // Filter todos based on active filter
+  // Handle manual sync to OneDrive
+  const handleSyncToCloud = useCallback(async () => {
+    if (!isSignedIn || isSyncing) return;
+
+    setIsSyncing(true);
+    try {
+      // Sync todos to OneDrive
+      await syncToDrive();
+
+      // Sync all customers with their checklists to OneDrive
+      if (syncAllToOneDrive) {
+        await syncAllToOneDrive();
+      } else {
+        // Fallback: sync customers individually
+        for (const customer of customers) {
+          if (customer.driveFolderId) {
+            await saveCustomerToFolder(customer, isSignedIn);
+          }
+        }
+      }
+
+      console.log('Manual sync completed');
+    } catch (error) {
+      console.error('Sync failed:', error);
+    } finally {
+      setIsSyncing(false);
+    }
+  }, [isSignedIn, isSyncing, syncToDrive, syncAllToOneDrive, customers, saveCustomerToFolder]);
+
+  // Filter todos based on active filter (use derived completion)
   const filteredTodos = useMemo(() => {
+    const today = new Date().toISOString().split('T')[0];
+
     switch (activeFilter) {
       case 'today':
-        return getTodayTodos();
+        return todosWithDerivedCompletion.filter((t) => t.dueDate === today && !t.completed);
       case 'overdue':
-        return getOverdueTodos();
+        return todosWithDerivedCompletion.filter((t) => t.dueDate && t.dueDate < today && !t.completed);
       case 'by-customer':
-        return todos; // Will be grouped separately
+        return todosWithDerivedCompletion; // Will be grouped separately
       case 'by-milestone':
-        return todos; // Will be grouped separately
+        return todosWithDerivedCompletion; // Will be grouped separately
       case 'all':
       default:
-        return todos;
+        return todosWithDerivedCompletion;
     }
-  }, [activeFilter, todos, getTodayTodos, getOverdueTodos]);
+  }, [activeFilter, todosWithDerivedCompletion]);
 
   // Group todos by customer for "by-customer" view
   const groupedTodos = useMemo(() => {
@@ -423,10 +480,10 @@ const TodoSidebar = memo(function TodoSidebar() {
     const groups = {};
 
     // Global todos first
-    groups['__global__'] = todos.filter((t) => !t.customerId);
+    groups['__global__'] = todosWithDerivedCompletion.filter((t) => !t.customerId);
 
     // Group by customer
-    todos
+    todosWithDerivedCompletion
       .filter((t) => t.customerId)
       .forEach((todo) => {
         const key = todo.customerId;
@@ -437,7 +494,7 @@ const TodoSidebar = memo(function TodoSidebar() {
       });
 
     return groups;
-  }, [activeFilter, todos]);
+  }, [activeFilter, todosWithDerivedCompletion]);
 
   // Group todos by milestone for "by-milestone" view
   const milestoneGroupedTodos = useMemo(() => {
@@ -446,23 +503,24 @@ const TodoSidebar = memo(function TodoSidebar() {
     const groups = {};
 
     // No milestone first
-    groups['__none__'] = todos.filter((t) => !t.milestoneId);
+    groups['__none__'] = todosWithDerivedCompletion.filter((t) => !t.milestoneId);
 
     // Group by milestone (in order of MILESTONES)
     MILESTONES.forEach((milestone) => {
-      const milestoneTodos = todos.filter((t) => t.milestoneId === milestone.id);
+      const milestoneTodos = todosWithDerivedCompletion.filter((t) => t.milestoneId === milestone.id);
       if (milestoneTodos.length > 0) {
         groups[milestone.id] = milestoneTodos;
       }
     });
 
     return groups;
-  }, [activeFilter, todos]);
+  }, [activeFilter, todosWithDerivedCompletion]);
 
-  // Stats
-  const completedCount = todos.filter((t) => t.completed).length;
-  const pendingCount = todos.length - completedCount;
-  const overdueCount = getOverdueTodos().length;
+  // Stats (use derived completion)
+  const completedCount = todosWithDerivedCompletion.filter((t) => t.completed).length;
+  const pendingCount = todosWithDerivedCompletion.length - completedCount;
+  const today = new Date().toISOString().split('T')[0];
+  const overdueCount = todosWithDerivedCompletion.filter((t) => t.dueDate && t.dueDate < today && !t.completed).length;
 
   return (
     <>
@@ -482,9 +540,22 @@ const TodoSidebar = memo(function TodoSidebar() {
             <ListTodo size={20} />
             Tasks
           </h2>
-          <button className="close-btn" onClick={toggleSidebar} aria-label="Close sidebar">
-            <X size={20} />
-          </button>
+          <div className="header-actions">
+            {isSignedIn && (
+              <button
+                className={`sync-btn ${isSyncing ? 'syncing' : ''}`}
+                onClick={handleSyncToCloud}
+                disabled={isSyncing}
+                aria-label="Sync to cloud"
+                title="Sync changes to OneDrive"
+              >
+                <RefreshCw size={18} className={isSyncing ? 'spinning' : ''} />
+              </button>
+            )}
+            <button className="close-btn" onClick={toggleSidebar} aria-label="Close sidebar">
+              <X size={20} />
+            </button>
+          </div>
         </div>
 
         {/* Stats Bar */}
