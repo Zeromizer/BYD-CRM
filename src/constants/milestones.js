@@ -52,9 +52,9 @@ export const CHECKLISTS = {
     { id: 'vsa_details_filled', label: 'VSA Details Filled' },
     { id: 'vsa_pdpa_coe_forms', label: 'VSA Form, PDPA Form & COE Bidding Form' },
     { id: 'input_byd_crm_cd', label: 'Input BYD CRM' },
+    { id: 'loan_approved', label: 'Loan Approved' },
   ],
   registration: [
-    { id: 'loan_approved', label: 'Loan Approved' },
     { id: 'insurance_accepted', label: 'Insurance Accepted' },
     { id: 'balance_payment_secured', label: 'Balance Payment Secured, Input BYD CRM' },
     { id: 'insurance_details_filled', label: 'Insurance Details Filled' },
