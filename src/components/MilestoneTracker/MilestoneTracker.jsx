@@ -33,9 +33,10 @@ const getMilestoneIcon = (iconName, size = 16, color = 'currentColor') => {
 const MilestoneTracker = memo(function MilestoneTracker({ customer, onSave }) {
   const { updateCustomer, saveToLocalStorage, saveCustomerToFolder } = useCustomerStore();
   const { isSignedIn, userEmail } = useAuthStore();
-  const { addTodo } = useTodoStore();
+  const { addTodo, todos } = useTodoStore();
   const [expandedMilestone, setExpandedMilestone] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isCreatingTodos, setIsCreatingTodos] = useState(false);
 
   // Local state for editing (not synced until save)
   const [localChecklist, setLocalChecklist] = useState(() => {
@@ -105,6 +106,9 @@ const MilestoneTracker = memo(function MilestoneTracker({ customer, onSave }) {
 
   // Create todos from checklist items for a milestone
   const handleCreateTodosFromChecklist = (milestoneId) => {
+    // Prevent double-clicks
+    if (isCreatingTodos) return;
+
     const items = CHECKLISTS[milestoneId] || [];
     const milestone = MILESTONES.find(m => m.id === milestoneId);
     const milestoneDate = localMilestoneDates[milestoneId];
@@ -119,8 +123,27 @@ const MilestoneTracker = memo(function MilestoneTracker({ customer, onSave }) {
       return;
     }
 
-    // Create a todo for each uncompleted item
-    uncompletedItems.forEach(item => {
+    // Check for existing todos to prevent duplicates
+    const existingTodos = todos.filter(
+      t => t.customerId === customer?.id && t.milestoneId === milestoneId && !t.completed
+    );
+    const existingTexts = new Set(existingTodos.map(t => t.text));
+
+    // Filter out items that already have todos
+    const itemsToCreate = uncompletedItems.filter(item => {
+      const todoText = `${milestone?.name}: ${item.label}`;
+      return !existingTexts.has(todoText);
+    });
+
+    if (itemsToCreate.length === 0) {
+      alert('Tasks already exist for all uncompleted checklist items.');
+      return;
+    }
+
+    setIsCreatingTodos(true);
+
+    // Create a todo for each item that doesn't already exist
+    itemsToCreate.forEach(item => {
       addTodo({
         text: `${milestone?.name}: ${item.label}`,
         priority: milestoneDate ? 'high' : 'medium',
@@ -131,7 +154,8 @@ const MilestoneTracker = memo(function MilestoneTracker({ customer, onSave }) {
       }, userEmail, isSignedIn);
     });
 
-    alert(`Created ${uncompletedItems.length} task(s) for ${milestone?.name}`);
+    setIsCreatingTodos(false);
+    alert(`Created ${itemsToCreate.length} task(s) for ${milestone?.name}`);
   };
 
   // Save all changes to store and sync
@@ -325,10 +349,11 @@ const MilestoneTracker = memo(function MilestoneTracker({ customer, onSave }) {
                       type="button"
                       className="create-todos-btn"
                       onClick={() => handleCreateTodosFromChecklist(milestone.id)}
+                      disabled={isCreatingTodos}
                       style={{ '--milestone-color': milestone.color }}
                     >
                       <ListTodo size={14} />
-                      Create Tasks from Checklist
+                      {isCreatingTodos ? 'Creating...' : 'Create Tasks from Checklist'}
                     </button>
                   </div>
 
