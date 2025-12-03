@@ -20,6 +20,48 @@ const loadXlsxPopulate = async () => {
   return xlsxModule;
 };
 
+/**
+ * Fields that should be treated as currency/numeric values in Excel
+ * These will be converted from text strings to numbers for proper Excel formulas
+ */
+const CURRENCY_FIELDS = new Set([
+  // VSA - Pricing & Deposit
+  'sellingWithCOE',
+  'sellingPriceList',
+  'purchasePriceWithCOE',
+  'coeRebateLevel',
+  'deposit',
+  'lessOthers',
+  'addOthers',
+  // VSA - Trade-In
+  'tradeInAmount',
+  // VSA - Insurance
+  'insuranceFee',
+  'insuranceFeeNet',
+  'insuranceSubsidy',
+  // VSA - Loan
+  'loanAmount',
+  'adminFee',
+  'monthlyRepayment',
+  // Proposal - Pricing
+  'proposalSellingPrice',
+  'proposalDownpayment',
+  'proposalLoanAmount',
+  'proposalAdminFee',
+  'proposalReferralFee',
+  'proposalLowLoanSurcharge',
+  'proposalNoLoanSurcharge',
+  'proposalQuotedTradeInPrice',
+]);
+
+/**
+ * Fields that should be treated as percentage values in Excel
+ */
+const PERCENTAGE_FIELDS = new Set([
+  'interest',
+  'proposalInterestRate',
+]);
+
 class ExcelService {
   /**
    * Get customer data mapping for Excel population
@@ -262,8 +304,28 @@ class ExcelService {
 
       let appliedCount = 0;
       for (const mapping of Object.values(fieldMappings)) {
-        const value = dataMapping[mapping.fieldType];
+        let value = dataMapping[mapping.fieldType];
         if (value !== undefined && value !== null && value !== '') {
+          // Convert currency fields to numbers for proper Excel formulas
+          if (CURRENCY_FIELDS.has(mapping.fieldType)) {
+            const numericValue = this.currencyToNumber(value);
+            // Only use numeric value if it's a valid number
+            if (!isNaN(numericValue) && numericValue !== 0) {
+              value = numericValue;
+            } else if (value === '' || value === '0' || value === '$0') {
+              value = 0; // Set zero values as numeric 0
+            }
+            // If it's not a valid number and not zero, keep as string (edge case)
+          }
+
+          // Convert percentage fields to numbers
+          if (PERCENTAGE_FIELDS.has(mapping.fieldType)) {
+            const numericValue = parseFloat(value.toString().replace(/[^0-9.-]/g, ''));
+            if (!isNaN(numericValue)) {
+              value = numericValue;
+            }
+          }
+
           // Set cell value - all formatting is automatically preserved
           sheet.cell(mapping.cellRef).value(value);
           appliedCount++;
