@@ -76,12 +76,20 @@ export const INSURANCE_COMPANIES = [
   'AXA',
   'Allianz',
   'Chubb',
-  'NTUC Income',
+  'EQ',
   'Great Eastern',
+  'Liberty',
   'MSIG',
+  'NTUC Income',
+  'QBE',
   'Sompo',
   'Tokio Marine',
-  'QBE',
+];
+
+export const PRZ_TYPES = [
+  { value: 'P', label: 'P - Passenger Motor Car' },
+  { value: 'R', label: 'R - Rental / Leasing' },
+  { value: 'Z', label: 'Z - Private Hire' },
 ];
 
 export const BANKS = [
