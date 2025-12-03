@@ -2,7 +2,7 @@ import { useState, useEffect, memo, useCallback, useMemo } from 'react';
 import useTodoStore, { useTodos, useSidebarOpen, useActiveFilter, useTodoActions } from '../../stores/useTodoStore';
 import useAuthStore from '../../stores/useAuthStore';
 import useCustomerStore from '../../stores/useCustomerStore';
-import { MILESTONES } from '../../constants/milestones';
+import { MILESTONES, CHECKLISTS } from '../../constants/milestones';
 import {
   CheckSquare,
   Square,
@@ -336,28 +336,49 @@ const TodoSidebar = memo(function TodoSidebar() {
       // Toggle the todo
       toggleTodo(todoId, userEmail, isSignedIn);
 
-      // If the todo is being completed (was not completed) and has checklist link
-      if (todo && !todo.completed && todo.checklistItemId && todo.customerId && todo.milestoneId) {
+      // If the todo is being completed (was not completed) and has customer + milestone link
+      if (todo && !todo.completed && todo.customerId && todo.milestoneId) {
         // Find the customer
         const customer = customers.find(c => c.id === todo.customerId);
         if (customer) {
-          // Update the checklist item to checked
-          const updatedChecklist = {
-            ...customer.checklist,
-            [todo.milestoneId]: {
-              ...(customer.checklist?.[todo.milestoneId] || {}),
-              [todo.checklistItemId]: true,
-            },
-          };
+          let checklistItemId = todo.checklistItemId;
 
-          // Update customer with new checklist
-          updateCustomer(customer.id, { checklist: updatedChecklist });
-          saveToLocalStorage();
+          // Fallback: if no checklistItemId, try to match by text pattern
+          // Task text format is "MilestoneName: ChecklistLabel"
+          if (!checklistItemId) {
+            const milestone = MILESTONES.find(m => m.id === todo.milestoneId);
+            if (milestone) {
+              const prefix = `${milestone.name}: `;
+              if (todo.text.startsWith(prefix)) {
+                const itemLabel = todo.text.substring(prefix.length);
+                const checklistItems = CHECKLISTS[todo.milestoneId] || [];
+                const matchedItem = checklistItems.find(item => item.label === itemLabel);
+                if (matchedItem) {
+                  checklistItemId = matchedItem.id;
+                }
+              }
+            }
+          }
 
-          // Sync to OneDrive if signed in
-          if (isSignedIn && customer.driveFolderId) {
-            const updatedCustomer = { ...customer, checklist: updatedChecklist };
-            saveCustomerToFolder(updatedCustomer, isSignedIn);
+          // If we have a checklist item ID (direct or matched), update the checklist
+          if (checklistItemId) {
+            const updatedChecklist = {
+              ...customer.checklist,
+              [todo.milestoneId]: {
+                ...(customer.checklist?.[todo.milestoneId] || {}),
+                [checklistItemId]: true,
+              },
+            };
+
+            // Update customer with new checklist
+            updateCustomer(customer.id, { checklist: updatedChecklist });
+            saveToLocalStorage();
+
+            // Sync to OneDrive if signed in
+            if (isSignedIn && customer.driveFolderId) {
+              const updatedCustomer = { ...customer, checklist: updatedChecklist };
+              saveCustomerToFolder(updatedCustomer, isSignedIn);
+            }
           }
         }
       }
