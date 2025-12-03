@@ -463,6 +463,31 @@ class OneDriveService {
   }
 
   /**
+   * Get direct edit URL for a file (opens in Office Online for editing)
+   * For Excel files, this opens directly in Excel Online
+   * @param {string} fileId - The file ID
+   * @returns {string|null} - The edit URL or null if not available
+   */
+  async getEditUrl(fileId) {
+    try {
+      // Get file metadata which includes webUrl for direct editing
+      const fileMetadata = await this.request(`/me/drive/items/${fileId}`);
+
+      // The webUrl opens the file directly in the appropriate Office Online app
+      if (fileMetadata.webUrl) {
+        return fileMetadata.webUrl;
+      }
+
+      // Fallback: Create an edit sharing link
+      const link = await this.createSharingLink(fileId, 'edit');
+      return link?.webUrl || null;
+    } catch (error) {
+      console.error('Error getting edit URL:', error);
+      return null;
+    }
+  }
+
+  /**
    * Get thumbnail URL for an image
    */
   async getThumbnailUrl(fileId, size = 'medium') {
