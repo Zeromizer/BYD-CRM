@@ -51,6 +51,8 @@ function DocumentsTab({
   const [showRenameModal, setShowRenameModal] = useState(false);
   const [renamingItem, setRenamingItem] = useState(null);
   const [renameValue, setRenameValue] = useState('');
+  const [showMoveModal, setShowMoveModal] = useState(false);
+  const [movingItem, setMovingItem] = useState(null);
 
   // Handle context menu toggle
   const handleMenuToggle = useCallback((e, item) => {
@@ -80,6 +82,29 @@ function DocumentsTab({
     setOpenMenuId(null);
     onDeleteDocument(item);
   }, [onDeleteDocument]);
+
+  // Handle move from desktop menu
+  const handleMove = useCallback((item) => {
+    setMovingItem(item);
+    setShowMoveModal(true);
+    setOpenMenuId(null);
+  }, []);
+
+  // Handle folder selection for desktop move
+  const handleDesktopFolderSelect = useCallback(async (targetFolder) => {
+    if (movingItem && targetFolder) {
+      await onMoveDocument(movingItem, targetFolder.id);
+      setShowMoveModal(false);
+      setMovingItem(null);
+    }
+  }, [movingItem, onMoveDocument]);
+
+  // Get available folders for move (desktop)
+  const getAvailableFoldersForMove = useCallback(() => {
+    return documents.filter(
+      (item) => isFolder(item.mimeType) && item.id !== movingItem?.id
+    );
+  }, [documents, movingItem]);
 
   // Mobile action menu handlers
   const handleMobileRename = useCallback(() => {
@@ -208,6 +233,7 @@ function DocumentsTab({
               isDragging={draggedFile?.id === item.id}
               onItemClick={onItemClick}
               onMenuToggle={handleMenuToggle}
+              onMove={handleMove}
               onRename={handleRename}
               onDelete={handleDelete}
               onDragStart={onDragStart}
@@ -276,6 +302,65 @@ function DocumentsTab({
               Rename
             </button>
           </div>
+        </div>
+      </Modal>
+
+      {/* Desktop Move Modal */}
+      <Modal
+        isOpen={showMoveModal}
+        onClose={() => {
+          setShowMoveModal(false);
+          setMovingItem(null);
+        }}
+        title="Move File"
+        size="small"
+      >
+        <div className="move-modal">
+          {movingItem && (
+            <>
+              <p className="move-modal-filename">Move "{movingItem.name}" to:</p>
+              <div className="move-modal-folders">
+                {/* Parent folder option */}
+                {folderPath.length > 1 && (
+                  <button
+                    className="move-modal-folder-btn"
+                    onClick={() => handleDesktopFolderSelect(folderPath[folderPath.length - 2])}
+                  >
+                    <span className="folder-icon">⬆️</span>
+                    <span>Parent folder</span>
+                  </button>
+                )}
+
+                {/* Available folders */}
+                {getAvailableFoldersForMove().map((folder) => (
+                  <button
+                    key={folder.id}
+                    className="move-modal-folder-btn"
+                    onClick={() => handleDesktopFolderSelect(folder)}
+                  >
+                    <span className="folder-icon">📁</span>
+                    <span>{folder.name}</span>
+                  </button>
+                ))}
+
+                {/* Empty state */}
+                {folderPath.length <= 1 && getAvailableFoldersForMove().length === 0 && (
+                  <p className="move-modal-empty">No folders available to move to</p>
+                )}
+              </div>
+              <div className="modal-actions">
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    setShowMoveModal(false);
+                    setMovingItem(null);
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </Modal>
 
@@ -363,6 +448,7 @@ const DocumentItem = memo(function DocumentItem({
   isDragging,
   onItemClick,
   onMenuToggle,
+  onMove,
   onRename,
   onDelete,
   onDragStart,
@@ -426,6 +512,7 @@ const DocumentItem = memo(function DocumentItem({
 
           {isMenuOpen && (
             <div className="context-menu" onClick={(e) => e.stopPropagation()}>
+              <button onClick={() => onMove(item)}>Move</button>
               <button onClick={() => onRename(item)}>Rename</button>
               <button className="danger" onClick={() => onDelete(item)}>
                 Delete
