@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
 import { getStorageService } from '../services/storageServiceSelector';
 import userStorage from '../services/userStorage';
-import { getDefaultChecklistState } from '../constants/milestones';
+import { getDefaultChecklistState, getDefaultMilestoneDates } from '../constants/milestones';
 
 /**
  * Customer Store
@@ -38,6 +38,7 @@ const useCustomerStore = create((set, get) => ({
       notes: customerData.notes || '',
       dateAdded: new Date().toISOString(),
       checklist: getDefaultChecklistState(),
+      milestoneDates: getDefaultMilestoneDates(),
       dealClosed: false,
       driveFolderId: null,
       driveFolderLink: null,
@@ -97,6 +98,7 @@ const useCustomerStore = create((set, get) => ({
       notes: customerData.notes || '',
       dateAdded: new Date().toISOString(),
       checklist: getDefaultChecklistState(),
+      milestoneDates: getDefaultMilestoneDates(),
       dealClosed: false,
       driveFolderId,
       driveFolderLink,
@@ -203,6 +205,61 @@ const useCustomerStore = create((set, get) => ({
               currentMilestone: milestoneId,
             },
             // Update lastModified to prevent sync from overwriting local changes
+            lastModified: new Date().toISOString(),
+          };
+        }
+        return c;
+      })
+    }));
+  },
+
+  /**
+   * Update milestone dates for a customer
+   * @param {number} customerId - Customer ID
+   * @param {string} milestoneId - Milestone ID (e.g., 'close_deal', 'registration')
+   * @param {string|null} date - Date string (YYYY-MM-DD) or null to clear
+   */
+  updateMilestoneDate: (customerId, milestoneId, date) => {
+    set((state) => ({
+      customers: state.customers.map((c) => {
+        const cId = typeof c.id === 'string' ? parseInt(c.id) : c.id;
+        const targetId = typeof customerId === 'string' ? parseInt(customerId) : customerId;
+
+        if (cId === targetId) {
+          const milestoneDates = c.milestoneDates || getDefaultMilestoneDates();
+          return {
+            ...c,
+            milestoneDates: {
+              ...milestoneDates,
+              [milestoneId]: date,
+            },
+            lastModified: new Date().toISOString(),
+          };
+        }
+        return c;
+      })
+    }));
+  },
+
+  /**
+   * Update multiple milestone dates at once
+   * @param {number} customerId - Customer ID
+   * @param {Object} dates - Object with milestone IDs as keys and date strings as values
+   */
+  updateMilestoneDates: (customerId, dates) => {
+    set((state) => ({
+      customers: state.customers.map((c) => {
+        const cId = typeof c.id === 'string' ? parseInt(c.id) : c.id;
+        const targetId = typeof customerId === 'string' ? parseInt(customerId) : customerId;
+
+        if (cId === targetId) {
+          const milestoneDates = c.milestoneDates || getDefaultMilestoneDates();
+          return {
+            ...c,
+            milestoneDates: {
+              ...milestoneDates,
+              ...dates,
+            },
             lastModified: new Date().toISOString(),
           };
         }
@@ -982,6 +1039,8 @@ export const useCustomerActions = () => useCustomerStore(
     updateCustomer: state.updateCustomer,
     updateChecklistItem: state.updateChecklistItem,
     setCurrentMilestone: state.setCurrentMilestone,
+    updateMilestoneDate: state.updateMilestoneDate,
+    updateMilestoneDates: state.updateMilestoneDates,
     deleteCustomer: state.deleteCustomer,
     deleteCustomerHybrid: state.deleteCustomerHybrid,
     selectCustomer: state.selectCustomer,

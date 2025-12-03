@@ -3,6 +3,46 @@
  * Defines the stages of customer journey in the CRM
  */
 
+/**
+ * Get default milestone dates structure for a new customer
+ * All dates start as null (not set)
+ */
+export const getDefaultMilestoneDates = () => ({
+  test_drive: null,      // Target date for test drive completion
+  close_deal: null,      // COE Bidding date
+  registration: null,    // Registration deadline
+  delivery: null,        // Expected delivery date
+  nps: null,             // NPS follow-up date
+});
+
+/**
+ * Calculate days remaining until a milestone date
+ * Returns null if date is not set, negative if overdue
+ */
+export const getDaysUntilMilestone = (dateString) => {
+  if (!dateString) return null;
+  const targetDate = new Date(dateString);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  targetDate.setHours(0, 0, 0, 0);
+  const diffTime = targetDate.getTime() - today.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  return diffDays;
+};
+
+/**
+ * Get milestone status based on days remaining
+ * Returns: 'overdue' | 'urgent' (<=3 days) | 'soon' (<=7 days) | 'upcoming' | null
+ */
+export const getMilestoneUrgency = (dateString) => {
+  const days = getDaysUntilMilestone(dateString);
+  if (days === null) return null;
+  if (days < 0) return 'overdue';
+  if (days <= 3) return 'urgent';
+  if (days <= 7) return 'soon';
+  return 'upcoming';
+};
+
 export const MILESTONES = [
   {
     id: 'test_drive',

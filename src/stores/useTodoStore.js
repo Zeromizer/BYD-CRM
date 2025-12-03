@@ -81,6 +81,7 @@ const useTodoStore = create((set, get) => ({
       dueDate: todoData.dueDate || null,
       customerId: todoData.customerId || null, // null = global todo
       customerName: todoData.customerName || null,
+      milestoneId: todoData.milestoneId || null, // Link to milestone (e.g., 'close_deal', 'registration')
       createdAt: new Date().toISOString(),
       lastModified: new Date().toISOString(),
     };
@@ -184,6 +185,18 @@ const useTodoStore = create((set, get) => ({
     const today = new Date().toISOString().split('T')[0];
     return get().todos.filter(
       (todo) => todo.dueDate && todo.dueDate < today && !todo.completed
+    );
+  },
+
+  // Get todos for a specific milestone
+  getMilestoneTodos: (milestoneId) => {
+    return get().todos.filter((todo) => todo.milestoneId === milestoneId);
+  },
+
+  // Get todos for a customer's milestone
+  getCustomerMilestoneTodos: (customerId, milestoneId) => {
+    return get().todos.filter(
+      (todo) => todo.customerId === customerId && todo.milestoneId === milestoneId
     );
   },
 
@@ -316,6 +329,8 @@ export const useTodoActions = () =>
       getGlobalTodos: state.getGlobalTodos,
       getTodayTodos: state.getTodayTodos,
       getOverdueTodos: state.getOverdueTodos,
+      getMilestoneTodos: state.getMilestoneTodos,
+      getCustomerMilestoneTodos: state.getCustomerMilestoneTodos,
       saveToLocalStorage: state.saveToLocalStorage,
       setTodos: state.setTodos,
       syncToDrive: state.syncToDrive,
