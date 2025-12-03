@@ -1422,6 +1422,29 @@ class OneDriveService {
     return this.listFolder(folderId);
   }
 
+  /**
+   * Get file content by folder ID and filename
+   * Matches Google Drive API for compatibility
+   * @param {string} folderId - The folder containing the file
+   * @param {string} fileName - The name of the file to read
+   * @returns {Object|null} - Parsed JSON content or null if not found
+   */
+  async getFileContent(folderId, fileName) {
+    try {
+      const file = await this.findFile(folderId, fileName);
+      if (!file) {
+        return null;
+      }
+      return await this.downloadFileAsJson(file.id);
+    } catch (error) {
+      // File not found is expected for new users
+      if (error.message?.includes('404') || error.message?.includes('not found')) {
+        return null;
+      }
+      throw error;
+    }
+  }
+
   // ============================================================
   // Sync Methods (Required by stores and syncCoordinator)
   // ============================================================
