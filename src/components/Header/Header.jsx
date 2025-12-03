@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import useAuthStore from '../../stores/useAuthStore';
+import useAuthStore, { useCurrentUserName } from '../../stores/useAuthStore';
 import useCustomerStore from '../../stores/useCustomerStore';
 import syncCoordinator from '../../services/syncCoordinator';
 import SyncProgressModal from '../SyncProgressModal/SyncProgressModal';
@@ -11,6 +11,7 @@ import './Header.css';
 function Header() {
   const navigate = useNavigate();
   const { isSignedIn, initialize, signIn, signOut, setOnSignInCallback } = useAuthStore();
+  const currentUserName = useCurrentUserName();
   const { selectCustomer } = useCustomerStore();
   const [showDropdown, setShowDropdown] = useState(false);
   const [syncing, setSyncing] = useState(false);
@@ -126,6 +127,13 @@ function Header() {
         <div className="header-actions">
           {/* Sync Status Indicator - shows when there are pending/failed syncs */}
           {isSignedIn && <SyncStatusIndicator />}
+
+          {/* Show account name when signed in */}
+          {isSignedIn && currentUserName && (
+            <span className="account-name" title={currentUserName}>
+              {currentUserName}
+            </span>
+          )}
 
           <button
             className={`auth-button ${isSignedIn ? 'connected' : ''}`}
