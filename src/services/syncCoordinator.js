@@ -7,7 +7,9 @@
 import useCustomerStore from '../stores/useCustomerStore';
 import useExcelStore from '../stores/useExcelStore';
 import useDocumentStore from '../stores/useDocumentStore';
+import useTodoStore from '../stores/useTodoStore';
 import { getStorageService } from './storageServiceSelector';
+import userStorage from './userStorage';
 
 class SyncCoordinator {
   constructor() {
@@ -58,6 +60,7 @@ class SyncCoordinator {
       customers: { status: 'pending', detail: '' },
       excel: { status: 'pending', detail: '' },
       documents: { status: 'pending', detail: '' },
+      todos: { status: 'pending', detail: '' },
       overall: 0,
     };
 
@@ -67,11 +70,11 @@ class SyncCoordinator {
     const updateProgress = (type, status, detail = '') => {
       progress[type] = { status, detail };
 
-      // Calculate overall progress (3 types)
-      const statuses = [progress.customers.status, progress.excel.status, progress.documents.status];
+      // Calculate overall progress (4 types)
+      const statuses = [progress.customers.status, progress.excel.status, progress.documents.status, progress.todos.status];
       const completed = statuses.filter(s => s === 'complete').length;
       const syncing = statuses.filter(s => s === 'syncing').length;
-      progress.overall = (completed * 100 + syncing * 25) / 3;
+      progress.overall = (completed * 100 + syncing * 25) / 4;
 
       this.notifyProgress({ ...progress });
     };
@@ -122,6 +125,20 @@ class SyncCoordinator {
           } catch (error) {
             updateProgress('documents', 'error', 'Sync failed');
             throw error;
+          }
+        })(),
+
+        // Sync Todos
+        (async () => {
+          try {
+            updateProgress('todos', 'syncing', 'Loading tasks...');
+            const email = userStorage.getUserEmail();
+            await useTodoStore.getState().syncFromDrive(email);
+            const count = useTodoStore.getState().todos.length;
+            updateProgress('todos', 'complete', `${count} task${count !== 1 ? 's' : ''} synced`);
+          } catch (error) {
+            updateProgress('todos', 'error', 'Sync failed');
+            // Don't throw - todos are non-critical
           }
         })(),
       ];

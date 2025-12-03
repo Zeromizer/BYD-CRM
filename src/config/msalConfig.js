@@ -100,4 +100,5 @@ export const ONEDRIVE_DATA_FILES = {
   CUSTOMER_DETAILS: 'customer.json',
   FORMS: 'forms.json',
   EXCEL: 'excel.json',
+  TODOS: 'todos.json',
 };

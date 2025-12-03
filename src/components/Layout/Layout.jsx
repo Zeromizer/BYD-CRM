@@ -1,5 +1,6 @@
 import { Outlet } from 'react-router-dom';
 import Header from '../Header/Header';
+import TodoSidebar from '../TodoSidebar/TodoSidebar';
 import './Layout.css';
 
 function Layout() {
@@ -9,6 +10,7 @@ function Layout() {
       <main className="app-main">
         <Outlet />
       </main>
+      <TodoSidebar />
     </div>
   );
 }
