@@ -179,14 +179,14 @@ function CustomerDetails() {
     setIsSubmitting(true);
     try {
       const updateData = { ...detailsForm.formData, guarantors: guarantorsHook.guarantors };
+      // Set lastModified timestamp for both local and Drive saves
+      const lastModified = new Date().toISOString();
       updateCustomer(customer.id, updateData);
       saveToLocalStorage();
 
       if (isSignedIn && customer.driveFolderId) {
-        const updatedCustomer = customers.find(c => c.id === customer.id);
-        if (updatedCustomer) {
-          await saveCustomerToFolder({ ...updatedCustomer, ...updateData }, isSignedIn);
-        }
+        // Include all current customer data plus updates and ensure lastModified is set
+        await saveCustomerToFolder({ ...customer, ...updateData, lastModified }, isSignedIn);
       }
 
       detailsForm.markAsSaved();
@@ -198,7 +198,7 @@ function CustomerDetails() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [customer, detailsForm, guarantorsHook, customers, isSignedIn, validateDetails, updateCustomer, saveToLocalStorage, saveCustomerToFolder, toast]);
+  }, [customer, detailsForm, guarantorsHook, isSignedIn, validateDetails, updateCustomer, saveToLocalStorage, saveCustomerToFolder, toast]);
 
   const handleProposalSave = useCallback(async () => {
     if (!customer) return;
@@ -206,14 +206,14 @@ function CustomerDetails() {
     setIsSubmitting(true);
     try {
       const updates = proposalForm.buildUpdateObject();
+      // Set lastModified timestamp for both local and Drive saves
+      const lastModified = new Date().toISOString();
       updateCustomer(customer.id, updates);
       saveToLocalStorage();
 
       if (isSignedIn && customer.driveFolderId) {
-        const updatedCustomer = customers.find(c => c.id === customer.id);
-        if (updatedCustomer) {
-          await saveCustomerToFolder({ ...updatedCustomer, ...updates }, isSignedIn);
-        }
+        // Include all current customer data plus updates and ensure lastModified is set
+        await saveCustomerToFolder({ ...customer, ...updates, lastModified }, isSignedIn);
       }
 
       proposalForm.markAsSaved();
@@ -224,7 +224,7 @@ function CustomerDetails() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [customer, proposalForm, customers, isSignedIn, updateCustomer, saveToLocalStorage, saveCustomerToFolder, toast]);
+  }, [customer, proposalForm, isSignedIn, updateCustomer, saveToLocalStorage, saveCustomerToFolder, toast]);
 
   const handleVsaSave = useCallback(async () => {
     if (!customer) return;
@@ -232,14 +232,14 @@ function CustomerDetails() {
     setIsSubmitting(true);
     try {
       const updates = vsaForm.buildUpdateObject();
+      // Set lastModified timestamp for both local and Drive saves
+      const lastModified = new Date().toISOString();
       updateCustomer(customer.id, updates);
       saveToLocalStorage();
 
       if (isSignedIn && customer.driveFolderId) {
-        const updatedCustomer = customers.find(c => c.id === customer.id);
-        if (updatedCustomer) {
-          await saveCustomerToFolder({ ...updatedCustomer, ...updates }, isSignedIn);
-        }
+        // Include all current customer data plus updates and ensure lastModified is set
+        await saveCustomerToFolder({ ...customer, ...updates, lastModified }, isSignedIn);
       }
 
       vsaForm.markAsSaved();
@@ -250,7 +250,7 @@ function CustomerDetails() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [customer, vsaForm, customers, isSignedIn, updateCustomer, saveToLocalStorage, saveCustomerToFolder, toast]);
+  }, [customer, vsaForm, isSignedIn, updateCustomer, saveToLocalStorage, saveCustomerToFolder, toast]);
 
   // Delete customer handler
   const handleDeleteConfirm = useCallback(async () => {
