@@ -37,8 +37,22 @@ try {
   process.exit(1);
 }
 
-// Step 2: Ensure root assets directory exists
-if (!fs.existsSync(rootAssetsDir)) {
+// Step 2: Clean up old assets and ensure directory exists
+if (fs.existsSync(rootAssetsDir)) {
+  // Remove old hashed asset files to prevent stale cache issues
+  const oldFiles = fs.readdirSync(rootAssetsDir);
+  let removedCount = 0;
+  oldFiles.forEach(file => {
+    const filePath = path.join(rootAssetsDir, file);
+    if (fs.statSync(filePath).isFile()) {
+      fs.unlinkSync(filePath);
+      removedCount++;
+    }
+  });
+  if (removedCount > 0) {
+    console.log(`✓ Cleaned up ${removedCount} old asset file(s)`);
+  }
+} else {
   fs.mkdirSync(rootAssetsDir, { recursive: true });
   console.log('✓ Created assets/ directory');
 }
