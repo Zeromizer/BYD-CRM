@@ -201,11 +201,12 @@ function VsaTab({
           <div className="inline-edit-item">
             <label htmlFor="vsa_deliveryDate">Approximate Delivery Date</label>
             <input
-              type="date"
+              type="text"
               id="vsa_deliveryDate"
               name="deliveryDate"
               value={formData.deliveryDate || ''}
               onChange={handleInputChange}
+              placeholder="e.g., Mid Jan 2025"
               disabled={isSubmitting}
             />
           </div>
