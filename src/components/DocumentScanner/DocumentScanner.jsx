@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import pdfGenerator from '../../services/pdfGenerator';
 import './DocumentScanner.css';
 
@@ -1360,7 +1361,8 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
   // RENDER
   // ========================================
 
-  return (
+  // Use portal to render at document body level, ensuring it covers everything
+  return createPortal(
     <div className="doc-scanner">
       <canvas ref={canvasRef} style={{ display: 'none' }} />
       <canvas ref={enhanceCanvasRef} style={{ display: 'none' }} />
@@ -1917,7 +1919,8 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
           )}
         </div>
       )}
-    </div>
+    </div>,
+    document.body
   );
 }
 
