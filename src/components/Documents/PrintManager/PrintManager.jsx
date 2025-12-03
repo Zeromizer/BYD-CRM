@@ -336,13 +336,13 @@ function PrintManager({ isOpen, onClose, customer }) {
       // Check if customer already has a folder ID stored
       let customerFolderId = customer.driveFolderId;
 
-      // If customer has a folder ID, verify it still exists
+      // If customer has a folder ID, verify it still exists using OneDrive service
       if (customerFolderId) {
         console.log('🔍 Verifying existing folder ID:', customerFolderId);
-        try {
-          await window.gapi.client.drive.files.get({ fileId: customerFolderId });
+        const folderExists = await getStorageService().validateFolderId(customerFolderId);
+        if (folderExists) {
           console.log('✅ Customer folder exists:', customerFolderId);
-        } catch {
+        } else {
           console.warn('⚠️ Stored folder ID no longer exists, will search/create');
           customerFolderId = null;
         }
