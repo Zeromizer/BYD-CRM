@@ -7,6 +7,7 @@ const DocumentViewer = memo(function DocumentViewer({ isOpen, onClose, document 
   const [loading, setLoading] = useState(true);
   const [imageUrl, setImageUrl] = useState(null);
   const [embedUrl, setEmbedUrl] = useState(null);
+  const [editUrl, setEditUrl] = useState(null);
   const [error, setError] = useState(null);
   const [iframeLoaded, setIframeLoaded] = useState(false);
 
@@ -41,6 +42,7 @@ const DocumentViewer = memo(function DocumentViewer({ isOpen, onClose, document 
       setError(null);
       setImageUrl(null);
       setEmbedUrl(null);
+      setEditUrl(null);
       setIframeLoaded(false);
 
       // Try to load image files directly
@@ -49,6 +51,10 @@ const DocumentViewer = memo(function DocumentViewer({ isOpen, onClose, document 
       } else if (canEmbedPreview(document.mimeType)) {
         // For embeddable files, we'll use iframe - set loading false when iframe loads
         loadEmbedUrl();
+        // For Excel files, also load the edit URL
+        if (isSpreadsheet(document.mimeType)) {
+          loadEditUrl();
+        }
       } else {
         setLoading(false);
       }
@@ -83,6 +89,25 @@ const DocumentViewer = memo(function DocumentViewer({ isOpen, onClose, document 
     } catch (err) {
       setError('Unable to load image preview');
       setLoading(false);
+    }
+  };
+
+  // Load edit URL for Excel files (opens directly in Excel Online)
+  const loadEditUrl = async () => {
+    try {
+      const url = await oneDriveService.getEditUrl(document.id);
+      if (url) {
+        setEditUrl(url);
+      }
+    } catch (err) {
+      console.error('Failed to get edit URL:', err);
+      // Don't show error - edit button just won't appear
+    }
+  };
+
+  const handleOpenInExcel = () => {
+    if (editUrl) {
+      window.open(editUrl, '_blank');
     }
   };
 
@@ -174,9 +199,16 @@ const DocumentViewer = memo(function DocumentViewer({ isOpen, onClose, document 
           )}
         </div>
 
-        {/* Action Bar - Show "Open in Drive" for all previewable files */}
+        {/* Action Bar - Show action buttons for all previewable files */}
         {!error && (imageUrl || (showEmbedPreview && iframeLoaded)) && (
           <div className="document-viewer-actions">
+            {/* Edit in Excel Online button - only for spreadsheets */}
+            {isSpreadsheet(document.mimeType) && editUrl && (
+              <button className="btn btn-primary" onClick={handleOpenInExcel}>
+                <span className="btn-icon">📝</span>
+                Edit in Excel Online
+              </button>
+            )}
             <button className="btn btn-secondary" onClick={handleOpenInDrive}>
               <span className="btn-icon">↗️</span>
               Open in OneDrive
