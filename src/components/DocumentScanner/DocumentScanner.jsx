@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import pdfGenerator from '../../services/pdfGenerator';
+import oneDriveService from '../../services/oneDriveService';
 import './DocumentScanner.css';
 
 /**
@@ -1275,46 +1276,30 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
 
     try {
       const uploadedFiles = [];
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
 
       for (let i = 0; i < pages.length; i++) {
         setExportProgress((i / pages.length) * 90);
 
         const page = pages[i];
-        const base64Data = page.image.split(',')[1];
 
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        // Convert base64 to Blob
+        const base64Data = page.image.split(',')[1];
+        const byteCharacters = atob(base64Data);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let j = 0; j < byteCharacters.length; j++) {
+          byteNumbers[j] = byteCharacters.charCodeAt(j);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: 'image/jpeg' });
+
         const filename = pages.length > 1
           ? `Scan_${timestamp}_${i + 1}.jpg`
           : `Scan_${timestamp}.jpg`;
 
-        const boundary = '-------314159265358979323846';
-        const metadata = {
-          name: filename,
-          mimeType: 'image/jpeg',
-          parents: [customerFolderId]
-        };
-
-        const multipartRequestBody =
-          '\r\n--' + boundary + '\r\n' +
-          'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
-          JSON.stringify(metadata) +
-          '\r\n--' + boundary + '\r\n' +
-          'Content-Type: image/jpeg\r\n' +
-          'Content-Transfer-Encoding: base64\r\n\r\n' +
-          base64Data +
-          '\r\n--' + boundary + '--';
-
-        const response = await window.gapi.client.request({
-          path: '/upload/drive/v3/files',
-          method: 'POST',
-          params: { uploadType: 'multipart' },
-          headers: {
-            'Content-Type': 'multipart/related; boundary="' + boundary + '"'
-          },
-          body: multipartRequestBody
-        });
-
-        uploadedFiles.push(response.result);
+        // Upload to OneDrive using the service
+        const fileId = await oneDriveService.uploadFileToFolder(filename, blob, customerFolderId);
+        uploadedFiles.push({ id: fileId, name: filename });
       }
 
       setExportProgress(100);
@@ -1329,7 +1314,7 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
 
     } catch (err) {
       console.error('Upload error:', err);
-      setError('Failed to upload. Please try again.');
+      setError('Failed to upload to OneDrive. Please try again.');
       setIsExporting(false);
     }
   };
