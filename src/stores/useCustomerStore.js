@@ -811,14 +811,14 @@ const useCustomerStore = create((set, get) => ({
       return false;
     }
 
+    // Add lastModified timestamp
+    const customerData = {
+      ...customer,
+      lastModified: new Date().toISOString(),
+    };
+
     try {
       console.log('saveCustomerToFolder: Saving customer to OneDrive...', customer.id, customer.name);
-
-      // Add lastModified timestamp
-      const customerData = {
-        ...customer,
-        lastModified: new Date().toISOString(),
-      };
 
       // Save to individual customer.json
       await getStorageService().saveCustomerData(customerData, customer.driveFolderId);
@@ -848,6 +848,78 @@ const useCustomerStore = create((set, get) => ({
 
       return true;
     } catch (error) {
+      // Check if error is due to invalid folder ID (Google Drive ID used with OneDrive)
+      const isInvalidFolderError = error.message?.includes('Invalid request') ||
+        error.message?.includes('Bad Request') ||
+        error.message?.includes('400') ||
+        error.message?.includes('itemNotFound');
+
+      if (isInvalidFolderError) {
+        console.log('saveCustomerToFolder: Invalid folder ID detected, creating new OneDrive folder...');
+
+        try {
+          // Create a new OneDrive folder for the customer
+          const folderInfo = await getStorageService().createCustomerFolderStructure(customer.name, customer.id);
+          console.log('saveCustomerToFolder: New OneDrive folder created:', folderInfo.folderId);
+
+          // Update customer data with new folder info
+          const updatedCustomerData = {
+            ...customerData,
+            driveFolderId: folderInfo.folderId,
+            driveFolderLink: folderInfo.folderUrl,
+          };
+
+          // Save to the new folder
+          await getStorageService().saveCustomerData(updatedCustomerData, folderInfo.folderId);
+          console.log('saveCustomerToFolder: Customer saved to new folder');
+
+          // Update local state with new folder info
+          set((state) => ({
+            customers: state.customers.map((c) => {
+              const customerId = typeof c.id === 'string' ? parseInt(c.id) : c.id;
+              const targetId = typeof customer.id === 'string' ? parseInt(customer.id) : customer.id;
+              if (customerId === targetId) {
+                return {
+                  ...c,
+                  driveFolderId: folderInfo.folderId,
+                  driveFolderLink: folderInfo.folderUrl,
+                  lastModified: updatedCustomerData.lastModified,
+                };
+              }
+              return c;
+            }),
+          }));
+
+          // Save to localStorage
+          get().saveToLocalStorage();
+
+          // Update index with new folder info
+          const index = await getStorageService().loadCustomersIndex();
+          const indexEntry = {
+            id: customer.id,
+            name: customer.name,
+            vsaNo: customer.vsaNo,
+            driveFolderId: folderInfo.folderId,
+            driveFolderLink: folderInfo.folderUrl,
+            lastModified: updatedCustomerData.lastModified,
+          };
+
+          const existingIndex = index.findIndex(e => e.id === customer.id);
+          if (existingIndex >= 0) {
+            index[existingIndex] = indexEntry;
+          } else {
+            index.push(indexEntry);
+          }
+          await getStorageService().saveCustomersIndex(index);
+
+          console.log('saveCustomerToFolder: Folder repaired successfully');
+          return true;
+        } catch (repairError) {
+          console.error('saveCustomerToFolder: Failed to repair folder:', repairError);
+          throw repairError;
+        }
+      }
+
       // Log the error and rethrow so the caller can handle it
       console.error('saveCustomerToFolder: Failed to save to OneDrive:', error);
       throw error;
