@@ -1198,7 +1198,7 @@
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 480px;
+    width: 600px;
     height: 85vh;
     max-height: 900px;
     border-radius: 24px;
@@ -1211,14 +1211,205 @@
     background: #000;
   }
 
+  /* Start view desktop improvements */
+  .start-content {
+    max-width: 480px;
+  }
+
+  .scanner-icon {
+    width: 120px;
+    height: 120px;
+  }
+
+  .start-content h2 {
+    font-size: 32px;
+  }
+
+  .start-content p {
+    font-size: 16px;
+  }
+
+  .start-buttons {
+    flex-direction: row;
+    justify-content: center;
+    gap: 16px;
+  }
+
+  .btn-primary-large,
+  .btn-secondary-large {
+    padding: 14px 28px;
+    font-size: 15px;
+  }
+
+  .btn-primary-large:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 24px rgba(59, 130, 246, 0.5);
+  }
+
+  .btn-secondary-large:hover {
+    background: rgba(255, 255, 255, 0.15);
+  }
+
+  /* Gallery desktop improvements */
   .gallery-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    padding: 20px;
+  }
+
+  .gallery-item {
+    border-radius: 12px;
+  }
+
+  .gallery-actions button {
+    width: 40px;
+    height: 40px;
+  }
+
+  .gallery-actions button:hover {
+    background: rgba(255, 255, 255, 0.25);
+  }
+
+  /* Export desktop improvements */
+  .export-buttons {
+    flex-direction: row;
+    gap: 16px;
+  }
+
+  .export-btn {
+    flex: 1;
+  }
+
+  .export-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+  }
+
+  /* Crop/Enhance desktop improvements */
+  .crop-actions {
+    gap: 16px;
+    padding: 20px;
+  }
+
+  .crop-btn:hover {
+    filter: brightness(1.1);
+  }
+
+  .filter-presets {
+    justify-content: center;
+    gap: 16px;
+  }
+
+  .filter-btn:hover .filter-preview {
+    border-color: rgba(59, 130, 246, 0.5);
+  }
+
+  .rotation-controls button:hover {
+    background: rgba(59, 130, 246, 0.25);
+  }
+
+  /* Header buttons hover */
+  .header-btn:hover {
+    background: rgba(59, 130, 246, 0.15);
+  }
+
+  .header-btn.primary:hover {
+    background: #2563eb;
+  }
+
+  /* Top bar buttons hover */
+  .topbar-btn:hover {
+    background: rgba(255, 255, 255, 0.25);
+  }
+
+  .btn-close-scanner:hover {
+    background: rgba(255, 255, 255, 0.2);
   }
 }
 
 @media (min-width: 1024px) {
   .doc-scanner {
-    width: 440px;
+    width: 700px;
+    height: 80vh;
+  }
+
+  .start-content {
+    max-width: 520px;
+  }
+
+  .scanner-icon {
+    width: 140px;
+    height: 140px;
+    margin-bottom: 32px;
+  }
+
+  .start-content h2 {
+    font-size: 36px;
+    margin-bottom: 16px;
+  }
+
+  .start-content p {
+    font-size: 17px;
+    margin-bottom: 40px;
+  }
+
+  .start-buttons {
+    gap: 20px;
+  }
+
+  .btn-primary-large {
+    padding: 16px 36px;
+    font-size: 16px;
+  }
+
+  .btn-secondary-large {
+    padding: 14px 32px;
+    font-size: 15px;
+  }
+
+  .gallery-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    padding: 24px;
+  }
+
+  /* Enhance view desktop */
+  .enhance-preview {
+    max-height: 50vh;
+  }
+
+  .filter-presets {
+    padding: 20px;
+    gap: 20px;
+  }
+
+  .filter-preview {
+    width: 70px;
+    height: 70px;
+  }
+
+  .adjust-controls {
+    padding: 16px 24px;
+  }
+
+  /* Export view desktop */
+  .preview-stack {
+    width: 220px;
+    height: 290px;
+  }
+
+  .export-options {
+    padding: 32px 24px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .doc-scanner {
+    width: 800px;
+  }
+
+  .gallery-grid {
+    grid-template-columns: repeat(4, 1fr);
   }
 }
 
