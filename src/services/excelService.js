@@ -1,5 +1,6 @@
 import { getStorageService, getAuthService } from './storageServiceSelector';
 import { PRZ_TYPES } from '../constants/vehicleData';
+import * as userStorage from './userStorage';
 
 /**
  * Excel Service for populating Excel templates with customer data
@@ -382,13 +383,19 @@ class ExcelService {
   /**
    * Get or create customer folder in cloud storage
    * Uses storageService to ensure consistent folder structure and prevent duplicates
+   * Uses userStorage for multi-user/multi-device support
    */
   async getOrCreateCustomerFolder(customerName, customerId) {
     try {
       console.log('📁 Getting/creating customer folder:', { customerName, customerId });
 
-      // Check if customer already has a folder ID stored
-      const customers = JSON.parse(localStorage.getItem('bydCRM') || '[]');
+      // Get current user email for user-specific storage
+      const userEmail = userStorage.getUserEmail();
+
+      // Check if customer already has a folder ID stored (use user-specific storage)
+      const customers = userEmail
+        ? (userStorage.loadUserData(userEmail, 'customers') || [])
+        : JSON.parse(localStorage.getItem('bydCRM') || '[]');
       const customer = customers.find(c => c.id === customerId);
 
       if (customer && customer.driveFolderId) {
@@ -410,7 +417,7 @@ class ExcelService {
         if (existingFolder) {
           console.log('✅ Found existing customer folder:', existingFolder.folderId);
 
-          // Update customer record with found folder ID
+          // Update customer record with found folder ID (use user-specific storage)
           const updatedCustomers = customers.map(c =>
             c.id === customerId ? {
               ...c,
@@ -418,7 +425,11 @@ class ExcelService {
               driveFolderLink: existingFolder.folderUrl
             } : c
           );
-          localStorage.setItem('bydCRM', JSON.stringify(updatedCustomers));
+          if (userEmail) {
+            userStorage.saveUserData(userEmail, 'customers', updatedCustomers);
+          } else {
+            localStorage.setItem('bydCRM', JSON.stringify(updatedCustomers));
+          }
           console.log('💾 Updated customer record with existing folder ID');
 
           return existingFolder.folderId;
@@ -432,7 +443,7 @@ class ExcelService {
       const folderInfo = await getStorageService().createCustomerFolderStructure(customerName, customerId);
       console.log('✅ Customer folder structure created:', folderInfo.folderId);
 
-      // Update customer record with folder ID
+      // Update customer record with folder ID (use user-specific storage)
       const updatedCustomers = customers.map(c =>
         c.id === customerId ? {
           ...c,
@@ -440,7 +451,11 @@ class ExcelService {
           driveFolderLink: folderInfo.folderUrl
         } : c
       );
-      localStorage.setItem('bydCRM', JSON.stringify(updatedCustomers));
+      if (userEmail) {
+        userStorage.saveUserData(userEmail, 'customers', updatedCustomers);
+      } else {
+        localStorage.setItem('bydCRM', JSON.stringify(updatedCustomers));
+      }
       console.log('💾 Updated customer record with new folder ID');
 
       return folderInfo.folderId;

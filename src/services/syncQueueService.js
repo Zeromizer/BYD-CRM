@@ -1,6 +1,6 @@
 /**
  * Sync Queue Service
- * Manages reliable syncing of data to Google Drive with retry logic and offline support
+ * Manages reliable syncing of data to OneDrive with retry logic and offline support
  *
  * Features:
  * - Queue operations for reliable delivery
