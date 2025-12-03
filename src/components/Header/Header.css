@@ -64,6 +64,17 @@
   align-items: center;
 }
 
+/* Account name display */
+.account-name {
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  font-weight: 500;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .auth-button {
   display: flex;
   align-items: center;
@@ -337,6 +348,10 @@
 
   .motor-east {
     font-size: 13px;
+  }
+
+  .account-name {
+    display: none;
   }
 
   .auth-button {

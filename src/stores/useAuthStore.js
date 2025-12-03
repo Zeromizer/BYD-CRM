@@ -17,6 +17,7 @@ const useAuthStore = create((set, get) => ({
   isInitializing: false,
   error: null,
   currentUserEmail: null,  // Track current user account
+  currentUserName: null,   // Track current user display name
   isUserVerified: false,   // Track if current user has been verified against data owner
   migrationPending: false, // Track if legacy data migration is pending
 
@@ -50,10 +51,12 @@ const useAuthStore = create((set, get) => ({
         const previousUserEmail = get().currentUserEmail;
         const currentDataOwner = userStorage.getCurrentDataOwner();
 
-        // Get current user email if signed in (await to ensure we have it)
+        // Get current user email and name if signed in (await to ensure we have it)
         let currentUserEmail = null;
+        let currentUserName = null;
         if (isSignedIn) {
           currentUserEmail = msAuthService.getUserEmail();
+          currentUserName = msAuthService.getUserName();
         }
 
         // Check if account switched (different user email)
@@ -86,7 +89,7 @@ const useAuthStore = create((set, get) => ({
           userStorage.setUserEmail(currentUserEmail);
         }
 
-        set({ isSignedIn, currentUserEmail, isUserVerified: isSignedIn });
+        set({ isSignedIn, currentUserEmail, currentUserName, isUserVerified: isSignedIn });
 
         // CRITICAL FIX: Only trigger sync when transitioning from signed-out → signed-in
         // NOT on token refreshes or when already signed in
@@ -158,6 +161,7 @@ const useAuthStore = create((set, get) => ({
         isSignedIn: false,
         isUserVerified: false,
         currentUserEmail: null,
+        currentUserName: null,
         rootFolderId: null,
         excelTemplatesFolderId: null,
         dataFileId: null,
@@ -232,6 +236,9 @@ export const useAuthInitState = () => useAuthStore(
 
 // Selector for current user email
 export const useCurrentUserEmail = () => useAuthStore((state) => state.currentUserEmail);
+
+// Selector for current user name
+export const useCurrentUserName = () => useAuthStore((state) => state.currentUserName);
 
 // Selector for auth actions (stable reference)
 export const useAuthActions = () => useAuthStore(
