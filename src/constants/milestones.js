@@ -13,8 +13,8 @@ export const MILESTONES = [
   },
   {
     id: 'close_deal',
-    name: 'Close Deal',
-    shortName: 'CD',
+    name: 'COE Bidding',
+    shortName: 'COE',
     color: '#0891b2', // Cyan - business progress
     iconName: 'Handshake',
   },
