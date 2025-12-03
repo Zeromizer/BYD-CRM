@@ -147,6 +147,8 @@ const useCustomerStore = create((set, get) => ({
             // Preserve folder IDs from updates if provided, otherwise keep existing
             driveFolderId: updates.driveFolderId !== undefined ? updates.driveFolderId : (c.driveFolderId || null),
             driveFolderLink: updates.driveFolderLink !== undefined ? updates.driveFolderLink : (c.driveFolderLink || null),
+            // CRITICAL: Always update lastModified to prevent sync from overwriting local changes
+            lastModified: new Date().toISOString(),
           };
         }
         return c;
@@ -174,6 +176,8 @@ const useCustomerStore = create((set, get) => ({
                 [itemId]: checked,
               },
             },
+            // Update lastModified to prevent sync from overwriting local changes
+            lastModified: new Date().toISOString(),
           };
         }
         return c;
@@ -198,6 +202,8 @@ const useCustomerStore = create((set, get) => ({
               ...checklist,
               currentMilestone: milestoneId,
             },
+            // Update lastModified to prevent sync from overwriting local changes
+            lastModified: new Date().toISOString(),
           };
         }
         return c;
