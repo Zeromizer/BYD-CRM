@@ -318,14 +318,41 @@ function CustomerDetails() {
   }, [documentManager]);
 
   // Open in OneDrive
-  const handleOpenInDrive = useCallback(() => {
+  const handleOpenInDrive = useCallback(async () => {
     if (documentManager.folderPath.length > 0) {
       const currentFolder = documentManager.folderPath[documentManager.folderPath.length - 1];
+
+      // Check if we have a stored link
       if (currentFolder.webViewLink) {
+        // Detect if it's a Google Drive link (legacy from before OneDrive migration)
+        if (currentFolder.webViewLink.includes('drive.google.com')) {
+          // Try to get the correct OneDrive link
+          try {
+            const folderDetails = await getStorageService().getFolder(currentFolder.id);
+            if (folderDetails?.webUrl) {
+              window.open(folderDetails.webUrl, '_blank');
+              return;
+            }
+          } catch {
+            // Folder might not exist in OneDrive
+          }
+          toast.error('This customer has a Google Drive folder. Please repair the customer folder in settings.');
+          return;
+        }
         window.open(currentFolder.webViewLink, '_blank');
+      } else if (currentFolder.id) {
+        // No link stored, try to fetch from OneDrive
+        try {
+          const folderDetails = await getStorageService().getFolder(currentFolder.id);
+          if (folderDetails?.webUrl) {
+            window.open(folderDetails.webUrl, '_blank');
+          }
+        } catch {
+          toast.error('Could not open folder. The folder may need to be repaired.');
+        }
       }
     }
-  }, [documentManager.folderPath]);
+  }, [documentManager.folderPath, toast]);
 
   // Empty state
   if (!customer) {
