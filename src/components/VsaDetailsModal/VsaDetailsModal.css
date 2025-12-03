@@ -2,7 +2,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--spacing-lg);
-  max-height: 70vh;
+  max-height: min(70vh, calc(100vh - 120px));
 }
 
 /* VSA Tabs */
@@ -205,5 +205,41 @@
 
   .modal-actions button {
     width: 100%;
+  }
+}
+
+/* Extra small screens - stack labels above inputs */
+@media (max-width: 480px) {
+  .vsa-details-form {
+    max-height: calc(100vh - 100px);
+  }
+
+  .vsa-tab {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+
+  .form-group {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+
+  .form-group label {
+    min-width: auto;
+    max-width: none;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .form-group input,
+  .form-group textarea,
+  .form-group select {
+    width: 100%;
+  }
+
+  .vsa-tab-content {
+    padding: 12px;
+    min-height: auto;
   }
 }

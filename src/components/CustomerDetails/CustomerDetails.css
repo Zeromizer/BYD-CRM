@@ -1704,3 +1704,39 @@
   }
 }
 
+/* Extra small screens - stack labels above inputs for better readability */
+@media (max-width: 480px) {
+  .inline-edit-item {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+
+  .inline-edit-item label {
+    min-width: auto;
+    max-width: none;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+  }
+
+  .inline-edit-item input,
+  .inline-edit-item select {
+    width: 100%;
+  }
+
+  /* Reduce section header size on very small screens */
+  .info-section h3 {
+    font-size: 14px;
+  }
+
+  /* Guarantor cards need more compact styling */
+  .guarantor-header {
+    padding: 12px;
+  }
+
+  .guarantor-content {
+    padding: 12px;
+  }
+}
+
