@@ -801,11 +801,19 @@ const useCustomerStore = create((set, get) => ({
    * HYBRID: Save individual customer to their folder
    */
   saveCustomerToFolder: async (customer, isSignedIn) => {
-    if (!isSignedIn || !customer.driveFolderId) {
+    if (!isSignedIn) {
+      console.log('saveCustomerToFolder: Skipped - not signed in');
+      return false;
+    }
+
+    if (!customer.driveFolderId) {
+      console.log('saveCustomerToFolder: Skipped - no driveFolderId for customer', customer.id, customer.name);
       return false;
     }
 
     try {
+      console.log('saveCustomerToFolder: Saving customer to OneDrive...', customer.id, customer.name);
+
       // Add lastModified timestamp
       const customerData = {
         ...customer,
@@ -814,6 +822,7 @@ const useCustomerStore = create((set, get) => ({
 
       // Save to individual customer.json
       await getStorageService().saveCustomerData(customerData, customer.driveFolderId);
+      console.log('saveCustomerToFolder: customer.json saved successfully');
 
       // Update index
       const index = await getStorageService().loadCustomersIndex();
@@ -835,10 +844,13 @@ const useCustomerStore = create((set, get) => ({
       }
 
       await getStorageService().saveCustomersIndex(index);
+      console.log('saveCustomerToFolder: Index updated successfully');
 
       return true;
-    } catch {
-      return false;
+    } catch (error) {
+      // Log the error and rethrow so the caller can handle it
+      console.error('saveCustomerToFolder: Failed to save to OneDrive:', error);
+      throw error;
     }
   },
 
