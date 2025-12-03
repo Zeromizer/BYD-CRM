@@ -3,7 +3,7 @@
   display: flex;
   flex-direction: column;
   gap: 0;
-  max-height: 70vh;
+  max-height: min(70vh, calc(100vh - 120px));
   overflow: hidden;
 }
 
@@ -105,5 +105,35 @@
 
   .vsa-details-form .modal-actions button {
     width: 100%;
+  }
+}
+
+/* Extra small screens - stack labels above inputs */
+@media (max-width: 480px) {
+  .vsa-details-form {
+    max-height: calc(100vh - 100px);
+  }
+
+  .vsa-details-form .form-group {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+
+  .vsa-details-form .form-group label {
+    min-width: auto;
+    max-width: none;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .vsa-details-form .form-group input,
+  .vsa-details-form .form-group textarea,
+  .vsa-details-form .form-group select {
+    width: 100%;
+  }
+
+  .vsa-details-form .modal-content {
+    padding: 12px;
   }
 }
