@@ -380,6 +380,116 @@
   transform: rotate(180deg);
 }
 
+/* Milestone Date Section */
+.milestone-date-section {
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border: 1px solid #bae6fd;
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.milestone-date-input-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.milestone-date-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #0369a1;
+  white-space: nowrap;
+}
+
+.milestone-date-input {
+  padding: 8px 12px;
+  border: 1px solid #7dd3fc;
+  border-radius: 6px;
+  font-size: 13px;
+  background: white;
+  color: #0c4a6e;
+  min-width: 150px;
+}
+
+.milestone-date-input:focus {
+  outline: none;
+  border-color: #0284c7;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+}
+
+.days-remaining {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.days-remaining.upcoming {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.days-remaining.soon {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.days-remaining.urgent {
+  background: #fee2e2;
+  color: #991b1b;
+  animation: pulse 2s infinite;
+}
+
+.days-remaining.overdue {
+  background: #dc2626;
+  color: white;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.create-todos-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: var(--milestone-color, #0284c7);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
+}
+
+.create-todos-btn:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.create-todos-btn:active {
+  transform: translateY(0);
+}
+
 /* Checklist Items */
 .checklist-items {
   padding: 0 16px 16px 16px;

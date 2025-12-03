@@ -1,14 +1,18 @@
 import { useState, useEffect, memo, useCallback, useMemo } from 'react';
 import useCustomerStore from '../../stores/useCustomerStore';
 import useAuthStore from '../../stores/useAuthStore';
+import useTodoStore from '../../stores/useTodoStore';
 import {
   MILESTONES,
   CHECKLISTS,
   getMilestoneProgress,
   isMilestoneComplete,
   getDefaultChecklistState,
+  getDefaultMilestoneDates,
+  getDaysUntilMilestone,
+  getMilestoneUrgency,
 } from '../../constants/milestones';
-import { Car, Handshake, ClipboardCheck, Package, Star } from 'lucide-react';
+import { Car, Handshake, ClipboardCheck, Package, Star, Calendar, Clock, Plus, ListTodo } from 'lucide-react';
 import './MilestoneTracker.css';
 
 // Map icon names to components
@@ -28,7 +32,8 @@ const getMilestoneIcon = (iconName, size = 16, color = 'currentColor') => {
 
 const MilestoneTracker = memo(function MilestoneTracker({ customer, onSave }) {
   const { updateCustomer, saveToLocalStorage, saveCustomerToFolder } = useCustomerStore();
-  const { isSignedIn } = useAuthStore();
+  const { isSignedIn, userEmail } = useAuthStore();
+  const { addTodo } = useTodoStore();
   const [expandedMilestone, setExpandedMilestone] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -37,13 +42,20 @@ const MilestoneTracker = memo(function MilestoneTracker({ customer, onSave }) {
     return customer?.checklist || getDefaultChecklistState();
   });
 
+  // Local state for milestone dates
+  const [localMilestoneDates, setLocalMilestoneDates] = useState(() => {
+    return customer?.milestoneDates || getDefaultMilestoneDates();
+  });
+
   // Track if there are unsaved changes
   const [hasChanges, setHasChanges] = useState(false);
 
   // Reset local state when customer changes
   useEffect(() => {
     const newChecklist = customer?.checklist || getDefaultChecklistState();
+    const newMilestoneDates = customer?.milestoneDates || getDefaultMilestoneDates();
     setLocalChecklist(newChecklist);
+    setLocalMilestoneDates(newMilestoneDates);
     setHasChanges(false);
   }, [customer?.id]);
 
@@ -82,14 +94,57 @@ const MilestoneTracker = memo(function MilestoneTracker({ customer, onSave }) {
     setHasChanges(true);
   };
 
+  // Update milestone date (local only until save)
+  const handleMilestoneDateChange = (milestoneId, date) => {
+    setLocalMilestoneDates((prev) => ({
+      ...prev,
+      [milestoneId]: date || null,
+    }));
+    setHasChanges(true);
+  };
+
+  // Create todos from checklist items for a milestone
+  const handleCreateTodosFromChecklist = (milestoneId) => {
+    const items = CHECKLISTS[milestoneId] || [];
+    const milestone = MILESTONES.find(m => m.id === milestoneId);
+    const milestoneDate = localMilestoneDates[milestoneId];
+
+    // Get uncompleted items only
+    const uncompletedItems = items.filter(
+      item => !localChecklist[milestoneId]?.[item.id]
+    );
+
+    if (uncompletedItems.length === 0) {
+      alert('All checklist items are already completed!');
+      return;
+    }
+
+    // Create a todo for each uncompleted item
+    uncompletedItems.forEach(item => {
+      addTodo({
+        text: `${milestone?.name}: ${item.label}`,
+        priority: milestoneDate ? 'high' : 'medium',
+        dueDate: milestoneDate || null,
+        customerId: customer?.id || null,
+        customerName: customer?.name || null,
+        milestoneId: milestoneId,
+      }, userEmail, isSignedIn);
+    });
+
+    alert(`Created ${uncompletedItems.length} task(s) for ${milestone?.name}`);
+  };
+
   // Save all changes to store and sync
   const handleSaveChanges = async () => {
     if (!customer || !hasChanges) return;
 
     setIsSaving(true);
     try {
-      // Update the customer with new checklist
-      updateCustomer(customer.id, { checklist: localChecklist });
+      // Update the customer with new checklist and milestone dates
+      updateCustomer(customer.id, {
+        checklist: localChecklist,
+        milestoneDates: localMilestoneDates,
+      });
       saveToLocalStorage();
 
       // Sync to Drive if signed in
@@ -97,6 +152,7 @@ const MilestoneTracker = memo(function MilestoneTracker({ customer, onSave }) {
         const updatedCustomer = {
           ...customer,
           checklist: localChecklist,
+          milestoneDates: localMilestoneDates,
         };
         await saveCustomerToFolder(updatedCustomer, isSignedIn);
       }
@@ -111,7 +167,9 @@ const MilestoneTracker = memo(function MilestoneTracker({ customer, onSave }) {
   // Cancel and revert to saved state
   const handleCancel = () => {
     const savedChecklist = customer?.checklist || getDefaultChecklistState();
+    const savedMilestoneDates = customer?.milestoneDates || getDefaultMilestoneDates();
     setLocalChecklist(savedChecklist);
+    setLocalMilestoneDates(savedMilestoneDates);
     setHasChanges(false);
   };
 
@@ -238,6 +296,43 @@ const MilestoneTracker = memo(function MilestoneTracker({ customer, onSave }) {
 
               {isExpanded && (
                 <div className="checklist-items">
+                  {/* Milestone Date Input */}
+                  <div className="milestone-date-section">
+                    <div className="milestone-date-input-row">
+                      <label className="milestone-date-label">
+                        <Calendar size={14} />
+                        Target Date:
+                      </label>
+                      <input
+                        type="date"
+                        className="milestone-date-input"
+                        value={localMilestoneDates[milestone.id] || ''}
+                        onChange={(e) => handleMilestoneDateChange(milestone.id, e.target.value)}
+                      />
+                      {(() => {
+                        const days = getDaysUntilMilestone(localMilestoneDates[milestone.id]);
+                        const urgency = getMilestoneUrgency(localMilestoneDates[milestone.id]);
+                        if (days === null) return null;
+                        return (
+                          <span className={`days-remaining ${urgency}`}>
+                            <Clock size={12} />
+                            {days < 0 ? `${Math.abs(days)}d overdue` : days === 0 ? 'Today' : `${days}d left`}
+                          </span>
+                        );
+                      })()}
+                    </div>
+                    <button
+                      type="button"
+                      className="create-todos-btn"
+                      onClick={() => handleCreateTodosFromChecklist(milestone.id)}
+                      style={{ '--milestone-color': milestone.color }}
+                    >
+                      <ListTodo size={14} />
+                      Create Tasks from Checklist
+                    </button>
+                  </div>
+
+                  {/* Checklist Items */}
                   {items.map((item) => {
                     const isChecked = localChecklist[milestone.id]?.[item.id] || false;
 

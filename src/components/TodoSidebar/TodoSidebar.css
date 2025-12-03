@@ -460,6 +460,69 @@
   margin-top: var(--spacing-xs);
 }
 
+/* Milestone Badge in Todo Item */
+.todo-milestone {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+/* Milestone Group */
+.milestone-group {
+  margin-bottom: var(--spacing-sm);
+}
+
+.milestone-group-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  width: 100%;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--color-background-tertiary);
+  border: none;
+  border-left: 3px solid var(--milestone-color, var(--color-border));
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  color: var(--color-text-primary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  min-height: auto;
+  text-align: left;
+  transition: all 0.2s;
+}
+
+.milestone-group-header:hover {
+  background: var(--color-border);
+}
+
+.milestone-group-header .rotated {
+  transform: rotate(90deg);
+}
+
+.milestone-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  color: white;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.milestone-group-items {
+  padding-left: var(--spacing-md);
+  margin-top: var(--spacing-xs);
+}
+
 /* Footer */
 .todo-footer {
   padding: var(--spacing-md);

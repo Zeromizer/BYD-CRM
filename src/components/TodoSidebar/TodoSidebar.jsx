@@ -2,6 +2,7 @@ import { useState, useEffect, memo, useCallback, useMemo } from 'react';
 import useTodoStore, { useTodos, useSidebarOpen, useActiveFilter, useTodoActions } from '../../stores/useTodoStore';
 import useAuthStore from '../../stores/useAuthStore';
 import useCustomerStore from '../../stores/useCustomerStore';
+import { MILESTONES } from '../../constants/milestones';
 import {
   CheckSquare,
   Square,
@@ -15,6 +16,7 @@ import {
   ListTodo,
   Trash2,
   Flag,
+  Milestone,
 } from 'lucide-react';
 import './TodoSidebar.css';
 
@@ -37,11 +39,18 @@ const FILTER_TABS = [
   { id: 'today', label: 'Today', icon: Calendar },
   { id: 'overdue', label: 'Overdue', icon: AlertCircle },
   { id: 'by-customer', label: 'By Customer', icon: User },
+  { id: 'by-milestone', label: 'By Stage', icon: Milestone },
 ];
 
+// Helper to get milestone info
+const getMilestoneInfo = (milestoneId) => {
+  return MILESTONES.find(m => m.id === milestoneId);
+};
+
 // Single Todo Item Component
-const TodoItem = memo(function TodoItem({ todo, onToggle, onDelete, showCustomer }) {
+const TodoItem = memo(function TodoItem({ todo, onToggle, onDelete, showCustomer, showMilestone = true }) {
   const isOverdue = todo.dueDate && new Date(todo.dueDate) < new Date() && !todo.completed;
+  const milestone = todo.milestoneId ? getMilestoneInfo(todo.milestoneId) : null;
 
   return (
     <div className={`todo-item ${todo.completed ? 'completed' : ''} ${isOverdue ? 'overdue' : ''}`}>
@@ -72,6 +81,15 @@ const TodoItem = memo(function TodoItem({ todo, onToggle, onDelete, showCustomer
               {todo.customerName}
             </span>
           )}
+          {showMilestone && milestone && (
+            <span
+              className="todo-milestone"
+              style={{ background: milestone.color, color: 'white' }}
+            >
+              <Milestone size={10} />
+              {milestone.shortName}
+            </span>
+          )}
           <span
             className="todo-priority"
             style={{ color: PRIORITY_COLORS[todo.priority] }}
@@ -99,13 +117,23 @@ const QuickAddForm = memo(function QuickAddForm({ onAdd, customers }) {
   const [priority, setPriority] = useState('medium');
   const [dueDate, setDueDate] = useState('');
   const [customerId, setCustomerId] = useState('');
+  const [milestoneId, setMilestoneId] = useState('');
   const [showOptions, setShowOptions] = useState(false);
+
+  // Get selected customer's milestone dates for auto-filling due date
+  const selectedCustomer = customers.find((c) => c.id === Number(customerId));
+
+  // When milestone changes and customer is selected, auto-fill due date
+  const handleMilestoneChange = (newMilestoneId) => {
+    setMilestoneId(newMilestoneId);
+    if (selectedCustomer?.milestoneDates?.[newMilestoneId]) {
+      setDueDate(selectedCustomer.milestoneDates[newMilestoneId]);
+    }
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!text.trim()) return;
-
-    const selectedCustomer = customers.find((c) => c.id === Number(customerId));
 
     onAdd({
       text: text.trim(),
@@ -113,12 +141,14 @@ const QuickAddForm = memo(function QuickAddForm({ onAdd, customers }) {
       dueDate: dueDate || null,
       customerId: customerId ? Number(customerId) : null,
       customerName: selectedCustomer?.name || null,
+      milestoneId: milestoneId || null,
     });
 
     setText('');
     setPriority('medium');
     setDueDate('');
     setCustomerId('');
+    setMilestoneId('');
     setShowOptions(false);
   };
 
@@ -177,6 +207,18 @@ const QuickAddForm = memo(function QuickAddForm({ onAdd, customers }) {
               ))}
             </select>
           </div>
+
+          <div className="option-row">
+            <label>Stage:</label>
+            <select value={milestoneId} onChange={(e) => handleMilestoneChange(e.target.value)}>
+              <option value="">No stage</option>
+              {MILESTONES.map((milestone) => (
+                <option key={milestone.id} value={milestone.id}>
+                  {milestone.name}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       )}
     </form>
@@ -204,6 +246,45 @@ const CustomerGroup = memo(function CustomerGroup({ customerName, todos, onToggl
               onToggle={onToggle}
               onDelete={onDelete}
               showCustomer={false}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+});
+
+// Milestone Group Component
+const MilestoneGroup = memo(function MilestoneGroup({ milestone, todos, onToggle, onDelete }) {
+  const [expanded, setExpanded] = useState(true);
+
+  return (
+    <div className="milestone-group">
+      <button
+        className="milestone-group-header"
+        onClick={() => setExpanded(!expanded)}
+        style={{ '--milestone-color': milestone?.color || '#64748b' }}
+      >
+        <ChevronRight size={16} className={expanded ? 'rotated' : ''} />
+        <span
+          className="milestone-badge"
+          style={{ background: milestone?.color || '#64748b' }}
+        >
+          {milestone?.shortName || 'N/A'}
+        </span>
+        <span>{milestone?.name || 'No Stage'}</span>
+        <span className="todo-count">{todos.length}</span>
+      </button>
+      {expanded && (
+        <div className="milestone-group-items">
+          {todos.map((todo) => (
+            <TodoItem
+              key={todo.id}
+              todo={todo}
+              onToggle={onToggle}
+              onDelete={onDelete}
+              showCustomer={true}
+              showMilestone={false}
             />
           ))}
         </div>
@@ -275,6 +356,8 @@ const TodoSidebar = memo(function TodoSidebar() {
         return getOverdueTodos();
       case 'by-customer':
         return todos; // Will be grouped separately
+      case 'by-milestone':
+        return todos; // Will be grouped separately
       case 'all':
       default:
         return todos;
@@ -300,6 +383,26 @@ const TodoSidebar = memo(function TodoSidebar() {
         }
         groups[key].push(todo);
       });
+
+    return groups;
+  }, [activeFilter, todos]);
+
+  // Group todos by milestone for "by-milestone" view
+  const milestoneGroupedTodos = useMemo(() => {
+    if (activeFilter !== 'by-milestone') return null;
+
+    const groups = {};
+
+    // No milestone first
+    groups['__none__'] = todos.filter((t) => !t.milestoneId);
+
+    // Group by milestone (in order of MILESTONES)
+    MILESTONES.forEach((milestone) => {
+      const milestoneTodos = todos.filter((t) => t.milestoneId === milestone.id);
+      if (milestoneTodos.length > 0) {
+        groups[milestone.id] = milestoneTodos;
+      }
+    });
 
     return groups;
   }, [activeFilter, todos]);
@@ -367,7 +470,7 @@ const TodoSidebar = memo(function TodoSidebar() {
         {/* Todo List */}
         <div className="todo-list">
           {activeFilter === 'by-customer' && groupedTodos ? (
-            // Grouped view
+            // Grouped by customer view
             <>
               {groupedTodos['__global__']?.length > 0 && (
                 <CustomerGroup
@@ -388,6 +491,31 @@ const TodoSidebar = memo(function TodoSidebar() {
                     onDelete={handleDeleteTodo}
                   />
                 ))}
+            </>
+          ) : activeFilter === 'by-milestone' && milestoneGroupedTodos ? (
+            // Grouped by milestone view
+            <>
+              {milestoneGroupedTodos['__none__']?.length > 0 && (
+                <MilestoneGroup
+                  milestone={null}
+                  todos={milestoneGroupedTodos['__none__']}
+                  onToggle={handleToggleTodo}
+                  onDelete={handleDeleteTodo}
+                />
+              )}
+              {MILESTONES.map((milestone) => {
+                const milestoneTodos = milestoneGroupedTodos[milestone.id];
+                if (!milestoneTodos || milestoneTodos.length === 0) return null;
+                return (
+                  <MilestoneGroup
+                    key={milestone.id}
+                    milestone={milestone}
+                    todos={milestoneTodos}
+                    onToggle={handleToggleTodo}
+                    onDelete={handleDeleteTodo}
+                  />
+                );
+              })}
             </>
           ) : (
             // Flat list view
