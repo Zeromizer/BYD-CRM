@@ -411,6 +411,18 @@ const TodoSidebar = memo(function TodoSidebar() {
     }
   }, [enrichedTodos, clearCompleted, userEmail, isSignedIn]);
 
+  // Handle clear all tasks (with confirmation)
+  const handleClearAll = useCallback(() => {
+    const count = enrichedTodos.length;
+    if (count === 0) return;
+
+    const confirmed = window.confirm(`Delete all ${count} task(s)? This cannot be undone.`);
+    if (confirmed) {
+      const allIds = enrichedTodos.map((t) => t.id);
+      clearCompleted(allIds, userEmail, isSignedIn);
+    }
+  }, [enrichedTodos, clearCompleted, userEmail, isSignedIn]);
+
   // Handle manual sync to OneDrive
   const handleSyncToCloud = useCallback(async () => {
     if (!isSignedIn || isSyncing) return;
@@ -622,11 +634,17 @@ const TodoSidebar = memo(function TodoSidebar() {
         </div>
 
         {/* Footer Actions */}
-        {completedCount > 0 && (
+        {(enrichedTodos.length > 0) && (
           <div className="todo-footer">
-            <button className="clear-completed-btn" onClick={handleClearCompleted}>
+            {completedCount > 0 && (
+              <button className="clear-completed-btn" onClick={handleClearCompleted}>
+                <Trash2 size={14} />
+                Clear {completedCount} completed
+              </button>
+            )}
+            <button className="clear-all-btn" onClick={handleClearAll}>
               <Trash2 size={14} />
-              Clear {completedCount} completed
+              Clear all ({enrichedTodos.length})
             </button>
           </div>
         )}
