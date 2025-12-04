@@ -97,6 +97,7 @@ export const CHECKLISTS = {
   registration: [
     { id: 'insurance_accepted', label: 'Insurance Accepted' },
     { id: 'balance_payment_secured', label: 'Balance Payment Secured, Input BYD CRM' },
+    { id: 'performa_invoice_balance_payment', label: 'Prepare Performa Invoice for Balance Payment' },
     { id: 'insurance_details_filled', label: 'Insurance Details Filled' },
   ],
   delivery: [
