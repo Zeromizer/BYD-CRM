@@ -10,6 +10,11 @@ const DocumentViewer = memo(function DocumentViewer({ isOpen, onClose, document 
   const [editUrl, setEditUrl] = useState(null);
   const [error, setError] = useState(null);
   const [iframeLoaded, setIframeLoaded] = useState(false);
+  const [zoomLevel, setZoomLevel] = useState(100);
+
+  const MIN_ZOOM = 25;
+  const MAX_ZOOM = 300;
+  const ZOOM_STEP = 25;
 
   // Check file type helpers
   const isImageFile = (mimeType) => mimeType?.startsWith('image/');
@@ -36,6 +41,18 @@ const DocumentViewer = memo(function DocumentViewer({ isOpen, onClose, document 
            isPowerPoint(mimeType);
   };
 
+  const handleZoomIn = () => {
+    setZoomLevel((prev) => Math.min(prev + ZOOM_STEP, MAX_ZOOM));
+  };
+
+  const handleZoomOut = () => {
+    setZoomLevel((prev) => Math.max(prev - ZOOM_STEP, MIN_ZOOM));
+  };
+
+  const handleZoomReset = () => {
+    setZoomLevel(100);
+  };
+
   useEffect(() => {
     if (isOpen && document) {
       setLoading(true);
@@ -44,6 +61,7 @@ const DocumentViewer = memo(function DocumentViewer({ isOpen, onClose, document 
       setEmbedUrl(null);
       setEditUrl(null);
       setIframeLoaded(false);
+      setZoomLevel(100);
 
       // Try to load image files directly
       if (isImageFile(document.mimeType)) {
@@ -167,7 +185,35 @@ const DocumentViewer = memo(function DocumentViewer({ isOpen, onClose, document 
           {/* Image Preview */}
           {!error && imageUrl && (
             <div className="viewer-image-container">
-              <img src={imageUrl} alt={document.name} className="viewer-image" />
+              <div className="zoom-controls">
+                <button
+                  className="zoom-btn"
+                  onClick={handleZoomOut}
+                  disabled={zoomLevel <= MIN_ZOOM}
+                  title="Zoom out"
+                >
+                  −
+                </button>
+                <button className="zoom-level" onClick={handleZoomReset} title="Reset zoom">
+                  {zoomLevel}%
+                </button>
+                <button
+                  className="zoom-btn"
+                  onClick={handleZoomIn}
+                  disabled={zoomLevel >= MAX_ZOOM}
+                  title="Zoom in"
+                >
+                  +
+                </button>
+              </div>
+              <div className="viewer-image-wrapper">
+                <img
+                  src={imageUrl}
+                  alt={document.name}
+                  className="viewer-image"
+                  style={{ transform: `scale(${zoomLevel / 100})` }}
+                />
+              </div>
             </div>
           )}
 
