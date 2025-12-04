@@ -20,7 +20,15 @@ import {
 } from 'lucide-react';
 import './TodoSidebar.css';
 
-// Priority colors matching the design system
+/**
+ * TodoSidebar - Task Management Component
+ *
+ * INTEGRATION WITH STATUS CHECKLIST:
+ * - Todos linked to checklist items (via checklistItemId) get completion from customer.checklist
+ * - Toggling a linked todo updates the checklist (source of truth)
+ * - Standalone todos use their own 'completed' field
+ */
+
 const PRIORITY_COLORS = {
   high: 'var(--color-error)',
   medium: 'var(--color-warning)',
@@ -33,7 +41,6 @@ const PRIORITY_LABELS = {
   low: 'Low',
 };
 
-// Filter tabs configuration
 const FILTER_TABS = [
   { id: 'all', label: 'All', icon: ListTodo },
   { id: 'today', label: 'Today', icon: Calendar },
@@ -42,41 +49,62 @@ const FILTER_TABS = [
   { id: 'by-milestone', label: 'By Stage', icon: Milestone },
 ];
 
-// Helper to get milestone info
-const getMilestoneInfo = (milestoneId) => {
-  return MILESTONES.find(m => m.id === milestoneId);
-};
+// Get milestone info by ID
+const getMilestoneInfo = (milestoneId) => MILESTONES.find((m) => m.id === milestoneId);
 
-// Helper to find checklistItemId from todo text pattern
-const findChecklistItemId = (todo) => {
+/**
+ * Find the checklistItemId from a todo
+ * Uses explicit checklistItemId, or falls back to text pattern matching
+ */
+const getChecklistItemId = (todo) => {
   if (todo.checklistItemId) return todo.checklistItemId;
   if (!todo.milestoneId) return null;
 
-  const milestone = MILESTONES.find(m => m.id === todo.milestoneId);
+  const milestone = getMilestoneInfo(todo.milestoneId);
   if (!milestone) return null;
 
+  // Try to match by text pattern: "Milestone Name: Item Label"
   const prefix = `${milestone.name}: `;
   if (!todo.text.startsWith(prefix)) return null;
 
   const itemLabel = todo.text.substring(prefix.length);
-  const checklistItems = CHECKLISTS[todo.milestoneId] || [];
-  const matchedItem = checklistItems.find(item => item.label === itemLabel);
-  return matchedItem?.id || null;
+  const items = CHECKLISTS[todo.milestoneId] || [];
+  const match = items.find((item) => item.label === itemLabel);
+  return match?.id || null;
+};
+
+/**
+ * Get completion status for a todo
+ * Returns: { isCompleted, isLinked, checklistItemId }
+ */
+const getTodoCompletion = (todo, customers) => {
+  const checklistItemId = getChecklistItemId(todo);
+
+  // If linked to a checklist item, get completion from customer's checklist
+  if (checklistItemId && todo.customerId && todo.milestoneId) {
+    const customer = customers.find((c) => c.id === todo.customerId);
+    const checklist = customer?.checklist?.[todo.milestoneId];
+    const isCompleted = checklist?.[checklistItemId] || false;
+    return { isCompleted, isLinked: true, checklistItemId };
+  }
+
+  // Standalone todo - use its own completed field
+  return { isCompleted: todo.completed || false, isLinked: false, checklistItemId: null };
 };
 
 // Single Todo Item Component
-const TodoItem = memo(function TodoItem({ todo, onToggle, onDelete, showCustomer, showMilestone = true }) {
-  const isOverdue = todo.dueDate && new Date(todo.dueDate) < new Date() && !todo.completed;
+const TodoItem = memo(function TodoItem({ todo, isCompleted, onToggle, onDelete, showCustomer, showMilestone = true }) {
+  const isOverdue = todo.dueDate && new Date(todo.dueDate) < new Date() && !isCompleted;
   const milestone = todo.milestoneId ? getMilestoneInfo(todo.milestoneId) : null;
 
   return (
-    <div className={`todo-item ${todo.completed ? 'completed' : ''} ${isOverdue ? 'overdue' : ''}`}>
+    <div className={`todo-item ${isCompleted ? 'completed' : ''} ${isOverdue ? 'overdue' : ''}`}>
       <button
         className="todo-checkbox"
-        onClick={() => onToggle(todo.id)}
-        aria-label={todo.completed ? 'Mark as incomplete' : 'Mark as complete'}
+        onClick={() => onToggle(todo)}
+        aria-label={isCompleted ? 'Mark as incomplete' : 'Mark as complete'}
       >
-        {todo.completed ? (
+        {isCompleted ? (
           <CheckSquare size={18} className="check-icon checked" />
         ) : (
           <Square size={18} className="check-icon" />
@@ -99,29 +127,19 @@ const TodoItem = memo(function TodoItem({ todo, onToggle, onDelete, showCustomer
             </span>
           )}
           {showMilestone && milestone && (
-            <span
-              className="todo-milestone"
-              style={{ background: milestone.color, color: 'white' }}
-            >
+            <span className="todo-milestone" style={{ background: milestone.color, color: 'white' }}>
               <Milestone size={10} />
               {milestone.shortName}
             </span>
           )}
-          <span
-            className="todo-priority"
-            style={{ color: PRIORITY_COLORS[todo.priority] }}
-          >
+          <span className="todo-priority" style={{ color: PRIORITY_COLORS[todo.priority] }}>
             <Flag size={12} />
             {PRIORITY_LABELS[todo.priority]}
           </span>
         </div>
       </div>
 
-      <button
-        className="todo-delete"
-        onClick={() => onDelete(todo.id)}
-        aria-label="Delete todo"
-      >
+      <button className="todo-delete" onClick={() => onDelete(todo.id)} aria-label="Delete todo">
         <Trash2 size={14} />
       </button>
     </div>
@@ -141,6 +159,7 @@ const QuickAddForm = memo(function QuickAddForm({ onAdd, customers }) {
 
   const handleMilestoneChange = (newMilestoneId) => {
     setMilestoneId(newMilestoneId);
+    // Auto-fill due date from customer's milestone date
     if (selectedCustomer?.milestoneDates?.[newMilestoneId]) {
       setDueDate(selectedCustomer.milestoneDates[newMilestoneId]);
     }
@@ -182,11 +201,7 @@ const QuickAddForm = memo(function QuickAddForm({ onAdd, customers }) {
         </button>
       </div>
 
-      <button
-        type="button"
-        className="toggle-options-btn"
-        onClick={() => setShowOptions(!showOptions)}
-      >
+      <button type="button" className="toggle-options-btn" onClick={() => setShowOptions(!showOptions)}>
         {showOptions ? 'Less options' : 'More options'}
         <ChevronRight size={14} className={showOptions ? 'rotated' : ''} />
       </button>
@@ -254,6 +269,7 @@ const CustomerGroup = memo(function CustomerGroup({ customerName, todos, onToggl
             <TodoItem
               key={todo.id}
               todo={todo}
+              isCompleted={todo._isCompleted}
               onToggle={onToggle}
               onDelete={onDelete}
               showCustomer={false}
@@ -277,10 +293,7 @@ const MilestoneGroup = memo(function MilestoneGroup({ milestone, todos, onToggle
         style={{ '--milestone-color': milestone?.color || '#64748b' }}
       >
         <ChevronRight size={16} className={expanded ? 'rotated' : ''} />
-        <span
-          className="milestone-badge"
-          style={{ background: milestone?.color || '#64748b' }}
-        >
+        <span className="milestone-badge" style={{ background: milestone?.color || '#64748b' }}>
           {milestone?.shortName || 'N/A'}
         </span>
         <span>{milestone?.name || 'No Stage'}</span>
@@ -292,6 +305,7 @@ const MilestoneGroup = memo(function MilestoneGroup({ milestone, todos, onToggle
             <TodoItem
               key={todo.id}
               todo={todo}
+              isCompleted={todo._isCompleted}
               onToggle={onToggle}
               onDelete={onDelete}
               showCustomer={true}
@@ -312,11 +326,13 @@ const TodoSidebar = memo(function TodoSidebar() {
   const {
     addTodo,
     deleteTodo,
+    toggleStandaloneTodo,
+    clearCompleted,
     toggleSidebar,
     setActiveFilter,
     initializeTodos,
     syncToDrive,
-    saveToLocalStorage: saveTodosToLocal,
+    saveToLocalStorage,
   } = useTodoActions();
 
   const { userEmail, isSignedIn } = useAuthStore();
@@ -331,96 +347,69 @@ const TodoSidebar = memo(function TodoSidebar() {
     initializeTodos(userEmail);
   }, [userEmail, initializeTodos]);
 
-  // Enrich todos with completion status from checklist (for checklist-linked todos)
+  // Enrich todos with completion status from checklist
   const enrichedTodos = useMemo(() => {
-    return todos.map(todo => {
-      const checklistItemId = findChecklistItemId(todo);
-
-      // If linked to a checklist item, get completion from checklist
-      if (checklistItemId && todo.customerId && todo.milestoneId) {
-        const customer = customers.find(c => c.id === todo.customerId);
-        if (customer?.checklist?.[todo.milestoneId]) {
-          const isCompleted = customer.checklist[todo.milestoneId][checklistItemId] || false;
-          return { ...todo, completed: isCompleted, _checklistItemId: checklistItemId };
-        }
-      }
-
-      return { ...todo, _checklistItemId: checklistItemId };
+    return todos.map((todo) => {
+      const { isCompleted, isLinked, checklistItemId } = getTodoCompletion(todo, customers);
+      return {
+        ...todo,
+        _isCompleted: isCompleted,
+        _isLinked: isLinked,
+        _checklistItemId: checklistItemId,
+      };
     });
   }, [todos, customers]);
 
-  // Handle add todo - save to localStorage immediately
+  // Handle add todo
   const handleAddTodo = useCallback(
     (todoData) => {
-      addTodo(todoData, userEmail, false); // false = don't sync to OneDrive yet
+      addTodo(todoData, userEmail, isSignedIn);
     },
-    [addTodo, userEmail]
+    [addTodo, userEmail, isSignedIn]
   );
 
-  // Handle toggle todo - update checklist if linked, always save immediately
+  // Handle toggle todo - updates checklist if linked, otherwise updates todo
   const handleToggleTodo = useCallback(
-    (todoId) => {
-      const todo = enrichedTodos.find(t => t.id === todoId);
-      if (!todo) return;
+    (todo) => {
+      const newState = !todo._isCompleted;
 
-      const checklistItemId = todo._checklistItemId;
-      const newCompletedState = !todo.completed;
-
-      // If linked to checklist, update the checklist (source of truth)
-      if (checklistItemId && todo.customerId && todo.milestoneId) {
-        const customer = customers.find(c => c.id === todo.customerId);
+      if (todo._isLinked && todo._checklistItemId && todo.customerId && todo.milestoneId) {
+        // Update the checklist (source of truth)
+        const customer = customers.find((c) => c.id === todo.customerId);
         if (customer) {
           const updatedChecklist = {
             ...customer.checklist,
             [todo.milestoneId]: {
               ...(customer.checklist?.[todo.milestoneId] || {}),
-              [checklistItemId]: newCompletedState,
+              [todo._checklistItemId]: newState,
             },
           };
-
-          // Update customer checklist and save to localStorage
           updateCustomer(customer.id, { checklist: updatedChecklist });
           saveCustomersToLocal();
-          console.log(`Checklist updated: ${checklistItemId} = ${newCompletedState}`);
         }
       } else {
-        // For non-linked todos, update the todo's completed state directly
-        const todoStore = useTodoStore.getState();
-        const updatedTodos = todoStore.todos.map(t =>
-          t.id === todoId
-            ? { ...t, completed: newCompletedState, lastModified: new Date().toISOString() }
-            : t
-        );
-        todoStore.setTodos(updatedTodos);
-        saveTodosToLocal(userEmail);
+        // Standalone todo - update the todo itself
+        toggleStandaloneTodo(todo.id, userEmail, isSignedIn);
       }
     },
-    [enrichedTodos, customers, updateCustomer, saveCustomersToLocal, saveTodosToLocal, userEmail]
+    [customers, updateCustomer, saveCustomersToLocal, toggleStandaloneTodo, userEmail, isSignedIn]
   );
 
-  // Handle delete todo - remove from todo list, save immediately
+  // Handle delete todo
   const handleDeleteTodo = useCallback(
     (todoId) => {
-      // Simply delete the todo - this removes it from the list
-      // The checklist item remains (customer can still see it in Status tab)
-      const todoStore = useTodoStore.getState();
-      const updatedTodos = todoStore.todos.filter(t => t.id !== todoId);
-      todoStore.setTodos(updatedTodos);
-      saveTodosToLocal(userEmail);
-      console.log(`Todo deleted: ${todoId}`);
+      deleteTodo(todoId, userEmail, isSignedIn);
     },
-    [saveTodosToLocal, userEmail]
+    [deleteTodo, userEmail, isSignedIn]
   );
 
-  // Handle clear completed - remove all completed todos
+  // Handle clear completed
   const handleClearCompleted = useCallback(() => {
-    const completedIds = enrichedTodos.filter(t => t.completed).map(t => t.id);
-    const todoStore = useTodoStore.getState();
-    const updatedTodos = todoStore.todos.filter(t => !completedIds.includes(t.id));
-    todoStore.setTodos(updatedTodos);
-    saveTodosToLocal(userEmail);
-    console.log(`Cleared ${completedIds.length} completed todos`);
-  }, [enrichedTodos, saveTodosToLocal, userEmail]);
+    const completedIds = enrichedTodos.filter((t) => t._isCompleted).map((t) => t.id);
+    if (completedIds.length > 0) {
+      clearCompleted(completedIds, userEmail, isSignedIn);
+    }
+  }, [enrichedTodos, clearCompleted, userEmail, isSignedIn]);
 
   // Handle manual sync to OneDrive
   const handleSyncToCloud = useCallback(async () => {
@@ -428,16 +417,11 @@ const TodoSidebar = memo(function TodoSidebar() {
 
     setIsSyncing(true);
     try {
-      // Sync todos
       await syncToDrive();
-
-      // Sync customers (they have the checklist data)
       const customerStore = useCustomerStore.getState();
       if (customerStore.syncAllToOneDrive) {
         await customerStore.syncAllToOneDrive();
       }
-
-      console.log('Sync to OneDrive completed');
     } catch (error) {
       console.error('Sync failed:', error);
     } finally {
@@ -451,12 +435,11 @@ const TodoSidebar = memo(function TodoSidebar() {
 
     switch (activeFilter) {
       case 'today':
-        return enrichedTodos.filter(t => t.dueDate === today && !t.completed);
+        return enrichedTodos.filter((t) => t.dueDate === today && !t._isCompleted);
       case 'overdue':
-        return enrichedTodos.filter(t => t.dueDate && t.dueDate < today && !t.completed);
+        return enrichedTodos.filter((t) => t.dueDate && t.dueDate < today && !t._isCompleted);
       case 'by-customer':
       case 'by-milestone':
-        return enrichedTodos;
       case 'all':
       default:
         return enrichedTodos;
@@ -467,8 +450,8 @@ const TodoSidebar = memo(function TodoSidebar() {
   const groupedByCustomer = useMemo(() => {
     if (activeFilter !== 'by-customer') return null;
 
-    const groups = { '__global__': [] };
-    enrichedTodos.forEach(todo => {
+    const groups = { __global__: [] };
+    enrichedTodos.forEach((todo) => {
       const key = todo.customerId || '__global__';
       if (!groups[key]) groups[key] = [];
       groups[key].push(todo);
@@ -480,10 +463,12 @@ const TodoSidebar = memo(function TodoSidebar() {
   const groupedByMilestone = useMemo(() => {
     if (activeFilter !== 'by-milestone') return null;
 
-    const groups = { '__none__': [] };
-    MILESTONES.forEach(m => { groups[m.id] = []; });
+    const groups = { __none__: [] };
+    MILESTONES.forEach((m) => {
+      groups[m.id] = [];
+    });
 
-    enrichedTodos.forEach(todo => {
+    enrichedTodos.forEach((todo) => {
       const key = todo.milestoneId || '__none__';
       if (groups[key]) groups[key].push(todo);
     });
@@ -492,10 +477,10 @@ const TodoSidebar = memo(function TodoSidebar() {
   }, [activeFilter, enrichedTodos]);
 
   // Stats
-  const completedCount = enrichedTodos.filter(t => t.completed).length;
+  const completedCount = enrichedTodos.filter((t) => t._isCompleted).length;
   const pendingCount = enrichedTodos.length - completedCount;
   const today = new Date().toISOString().split('T')[0];
-  const overdueCount = enrichedTodos.filter(t => t.dueDate && t.dueDate < today && !t.completed).length;
+  const overdueCount = enrichedTodos.filter((t) => t.dueDate && t.dueDate < today && !t._isCompleted).length;
 
   return (
     <>
@@ -549,7 +534,7 @@ const TodoSidebar = memo(function TodoSidebar() {
 
         {/* Filter Tabs */}
         <div className="todo-filters">
-          {FILTER_TABS.map(tab => (
+          {FILTER_TABS.map((tab) => (
             <button
               key={tab.id}
               className={`filter-tab ${activeFilter === tab.id ? 'active' : ''}`}
@@ -598,7 +583,7 @@ const TodoSidebar = memo(function TodoSidebar() {
                   onDelete={handleDeleteTodo}
                 />
               )}
-              {MILESTONES.map(milestone => {
+              {MILESTONES.map((milestone) => {
                 const milestoneTodos = groupedByMilestone[milestone.id];
                 if (!milestoneTodos?.length) return null;
                 return (
@@ -621,10 +606,11 @@ const TodoSidebar = memo(function TodoSidebar() {
                   {activeFilter === 'all' && 'No tasks yet. Add one above!'}
                 </div>
               ) : (
-                filteredTodos.map(todo => (
+                filteredTodos.map((todo) => (
                   <TodoItem
                     key={todo.id}
                     todo={todo}
+                    isCompleted={todo._isCompleted}
                     onToggle={handleToggleTodo}
                     onDelete={handleDeleteTodo}
                     showCustomer={true}
