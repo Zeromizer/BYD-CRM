@@ -1,4 +1,4 @@
-import { useState, useEffect, memo } from 'react';
+import { useState, useEffect, memo, useRef } from 'react';
 import Modal from '../Modal/Modal';
 import oneDriveService from '../../services/oneDriveService';
 import './DocumentViewer.css';
@@ -11,6 +11,10 @@ const DocumentViewer = memo(function DocumentViewer({ isOpen, onClose, document 
   const [error, setError] = useState(null);
   const [iframeLoaded, setIframeLoaded] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(100);
+  const [panPosition, setPanPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartRef = useRef({ x: 0, y: 0 });
+  const panStartRef = useRef({ x: 0, y: 0 });
 
   const MIN_ZOOM = 25;
   const MAX_ZOOM = 300;
@@ -51,6 +55,52 @@ const DocumentViewer = memo(function DocumentViewer({ isOpen, onClose, document 
 
   const handleZoomReset = () => {
     setZoomLevel(100);
+    setPanPosition({ x: 0, y: 0 });
+  };
+
+  // Drag/pan handlers
+  const handleMouseDown = (e) => {
+    if (zoomLevel <= 100) return; // Only allow dragging when zoomed in
+    e.preventDefault();
+    setIsDragging(true);
+    dragStartRef.current = { x: e.clientX, y: e.clientY };
+    panStartRef.current = { x: panPosition.x, y: panPosition.y };
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isDragging) return;
+    const deltaX = e.clientX - dragStartRef.current.x;
+    const deltaY = e.clientY - dragStartRef.current.y;
+    setPanPosition({
+      x: panStartRef.current.x + deltaX,
+      y: panStartRef.current.y + deltaY,
+    });
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  // Touch handlers for mobile
+  const handleTouchStart = (e) => {
+    if (zoomLevel <= 100 || e.touches.length !== 1) return;
+    setIsDragging(true);
+    dragStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    panStartRef.current = { x: panPosition.x, y: panPosition.y };
+  };
+
+  const handleTouchMove = (e) => {
+    if (!isDragging || e.touches.length !== 1) return;
+    const deltaX = e.touches[0].clientX - dragStartRef.current.x;
+    const deltaY = e.touches[0].clientY - dragStartRef.current.y;
+    setPanPosition({
+      x: panStartRef.current.x + deltaX,
+      y: panStartRef.current.y + deltaY,
+    });
+  };
+
+  const handleTouchEnd = () => {
+    setIsDragging(false);
   };
 
   useEffect(() => {
@@ -62,6 +112,8 @@ const DocumentViewer = memo(function DocumentViewer({ isOpen, onClose, document 
       setEditUrl(null);
       setIframeLoaded(false);
       setZoomLevel(100);
+      setPanPosition({ x: 0, y: 0 });
+      setIsDragging(false);
 
       // Try to load image files directly
       if (isImageFile(document.mimeType)) {
@@ -206,12 +258,24 @@ const DocumentViewer = memo(function DocumentViewer({ isOpen, onClose, document 
                   +
                 </button>
               </div>
-              <div className="viewer-image-wrapper">
+              <div
+                className={`viewer-image-wrapper ${zoomLevel > 100 ? 'zoomable' : ''} ${isDragging ? 'dragging' : ''}`}
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                onMouseLeave={handleMouseUp}
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+              >
                 <img
                   src={imageUrl}
                   alt={document.name}
                   className="viewer-image"
-                  style={{ transform: `scale(${zoomLevel / 100})` }}
+                  style={{
+                    transform: `translate(${panPosition.x}px, ${panPosition.y}px) scale(${zoomLevel / 100})`,
+                  }}
+                  draggable={false}
                 />
               </div>
             </div>
