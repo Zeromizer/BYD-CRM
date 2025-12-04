@@ -336,11 +336,12 @@ class ExcelService {
             // If it's not a valid number and not zero, keep as string (edge case)
           }
 
-          // Convert percentage fields to numbers
+          // Convert percentage fields to decimal for Excel percentage format
+          // Excel percentage format displays value * 100, so 2.28% should be stored as 0.0228
           if (PERCENTAGE_FIELDS.has(mapping.fieldType)) {
             const numericValue = parseFloat(value.toString().replace(/[^0-9.-]/g, ''));
             if (!isNaN(numericValue)) {
-              value = numericValue;
+              value = numericValue / 100; // Convert 2.28 to 0.0228 for Excel percentage format
             }
           }
 
