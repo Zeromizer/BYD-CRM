@@ -1,4 +1,4 @@
-import { useState, useEffect, memo, useCallback, useMemo } from 'react';
+import { useState, useEffect, memo, useCallback } from 'react';
 import useCustomerStore from '../../stores/useCustomerStore';
 import useAuthStore from '../../stores/useAuthStore';
 import useTodoStore from '../../stores/useTodoStore';
@@ -12,19 +12,21 @@ import {
   getDaysUntilMilestone,
   getMilestoneUrgency,
 } from '../../constants/milestones';
-import { Car, Handshake, ClipboardCheck, Package, Star, Calendar, Clock, Plus, ListTodo } from 'lucide-react';
+import { Car, Handshake, ClipboardCheck, Package, Star, Calendar, Clock, ListTodo } from 'lucide-react';
 import './MilestoneTracker.css';
 
-// Map icon names to components
-const iconComponents = {
-  Car,
-  Handshake,
-  ClipboardCheck,
-  Package,
-  Star,
-};
+/**
+ * MilestoneTracker - Status Checklist Component
+ *
+ * ARCHITECTURE:
+ * - This component manages the customer's Status Checklist (the source of truth)
+ * - Uses local state for editing, saved on explicit "Save" action
+ * - "Create Tasks from Checklist" creates todos linked to checklist items
+ * - Todos linked to this checklist will automatically reflect completion status
+ */
 
-// Helper to get icon component
+const iconComponents = { Car, Handshake, ClipboardCheck, Package, Star };
+
 const getMilestoneIcon = (iconName, size = 16, color = 'currentColor') => {
   const IconComponent = iconComponents[iconName];
   return IconComponent ? <IconComponent size={size} color={color} strokeWidth={2} /> : null;
@@ -34,145 +36,123 @@ const MilestoneTracker = memo(function MilestoneTracker({ customer, onSave }) {
   const { updateCustomer, saveToLocalStorage, saveCustomerToFolder } = useCustomerStore();
   const { isSignedIn, userEmail } = useAuthStore();
   const { addTodo, todos } = useTodoStore();
+
   const [expandedMilestone, setExpandedMilestone] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isCreatingTodos, setIsCreatingTodos] = useState(false);
 
-  // Local state for editing (not synced until save)
-  const [localChecklist, setLocalChecklist] = useState(() => {
-    return customer?.checklist || getDefaultChecklistState();
-  });
-
-  // Local state for milestone dates
-  const [localMilestoneDates, setLocalMilestoneDates] = useState(() => {
-    return customer?.milestoneDates || getDefaultMilestoneDates();
-  });
-
-  // Track if there are unsaved changes
+  // Local state for editing (saved on explicit action)
+  const [localChecklist, setLocalChecklist] = useState(() => customer?.checklist || getDefaultChecklistState());
+  const [localMilestoneDates, setLocalMilestoneDates] = useState(() => customer?.milestoneDates || getDefaultMilestoneDates());
   const [hasChanges, setHasChanges] = useState(false);
 
   // Reset local state when customer changes
   useEffect(() => {
-    const newChecklist = customer?.checklist || getDefaultChecklistState();
-    const newMilestoneDates = customer?.milestoneDates || getDefaultMilestoneDates();
-    setLocalChecklist(newChecklist);
-    setLocalMilestoneDates(newMilestoneDates);
+    setLocalChecklist(customer?.checklist || getDefaultChecklistState());
+    setLocalMilestoneDates(customer?.milestoneDates || getDefaultMilestoneDates());
     setHasChanges(false);
   }, [customer?.id]);
 
-  // Get current milestone from local state
   const currentMilestone = localChecklist.currentMilestone || 'test_drive';
 
-  // Auto-expand the current milestone on first render
+  // Auto-expand current milestone on first render
   useEffect(() => {
     if (!expandedMilestone) {
       setExpandedMilestone(currentMilestone);
     }
-  }, [currentMilestone]);
+  }, [currentMilestone, expandedMilestone]);
 
-  const handleMilestoneClick = (milestoneId) => {
-    setExpandedMilestone(expandedMilestone === milestoneId ? null : milestoneId);
-  };
+  const handleMilestoneClick = useCallback((milestoneId) => {
+    setExpandedMilestone((prev) => (prev === milestoneId ? null : milestoneId));
+  }, []);
 
-  // Update local state only (no sync)
-  const handleSetCurrentMilestone = (milestoneId) => {
+  const handleSetCurrentMilestone = useCallback((milestoneId) => {
+    setLocalChecklist((prev) => ({ ...prev, currentMilestone: milestoneId }));
+    setHasChanges(true);
+  }, []);
+
+  const handleChecklistToggle = useCallback((milestoneId, itemId, checked) => {
     setLocalChecklist((prev) => ({
       ...prev,
-      currentMilestone: milestoneId,
+      [milestoneId]: { ...(prev[milestoneId] || {}), [itemId]: checked },
     }));
     setHasChanges(true);
-  };
+  }, []);
 
-  // Update local state only (no sync)
-  const handleChecklistToggle = (milestoneId, itemId, checked) => {
-    setLocalChecklist((prev) => ({
-      ...prev,
-      [milestoneId]: {
-        ...(prev[milestoneId] || {}),
-        [itemId]: checked,
-      },
-    }));
+  const handleMilestoneDateChange = useCallback((milestoneId, date) => {
+    setLocalMilestoneDates((prev) => ({ ...prev, [milestoneId]: date || null }));
     setHasChanges(true);
-  };
+  }, []);
 
-  // Update milestone date (local only until save)
-  const handleMilestoneDateChange = (milestoneId, date) => {
-    setLocalMilestoneDates((prev) => ({
-      ...prev,
-      [milestoneId]: date || null,
-    }));
-    setHasChanges(true);
-  };
+  // Create todos from uncompleted checklist items
+  const handleCreateTodosFromChecklist = useCallback(
+    (milestoneId) => {
+      if (isCreatingTodos) return;
 
-  // Create todos from checklist items for a milestone
-  const handleCreateTodosFromChecklist = (milestoneId) => {
-    // Prevent double-clicks
-    if (isCreatingTodos) return;
+      const items = CHECKLISTS[milestoneId] || [];
+      const milestone = MILESTONES.find((m) => m.id === milestoneId);
+      const milestoneDate = localMilestoneDates[milestoneId];
 
-    const items = CHECKLISTS[milestoneId] || [];
-    const milestone = MILESTONES.find(m => m.id === milestoneId);
-    const milestoneDate = localMilestoneDates[milestoneId];
+      // Get uncompleted items
+      const uncompletedItems = items.filter((item) => !localChecklist[milestoneId]?.[item.id]);
 
-    // Get uncompleted items only
-    const uncompletedItems = items.filter(
-      item => !localChecklist[milestoneId]?.[item.id]
-    );
+      if (uncompletedItems.length === 0) {
+        alert('All checklist items are already completed!');
+        return;
+      }
 
-    if (uncompletedItems.length === 0) {
-      alert('All checklist items are already completed!');
-      return;
-    }
+      // Check for existing todos to prevent duplicates
+      const existingTodos = todos.filter(
+        (t) => t.customerId === customer?.id && t.milestoneId === milestoneId && !t.completed
+      );
+      const existingTexts = new Set(existingTodos.map((t) => t.text));
 
-    // Check for existing todos to prevent duplicates
-    const existingTodos = todos.filter(
-      t => t.customerId === customer?.id && t.milestoneId === milestoneId && !t.completed
-    );
-    const existingTexts = new Set(existingTodos.map(t => t.text));
+      const itemsToCreate = uncompletedItems.filter((item) => {
+        const todoText = `${milestone?.name}: ${item.label}`;
+        return !existingTexts.has(todoText);
+      });
 
-    // Filter out items that already have todos
-    const itemsToCreate = uncompletedItems.filter(item => {
-      const todoText = `${milestone?.name}: ${item.label}`;
-      return !existingTexts.has(todoText);
-    });
+      if (itemsToCreate.length === 0) {
+        alert('Tasks already exist for all uncompleted checklist items.');
+        return;
+      }
 
-    if (itemsToCreate.length === 0) {
-      alert('Tasks already exist for all uncompleted checklist items.');
-      return;
-    }
+      setIsCreatingTodos(true);
 
-    setIsCreatingTodos(true);
+      itemsToCreate.forEach((item) => {
+        addTodo(
+          {
+            text: `${milestone?.name}: ${item.label}`,
+            priority: milestoneDate ? 'high' : 'medium',
+            dueDate: milestoneDate || null,
+            customerId: customer?.id || null,
+            customerName: customer?.name || null,
+            milestoneId: milestoneId,
+            checklistItemId: item.id,
+          },
+          userEmail,
+          isSignedIn
+        );
+      });
 
-    // Create a todo for each item that doesn't already exist
-    itemsToCreate.forEach(item => {
-      addTodo({
-        text: `${milestone?.name}: ${item.label}`,
-        priority: milestoneDate ? 'high' : 'medium',
-        dueDate: milestoneDate || null,
-        customerId: customer?.id || null,
-        customerName: customer?.name || null,
-        milestoneId: milestoneId,
-        checklistItemId: item.id, // Link to specific checklist item for auto-check
-      }, userEmail, isSignedIn);
-    });
+      setIsCreatingTodos(false);
+      alert(`Created ${itemsToCreate.length} task(s) for ${milestone?.name}`);
+    },
+    [isCreatingTodos, localChecklist, localMilestoneDates, todos, customer, addTodo, userEmail, isSignedIn]
+  );
 
-    setIsCreatingTodos(false);
-    alert(`Created ${itemsToCreate.length} task(s) for ${milestone?.name}`);
-  };
-
-  // Save all changes to store and sync
-  const handleSaveChanges = async () => {
+  // Save changes to store and sync
+  const handleSaveChanges = useCallback(async () => {
     if (!customer || !hasChanges) return;
 
     setIsSaving(true);
     try {
-      // Update the customer with new checklist and milestone dates
       updateCustomer(customer.id, {
         checklist: localChecklist,
         milestoneDates: localMilestoneDates,
       });
       saveToLocalStorage();
 
-      // Sync to Drive if signed in
       if (isSignedIn && customer.driveFolderId) {
         const updatedCustomer = {
           ...customer,
@@ -187,22 +167,14 @@ const MilestoneTracker = memo(function MilestoneTracker({ customer, onSave }) {
     } finally {
       setIsSaving(false);
     }
-  };
+  }, [customer, hasChanges, localChecklist, localMilestoneDates, updateCustomer, saveToLocalStorage, isSignedIn, saveCustomerToFolder, onSave]);
 
-  // Cancel and revert to saved state
-  const handleCancel = () => {
-    const savedChecklist = customer?.checklist || getDefaultChecklistState();
-    const savedMilestoneDates = customer?.milestoneDates || getDefaultMilestoneDates();
-    setLocalChecklist(savedChecklist);
-    setLocalMilestoneDates(savedMilestoneDates);
+  // Cancel and revert
+  const handleCancel = useCallback(() => {
+    setLocalChecklist(customer?.checklist || getDefaultChecklistState());
+    setLocalMilestoneDates(customer?.milestoneDates || getDefaultMilestoneDates());
     setHasChanges(false);
-  };
-
-  const getMilestoneIndex = (milestoneId) => {
-    return MILESTONES.findIndex((m) => m.id === milestoneId);
-  };
-
-  const currentMilestoneIndex = getMilestoneIndex(currentMilestone);
+  }, [customer]);
 
   return (
     <div className="milestone-tracker">
@@ -211,18 +183,10 @@ const MilestoneTracker = memo(function MilestoneTracker({ customer, onSave }) {
         <div className="milestone-actions-bar">
           <span className="unsaved-indicator">You have unsaved changes</span>
           <div className="milestone-actions-buttons">
-            <button
-              className="btn btn-secondary"
-              onClick={handleCancel}
-              disabled={isSaving}
-            >
+            <button className="btn btn-secondary" onClick={handleCancel} disabled={isSaving}>
               Cancel
             </button>
-            <button
-              className="btn btn-primary"
-              onClick={handleSaveChanges}
-              disabled={isSaving}
-            >
+            <button className="btn btn-primary" onClick={handleSaveChanges} disabled={isSaving}>
               {isSaving ? 'Saving...' : 'Save Changes'}
             </button>
           </div>
@@ -275,9 +239,7 @@ const MilestoneTracker = memo(function MilestoneTracker({ customer, onSave }) {
               <button
                 className="checklist-header"
                 onClick={() => handleMilestoneClick(milestone.id)}
-                style={{
-                  '--milestone-color': milestone.color,
-                }}
+                style={{ '--milestone-color': milestone.color }}
               >
                 <div className="checklist-header-left">
                   <div
@@ -295,7 +257,11 @@ const MilestoneTracker = memo(function MilestoneTracker({ customer, onSave }) {
                   <span className="checklist-title" style={{ color: isCurrent ? milestone.color : 'inherit' }}>
                     {milestone.name}
                   </span>
-                  {isCurrent && <span className="current-badge" style={{ background: milestone.color }}>Current</span>}
+                  {isCurrent && (
+                    <span className="current-badge" style={{ background: milestone.color }}>
+                      Current
+                    </span>
+                  )}
                 </div>
                 <div className="checklist-header-right">
                   <div className="checklist-progress-bar">

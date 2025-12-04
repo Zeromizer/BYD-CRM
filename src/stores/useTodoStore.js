@@ -5,23 +5,27 @@ import { getStorageService } from '../services/storageServiceSelector';
 import { ONEDRIVE_DATA_FILES } from '../config/msalConfig';
 
 /**
- * Todo Store
- * Manages global and customer-specific todos
+ * Todo Store - Task Reminder System
  *
- * Features:
- * - Global todos (not tied to any customer)
- * - Customer-specific todos (linked via customerId)
- * - Priority levels (low, medium, high)
- * - Due dates
- * - Cloud sync to OneDrive
+ * ARCHITECTURE:
+ * - Todos are task reminders, NOT the source of truth for completion
+ * - For todos linked to checklist items (via checklistItemId):
+ *   → Completion is determined by the customer's checklist state
+ *   → Toggling updates the checklist, not the todo
+ * - For standalone todos (no checklistItemId):
+ *   → The todo's own 'completed' field is used
+ *
+ * INTEGRATION WITH STATUS CHECKLIST:
+ * - "Create Tasks from Checklist" in MilestoneTracker creates todos with checklistItemId
+ * - TodoSidebar reads checklist state to show correct completion status
+ * - Toggling a linked todo updates customer.checklist (source of truth)
  */
 
 const STORAGE_KEY_PREFIX = 'bydCRM_todos_';
 
-// Counter to ensure unique IDs even within same millisecond
+// Counter for unique IDs within same millisecond
 let todoIdCounter = 0;
 
-// Generate unique todo ID
 function generateTodoId() {
   const timestamp = Date.now();
   todoIdCounter = (todoIdCounter + 1) % 1000;
@@ -31,34 +35,29 @@ function generateTodoId() {
 // Debounce timer for sync
 let syncDebounceTimer = null;
 
-// Get user-specific storage key
 function getTodoStorageKey(email) {
   if (!email) return 'bydCRM_todos_local';
   return `${STORAGE_KEY_PREFIX}${userStorage.normalizeEmail(email)}`;
 }
 
-// Load todos from localStorage
 function loadTodosFromStorage(email) {
   try {
     const key = getTodoStorageKey(email);
     const data = localStorage.getItem(key);
-    if (data) {
-      return JSON.parse(data);
-    }
+    return data ? JSON.parse(data) : [];
   } catch (error) {
-    console.error('Error loading todos from storage:', error);
+    console.error('Error loading todos:', error);
+    return [];
   }
-  return [];
 }
 
-// Save todos to localStorage
 function saveTodosToStorage(todos, email) {
   try {
     const key = getTodoStorageKey(email);
     localStorage.setItem(key, JSON.stringify(todos));
     return true;
   } catch (error) {
-    console.error('Error saving todos to storage:', error);
+    console.error('Error saving todos:', error);
     return false;
   }
 }
@@ -69,33 +68,31 @@ const useTodoStore = create((set, get) => ({
   isLoading: false,
   isSyncing: false,
   sidebarOpen: false,
-  activeFilter: 'all', // 'all' | 'today' | 'overdue' | 'by-customer'
+  activeFilter: 'all',
 
-  // Initialize todos from storage
+  // Initialize from storage
   initializeTodos: (email) => {
     const todos = loadTodosFromStorage(email);
     set({ todos });
   },
 
-  // Toggle sidebar
+  // Sidebar controls
   toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
   setSidebarOpen: (open) => set({ sidebarOpen: open }),
-
-  // Set active filter
   setActiveFilter: (filter) => set({ activeFilter: filter }),
 
   // Add a new todo
-  addTodo: async (todoData, email, isSignedIn = false) => {
+  addTodo: (todoData, email, isSignedIn = false) => {
     const newTodo = {
-      id: generateTodoId(), // Use unique ID generator to prevent collisions
+      id: generateTodoId(),
       text: todoData.text || '',
-      completed: false,
+      completed: false, // Only used for standalone todos
       priority: todoData.priority || 'medium',
       dueDate: todoData.dueDate || null,
-      customerId: todoData.customerId || null, // null = global todo
+      customerId: todoData.customerId || null,
       customerName: todoData.customerName || null,
-      milestoneId: todoData.milestoneId || null, // Link to milestone (e.g., 'close_deal', 'registration')
-      checklistItemId: todoData.checklistItemId || null, // Link to specific checklist item for auto-check
+      milestoneId: todoData.milestoneId || null,
+      checklistItemId: todoData.checklistItemId || null, // Link to checklist item
       createdAt: new Date().toISOString(),
       lastModified: new Date().toISOString(),
     };
@@ -106,7 +103,6 @@ const useTodoStore = create((set, get) => ({
       return { todos: newTodos };
     });
 
-    // Sync to Drive if signed in (debounced via scheduleSyncToDrive)
     if (isSignedIn) {
       get().scheduleSyncToDrive();
     }
@@ -114,8 +110,8 @@ const useTodoStore = create((set, get) => ({
     return newTodo;
   },
 
-  // Update a todo
-  updateTodo: async (todoId, updates, email, isSignedIn = false) => {
+  // Update a todo's properties
+  updateTodo: (todoId, updates, email, isSignedIn = false) => {
     set((state) => {
       const newTodos = state.todos.map((todo) =>
         todo.id === todoId
@@ -126,14 +122,13 @@ const useTodoStore = create((set, get) => ({
       return { todos: newTodos };
     });
 
-    // Sync to Drive if signed in (debounced)
     if (isSignedIn) {
       get().scheduleSyncToDrive();
     }
   },
 
-  // Toggle todo completion
-  toggleTodo: async (todoId, email, isSignedIn = false) => {
+  // Toggle standalone todo (NOT linked to checklist)
+  toggleStandaloneTodo: (todoId, email, isSignedIn = false) => {
     set((state) => {
       const newTodos = state.todos.map((todo) =>
         todo.id === todoId
@@ -144,100 +139,68 @@ const useTodoStore = create((set, get) => ({
       return { todos: newTodos };
     });
 
-    // Sync to Drive if signed in (debounced)
     if (isSignedIn) {
       get().scheduleSyncToDrive();
     }
   },
 
   // Delete a todo
-  deleteTodo: async (todoId, email, isSignedIn = false) => {
+  deleteTodo: (todoId, email, isSignedIn = false) => {
     set((state) => {
       const newTodos = state.todos.filter((todo) => todo.id !== todoId);
       saveTodosToStorage(newTodos, email);
       return { todos: newTodos };
     });
 
-    // Sync to Drive if signed in (debounced)
     if (isSignedIn) {
       get().scheduleSyncToDrive();
     }
   },
 
-  // Delete all completed todos
-  clearCompleted: async (email, isSignedIn = false) => {
+  // Clear all completed todos
+  clearCompleted: (completedIds, email, isSignedIn = false) => {
     set((state) => {
-      const newTodos = state.todos.filter((todo) => !todo.completed);
+      const newTodos = state.todos.filter((todo) => !completedIds.includes(todo.id));
       saveTodosToStorage(newTodos, email);
       return { todos: newTodos };
     });
 
-    // Sync to Drive if signed in (debounced)
     if (isSignedIn) {
       get().scheduleSyncToDrive();
     }
   },
 
-  // Get todos for a specific customer
-  getCustomerTodos: (customerId) => {
-    return get().todos.filter((todo) => todo.customerId === customerId);
-  },
+  // Getters
+  getCustomerTodos: (customerId) => get().todos.filter((t) => t.customerId === customerId),
+  getGlobalTodos: () => get().todos.filter((t) => t.customerId === null),
 
-  // Get global todos (not tied to any customer)
-  getGlobalTodos: () => {
-    return get().todos.filter((todo) => todo.customerId === null);
-  },
-
-  // Get todos due today
   getTodayTodos: () => {
     const today = new Date().toISOString().split('T')[0];
-    return get().todos.filter((todo) => todo.dueDate === today && !todo.completed);
+    return get().todos.filter((t) => t.dueDate === today);
   },
 
-  // Get overdue todos
   getOverdueTodos: () => {
     const today = new Date().toISOString().split('T')[0];
-    return get().todos.filter(
-      (todo) => todo.dueDate && todo.dueDate < today && !todo.completed
-    );
+    return get().todos.filter((t) => t.dueDate && t.dueDate < today);
   },
 
-  // Get todos for a specific milestone
-  getMilestoneTodos: (milestoneId) => {
-    return get().todos.filter((todo) => todo.milestoneId === milestoneId);
-  },
+  getMilestoneTodos: (milestoneId) => get().todos.filter((t) => t.milestoneId === milestoneId),
 
-  // Get todos for a customer's milestone
-  getCustomerMilestoneTodos: (customerId, milestoneId) => {
-    return get().todos.filter(
-      (todo) => todo.customerId === customerId && todo.milestoneId === milestoneId
-    );
-  },
-
-  // Save to localStorage
-  saveToLocalStorage: (email) => {
-    const { todos } = get();
-    saveTodosToStorage(todos, email);
-  },
-
-  // Set todos directly (for sync)
+  // Storage operations
+  saveToLocalStorage: (email) => saveTodosToStorage(get().todos, email),
   setTodos: (todos) => set({ todos }),
-
-  // Sync status
   setSyncing: (isSyncing) => set({ isSyncing }),
 
-  // Schedule a debounced sync to OneDrive (waits for rapid changes to settle)
+  // Debounced sync
   scheduleSyncToDrive: () => {
-    if (syncDebounceTimer) {
-      clearTimeout(syncDebounceTimer);
-    }
+    if (syncDebounceTimer) clearTimeout(syncDebounceTimer);
     syncDebounceTimer = setTimeout(() => {
       get().syncToDrive();
       syncDebounceTimer = null;
-    }, 500); // Wait 500ms after last change before syncing
+    }, 500);
   },
 
-  // Sync todos to OneDrive
+  // Sync to OneDrive
   syncToDrive: async () => {
     const { todos, isSyncing } = get();
     if (isSyncing) return;
@@ -253,7 +216,7 @@ const useTodoStore = create((set, get) => ({
           ONEDRIVE_DATA_FILES.TODOS,
           { todos, lastModified: new Date().toISOString() }
         );
-        console.log('Todos synced to OneDrive:', todos.length, 'todos');
+        console.log('Todos synced to OneDrive:', todos.length);
       }
     } catch (error) {
       console.error('Error syncing todos to Drive:', error);
@@ -262,7 +225,7 @@ const useTodoStore = create((set, get) => ({
     }
   },
 
-  // Sync todos from OneDrive
+  // Sync from OneDrive
   syncFromDrive: async (email) => {
     const { isSyncing } = get();
     if (isSyncing) return;
@@ -279,74 +242,60 @@ const useTodoStore = create((set, get) => ({
         );
 
         if (driveData?.todos) {
-          // Merge: Use newer lastModified per todo
           const localTodos = loadTodosFromStorage(email);
           const driveTodos = driveData.todos;
 
-          // Create maps for efficient lookup
-          const localMap = new Map(localTodos.map(t => [t.id, t]));
-          const driveMap = new Map(driveTodos.map(t => [t.id, t]));
-
-          // Merge todos (newer wins)
-          const mergedTodos = [];
+          // Merge by ID (newer wins)
+          const localMap = new Map(localTodos.map((t) => [t.id, t]));
+          const driveMap = new Map(driveTodos.map((t) => [t.id, t]));
           const allIds = new Set([...localMap.keys(), ...driveMap.keys()]);
 
+          const mergedTodos = [];
           for (const id of allIds) {
             const local = localMap.get(id);
             const drive = driveMap.get(id);
 
             if (local && drive) {
-              // Both exist - use newer
               const localTime = new Date(local.lastModified || 0).getTime();
               const driveTime = new Date(drive.lastModified || 0).getTime();
               mergedTodos.push(driveTime > localTime ? drive : local);
             } else {
-              // Only one exists
               mergedTodos.push(local || drive);
             }
           }
 
-          // CRITICAL: Deduplicate by content to prevent duplicates with different IDs
-          // This can happen if todos were created before sync completed
-          const deduplicatedTodos = [];
-          const seenContent = new Set();
+          // Deduplicate by content (text + customerId + milestoneId)
+          const deduped = [];
+          const seen = new Set();
 
           for (const todo of mergedTodos) {
-            // Create a content key: text + customerId + milestoneId
-            const contentKey = `${todo.text}|${todo.customerId || ''}|${todo.milestoneId || ''}`;
-
-            if (!seenContent.has(contentKey)) {
-              seenContent.add(contentKey);
-              deduplicatedTodos.push(todo);
+            const key = `${todo.text}|${todo.customerId || ''}|${todo.milestoneId || ''}`;
+            if (!seen.has(key)) {
+              seen.add(key);
+              deduped.push(todo);
             } else {
-              // Duplicate content found - keep the newer one
-              const existingIndex = deduplicatedTodos.findIndex(t =>
-                `${t.text}|${t.customerId || ''}|${t.milestoneId || ''}` === contentKey
+              // Keep newer version
+              const idx = deduped.findIndex(
+                (t) => `${t.text}|${t.customerId || ''}|${t.milestoneId || ''}` === key
               );
-              if (existingIndex !== -1) {
-                const existing = deduplicatedTodos[existingIndex];
-                const existingTime = new Date(existing.lastModified || 0).getTime();
-                const currentTime = new Date(todo.lastModified || 0).getTime();
-                if (currentTime > existingTime) {
-                  deduplicatedTodos[existingIndex] = todo;
+              if (idx !== -1) {
+                const existing = deduped[idx];
+                if (new Date(todo.lastModified || 0) > new Date(existing.lastModified || 0)) {
+                  deduped[idx] = todo;
                 }
               }
             }
           }
 
-          // Sort by createdAt (newest first)
-          deduplicatedTodos.sort((a, b) =>
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-          );
+          // Sort by creation date (newest first)
+          deduped.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-          console.log(`Todos merged: ${localTodos.length} local + ${driveTodos.length} drive = ${deduplicatedTodos.length} final`);
-
-          set({ todos: deduplicatedTodos });
-          saveTodosToStorage(deduplicatedTodos, email);
+          console.log(`Todos merged: ${localTodos.length} local + ${driveTodos.length} drive = ${deduped.length} final`);
+          set({ todos: deduped });
+          saveTodosToStorage(deduped, email);
         }
       }
     } catch (error) {
-      // File might not exist yet - that's OK
       if (!error.message?.includes('404')) {
         console.error('Error syncing todos from Drive:', error);
       }
@@ -355,7 +304,7 @@ const useTodoStore = create((set, get) => ({
     }
   },
 
-  // Full sync (from Drive first, then initialize from local)
+  // Full sync
   syncWithDrive: async (email, isSignedIn) => {
     if (isSignedIn) {
       await get().syncFromDrive(email);
@@ -365,16 +314,17 @@ const useTodoStore = create((set, get) => ({
   },
 }));
 
-// Selectors for granular subscriptions
+// Selectors
 export const useTodos = () => useTodoStore(useShallow((state) => state.todos));
 export const useSidebarOpen = () => useTodoStore((state) => state.sidebarOpen);
 export const useActiveFilter = () => useTodoStore((state) => state.activeFilter);
+
 export const useTodoActions = () =>
   useTodoStore(
     useShallow((state) => ({
       addTodo: state.addTodo,
       updateTodo: state.updateTodo,
-      toggleTodo: state.toggleTodo,
+      toggleStandaloneTodo: state.toggleStandaloneTodo,
       deleteTodo: state.deleteTodo,
       clearCompleted: state.clearCompleted,
       toggleSidebar: state.toggleSidebar,
@@ -386,7 +336,6 @@ export const useTodoActions = () =>
       getTodayTodos: state.getTodayTodos,
       getOverdueTodos: state.getOverdueTodos,
       getMilestoneTodos: state.getMilestoneTodos,
-      getCustomerMilestoneTodos: state.getCustomerMilestoneTodos,
       saveToLocalStorage: state.saveToLocalStorage,
       setTodos: state.setTodos,
       scheduleSyncToDrive: state.scheduleSyncToDrive,
