@@ -429,7 +429,7 @@ const TodoSidebar = memo(function TodoSidebar() {
 
     setIsSyncing(true);
     try {
-      await syncToDrive();
+      await syncToDrive(userEmail);
       const customerStore = useCustomerStore.getState();
       if (customerStore.syncAllToOneDrive) {
         await customerStore.syncAllToOneDrive();
@@ -439,7 +439,7 @@ const TodoSidebar = memo(function TodoSidebar() {
     } finally {
       setIsSyncing(false);
     }
-  }, [isSignedIn, isSyncing, syncToDrive]);
+  }, [isSignedIn, isSyncing, syncToDrive, userEmail]);
 
   // Filter todos based on active filter
   const filteredTodos = useMemo(() => {

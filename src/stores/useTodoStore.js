@@ -62,6 +62,25 @@ function saveTodosToStorage(todos, email) {
   }
 }
 
+// Track last sync timestamp
+function getLastSyncTimestamp(email) {
+  try {
+    const key = `${getTodoStorageKey(email)}_lastSync`;
+    return localStorage.getItem(key) || null;
+  } catch {
+    return null;
+  }
+}
+
+function setLastSyncTimestamp(email, timestamp) {
+  try {
+    const key = `${getTodoStorageKey(email)}_lastSync`;
+    localStorage.setItem(key, timestamp);
+  } catch {
+    // Ignore
+  }
+}
+
 const useTodoStore = create((set, get) => ({
   // State
   todos: [],
@@ -104,7 +123,7 @@ const useTodoStore = create((set, get) => ({
     });
 
     if (isSignedIn) {
-      get().scheduleSyncToDrive();
+      get().scheduleSyncToDrive(email);
     }
 
     return newTodo;
@@ -123,7 +142,7 @@ const useTodoStore = create((set, get) => ({
     });
 
     if (isSignedIn) {
-      get().scheduleSyncToDrive();
+      get().scheduleSyncToDrive(email);
     }
   },
 
@@ -140,7 +159,7 @@ const useTodoStore = create((set, get) => ({
     });
 
     if (isSignedIn) {
-      get().scheduleSyncToDrive();
+      get().scheduleSyncToDrive(email);
     }
   },
 
@@ -153,7 +172,7 @@ const useTodoStore = create((set, get) => ({
     });
 
     if (isSignedIn) {
-      get().scheduleSyncToDrive();
+      get().scheduleSyncToDrive(email);
     }
   },
 
@@ -166,7 +185,7 @@ const useTodoStore = create((set, get) => ({
     });
 
     if (isSignedIn) {
-      get().scheduleSyncToDrive();
+      get().scheduleSyncToDrive(email);
     }
   },
 
@@ -192,16 +211,16 @@ const useTodoStore = create((set, get) => ({
   setSyncing: (isSyncing) => set({ isSyncing }),
 
   // Debounced sync
-  scheduleSyncToDrive: () => {
+  scheduleSyncToDrive: (email) => {
     if (syncDebounceTimer) clearTimeout(syncDebounceTimer);
     syncDebounceTimer = setTimeout(() => {
-      get().syncToDrive();
+      get().syncToDrive(email);
       syncDebounceTimer = null;
     }, 500);
   },
 
   // Sync to OneDrive
-  syncToDrive: async () => {
+  syncToDrive: async (email) => {
     const { todos, isSyncing } = get();
     if (isSyncing) return;
 
@@ -211,11 +230,16 @@ const useTodoStore = create((set, get) => ({
       const folderIds = await storageService.getFolderIds();
 
       if (folderIds?.root) {
+        const syncTimestamp = new Date().toISOString();
         await storageService.uploadFile(
           folderIds.root,
           ONEDRIVE_DATA_FILES.TODOS,
-          { todos, lastModified: new Date().toISOString() }
+          { todos, lastModified: syncTimestamp }
         );
+        // Save sync timestamp so we know when we last pushed to drive
+        if (email) {
+          setLastSyncTimestamp(email, syncTimestamp);
+        }
         console.log('Todos synced to OneDrive:', todos.length);
       }
     } catch (error) {
@@ -241,58 +265,61 @@ const useTodoStore = create((set, get) => ({
           ONEDRIVE_DATA_FILES.TODOS
         );
 
-        if (driveData?.todos) {
-          const localTodos = loadTodosFromStorage(email);
-          const driveTodos = driveData.todos;
+        if (driveData) {
+          const driveTodos = driveData.todos || [];
+          const driveModified = driveData.lastModified;
+          const lastSyncTime = getLastSyncTimestamp(email);
 
-          // Merge by ID (newer wins)
-          const localMap = new Map(localTodos.map((t) => [t.id, t]));
-          const driveMap = new Map(driveTodos.map((t) => [t.id, t]));
-          const allIds = new Set([...localMap.keys(), ...driveMap.keys()]);
+          // If drive was modified after our last sync, trust drive as source of truth
+          // This handles the case where todos were deleted and synced
+          const driveIsNewer = driveModified && (!lastSyncTime || new Date(driveModified) >= new Date(lastSyncTime));
 
-          const mergedTodos = [];
-          for (const id of allIds) {
-            const local = localMap.get(id);
-            const drive = driveMap.get(id);
+          if (driveIsNewer) {
+            // Drive is authoritative - use its data directly
+            console.log(`Todos from OneDrive: ${driveTodos.length} (drive is source of truth)`);
+            set({ todos: driveTodos });
+            saveTodosToStorage(driveTodos, email);
+            setLastSyncTimestamp(email, driveModified);
+          } else {
+            // Local might have newer changes - merge carefully
+            const localTodos = loadTodosFromStorage(email);
 
-            if (local && drive) {
-              const localTime = new Date(local.lastModified || 0).getTime();
-              const driveTime = new Date(drive.lastModified || 0).getTime();
-              mergedTodos.push(driveTime > localTime ? drive : local);
-            } else {
-              mergedTodos.push(local || drive);
-            }
-          }
+            // Merge by ID (newer wins), but only keep items that exist in drive
+            // or were created locally after last sync
+            const driveMap = new Map(driveTodos.map((t) => [t.id, t]));
+            const mergedTodos = [...driveTodos]; // Start with drive todos
 
-          // Deduplicate by content (text + customerId + milestoneId)
-          const deduped = [];
-          const seen = new Set();
-
-          for (const todo of mergedTodos) {
-            const key = `${todo.text}|${todo.customerId || ''}|${todo.milestoneId || ''}`;
-            if (!seen.has(key)) {
-              seen.add(key);
-              deduped.push(todo);
-            } else {
-              // Keep newer version
-              const idx = deduped.findIndex(
-                (t) => `${t.text}|${t.customerId || ''}|${t.milestoneId || ''}` === key
-              );
-              if (idx !== -1) {
-                const existing = deduped[idx];
-                if (new Date(todo.lastModified || 0) > new Date(existing.lastModified || 0)) {
-                  deduped[idx] = todo;
+            // Add local todos that are newer than last sync (new local additions)
+            for (const local of localTodos) {
+              if (!driveMap.has(local.id)) {
+                const localTime = new Date(local.lastModified || local.createdAt || 0).getTime();
+                const syncTime = lastSyncTime ? new Date(lastSyncTime).getTime() : 0;
+                if (localTime > syncTime) {
+                  // This is a new local todo created after last sync
+                  mergedTodos.push(local);
                 }
+                // Otherwise, it was deleted on drive - don't add it back
               }
             }
+
+            // Deduplicate by content
+            const deduped = [];
+            const seen = new Set();
+            for (const todo of mergedTodos) {
+              const key = `${todo.text}|${todo.customerId || ''}|${todo.milestoneId || ''}`;
+              if (!seen.has(key)) {
+                seen.add(key);
+                deduped.push(todo);
+              }
+            }
+
+            // Sort by creation date (newest first)
+            deduped.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+            console.log(`Todos merged: ${localTodos.length} local + ${driveTodos.length} drive = ${deduped.length} final`);
+            set({ todos: deduped });
+            saveTodosToStorage(deduped, email);
           }
-
-          // Sort by creation date (newest first)
-          deduped.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-          console.log(`Todos merged: ${localTodos.length} local + ${driveTodos.length} drive = ${deduped.length} final`);
-          set({ todos: deduped });
-          saveTodosToStorage(deduped, email);
         }
       }
     } catch (error) {
