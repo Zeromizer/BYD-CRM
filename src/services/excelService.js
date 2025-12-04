@@ -265,14 +265,20 @@ class ExcelService {
         fileType: file.type
       });
 
-      const result = await getStorageService().uploadFile(folderId, fileName, file, file.type);
+      const storageService = getStorageService();
+      if (!storageService) {
+        throw new Error('Storage service not available');
+      }
+
+      // Use uploadFileToFolder for binary files (more robust than uploadFile)
+      const fileId = await storageService.uploadFileToFolder(fileName, file, folderId);
 
       console.log('✅ File uploaded successfully to cloud storage:', {
-        fileId: result.id,
-        fileName: result.name
+        fileId,
+        fileName
       });
 
-      return result;
+      return { id: fileId, name: fileName };
     } catch (error) {
       console.error('❌ Error uploading file to cloud storage:', error);
       throw error;
