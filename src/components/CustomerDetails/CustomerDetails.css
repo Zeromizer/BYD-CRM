@@ -229,6 +229,45 @@
   padding: var(--spacing-lg);
 }
 
+/* Tab content animation wrapper */
+.tab-content-wrapper {
+  animation: tabContentReveal 0.35s var(--ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1));
+}
+
+@keyframes tabContentReveal {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Tab indicator animation */
+.customer-tabs .tab {
+  position: relative;
+}
+
+.customer-tabs .tab::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 50%;
+  width: 0;
+  height: 3px;
+  background: var(--color-primary);
+  transition: all 0.3s var(--ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1));
+  transform: translateX(-50%);
+}
+
+.customer-tabs .tab.active::after {
+  width: 100%;
+  left: 0;
+  transform: translateX(0);
+}
+
 .info-section {
   margin-bottom: var(--spacing-xl);
 }
@@ -495,7 +534,7 @@
 
 .customer-tabs .tab.active {
   color: var(--color-primary);
-  border-bottom-color: var(--color-primary);
+  border-bottom-color: transparent;
   background: var(--color-card-background);
 }
 
