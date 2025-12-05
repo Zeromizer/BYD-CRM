@@ -3,6 +3,11 @@
  * Handles OCR processing and extraction of Singapore NRIC/FIN details
  *
  * NOTE: tesseract.js is lazy-loaded to reduce initial bundle size (~6.8MB)
+ *
+ * PERFORMANCE OPTIMIZATIONS:
+ * - Worker pooling: Reuses Tesseract workers instead of creating new ones
+ * - Image preprocessing: Resizes and enhances images for faster OCR
+ * - Parallel processing: Processes front+back images simultaneously
  */
 
 // NRIC/FIN regex patterns
@@ -17,6 +22,11 @@ const POSTAL_CODE_PATTERN = /\b\d{6}\b/g;
 // Cache the tesseract module after first load
 let tesseractModule = null;
 
+// Worker pool for reusing Tesseract workers (major performance improvement)
+let workerPool = null;
+let isWorkerInitializing = false;
+let workerInitPromise = null;
+
 /**
  * Lazy load tesseract.js module
  * @returns {Promise<{createWorker: Function}>}
@@ -29,46 +39,135 @@ const loadTesseract = async () => {
 };
 
 /**
+ * Get or create a reusable Tesseract worker
+ * Workers are expensive to create (3-5s), so we reuse them
+ * @returns {Promise<Worker>}
+ */
+const getWorker = async () => {
+  // Return existing worker if available
+  if (workerPool) return workerPool;
+
+  // If another call is initializing, wait for it
+  if (isWorkerInitializing && workerInitPromise) {
+    return workerInitPromise;
+  }
+
+  // Initialize new worker
+  isWorkerInitializing = true;
+  workerInitPromise = (async () => {
+    const { createWorker } = await loadTesseract();
+    workerPool = await createWorker('eng');
+    isWorkerInitializing = false;
+    return workerPool;
+  })();
+
+  return workerInitPromise;
+};
+
+/**
+ * Cleanup OCR worker - call when done with ID scanning
+ * @returns {Promise<void>}
+ */
+export const cleanupOCRWorker = async () => {
+  if (workerPool) {
+    try {
+      await workerPool.terminate();
+    } catch (e) {
+      console.error('Worker termination error:', e);
+    }
+    workerPool = null;
+    workerInitPromise = null;
+  }
+};
+
+/**
+ * Preprocess image for optimal OCR performance
+ * - Resizes to optimal dimensions (faster processing)
+ * - Enhances contrast for better text recognition
+ * @param {string} imageDataUrl - Base64 data URL of the image
+ * @returns {Promise<string>} - Optimized image data URL
+ */
+const preprocessImageForOCR = async (imageDataUrl) => {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+
+      // Optimal width for ID card OCR (maintains ~300 DPI equivalent)
+      // Smaller than raw camera (1920px) but enough for accurate text recognition
+      const targetWidth = 1000;
+      const scale = Math.min(targetWidth / img.width, 1); // Don't upscale
+      const newWidth = Math.round(img.width * scale);
+      const newHeight = Math.round(img.height * scale);
+
+      canvas.width = newWidth;
+      canvas.height = newHeight;
+
+      const ctx = canvas.getContext('2d');
+
+      // High-quality downscaling
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(img, 0, 0, newWidth, newHeight);
+
+      // Apply contrast enhancement for better OCR
+      const imageData = ctx.getImageData(0, 0, newWidth, newHeight);
+      const data = imageData.data;
+
+      // Contrast factor (10% increase)
+      const contrastFactor = 1.1;
+      const brightness = 5;
+
+      for (let i = 0; i < data.length; i += 4) {
+        // Apply brightness and contrast
+        data[i] = Math.min(255, Math.max(0, contrastFactor * (data[i] - 128) + 128 + brightness));
+        data[i + 1] = Math.min(255, Math.max(0, contrastFactor * (data[i + 1] - 128) + 128 + brightness));
+        data[i + 2] = Math.min(255, Math.max(0, contrastFactor * (data[i + 2] - 128) + 128 + brightness));
+      }
+
+      ctx.putImageData(imageData, 0, 0);
+
+      // Use slightly lower quality JPEG (0.88 vs 0.95) for faster processing
+      resolve(canvas.toDataURL('image/jpeg', 0.88));
+    };
+    img.onerror = () => {
+      // On error, return original image
+      resolve(imageDataUrl);
+    };
+    img.src = imageDataUrl;
+  });
+};
+
+/**
  * Perform OCR on an image using Tesseract.js
- * Creates a new worker for each request to avoid state issues
+ * Uses worker pooling for performance (avoids 3-5s worker creation overhead)
  * @param {string} imageDataUrl - Base64 data URL of the image
  * @param {function} onProgress - Progress callback
  * @returns {Promise<string>} - Extracted text
  */
 export const performOCR = async (imageDataUrl, onProgress = null) => {
-  let worker = null;
-
   try {
     if (onProgress) onProgress(5);
 
-    // Lazy load tesseract.js
-    const { createWorker } = await loadTesseract();
+    // Preprocess image for faster OCR
+    const optimizedImage = await preprocessImageForOCR(imageDataUrl);
 
-    // Create worker with just the language - simplest form for v6
-    worker = await createWorker('eng');
+    if (onProgress) onProgress(15);
+
+    // Get reusable worker (fast if already initialized)
+    const worker = await getWorker();
 
     if (onProgress) onProgress(30);
 
-    const result = await worker.recognize(imageDataUrl);
-
-    if (onProgress) onProgress(90);
-
-    // Terminate worker after use
-    await worker.terminate();
+    const result = await worker.recognize(optimizedImage);
 
     if (onProgress) onProgress(100);
 
+    // Don't terminate worker - keep it for next use
     return result.data.text;
   } catch (error) {
-    // Make sure to terminate worker on error
-    if (worker) {
-      try {
-        await worker.terminate();
-      } catch {
-        // Ignore termination errors
-      }
-    }
-
+    // On error, cleanup worker so next call creates fresh one
+    await cleanupOCRWorker();
     throw new Error(`OCR failed: ${error.message || 'Unknown error'}`);
   }
 };
@@ -493,5 +592,6 @@ export default {
   extractName,
   extractDateOfBirth,
   extractAddress,
-  processIDImages
+  processIDImages,
+  cleanupOCRWorker
 };

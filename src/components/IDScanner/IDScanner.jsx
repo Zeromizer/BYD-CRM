@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { processIDImages } from '../../services/idParserService';
+import { processIDImages, cleanupOCRWorker } from '../../services/idParserService';
 import './IDScanner.css';
 
 /**
@@ -41,6 +41,8 @@ function IDScanner({ isOpen, onClose, onDataExtracted }) {
   useEffect(() => {
     return () => {
       stopCamera();
+      // Cleanup OCR worker to free memory (worker is reused while scanner is open)
+      cleanupOCRWorker();
     };
   }, []);
 
