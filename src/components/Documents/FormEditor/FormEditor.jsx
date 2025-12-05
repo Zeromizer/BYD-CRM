@@ -345,94 +345,6 @@ function FormEditor({ isOpen, onClose, template, onSave }) {
             </div>
           </div>
 
-          {/* Field Properties (when field is selected) */}
-          {selectedField && (
-            <div className="sidebar-section">
-              <h3>Selected Field</h3>
-              <div className="selected-field-info">
-                <strong>{getFieldLabel(selectedField.fieldType)}</strong>
-                {selectedField.customValue && (
-                  <span className="custom-value">"{selectedField.customValue}"</span>
-                )}
-              </div>
-
-              <div className="form-group">
-                <label>Font Size (pt)</label>
-                <select
-                  value={selectedField.fontSize}
-                  onChange={(e) =>
-                    updateSelectedField({ fontSize: parseInt(e.target.value) })
-                  }
-                >
-                  {FONT_SIZES.map((size) => (
-                    <option key={size} value={size}>
-                      {size}pt
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label>Font Family</label>
-                <select
-                  value={selectedField.fontFamily}
-                  onChange={(e) => updateSelectedField({ fontFamily: e.target.value })}
-                >
-                  {FONT_FAMILIES.map((font) => (
-                    <option key={font.value} value={font.value}>
-                      {font.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label>Font Weight</label>
-                <select
-                  value={selectedField.fontWeight}
-                  onChange={(e) => updateSelectedField({ fontWeight: e.target.value })}
-                >
-                  <option value="normal">Normal</option>
-                  <option value="bold">Bold</option>
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label>Alignment</label>
-                <div className="alignment-buttons">
-                  {TEXT_ALIGNMENTS.map((align) => (
-                    <button
-                      key={align.value}
-                      className={`btn-alignment ${
-                        selectedField.alignment === align.value ? 'active' : ''
-                      }`}
-                      onClick={() => updateSelectedField({ alignment: align.value })}
-                      title={align.label}
-                    >
-                      {align.icon}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label>Text Color</label>
-                <input
-                  type="color"
-                  value={selectedField.color}
-                  onChange={(e) => updateSelectedField({ color: e.target.value })}
-                />
-              </div>
-
-              <button
-                className="btn btn-danger btn-block"
-                onClick={() => deleteField(selectedFieldId)}
-              >
-                Delete Field
-              </button>
-            </div>
-          )}
-
           {/* Fields List */}
           <div className="sidebar-section">
             <div className="fields-list-header">
@@ -564,37 +476,135 @@ function FormEditor({ isOpen, onClose, template, onSave }) {
           </div>
         </div>
 
-        {/* Right Sidebar - Instructions */}
+        {/* Right Sidebar - Selected Field Editor */}
         <div className="form-editor-info">
-          <div className="info-section">
-            <h3>Instructions</h3>
-            <ol className="instructions-list">
-              <li>Use zoom controls to adjust view size</li>
-              <li>Select a field type from the left panel</li>
-              <li>Configure font size, family, and color</li>
-              <li>Click on the form to place the field</li>
-              <li>Click on a placed field to select and edit it</li>
-              <li>Drag fields to reposition them</li>
-              <li>Toggle "Show Preview Data" to see actual values</li>
-              <li>Click "Save" when done</li>
-            </ol>
-          </div>
+          {selectedField ? (
+            <div className="info-section selected-field-panel">
+              <h3>Edit Field</h3>
+              <div className="selected-field-info">
+                <strong>{getFieldLabel(selectedField.fieldType)}</strong>
+                {selectedField.customValue && (
+                  <span className="custom-value">"{selectedField.customValue}"</span>
+                )}
+              </div>
 
-          <div className="info-section">
-            <h3>Tips</h3>
-            <ul className="tips-list">
-              <li>Zoom in for precise field placement</li>
-              <li>Font sizes are in points (pt) - standard for printing</li>
-              <li>12pt = readable small text</li>
-              <li>14pt = standard body text</li>
-              <li>18pt-24pt = headings</li>
-              <li>The preview shows exactly how it will print</li>
-              <li>Green circle shows anchor point when selected</li>
-              <li>Left align: click where text starts</li>
-              <li>Center align: click where text centers</li>
-              <li>Right align: click where text ends</li>
-            </ul>
-          </div>
+              <div className="form-group">
+                <label>Font Size (pt)</label>
+                <select
+                  value={selectedField.fontSize}
+                  onChange={(e) =>
+                    updateSelectedField({ fontSize: parseInt(e.target.value) })
+                  }
+                >
+                  {FONT_SIZES.map((size) => (
+                    <option key={size} value={size}>
+                      {size}pt
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label>Font Family</label>
+                <select
+                  value={selectedField.fontFamily}
+                  onChange={(e) => updateSelectedField({ fontFamily: e.target.value })}
+                >
+                  {FONT_FAMILIES.map((font) => (
+                    <option key={font.value} value={font.value}>
+                      {font.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label>Font Weight</label>
+                <select
+                  value={selectedField.fontWeight}
+                  onChange={(e) => updateSelectedField({ fontWeight: e.target.value })}
+                >
+                  <option value="normal">Normal</option>
+                  <option value="bold">Bold</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label>Alignment</label>
+                <div className="alignment-buttons">
+                  {TEXT_ALIGNMENTS.map((align) => (
+                    <button
+                      key={align.value}
+                      className={`btn-alignment ${
+                        selectedField.alignment === align.value ? 'active' : ''
+                      }`}
+                      onClick={() => updateSelectedField({ alignment: align.value })}
+                      title={align.label}
+                    >
+                      {align.icon}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label>Text Color</label>
+                <input
+                  type="color"
+                  value={selectedField.color}
+                  onChange={(e) => updateSelectedField({ color: e.target.value })}
+                />
+              </div>
+
+              <div className="form-group field-position">
+                <label>Position (pixels)</label>
+                <div className="position-inputs">
+                  <div className="position-input">
+                    <span>X:</span>
+                    <input
+                      type="number"
+                      value={Math.round(selectedField.x)}
+                      onChange={(e) => updateSelectedField({ x: parseInt(e.target.value) || 0 })}
+                    />
+                  </div>
+                  <div className="position-input">
+                    <span>Y:</span>
+                    <input
+                      type="number"
+                      value={Math.round(selectedField.y)}
+                      onChange={(e) => updateSelectedField({ y: parseInt(e.target.value) || 0 })}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <button
+                className="btn btn-danger btn-block"
+                onClick={() => deleteField(selectedFieldId)}
+              >
+                Delete Field
+              </button>
+            </div>
+          ) : (
+            <div className="info-section no-field-selected">
+              <div className="no-selection-icon">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="1.5">
+                  <rect x="3" y="3" width="18" height="18" rx="2" />
+                  <path d="M3 9h18M9 21V9" />
+                </svg>
+              </div>
+              <h3>No Field Selected</h3>
+              <p className="no-selection-hint">Click on a field in the form to edit its properties, or add a new field from the left panel.</p>
+              <div className="quick-tips">
+                <p><strong>Quick Tips:</strong></p>
+                <ul>
+                  <li>Use + / - to zoom in/out</li>
+                  <li>Drag fields to reposition</li>
+                  <li>Click field to select and edit</li>
+                </ul>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
