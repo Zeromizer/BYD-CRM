@@ -11,7 +11,8 @@
 
 import oneDriveService from './oneDriveService';
 
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
+// Use gemini-1.5-flash-latest for the most up-to-date model
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent';
 
 // LocalStorage key for API key (cached locally for offline use)
 const API_KEY_STORAGE_KEY = 'bydcrm_gemini_api_key';
