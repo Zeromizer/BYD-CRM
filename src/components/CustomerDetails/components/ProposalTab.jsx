@@ -1,5 +1,6 @@
 import { memo, useCallback } from 'react';
 import { VEHICLE_MODELS, BENEFITS_OPTIONS, BANKS } from '../../../constants/vehicleData';
+import { SaveButton } from '../../AnimatedButton/AnimatedButton';
 
 /**
  * ProposalTab - Sales proposal and financing information form
@@ -279,13 +280,13 @@ function ProposalTab({
               Cancel
             </button>
           )}
-          <button
-            className="btn btn-primary"
+          <SaveButton
             onClick={onSave}
-            disabled={isSubmitting || !hasChanges}
+            isSubmitting={isSubmitting}
+            hasChanges={hasChanges}
           >
-            {isSubmitting ? 'Saving...' : 'Save Changes'}
-          </button>
+            Save Changes
+          </SaveButton>
         </div>
       </div>
     </>

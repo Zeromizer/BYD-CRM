@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Plus } from 'lucide-react';
 import useCustomerStore from '../../stores/useCustomerStore';
 import useAuthStore from '../../stores/useAuthStore';
@@ -7,15 +7,29 @@ import Modal from '../Modal/Modal';
 import CustomerForm from '../CustomerForm/CustomerForm';
 import { MILESTONES, isMilestoneComplete } from '../../constants/milestones';
 import { useToast } from '../Toast/Toast';
+import { CustomerListSkeleton } from '../Skeleton/Skeleton';
 import './CustomerList.css';
 
 function CustomerList() {
-  const { customers, selectedCustomerId, selectCustomer, addCustomerWithFolder, updateChecklistItem, saveCustomerToFolder } = useCustomerStore();
+  const { customers, selectedCustomerId, selectCustomer, addCustomerWithFolder, updateChecklistItem, saveCustomerToFolder, isLoading } = useCustomerStore();
   const { isSignedIn } = useAuthStore();
   const toast = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [animateItems, setAnimateItems] = useState(false);
+  const prevCustomersLength = useRef(customers.length);
+
+  // Trigger animation when customers list changes
+  useEffect(() => {
+    if (customers.length !== prevCustomersLength.current) {
+      setAnimateItems(true);
+      prevCustomersLength.current = customers.length;
+      // Reset animation state after animations complete
+      const timer = setTimeout(() => setAnimateItems(false), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [customers.length]);
 
   const filteredCustomers = customers.filter((customer) => {
     const search = searchTerm.toLowerCase();
@@ -165,30 +179,33 @@ function CustomerList() {
         </div>
 
         <div className="customer-items">
-          {filteredCustomers.length === 0 ? (
-            <div className="empty-state">
+          {isLoading ? (
+            <CustomerListSkeleton count={5} />
+          ) : filteredCustomers.length === 0 ? (
+            <div className="empty-state animate-fadeIn">
               <p>No customers yet</p>
               <p className="empty-hint">Tap + to add a customer</p>
             </div>
           ) : (
-            filteredCustomers.map((customer) => {
+            filteredCustomers.map((customer, index) => {
               const currentMilestoneId = customer.checklist?.currentMilestone || 'test_drive';
               const currentMilestoneIndex = MILESTONES.findIndex(m => m.id === currentMilestoneId);
 
               return (
                 <div
                   key={customer.id}
-                  className={`customer-item ${selectedCustomerId === customer.id ? 'active' : ''}`}
+                  className={`customer-item ${selectedCustomerId === customer.id ? 'active' : ''} ${animateItems ? 'list-item-animated' : ''}`}
+                  style={animateItems ? { animationDelay: `${Math.min(index, 10) * 50}ms` } : {}}
                   onClick={() => selectCustomer(customer.id)}
                 >
                   <div className="customer-info">
                     <div className="customer-name">{customer.name || 'Unnamed'}</div>
                     <div className="customer-vsa">{customer.vsaNo || 'No VSA'}</div>
                     <div className="customer-milestone-progress">
-                      {MILESTONES.map((milestone, index) => {
+                      {MILESTONES.map((milestone, milestoneIndex) => {
                         const isComplete = isMilestoneComplete(milestone.id, customer.checklist);
-                        const isCurrent = index === currentMilestoneIndex;
-                        const isPast = index < currentMilestoneIndex;
+                        const isCurrent = milestoneIndex === currentMilestoneIndex;
+                        const isPast = milestoneIndex < currentMilestoneIndex;
 
                         return (
                           <div

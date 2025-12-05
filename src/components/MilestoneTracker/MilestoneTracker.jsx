@@ -13,6 +13,7 @@ import {
   getMilestoneUrgency,
 } from '../../constants/milestones';
 import { Car, Handshake, ClipboardCheck, Package, Star, Calendar, Clock, ListTodo } from 'lucide-react';
+import { SaveButton } from '../AnimatedButton/AnimatedButton';
 import './MilestoneTracker.css';
 
 /**
@@ -180,15 +181,19 @@ const MilestoneTracker = memo(function MilestoneTracker({ customer, onSave }) {
     <div className="milestone-tracker">
       {/* Save/Cancel Actions Bar */}
       {hasChanges && (
-        <div className="milestone-actions-bar">
+        <div className="milestone-actions-bar animate-fadeInDown">
           <span className="unsaved-indicator">You have unsaved changes</span>
           <div className="milestone-actions-buttons">
             <button className="btn btn-secondary" onClick={handleCancel} disabled={isSaving}>
               Cancel
             </button>
-            <button className="btn btn-primary" onClick={handleSaveChanges} disabled={isSaving}>
-              {isSaving ? 'Saving...' : 'Save Changes'}
-            </button>
+            <SaveButton
+              onClick={handleSaveChanges}
+              isSubmitting={isSaving}
+              hasChanges={hasChanges}
+            >
+              Save Changes
+            </SaveButton>
           </div>
         </div>
       )}

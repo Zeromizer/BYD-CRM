@@ -486,106 +486,116 @@ function CustomerDetails() {
         {/* Tab Content */}
         <div className="customer-details-content">
           {activeTab === 'details' && (
-            <DetailsTab
-              formData={detailsForm.formData}
-              errors={detailsForm.errors}
-              guarantors={guarantorsHook.guarantors}
-              expandedGuarantors={guarantorsHook.expandedGuarantors}
-              hasChanges={detailsForm.hasChanges}
-              hasGuarantorChanges={guarantorsHook.hasChanges}
-              isSubmitting={isSubmitting}
-              onFieldChange={detailsForm.handleChange}
-              onGuarantorChange={guarantorsHook.updateGuarantor}
-              onAddGuarantor={guarantorsHook.addGuarantor}
-              onRemoveGuarantor={guarantorsHook.removeGuarantor}
-              onToggleGuarantor={guarantorsHook.toggleExpanded}
-              onSave={handleDetailsSave}
-              onCancel={() => {
-                detailsForm.resetForm();
-                guarantorsHook.resetGuarantors();
-              }}
-              canAddMoreGuarantors={guarantorsHook.canAddMore}
-            />
+            <div key="details" className="tab-content-wrapper">
+              <DetailsTab
+                formData={detailsForm.formData}
+                errors={detailsForm.errors}
+                guarantors={guarantorsHook.guarantors}
+                expandedGuarantors={guarantorsHook.expandedGuarantors}
+                hasChanges={detailsForm.hasChanges}
+                hasGuarantorChanges={guarantorsHook.hasChanges}
+                isSubmitting={isSubmitting}
+                onFieldChange={detailsForm.handleChange}
+                onGuarantorChange={guarantorsHook.updateGuarantor}
+                onAddGuarantor={guarantorsHook.addGuarantor}
+                onRemoveGuarantor={guarantorsHook.removeGuarantor}
+                onToggleGuarantor={guarantorsHook.toggleExpanded}
+                onSave={handleDetailsSave}
+                onCancel={() => {
+                  detailsForm.resetForm();
+                  guarantorsHook.resetGuarantors();
+                }}
+                canAddMoreGuarantors={guarantorsHook.canAddMore}
+              />
+            </div>
           )}
 
           {activeTab === 'proposal' && (
-            <ProposalTab
-              formData={proposalForm.formData}
-              hasChanges={proposalForm.hasChanges}
-              isSubmitting={isSubmitting}
-              onFieldChange={proposalForm.handleChange}
-              onSave={handleProposalSave}
-              onCancel={proposalForm.resetForm}
-            />
+            <div key="proposal" className="tab-content-wrapper">
+              <ProposalTab
+                formData={proposalForm.formData}
+                hasChanges={proposalForm.hasChanges}
+                isSubmitting={isSubmitting}
+                onFieldChange={proposalForm.handleChange}
+                onSave={handleProposalSave}
+                onCancel={proposalForm.resetForm}
+              />
+            </div>
           )}
 
           {activeTab === 'vsa' && (
-            <VsaTab
-              formData={vsaForm.formData}
-              customerName={customer.name}
-              customerNric={customer.nric}
-              customerPhone={customer.phone}
-              hasChanges={vsaForm.hasChanges}
-              isSubmitting={isSubmitting}
-              onFieldChange={vsaForm.handleChange}
-              onSave={handleVsaSave}
-              onCancel={vsaForm.resetForm}
-            />
+            <div key="vsa" className="tab-content-wrapper">
+              <VsaTab
+                formData={vsaForm.formData}
+                customerName={customer.name}
+                customerNric={customer.nric}
+                customerPhone={customer.phone}
+                hasChanges={vsaForm.hasChanges}
+                isSubmitting={isSubmitting}
+                onFieldChange={vsaForm.handleChange}
+                onSave={handleVsaSave}
+                onCancel={vsaForm.resetForm}
+              />
+            </div>
           )}
 
           {activeTab === 'status' && (
-            <MilestoneTracker customer={customer} />
+            <div key="status" className="tab-content-wrapper">
+              <MilestoneTracker customer={customer} />
+            </div>
           )}
 
           {activeTab === 'documents' && (
-            <DocumentsTab
-              documents={documentManager.documents}
-              loadingDocuments={documentManager.loadingDocuments}
-              currentFolderId={documentManager.currentFolderId}
-              folderPath={documentManager.folderPath}
-              isSignedIn={isSignedIn}
-              hasDriveFolder={!!customer.driveFolderId}
-              onLoadDocuments={documentManager.loadDocuments}
-              onNavigateToFolder={documentManager.navigateToFolder}
-              onNavigateToBreadcrumb={documentManager.navigateToBreadcrumb}
-              onItemClick={documentManager.handleItemClick}
-              onDeleteDocument={documentManager.deleteDocument}
-              onMoveDocument={documentManager.moveDocument}
-              onRenameDocument={documentManager.renameDocument}
-              onOpenInDrive={handleOpenInDrive}
-              draggedFile={dragDrop.draggedFile}
-              dropTargetFolder={dragDrop.dropTargetFolder}
-              dropTargetBreadcrumb={dragDrop.dropTargetBreadcrumb}
-              isDragMode={dragDrop.isDragMode}
-              onDragStart={dragDrop.handleDragStart}
-              onDragEnd={dragDrop.handleDragEnd}
-              onDragOver={dragDrop.handleDragOver}
-              onDragLeave={dragDrop.handleDragLeave}
-              onDrop={dragDrop.handleDrop}
-              onBreadcrumbDragOver={dragDrop.handleBreadcrumbDragOver}
-              onBreadcrumbDragLeave={dragDrop.handleBreadcrumbDragLeave}
-              onBreadcrumbDrop={dragDrop.handleBreadcrumbDrop}
-              onTouchStart={touchMenu.handleTouchStart}
-              onTouchMove={touchMenu.handleTouchMove}
-              onTouchEnd={touchMenu.handleTouchEnd}
-              // Mobile action menu props
-              showActionMenu={touchMenu.showActionMenu}
-              showFolderMenu={touchMenu.showFolderMenu}
-              selectedFile={touchMenu.selectedFile}
-              onCloseActionMenu={touchMenu.closeActionMenu}
-              onCloseAllMenus={touchMenu.closeAllMenus}
-              onMoveAction={touchMenu.handleMoveAction}
-            />
+            <div key="documents" className="tab-content-wrapper">
+              <DocumentsTab
+                documents={documentManager.documents}
+                loadingDocuments={documentManager.loadingDocuments}
+                currentFolderId={documentManager.currentFolderId}
+                folderPath={documentManager.folderPath}
+                isSignedIn={isSignedIn}
+                hasDriveFolder={!!customer.driveFolderId}
+                onLoadDocuments={documentManager.loadDocuments}
+                onNavigateToFolder={documentManager.navigateToFolder}
+                onNavigateToBreadcrumb={documentManager.navigateToBreadcrumb}
+                onItemClick={documentManager.handleItemClick}
+                onDeleteDocument={documentManager.deleteDocument}
+                onMoveDocument={documentManager.moveDocument}
+                onRenameDocument={documentManager.renameDocument}
+                onOpenInDrive={handleOpenInDrive}
+                draggedFile={dragDrop.draggedFile}
+                dropTargetFolder={dragDrop.dropTargetFolder}
+                dropTargetBreadcrumb={dragDrop.dropTargetBreadcrumb}
+                isDragMode={dragDrop.isDragMode}
+                onDragStart={dragDrop.handleDragStart}
+                onDragEnd={dragDrop.handleDragEnd}
+                onDragOver={dragDrop.handleDragOver}
+                onDragLeave={dragDrop.handleDragLeave}
+                onDrop={dragDrop.handleDrop}
+                onBreadcrumbDragOver={dragDrop.handleBreadcrumbDragOver}
+                onBreadcrumbDragLeave={dragDrop.handleBreadcrumbDragLeave}
+                onBreadcrumbDrop={dragDrop.handleBreadcrumbDrop}
+                onTouchStart={touchMenu.handleTouchStart}
+                onTouchMove={touchMenu.handleTouchMove}
+                onTouchEnd={touchMenu.handleTouchEnd}
+                // Mobile action menu props
+                showActionMenu={touchMenu.showActionMenu}
+                showFolderMenu={touchMenu.showFolderMenu}
+                selectedFile={touchMenu.selectedFile}
+                onCloseActionMenu={touchMenu.closeActionMenu}
+                onCloseAllMenus={touchMenu.closeAllMenus}
+                onMoveAction={touchMenu.handleMoveAction}
+              />
+            </div>
           )}
 
           {activeTab === 'scanner' && (
-            <div className="scanner-section">
+            <div key="scanner" className="tab-content-wrapper scanner-section">
               {!isSignedIn ? (
-                <div className="warning-banner">
+                <div className="warning-banner animate-fadeIn">
                   <p>Please sign in to OneDrive to use the scanner</p>
                 </div>
               ) : !customer.driveFolderId ? (
-                <div className="empty-state">
+                <div className="empty-state animate-fadeIn">
                   <p>No OneDrive folder for this customer yet</p>
                   <p className="empty-state-hint">A folder will be created when you generate forms or Excel files</p>
                 </div>

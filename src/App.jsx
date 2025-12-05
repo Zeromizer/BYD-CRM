@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout/Layout';
 import { ToastProvider } from './components/Toast/Toast';
+import './styles/animations.css';
 import './App.css';
 
 // Lazy load route components for code splitting

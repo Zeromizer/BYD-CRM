@@ -1,5 +1,6 @@
 import { memo, useCallback } from 'react';
 import DateInput from './DateInput';
+import { SaveButton } from '../../AnimatedButton/AnimatedButton';
 
 /**
  * DetailsTab - Customer contact and personal information form
@@ -335,13 +336,13 @@ function DetailsTab({
               Cancel
             </button>
           )}
-          <button
-            className="btn btn-primary"
+          <SaveButton
             onClick={onSave}
-            disabled={isSubmitting || !totalChanges}
+            isSubmitting={isSubmitting}
+            hasChanges={totalChanges}
           >
-            {isSubmitting ? 'Saving...' : 'Save Changes'}
-          </button>
+            Save Changes
+          </SaveButton>
         </div>
       </div>
     </>

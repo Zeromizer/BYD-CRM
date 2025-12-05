@@ -1,5 +1,6 @@
 import { memo, useCallback } from 'react';
 import { VEHICLE_MODELS, BODY_COLOURS, INSURANCE_COMPANIES, PRZ_TYPES } from '../../../constants/vehicleData';
+import { SaveButton } from '../../AnimatedButton/AnimatedButton';
 
 /**
  * VsaTab - Vehicle Sales Agreement form
@@ -562,13 +563,13 @@ function VsaTab({
               Cancel
             </button>
           )}
-          <button
-            className="btn btn-primary"
+          <SaveButton
             onClick={onSave}
-            disabled={isSubmitting || !hasChanges}
+            isSubmitting={isSubmitting}
+            hasChanges={hasChanges}
           >
-            {isSubmitting ? 'Saving...' : 'Save Changes'}
-          </button>
+            Save Changes
+          </SaveButton>
         </div>
       </div>
     </>

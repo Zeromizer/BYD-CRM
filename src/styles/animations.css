@@ -1,0 +1,573 @@
+/* ================================
+   BYD CRM - Global Animation System
+   ================================ */
+
+/* ===== Animation Variables ===== */
+:root {
+  /* Timing Functions */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out-back: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+
+  /* Durations */
+  --duration-fast: 150ms;
+  --duration-normal: 250ms;
+  --duration-slow: 400ms;
+  --duration-slower: 600ms;
+}
+
+/* ===== Keyframe Animations ===== */
+
+/* Fade In */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Fade In Up - for list items and content */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Fade In Down - for dropdowns and menus */
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Fade In Scale - for modals and cards */
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Scale In - for buttons and icons */
+@keyframes scaleIn {
+  from {
+    transform: scale(0);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+/* Pop In - satisfying bounce effect */
+@keyframes popIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  70% {
+    transform: scale(1.1);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Slide In from Right */
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Slide In from Left */
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Pulse - for loading states */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Shimmer - for skeleton loaders */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Spin - for loading spinners */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Bounce - attention grabbing */
+@keyframes bounce {
+  0%, 20%, 53%, 100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-8px);
+  }
+  60% {
+    transform: translateY(-4px);
+  }
+}
+
+/* Success Checkmark Animation */
+@keyframes checkmark {
+  0% {
+    stroke-dashoffset: 100;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Success Circle Animation */
+@keyframes successCircle {
+  0% {
+    stroke-dashoffset: 166;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Ripple Effect */
+@keyframes ripple {
+  0% {
+    transform: scale(0);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(2.5);
+    opacity: 0;
+  }
+}
+
+/* Shake - for errors */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+  20%, 40%, 60%, 80% { transform: translateX(4px); }
+}
+
+/* Content Reveal - for tab content */
+@keyframes contentReveal {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Progress Fill */
+@keyframes progressFill {
+  from {
+    width: 0%;
+  }
+  to {
+    width: var(--progress-width, 100%);
+  }
+}
+
+/* Glow Pulse - for active states */
+@keyframes glowPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(0, 188, 212, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(0, 188, 212, 0);
+  }
+}
+
+/* ===== Animation Utility Classes ===== */
+
+/* Fade animations */
+.animate-fadeIn {
+  animation: fadeIn var(--duration-normal) var(--ease-out-expo) forwards;
+}
+
+.animate-fadeInUp {
+  animation: fadeInUp var(--duration-normal) var(--ease-out-expo) forwards;
+}
+
+.animate-fadeInDown {
+  animation: fadeInDown var(--duration-normal) var(--ease-out-expo) forwards;
+}
+
+.animate-fadeInScale {
+  animation: fadeInScale var(--duration-normal) var(--ease-out-expo) forwards;
+}
+
+/* Pop and scale animations */
+.animate-popIn {
+  animation: popIn var(--duration-slow) var(--ease-spring) forwards;
+}
+
+.animate-scaleIn {
+  animation: scaleIn var(--duration-fast) var(--ease-out-back) forwards;
+}
+
+/* Slide animations */
+.animate-slideInRight {
+  animation: slideInRight var(--duration-normal) var(--ease-out-expo) forwards;
+}
+
+.animate-slideInLeft {
+  animation: slideInLeft var(--duration-normal) var(--ease-out-expo) forwards;
+}
+
+/* Continuous animations */
+.animate-pulse {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+.animate-bounce {
+  animation: bounce 1s ease-in-out;
+}
+
+.animate-shake {
+  animation: shake 0.5s ease-in-out;
+}
+
+.animate-glowPulse {
+  animation: glowPulse 2s ease-in-out infinite;
+}
+
+/* ===== Staggered Animation Delays ===== */
+.stagger-1 { animation-delay: 50ms; }
+.stagger-2 { animation-delay: 100ms; }
+.stagger-3 { animation-delay: 150ms; }
+.stagger-4 { animation-delay: 200ms; }
+.stagger-5 { animation-delay: 250ms; }
+.stagger-6 { animation-delay: 300ms; }
+.stagger-7 { animation-delay: 350ms; }
+.stagger-8 { animation-delay: 400ms; }
+.stagger-9 { animation-delay: 450ms; }
+.stagger-10 { animation-delay: 500ms; }
+
+/* ===== Skeleton Loading ===== */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    #e5e7eb 0%,
+    #f3f4f6 50%,
+    #e5e7eb 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: var(--radius-md);
+}
+
+.skeleton-text {
+  height: 16px;
+  margin-bottom: 8px;
+  border-radius: 4px;
+}
+
+.skeleton-text-sm {
+  height: 12px;
+  width: 60%;
+}
+
+.skeleton-text-lg {
+  height: 20px;
+  width: 80%;
+}
+
+.skeleton-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+}
+
+.skeleton-card {
+  padding: 16px;
+  border-radius: var(--radius-md);
+  min-height: 80px;
+}
+
+.skeleton-button {
+  height: 40px;
+  width: 100px;
+  border-radius: var(--radius-md);
+}
+
+/* ===== Button States ===== */
+
+/* Button with loading state */
+.btn-loading {
+  position: relative;
+  color: transparent !important;
+  pointer-events: none;
+}
+
+.btn-loading::after {
+  content: '';
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  top: 50%;
+  left: 50%;
+  margin-left: -10px;
+  margin-top: -10px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+/* Button success state */
+.btn-success-state {
+  background: var(--color-success) !important;
+  transform: scale(1.02);
+  transition: all 0.3s var(--ease-out-expo);
+}
+
+.btn-success-state::before {
+  content: '\2713'; /* Checkmark */
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 18px;
+  color: white;
+  animation: popIn 0.4s var(--ease-spring);
+}
+
+/* Button with ripple effect */
+.btn-ripple {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-ripple::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.btn-ripple:active::after {
+  animation: ripple 0.6s ease-out;
+}
+
+/* ===== Success Animation Component ===== */
+.success-animation {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 60px;
+}
+
+.success-checkmark {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  stroke-width: 2;
+  stroke: var(--color-success);
+  stroke-miterlimit: 10;
+  animation: fadeIn 0.3s ease-in-out forwards;
+}
+
+.success-checkmark__circle {
+  stroke-dasharray: 166;
+  stroke-dashoffset: 166;
+  stroke-width: 2;
+  stroke-miterlimit: 10;
+  stroke: var(--color-success);
+  fill: none;
+  animation: successCircle 0.6s var(--ease-out-expo) forwards;
+}
+
+.success-checkmark__check {
+  transform-origin: 50% 50%;
+  stroke-dasharray: 48;
+  stroke-dashoffset: 48;
+  animation: checkmark 0.3s var(--ease-out-expo) 0.3s forwards;
+}
+
+/* ===== Tab Content Transitions ===== */
+.tab-content-enter {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.tab-content-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity var(--duration-normal) var(--ease-out-expo),
+              transform var(--duration-normal) var(--ease-out-expo);
+}
+
+.tab-content-exit {
+  opacity: 1;
+}
+
+.tab-content-exit-active {
+  opacity: 0;
+  transition: opacity var(--duration-fast) ease-out;
+}
+
+/* Simple tab content animation */
+.tab-content-animated {
+  animation: contentReveal var(--duration-normal) var(--ease-out-expo);
+}
+
+/* ===== List Item Animations ===== */
+.list-item-animated {
+  opacity: 0;
+  animation: fadeInUp var(--duration-normal) var(--ease-out-expo) forwards;
+}
+
+/* Apply staggered delays dynamically */
+.list-item-animated:nth-child(1) { animation-delay: 0ms; }
+.list-item-animated:nth-child(2) { animation-delay: 50ms; }
+.list-item-animated:nth-child(3) { animation-delay: 100ms; }
+.list-item-animated:nth-child(4) { animation-delay: 150ms; }
+.list-item-animated:nth-child(5) { animation-delay: 200ms; }
+.list-item-animated:nth-child(6) { animation-delay: 250ms; }
+.list-item-animated:nth-child(7) { animation-delay: 300ms; }
+.list-item-animated:nth-child(8) { animation-delay: 350ms; }
+.list-item-animated:nth-child(9) { animation-delay: 400ms; }
+.list-item-animated:nth-child(10) { animation-delay: 450ms; }
+
+/* Cap delay for items beyond 10 */
+.list-item-animated:nth-child(n+11) { animation-delay: 500ms; }
+
+/* ===== Card/Panel Animations ===== */
+.card-animated {
+  animation: fadeInScale var(--duration-slow) var(--ease-out-expo);
+}
+
+.card-hover-lift {
+  transition: transform var(--duration-fast) var(--ease-out-expo),
+              box-shadow var(--duration-fast) var(--ease-out-expo);
+}
+
+.card-hover-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+}
+
+/* ===== Form Field Animations ===== */
+.field-focus-animation {
+  transition: border-color var(--duration-fast) ease,
+              box-shadow var(--duration-fast) ease,
+              transform var(--duration-fast) var(--ease-out-expo);
+}
+
+.field-focus-animation:focus {
+  transform: scale(1.01);
+}
+
+.field-error-shake {
+  animation: shake 0.5s ease-in-out;
+  border-color: var(--color-error) !important;
+}
+
+/* ===== Progress Indicator ===== */
+.progress-bar-animated {
+  transition: width var(--duration-slow) var(--ease-out-expo);
+}
+
+.progress-bar-fill {
+  animation: progressFill var(--duration-slower) var(--ease-out-expo) forwards;
+}
+
+/* ===== Tooltip/Popover Animations ===== */
+.tooltip-animated {
+  animation: fadeInDown var(--duration-fast) var(--ease-out-expo);
+}
+
+/* ===== Data Update Animation ===== */
+.data-updated {
+  animation: pulse 0.5s ease-in-out;
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.data-updated-highlight {
+  position: relative;
+}
+
+.data-updated-highlight::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border: 2px solid var(--color-success);
+  border-radius: inherit;
+  animation: fadeIn 0.3s ease forwards, fadeOut 1s ease 0.5s forwards;
+  pointer-events: none;
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+/* ===== Reduced Motion Support ===== */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .skeleton {
+    animation: none;
+    background: #e5e7eb;
+  }
+}
