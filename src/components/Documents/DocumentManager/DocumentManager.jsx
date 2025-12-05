@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import useDocumentStore from '../../../stores/useDocumentStore';
 import useAuthStore from '../../../stores/useAuthStore';
 import { getStorageService } from '../../../services/storageServiceSelector';
@@ -53,40 +53,45 @@ function DocumentManager() {
     }
   }, [isInitialized, loadFromLocalStorage, canLoadData]);
 
-  // Get templates as array
-  const templatesArray = Object.values(templates);
+  // Memoize templates array conversion
+  const templatesArray = useMemo(() => Object.values(templates), [templates]);
 
-  // Filter templates (with defensive checks for corrupted data)
-  const filteredTemplates = templatesArray
-    .filter((t) => {
-      // Search filter
-      if (searchQuery) {
-        const query = searchQuery.toLowerCase();
-        const name = t.name || '';
-        const category = t.category || '';
-        return (
-          name.toLowerCase().includes(query) ||
-          category.toLowerCase().includes(query)
-        );
-      }
-      return true;
-    })
-    .filter((t) => {
-      // Category filter
-      if (filterCategory === 'all') return true;
-      return t.category === filterCategory;
-    })
-    .sort((a, b) => {
-      const dateA = new Date(a.updatedAt);
-      const dateB = new Date(b.updatedAt);
-      // Handle invalid dates by treating them as oldest
-      const timeA = isNaN(dateA.getTime()) ? 0 : dateA.getTime();
-      const timeB = isNaN(dateB.getTime()) ? 0 : dateB.getTime();
-      return timeB - timeA;
-    });
+  // Memoize filtered and sorted templates to avoid recalculation on every render
+  const filteredTemplates = useMemo(() => {
+    return templatesArray
+      .filter((t) => {
+        // Search filter
+        if (searchQuery) {
+          const query = searchQuery.toLowerCase();
+          const name = t.name || '';
+          const category = t.category || '';
+          return (
+            name.toLowerCase().includes(query) ||
+            category.toLowerCase().includes(query)
+          );
+        }
+        return true;
+      })
+      .filter((t) => {
+        // Category filter
+        if (filterCategory === 'all') return true;
+        return t.category === filterCategory;
+      })
+      .sort((a, b) => {
+        const dateA = new Date(a.updatedAt);
+        const dateB = new Date(b.updatedAt);
+        // Handle invalid dates by treating them as oldest
+        const timeA = isNaN(dateA.getTime()) ? 0 : dateA.getTime();
+        const timeB = isNaN(dateB.getTime()) ? 0 : dateB.getTime();
+        return timeB - timeA;
+      });
+  }, [templatesArray, searchQuery, filterCategory]);
 
-  // Get unique categories (filter out undefined/null)
-  const categories = ['all', ...new Set(templatesArray.map((t) => t.category).filter(Boolean))];
+  // Memoize categories to avoid recalculation on every render
+  const categories = useMemo(
+    () => ['all', ...new Set(templatesArray.map((t) => t.category).filter(Boolean))],
+    [templatesArray]
+  );
 
   // Handle file selection
   const handleFileSelect = (e) => {
@@ -556,9 +561,9 @@ function UploadForm({
 }
 
 /**
- * TemplateCard - Display card for a single template
+ * TemplateCard - Display card for a single template (memoized for performance)
  */
-function TemplateCard({ template, onEditFields, onDelete, onChangeMasterFile }) {
+const TemplateCard = memo(function TemplateCard({ template, onEditFields, onDelete, onChangeMasterFile }) {
   const fieldCount = Object.keys(template.fields || {}).length;
   const hasFields = fieldCount > 0;
   const hasMasterFile = !!template.fileId;
@@ -627,6 +632,6 @@ function TemplateCard({ template, onEditFields, onDelete, onChangeMasterFile }) 
       </div>
     </div>
   );
-}
+});
 
 export default DocumentManager;

@@ -1,7 +1,11 @@
-import { useState, useEffect, memo, useRef } from 'react';
+import { useState, useEffect, memo, useRef, useCallback } from 'react';
 import Modal from '../Modal/Modal';
 import oneDriveService from '../../services/oneDriveService';
 import './DocumentViewer.css';
+
+// Cache for preview URLs to avoid repeated API calls
+const previewUrlCache = new Map();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 const DocumentViewer = memo(function DocumentViewer({ isOpen, onClose, document }) {
   const [loading, setLoading] = useState(true);
@@ -15,6 +19,15 @@ const DocumentViewer = memo(function DocumentViewer({ isOpen, onClose, document 
   const [isDragging, setIsDragging] = useState(false);
   const dragStartRef = useRef({ x: 0, y: 0 });
   const panStartRef = useRef({ x: 0, y: 0 });
+
+  // Cleanup blob URLs to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      if (imageUrl && imageUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(imageUrl);
+      }
+    };
+  }, [imageUrl]);
 
   const MIN_ZOOM = 25;
   const MAX_ZOOM = 300;
@@ -133,11 +146,21 @@ const DocumentViewer = memo(function DocumentViewer({ isOpen, onClose, document 
 
   if (!document) return null;
 
-  // Load embed URL for OneDrive
+  // Load embed URL for OneDrive (with caching)
   const loadEmbedUrl = async () => {
     try {
+      // Check cache first
+      const cacheKey = `preview_${document.id}`;
+      const cached = previewUrlCache.get(cacheKey);
+      if (cached && Date.now() - cached.time < CACHE_TTL) {
+        setEmbedUrl(cached.url);
+        return;
+      }
+
       const url = await oneDriveService.getPreviewUrl(document.id);
       if (url) {
+        // Cache the URL
+        previewUrlCache.set(cacheKey, { url, time: Date.now() });
         setEmbedUrl(url);
       } else {
         // Preview not available, show fallback
