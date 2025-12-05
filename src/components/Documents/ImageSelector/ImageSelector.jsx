@@ -1,24 +1,34 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { getStorageService } from '../../../services/storageServiceSelector';
-import documentRenderer from '../../../services/documentRenderer';
 import './ImageSelector.css';
 
 /**
  * ImageSelector - Select images from customer's OneDrive folder
  *
  * Used for selecting up to 4 images for the back page of double-sided forms
+ *
+ * OPTIMIZED: Uses Microsoft Graph thumbnails API for fast loading
  */
 function ImageSelector({ customerFolderId, selectedImages = [], onSelectionChange, maxImages = 4 }) {
   const [images, setImages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [previewUrls, setPreviewUrls] = useState({});
+  const [thumbnailUrls, setThumbnailUrls] = useState({});
+  const [loadingThumbnails, setLoadingThumbnails] = useState(false);
+  const thumbnailCacheRef = useRef(new Map());
 
   useEffect(() => {
     if (customerFolderId) {
       loadImagesFromFolder();
     }
   }, [customerFolderId]);
+
+  // OPTIMIZED: Preload all thumbnails in parallel when images are loaded
+  useEffect(() => {
+    if (images.length > 0) {
+      preloadAllThumbnails(images);
+    }
+  }, [images]);
 
   const loadImagesFromFolder = async () => {
     setLoading(true);
@@ -38,6 +48,61 @@ function ImageSelector({ customerFolderId, selectedImages = [], onSelectionChang
     }
   };
 
+  // OPTIMIZED: Preload all thumbnails in parallel using Microsoft Graph API
+  const preloadAllThumbnails = async (imageList) => {
+    setLoadingThumbnails(true);
+
+    // Filter out images that are already cached
+    const uncachedImages = imageList.filter(img => !thumbnailCacheRef.current.has(img.id));
+
+    if (uncachedImages.length === 0) {
+      // All thumbnails already cached, use them
+      const cached = {};
+      imageList.forEach(img => {
+        if (thumbnailCacheRef.current.has(img.id)) {
+          cached[img.id] = thumbnailCacheRef.current.get(img.id);
+        }
+      });
+      setThumbnailUrls(cached);
+      setLoadingThumbnails(false);
+      return;
+    }
+
+    // Load thumbnails in batches of 10 to avoid overwhelming the API
+    const BATCH_SIZE = 10;
+    const newThumbnails = {};
+
+    for (let i = 0; i < uncachedImages.length; i += BATCH_SIZE) {
+      const batch = uncachedImages.slice(i, i + BATCH_SIZE);
+
+      // Fetch all thumbnails in this batch in parallel
+      const results = await Promise.allSettled(
+        batch.map(async (image) => {
+          try {
+            const url = await getStorageService().getThumbnailUrl(image.id, 'medium');
+            return { id: image.id, url };
+          } catch (err) {
+            console.warn(`Failed to load thumbnail for ${image.name}:`, err);
+            return { id: image.id, url: null };
+          }
+        })
+      );
+
+      // Process results
+      results.forEach((result) => {
+        if (result.status === 'fulfilled' && result.value.url) {
+          newThumbnails[result.value.id] = result.value.url;
+          thumbnailCacheRef.current.set(result.value.id, result.value.url);
+        }
+      });
+
+      // Update state progressively so users see thumbnails loading
+      setThumbnailUrls(prev => ({ ...prev, ...newThumbnails }));
+    }
+
+    setLoadingThumbnails(false);
+  };
+
   const handleImageClick = (image) => {
     const isSelected = selectedImages.some(img => img.id === image.id);
 
@@ -52,18 +117,6 @@ function ImageSelector({ customerFolderId, selectedImages = [], onSelectionChang
       } else {
         alert(`Maximum ${maxImages} images allowed`);
       }
-    }
-  };
-
-  const loadImagePreview = async (fileId) => {
-    if (previewUrls[fileId]) return; // Already loaded
-
-    try {
-      const blob = await documentRenderer.fetchImageFromDrive(fileId);
-      const url = URL.createObjectURL(blob);
-      setPreviewUrls(prev => ({ ...prev, [fileId]: url }));
-    } catch (err) {
-      console.error('Error loading image preview:', err);
     }
   };
 
@@ -92,37 +145,47 @@ function ImageSelector({ customerFolderId, selectedImages = [], onSelectionChang
     <div className="image-selector">
       <div className="image-selector-header">
         <h4>Select Images for Back Page ({selectedImages.length}/{maxImages})</h4>
-        {selectedImages.length > 0 && (
-          <button
-            className="btn btn-small btn-secondary"
-            onClick={() => onSelectionChange([])}
-          >
-            Clear All
-          </button>
-        )}
+        <div className="header-actions">
+          {loadingThumbnails && (
+            <span className="thumbnail-loading-indicator">Loading thumbnails...</span>
+          )}
+          {selectedImages.length > 0 && (
+            <button
+              className="btn btn-small btn-secondary"
+              onClick={() => onSelectionChange([])}
+            >
+              Clear All
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="image-grid">
         {images.map(image => {
           const isSelected = selectedImages.some(img => img.id === image.id);
           const selectionIndex = getSelectionIndex(image.id);
+          const thumbnailUrl = thumbnailUrls[image.id];
 
           return (
             <div
               key={image.id}
               className={`image-card ${isSelected ? 'selected' : ''}`}
               onClick={() => handleImageClick(image)}
-              onMouseEnter={() => loadImagePreview(image.id)}
             >
-              {previewUrls[image.id] ? (
+              {thumbnailUrl ? (
                 <img
-                  src={previewUrls[image.id]}
+                  src={thumbnailUrl}
                   alt={image.name}
                   className="image-thumbnail"
+                  loading="lazy"
                 />
               ) : (
                 <div className="image-placeholder">
-                  <span>📷</span>
+                  {loadingThumbnails ? (
+                    <span className="loading-spinner-small"></span>
+                  ) : (
+                    <span>📷</span>
+                  )}
                   <span className="image-name">{image.name}</span>
                 </div>
               )}
