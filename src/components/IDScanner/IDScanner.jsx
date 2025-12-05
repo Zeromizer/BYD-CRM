@@ -465,6 +465,9 @@ function IDScanner({ isOpen, onClose, onDataExtracted }) {
             <div className="review-section">
               {extractedData && (
                 <div className="confidence-badge">
+                  <span className={`scanner-method ${extractedData.method === 'gemini' ? 'ai' : 'ocr'}`}>
+                    {extractedData.method === 'gemini' ? '✨ AI Scanner' : '📷 OCR Scanner'}
+                  </span>
                   <span className={`confidence ${extractedData.confidence >= 75 ? 'high' : extractedData.confidence >= 50 ? 'medium' : 'low'}`}>
                     {extractedData.confidence}% confidence
                   </span>
