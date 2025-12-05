@@ -246,6 +246,100 @@ The confidence should be 0-100 based on how clearly you could read the informati
 }
 
 /**
+ * Extract license start date from a Singapore driving license image using Gemini AI
+ * @param {string} licenseFrontImageData - Base64 data URL of front of license
+ * @param {function} onProgress - Progress callback
+ * @returns {Promise<object>} - Extracted license data
+ */
+export async function extractLicenseWithGemini(licenseFrontImageData, onProgress = null) {
+  const apiKey = getGeminiApiKey();
+
+  if (!apiKey) {
+    throw new Error('Gemini API key not configured');
+  }
+
+  if (onProgress) onProgress({ stage: 'Analyzing license with AI...', progress: 10 });
+
+  const prompt = `You are analyzing a Singapore driving license. Extract the following information from the image:
+
+1. License Start Date / Issue Date / Date of Issue (the date when this license was first issued, NOT the validity date)
+
+IMPORTANT:
+- Return ONLY valid JSON, no markdown or explanations
+- Look for dates labeled as "DATE OF ISSUE", "ISSUE DATE", "VALID FROM", or similar
+- Convert the date to YYYY-MM-DD format
+- If you cannot find a clear issue/start date, use empty string ""
+- The license start date is typically when the person first got their driving license
+
+Return the data in this exact JSON format:
+{
+  "licenseStartDate": "2015-03-20",
+  "confidence": 85
+}
+
+The confidence should be 0-100 based on how clearly you could read the date.`;
+
+  try {
+    const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [{
+          parts: [
+            { text: prompt },
+            {
+              inlineData: {
+                mimeType: 'image/jpeg',
+                data: dataUrlToBase64(licenseFrontImageData)
+              }
+            }
+          ]
+        }],
+        generationConfig: {
+          temperature: 0.1,
+          maxOutputTokens: 256,
+        }
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Gemini API error: ${response.status}`);
+    }
+
+    if (onProgress) onProgress({ stage: 'Processing license data...', progress: 70 });
+
+    const data = await response.json();
+    const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    if (!textResponse) {
+      throw new Error('No response from Gemini');
+    }
+
+    // Parse the JSON response
+    const jsonMatch = textResponse.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      console.warn('Could not parse license JSON from Gemini response');
+      return { licenseStartDate: '', confidence: 0 };
+    }
+
+    const result = JSON.parse(jsonMatch[0]);
+
+    if (onProgress) onProgress({ stage: 'License data extracted', progress: 100 });
+
+    return {
+      licenseStartDate: result.licenseStartDate || '',
+      confidence: result.confidence || 0
+    };
+
+  } catch (error) {
+    console.error('Gemini license extraction failed:', error);
+    return { licenseStartDate: '', confidence: 0 };
+  }
+}
+
+/**
  * Analyze a scanned document using Gemini AI
  * Detects document type and suggests optimal enhancement settings
  * @param {string} imageData - Base64 data URL of the document image

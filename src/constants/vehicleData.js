@@ -102,4 +102,5 @@ export const BANKS = [
   'Citibank',
   'Hong Leong Finance',
   'Tokyo Century',
+  'Motorway Credit',
 ];

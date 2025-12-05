@@ -31,6 +31,7 @@ const useCustomerStore = create((set, get) => ({
       nric: customerData.nric || '',
       occupation: customerData.occupation || '',
       dob: customerData.dob || '',
+      licenseStartDate: customerData.licenseStartDate || '',
       salesConsultant: customerData.salesConsultant || '',
       vsaNo: customerData.vsaNo || '',
       address: customerData.address || '',

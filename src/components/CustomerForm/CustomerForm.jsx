@@ -89,6 +89,7 @@ function CustomerForm({ customer, onSubmit, onCancel, isSubmitting = false }) {
       dob: data.dob || prev.dob,
       address: data.address || prev.address,
       addressContinue: data.addressContinue || prev.addressContinue,
+      licenseStartDate: data.licenseStartDate || prev.licenseStartDate,
     }));
 
     // Store scanned images for later upload (including license images)
