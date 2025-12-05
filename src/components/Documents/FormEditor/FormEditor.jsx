@@ -473,6 +473,42 @@ function FormEditor({ isOpen, onClose, template, onSave }) {
                 <p>Loading form image...</p>
               </div>
             )}
+
+            {/* Floating Zoom Toolbar */}
+            <div className="floating-zoom-toolbar">
+              <button
+                className="zoom-btn"
+                onClick={handleZoomOut}
+                title="Zoom Out (−)"
+                disabled={scale <= 0.25}
+              >
+                −
+              </button>
+              <span className="zoom-level">{Math.round(scale * 100)}%</span>
+              <button
+                className="zoom-btn"
+                onClick={handleZoomIn}
+                title="Zoom In (+)"
+                disabled={scale >= 3}
+              >
+                +
+              </button>
+              <div className="zoom-divider" />
+              <button
+                className="zoom-btn zoom-btn-text"
+                onClick={handleZoomReset}
+                title="Fit to Screen"
+              >
+                Fit
+              </button>
+              <button
+                className="zoom-btn zoom-btn-text"
+                onClick={handleZoom100}
+                title="Actual Size (100%)"
+              >
+                100%
+              </button>
+            </div>
           </div>
         </div>
 

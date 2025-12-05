@@ -212,12 +212,14 @@
 }
 
 .canvas-header {
-  padding: 16px 20px;
+  padding: 12px 16px;
   background: white;
   border-bottom: 1px solid #e0e0e0;
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
 }
 
 .canvas-header h3 {
@@ -229,44 +231,53 @@
 
 .canvas-controls {
   display: flex;
-  gap: 16px;
+  flex-wrap: wrap;
+  gap: 12px;
   align-items: center;
 }
 
 .zoom-controls {
   display: flex;
-  gap: 6px;
+  gap: 4px;
   align-items: center;
-  padding: 6px 10px;
-  background: #f5f5f5;
+  padding: 4px 8px;
+  background: #e3f2fd;
   border-radius: 8px;
-  border: 1px solid #ddd;
+  border: 2px solid #00bcd4;
 }
 
 .zoom-display {
-  min-width: 50px;
+  min-width: 45px;
   text-align: center;
-  font-size: 13px;
-  font-weight: 600;
-  color: #2c3e50;
+  font-size: 12px;
+  font-weight: 700;
+  color: #00838f;
 }
 
 .zoom-controls .btn {
-  min-width: 36px;
-  height: 32px;
-  padding: 4px 10px;
-  font-size: 18px;
+  min-width: 32px;
+  height: 28px;
+  padding: 2px 8px;
+  font-size: 16px;
   font-weight: 700;
   line-height: 1;
   display: flex;
   align-items: center;
   justify-content: center;
+  background: white;
+  border: 1px solid #00bcd4;
+  color: #00838f;
 }
 
 .zoom-controls .btn:not(:disabled):hover {
   background: #00bcd4;
   color: white;
   border-color: #00bcd4;
+}
+
+.zoom-controls .btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .checkbox-label {
@@ -286,7 +297,8 @@
 .canvas-container {
   flex: 1;
   overflow: auto;
-  padding: 40px;
+  padding: 20px;
+  position: relative;
   display: flex;
   justify-content: center;
   align-items: flex-start;
@@ -331,6 +343,71 @@
   to {
     transform: rotate(360deg);
   }
+}
+
+/* Floating Zoom Toolbar */
+.floating-zoom-toolbar {
+  position: fixed;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  border: 2px solid #00bcd4;
+}
+
+.floating-zoom-toolbar .zoom-btn {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 8px;
+  background: #f5f5f5;
+  color: #333;
+  font-size: 20px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.floating-zoom-toolbar .zoom-btn:hover:not(:disabled) {
+  background: #00bcd4;
+  color: white;
+}
+
+.floating-zoom-toolbar .zoom-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.floating-zoom-toolbar .zoom-btn-text {
+  width: auto;
+  padding: 0 12px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.floating-zoom-toolbar .zoom-level {
+  min-width: 50px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 700;
+  color: #00838f;
+}
+
+.floating-zoom-toolbar .zoom-divider {
+  width: 1px;
+  height: 24px;
+  background: #ddd;
+  margin: 0 6px;
 }
 
 /* Field Markers - WYSIWYG accurate positioning */
