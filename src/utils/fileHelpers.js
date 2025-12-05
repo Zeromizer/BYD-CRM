@@ -66,13 +66,3 @@ export function getFileIcon(mimeType) {
   return '📎';
 }
 
-/**
- * Get file extension from filename
- * @param {string} filename - File name
- * @returns {string} Extension without dot
- */
-export function getFileExtension(filename) {
-  if (!filename) return '';
-  const parts = filename.split('.');
-  return parts.length > 1 ? parts.pop().toLowerCase() : '';
-}
