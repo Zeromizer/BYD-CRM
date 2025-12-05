@@ -175,17 +175,59 @@ class PDFGenerator {
   }
 
   /**
-   * Generate PDF from rendered documents
-   * Convenience method that combines rendering and PDF generation
+   * Generate PDF from rendered documents (OPTIMIZED)
+   * Uses pre-generated dataUrls to avoid re-encoding canvases
    */
   async generatePDFFromRenders(renders, options = {}) {
-    const canvases = renders.map((render) => render.canvas);
+    const {
+      orientation = 'portrait',
+      title = 'Document',
+    } = options;
 
-    if (canvases.length === 1) {
-      return this.generateSinglePagePDF(canvases[0], options);
-    } else {
-      return this.generateMultiPagePDF(canvases, options);
+    if (!renders || renders.length === 0) {
+      throw new Error('No renders provided');
     }
+
+    // Lazy load jsPDF
+    const jsPDF = await loadJsPDF();
+
+    // Create PDF
+    const pdf = new jsPDF({
+      orientation,
+      unit: 'in',
+      format: 'a4',
+      compress: true,
+    });
+
+    // Add metadata
+    pdf.setProperties({
+      title,
+      subject: 'BYD CRM Document',
+      author: 'BYD MotorEast CRM',
+      creator: 'BYD CRM System',
+    });
+
+    // OPTIMIZED: Use existing dataUrls instead of re-encoding canvases
+    renders.forEach((render, index) => {
+      if (index > 0) {
+        pdf.addPage();
+      }
+
+      // Use pre-generated dataUrl if available, otherwise fall back to canvas
+      const imgData = render.dataUrl || render.canvas.toDataURL('image/jpeg', 1.0);
+      pdf.addImage(
+        imgData,
+        'JPEG',
+        0,
+        0,
+        this.a4Width,
+        this.a4Height,
+        undefined,
+        'NONE'
+      );
+    });
+
+    return pdf;
   }
 
   /**

@@ -7,11 +7,55 @@ import { getStorageService } from './storageServiceSelector';
  * - Preview = Print = Reality (WYSIWYG)
  * - Font sizes in Points (pt), not pixels
  * - Single source of truth for all rendering
+ *
+ * OPTIMIZED: Includes image caching and parallel operations
  */
 class DocumentRenderer {
   constructor() {
     this.defaultDPI = 300; // Print standard
     this.screenDPI = 96;   // Screen standard
+
+    // Image cache with TTL (5 minutes)
+    this.imageCache = new Map();
+    this.imageCacheTTL = 5 * 60 * 1000;
+  }
+
+  /**
+   * Get cached image or fetch from storage
+   * Cache key is the fileId
+   */
+  async getCachedImage(fileId) {
+    const cached = this.imageCache.get(fileId);
+    if (cached && Date.now() - cached.timestamp < this.imageCacheTTL) {
+      return cached.image;
+    }
+
+    // Fetch and cache the image
+    const blob = await this.fetchImageFromDrive(fileId);
+    const image = await this.loadImage(blob);
+
+    this.imageCache.set(fileId, {
+      image,
+      timestamp: Date.now()
+    });
+
+    return image;
+  }
+
+  /**
+   * Prefetch and cache multiple images in parallel
+   * Use this to warm up cache before rendering
+   */
+  async prefetchImages(fileIds) {
+    const uniqueIds = [...new Set(fileIds.filter(Boolean))];
+    await Promise.all(uniqueIds.map(id => this.getCachedImage(id)));
+  }
+
+  /**
+   * Clear image cache (call when switching customers or on memory pressure)
+   */
+  clearImageCache() {
+    this.imageCache.clear();
   }
 
   /**
@@ -90,12 +134,11 @@ class DocumentRenderer {
    */
   async renderDocument(template, customerData, options = {}) {
     try {
-      // Fetch base image
-      const imageBlob = await this.fetchImageFromDrive(template.fileId);
-      const image = await this.loadImage(imageBlob);
+      // Fetch base image (uses cache for repeated renders)
+      const image = await this.getCachedImage(template.fileId);
 
-      // Get DPI (from template or detect from image)
-      const dpi = template.dpi || await this.detectImageDPI(imageBlob);
+      // Get DPI (from template or default)
+      const dpi = template.dpi || this.defaultDPI;
 
       // Create canvas at original image dimensions (already at print DPI)
       const canvas = this.createCanvas(image.width, image.height);
@@ -230,20 +273,28 @@ class DocumentRenderer {
         { x: margin + quarterWidth, y: margin + quarterHeight } // Bottom-right
       ];
 
-      for (let i = 0; i < Math.min(imageFileIds.length, 4); i++) {
-        const fileId = imageFileIds[i];
-        if (!fileId) continue;
-
+      // OPTIMIZED: Load all images in parallel using Promise.allSettled
+      const imagePromises = imageFileIds.slice(0, 4).map(async (fileId, index) => {
+        if (!fileId) return { index, image: null, error: null };
         try {
-          // Fetch and load image
-          const imageBlob = await this.fetchImageFromDrive(fileId);
-          const image = await this.loadImage(imageBlob);
+          const image = await this.getCachedImage(fileId);
+          return { index, image, error: null };
+        } catch (error) {
+          console.error(`Error loading image ${index + 1}:`, error);
+          return { index, image: null, error };
+        }
+      });
 
+      const imageResults = await Promise.all(imagePromises);
+
+      // Draw all loaded images
+      for (const { index, image, error } of imageResults) {
+        const padding = this.pointsToPixels(18, dpi); // 0.25 inch padding
+        const maxImgWidth = quarterWidth - (padding * 2);
+        const maxImgHeight = quarterHeight - (padding * 2);
+
+        if (image) {
           // Calculate scaling to fit in quarter with padding
-          const padding = this.pointsToPixels(18, dpi); // 0.25 inch padding
-          const maxImgWidth = quarterWidth - (padding * 2);
-          const maxImgHeight = quarterHeight - (padding * 2);
-
           const scaleX = maxImgWidth / image.width;
           const scaleY = maxImgHeight / image.height;
           const scale = Math.min(scaleX, scaleY);
@@ -252,8 +303,8 @@ class DocumentRenderer {
           const scaledHeight = image.height * scale;
 
           // Center image in quarter
-          const imgX = positions[i].x + padding + (maxImgWidth - scaledWidth) / 2;
-          const imgY = positions[i].y + padding + (maxImgHeight - scaledHeight) / 2;
+          const imgX = positions[index].x + padding + (maxImgWidth - scaledWidth) / 2;
+          const imgY = positions[index].y + padding + (maxImgHeight - scaledHeight) / 2;
 
           // Draw image
           ctx.drawImage(image, imgX, imgY, scaledWidth, scaledHeight);
@@ -263,18 +314,16 @@ class DocumentRenderer {
           ctx.fillStyle = '#666666';
           ctx.textAlign = 'center';
           ctx.fillText(
-            `Image ${i + 1}`,
-            positions[i].x + quarterWidth / 2,
-            positions[i].y + padding / 2
+            `Image ${index + 1}`,
+            positions[index].x + quarterWidth / 2,
+            positions[index].y + padding / 2
           );
-        } catch (error) {
-          console.error(`Error loading image ${i + 1}:`, error);
-
-          // Draw placeholder for failed image
+        } else if (error || imageFileIds[index]) {
+          // Draw placeholder for failed or missing image
           ctx.fillStyle = '#f5f5f5';
           ctx.fillRect(
-            positions[i].x + this.pointsToPixels(18, dpi),
-            positions[i].y + this.pointsToPixels(18, dpi),
+            positions[index].x + this.pointsToPixels(18, dpi),
+            positions[index].y + this.pointsToPixels(18, dpi),
             quarterWidth - this.pointsToPixels(36, dpi),
             quarterHeight - this.pointsToPixels(36, dpi)
           );
@@ -284,8 +333,8 @@ class DocumentRenderer {
           ctx.font = `${this.pointsToPixels(14, dpi)}px Arial`;
           ctx.fillText(
             'Image not available',
-            positions[i].x + quarterWidth / 2,
-            positions[i].y + quarterHeight / 2
+            positions[index].x + quarterWidth / 2,
+            positions[index].y + quarterHeight / 2
           );
         }
       }
@@ -385,17 +434,95 @@ class DocumentRenderer {
   }
 
   /**
-   * Render multiple documents (for multi-page forms)
+   * Render multiple documents in parallel (OPTIMIZED)
+   * Prefetches all images first, then renders all documents concurrently
    */
   async renderMultipleDocuments(templates, customerData) {
-    const renders = [];
+    // Prefetch all template images in parallel first
+    const fileIds = templates.map(t => t.fileId).filter(Boolean);
+    await this.prefetchImages(fileIds);
 
-    for (const template of templates) {
-      const render = await this.renderDocument(template, customerData);
-      renders.push(render);
-    }
+    // Render all documents in parallel
+    const renderPromises = templates.map(template =>
+      this.renderDocument(template, customerData)
+    );
 
-    return renders;
+    return Promise.all(renderPromises);
+  }
+
+  /**
+   * Render documents with back pages in parallel (for PrintManager)
+   * This is the fully optimized rendering pipeline
+   *
+   * @param {Array} templateConfigs - Array of {template, doubleSidedConfig}
+   * @param {Object} customerData - Customer data mapping
+   * @returns {Array} - Array of renders (front and back pages interleaved)
+   */
+  async renderDocumentsWithBackPages(templateConfigs, customerData) {
+    // Step 1: Collect all file IDs that need to be fetched
+    const allFileIds = [];
+    templateConfigs.forEach(({ template, doubleSidedConfig }) => {
+      if (template.fileId) {
+        allFileIds.push(template.fileId);
+      }
+      if (doubleSidedConfig?.enabled && doubleSidedConfig.images) {
+        allFileIds.push(...doubleSidedConfig.images);
+      }
+    });
+
+    // Step 2: Prefetch ALL images in parallel (both templates and back page images)
+    await this.prefetchImages(allFileIds);
+
+    // Step 3: Render all front and back pages in parallel
+    const renderPromises = templateConfigs.flatMap(({ template, doubleSidedConfig }) => {
+      const promises = [];
+
+      // Front page render
+      const frontPromise = this.renderDocument(template, customerData).then(render => ({
+        ...render,
+        templateId: template.id,
+        pageType: 'front',
+        templateName: template.name,
+        order: templateConfigs.indexOf({ template, doubleSidedConfig }) * 2
+      }));
+      promises.push(frontPromise);
+
+      // Back page render (if double-sided)
+      if (doubleSidedConfig?.enabled && doubleSidedConfig.images?.length > 0) {
+        const backPromise = frontPromise.then(async (frontRender) => {
+          const backRender = await this.renderBackPageWithImages(
+            doubleSidedConfig.images,
+            {
+              width: frontRender.width,
+              height: frontRender.height,
+              dpi: frontRender.dpi
+            }
+          );
+          return {
+            ...backRender,
+            templateId: template.id,
+            pageType: 'back',
+            templateName: template.name,
+            order: templateConfigs.indexOf({ template, doubleSidedConfig }) * 2 + 1
+          };
+        });
+        promises.push(backPromise);
+      }
+
+      return promises;
+    });
+
+    // Wait for all renders to complete
+    const renders = await Promise.all(renderPromises);
+
+    // Sort by original order to maintain front-back sequence
+    return renders.sort((a, b) => {
+      // Group by template first, then front before back
+      const aTemplateIdx = templateConfigs.findIndex(c => c.template.id === a.templateId);
+      const bTemplateIdx = templateConfigs.findIndex(c => c.template.id === b.templateId);
+      if (aTemplateIdx !== bTemplateIdx) return aTemplateIdx - bTemplateIdx;
+      return a.pageType === 'front' ? -1 : 1;
+    });
   }
 
   /**

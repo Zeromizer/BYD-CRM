@@ -42,6 +42,9 @@ function PrintManager({ isOpen, onClose, customer }) {
       setRenders([]);
       setPdf(null);
       setError(null);
+    } else {
+      // Clear image cache when modal closes to free memory
+      documentRenderer.clearImageCache();
     }
   }, [isOpen, loadFromLocalStorage]);
 
@@ -140,6 +143,13 @@ function PrintManager({ isOpen, onClose, customer }) {
         });
         return newSelection;
       });
+      // OPTIMIZED: Prefetch all template images in group in background
+      const fileIds = group.templates.map(t => t.fileId).filter(Boolean);
+      if (fileIds.length > 0) {
+        documentRenderer.prefetchImages(fileIds).catch(() => {
+          // Silently ignore prefetch errors
+        });
+      }
     }
   };
 
@@ -173,6 +183,13 @@ function PrintManager({ isOpen, onClose, customer }) {
       setDoubleSidedTemplates(newDoubleSided);
     } else {
       setSelectedTemplateIds([...selectedTemplateIds, templateId]);
+      // OPTIMIZED: Prefetch template image in background while user continues selecting
+      const template = templates[templateId];
+      if (template?.fileId) {
+        documentRenderer.prefetchImages([template.fileId]).catch(() => {
+          // Silently ignore prefetch errors - will be handled during actual render
+        });
+      }
     }
   };
 
@@ -240,40 +257,17 @@ function PrintManager({ isOpen, onClose, customer }) {
       // Get customer data mapping
       const customerData = getCustomerDataMapping(customer);
 
-      // Render all pages (front pages and back pages for double-sided templates)
-      const allRenders = [];
+      // OPTIMIZED: Build template configs for parallel rendering
+      const templateConfigs = selectedTemplateIds.map(templateId => ({
+        template: templates[templateId],
+        doubleSidedConfig: doubleSidedTemplates[templateId]
+      }));
 
-      for (const templateId of selectedTemplateIds) {
-        const template = templates[templateId];
-
-        // Render front page
-        const frontPageRender = await documentRenderer.renderDocument(template, customerData);
-        allRenders.push({
-          ...frontPageRender,
-          templateId,
-          pageType: 'front',
-          templateName: template.name
-        });
-
-        // Render back page if double-sided
-        const dsConfig = doubleSidedTemplates[templateId];
-        if (dsConfig?.enabled && dsConfig.images && dsConfig.images.length > 0) {
-          const backPageRender = await documentRenderer.renderBackPageWithImages(
-            dsConfig.images,
-            {
-              width: frontPageRender.width,
-              height: frontPageRender.height,
-              dpi: frontPageRender.dpi
-            }
-          );
-          allRenders.push({
-            ...backPageRender,
-            templateId,
-            pageType: 'back',
-            templateName: template.name
-          });
-        }
-      }
+      // OPTIMIZED: Render all pages in parallel (images prefetched, templates rendered concurrently)
+      const allRenders = await documentRenderer.renderDocumentsWithBackPages(
+        templateConfigs,
+        customerData
+      );
 
       setRenders(allRenders);
 
