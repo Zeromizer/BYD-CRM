@@ -10,6 +10,7 @@ import useDocumentStore from '../stores/useDocumentStore';
 import useTodoStore from '../stores/useTodoStore';
 import { getStorageService } from './storageServiceSelector';
 import userStorage from './userStorage';
+import { initializeGeminiService } from './geminiService';
 
 class SyncCoordinator {
   constructor() {
@@ -84,7 +85,10 @@ class SyncCoordinator {
     try {
       // OPTIMIZATION Phase 2+3: Warmup - preload folder IDs (uses cache on subsequent syncs)
       const warmupStart = Date.now();
-      await getStorageService().warmup();
+      await Promise.all([
+        getStorageService().warmup(),
+        initializeGeminiService(), // Load Gemini API key from OneDrive settings
+      ]);
       console.log(`Sync warmup: ${Date.now() - warmupStart}ms`);
 
       // Start all syncs in parallel

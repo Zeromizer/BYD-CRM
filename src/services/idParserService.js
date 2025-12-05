@@ -2,6 +2,10 @@
  * ID Parser Service
  * Handles OCR processing and extraction of Singapore NRIC/FIN details
  *
+ * EXTRACTION METHODS:
+ * 1. Primary: Gemini AI (fast, highly accurate when API key is configured)
+ * 2. Fallback: Tesseract.js OCR (works offline, lower accuracy)
+ *
  * NOTE: tesseract.js is lazy-loaded to reduce initial bundle size (~6.8MB)
  *
  * PERFORMANCE OPTIMIZATIONS:
@@ -9,6 +13,8 @@
  * - Image preprocessing: Resizes and enhances images for faster OCR
  * - Parallel processing: Processes front+back images simultaneously
  */
+
+import { isGeminiAvailable, extractIDWithGemini } from './geminiService';
 
 // NRIC/FIN regex patterns
 const NRIC_PATTERN = /[STFGM]\d{7}[A-Z]/gi;
@@ -497,13 +503,13 @@ export const extractAddress = (text) => {
 };
 
 /**
- * Process ID images and extract all relevant information
+ * Process ID images using Tesseract OCR (fallback method)
  * @param {string} frontImageData - Base64 data URL of front image
  * @param {string} backImageData - Base64 data URL of back image (optional)
  * @param {function} onProgress - Progress callback ({ stage, progress })
  * @returns {Promise<object>} - Extracted data
  */
-export const processIDImages = async (frontImageData, backImageData = null, onProgress = null) => {
+const processIDImagesWithTesseract = async (frontImageData, backImageData = null, onProgress = null) => {
   const result = {
     name: '',
     nric: '',
@@ -512,74 +518,111 @@ export const processIDImages = async (frontImageData, backImageData = null, onPr
     addressContinue: '',
     rawTextFront: '',
     rawTextBack: '',
-    confidence: 0
+    confidence: 0,
+    method: 'tesseract'
   };
 
   let fieldsFound = 0;
   const totalFields = 4; // name, nric, dob, address
 
-  try {
-    // Process front image
-    if (onProgress) onProgress({ stage: 'Processing front of ID...', progress: 0 });
+  // Process front image
+  if (onProgress) onProgress({ stage: 'Processing front of ID...', progress: 0 });
 
-    const frontText = await performOCR(frontImageData, (progress) => {
-      if (onProgress) onProgress({ stage: 'Processing front of ID...', progress: progress * 0.4 });
+  const frontText = await performOCR(frontImageData, (progress) => {
+    if (onProgress) onProgress({ stage: 'Processing front of ID...', progress: progress * 0.4 });
+  });
+  result.rawTextFront = frontText;
+
+  // Extract from front
+  const nric = extractNRIC(frontText);
+  if (nric) {
+    result.nric = nric;
+    fieldsFound++;
+  }
+
+  const name = extractName(frontText);
+  if (name) {
+    result.name = name;
+    fieldsFound++;
+  }
+
+  const dob = extractDateOfBirth(frontText);
+  if (dob) {
+    result.dob = dob;
+    fieldsFound++;
+  }
+
+  // Process back image if provided
+  if (backImageData) {
+    if (onProgress) onProgress({ stage: 'Processing back of ID...', progress: 50 });
+
+    const backText = await performOCR(backImageData, (progress) => {
+      if (onProgress) onProgress({ stage: 'Processing back of ID...', progress: 50 + (progress * 0.4) });
     });
-    result.rawTextFront = frontText;
+    result.rawTextBack = backText;
 
-    // Extract from front
-    const nric = extractNRIC(frontText);
-    if (nric) {
-      result.nric = nric;
+    // Extract address from back
+    const addressData = extractAddress(backText);
+    if (addressData.address || addressData.addressContinue) {
+      result.address = addressData.address;
+      result.addressContinue = addressData.addressContinue;
       fieldsFound++;
     }
 
-    const name = extractName(frontText);
-    if (name) {
-      result.name = name;
-      fieldsFound++;
-    }
-
-    const dob = extractDateOfBirth(frontText);
-    if (dob) {
-      result.dob = dob;
-      fieldsFound++;
-    }
-
-    // Process back image if provided
-    if (backImageData) {
-      if (onProgress) onProgress({ stage: 'Processing back of ID...', progress: 50 });
-
-      const backText = await performOCR(backImageData, (progress) => {
-        if (onProgress) onProgress({ stage: 'Processing back of ID...', progress: 50 + (progress * 0.4) });
-      });
-      result.rawTextBack = backText;
-
-      // Extract address from back
-      const addressData = extractAddress(backText);
-      if (addressData.address || addressData.addressContinue) {
-        result.address = addressData.address;
-        result.addressContinue = addressData.addressContinue;
+    // Also check front for address if not found on back
+    if (!result.address) {
+      const frontAddressData = extractAddress(frontText);
+      if (frontAddressData.address) {
+        result.address = frontAddressData.address;
+        result.addressContinue = frontAddressData.addressContinue;
         fieldsFound++;
       }
+    }
+  }
 
-      // Also check front for address if not found on back
-      if (!result.address) {
-        const frontAddressData = extractAddress(frontText);
-        if (frontAddressData.address) {
-          result.address = frontAddressData.address;
-          result.addressContinue = frontAddressData.addressContinue;
-          fieldsFound++;
+  // Calculate confidence based on fields extracted
+  result.confidence = Math.round((fieldsFound / totalFields) * 100);
+
+  if (onProgress) onProgress({ stage: 'Complete', progress: 100 });
+
+  return result;
+};
+
+/**
+ * Process ID images and extract all relevant information
+ * Uses Gemini AI when available (faster, more accurate), falls back to Tesseract OCR
+ *
+ * @param {string} frontImageData - Base64 data URL of front image
+ * @param {string} backImageData - Base64 data URL of back image (optional)
+ * @param {function} onProgress - Progress callback ({ stage, progress })
+ * @returns {Promise<object>} - Extracted data
+ */
+export const processIDImages = async (frontImageData, backImageData = null, onProgress = null) => {
+  try {
+    // Try Gemini AI first if available (fast, accurate, requires API key + internet)
+    if (isGeminiAvailable()) {
+      try {
+        console.log('Using Gemini AI for ID extraction...');
+        const geminiResult = await extractIDWithGemini(frontImageData, backImageData, onProgress);
+
+        // If Gemini returned good results, use them
+        if (geminiResult && (geminiResult.nric || geminiResult.name)) {
+          console.log('Gemini AI extraction successful:', geminiResult.confidence + '% confidence');
+          return geminiResult;
         }
+
+        // If Gemini returned empty results, fall through to Tesseract
+        console.log('Gemini returned no results, falling back to Tesseract...');
+      } catch (geminiError) {
+        console.warn('Gemini AI extraction failed, falling back to Tesseract:', geminiError.message);
+        // Fall through to Tesseract
       }
+    } else {
+      console.log('Gemini AI not available, using Tesseract OCR...');
     }
 
-    // Calculate confidence based on fields extracted
-    result.confidence = Math.round((fieldsFound / totalFields) * 100);
-
-    if (onProgress) onProgress({ stage: 'Complete', progress: 100 });
-
-    return result;
+    // Fallback to Tesseract OCR
+    return await processIDImagesWithTesseract(frontImageData, backImageData, onProgress);
   } catch (error) {
     console.error('ID processing error:', error);
     throw error;
