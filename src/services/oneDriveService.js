@@ -1408,6 +1408,52 @@ class OneDriveService {
     return this.loadExcelTemplates();
   }
 
+  // ============================================================
+  // App Settings Operations (cross-device sync)
+  // ============================================================
+
+  /**
+   * Save app settings to OneDrive
+   * Used for API keys and other settings that need to sync across devices
+   */
+  async saveSettings(settings) {
+    const folderIds = await this.getFolderIds();
+    return this.uploadFile(
+      folderIds.root,
+      ONEDRIVE_DATA_FILES.SETTINGS,
+      { ...settings, lastModified: new Date().toISOString() }
+    );
+  }
+
+  /**
+   * Load app settings from OneDrive
+   * Returns empty object if no settings file exists
+   */
+  async loadSettings() {
+    try {
+      const folderIds = await this.getFolderIds();
+      const file = await this.findFile(folderIds.root, ONEDRIVE_DATA_FILES.SETTINGS);
+
+      if (!file) {
+        return {};
+      }
+
+      return await this.downloadFileAsJson(file.id);
+    } catch (error) {
+      console.error('Error loading settings from OneDrive:', error);
+      return {};
+    }
+  }
+
+  /**
+   * Update a single setting (merges with existing settings)
+   */
+  async updateSetting(key, value) {
+    const currentSettings = await this.loadSettings();
+    const updatedSettings = { ...currentSettings, [key]: value };
+    return this.saveSettings(updatedSettings);
+  }
+
   /**
    * Upload file to Drive (generic method used by various stores)
    */
