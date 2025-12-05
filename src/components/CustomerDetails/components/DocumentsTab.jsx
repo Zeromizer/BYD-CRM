@@ -483,12 +483,12 @@ const DocumentItem = memo(function DocumentItem({
       onTouchEnd={onTouchEnd}
     >
       {/* Icon/Thumbnail */}
-      <div className="document-icon">
+      <div className={`document-icon${itemIsImage && item.thumbnailLink ? ' has-thumbnail' : ''}`}>
         {itemIsImage && item.thumbnailLink ? (
           <img
             src={item.thumbnailLink}
             alt={item.name}
-            className="thumbnail"
+            className="thumbnail-image"
             loading="lazy"
             decoding="async"
           />
