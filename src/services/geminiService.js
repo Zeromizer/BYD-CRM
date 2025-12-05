@@ -245,10 +245,168 @@ The confidence should be 0-100 based on how clearly you could read the informati
   }
 }
 
+/**
+ * Analyze a scanned document using Gemini AI
+ * Detects document type and suggests optimal enhancement settings
+ * @param {string} imageData - Base64 data URL of the document image
+ * @param {function} onProgress - Progress callback
+ * @returns {Promise<object>} - Analysis results
+ */
+export async function analyzeDocumentWithGemini(imageData, onProgress = null) {
+  const apiKey = getGeminiApiKey();
+
+  if (!apiKey) {
+    throw new Error('Gemini API key not configured');
+  }
+
+  if (onProgress) onProgress({ stage: 'Analyzing document...', progress: 10 });
+
+  const prompt = `You are analyzing a scanned document image. Analyze the document and provide the following information:
+
+1. **Document Type**: Identify what type of document this is. Common types include:
+   - invoice, receipt, bill
+   - contract, agreement, legal_document
+   - letter, correspondence
+   - form, application
+   - report, presentation
+   - id_card, passport, license
+   - business_card
+   - certificate, diploma
+   - bank_statement, financial
+   - medical_record, prescription
+   - photo, image
+   - handwritten_note
+   - other
+
+2. **Quality Assessment**: Rate the scan quality from 0-100:
+   - Clarity: How clear/readable is the text?
+   - Lighting: Is the lighting even or are there shadows/glare?
+   - Alignment: Is the document properly aligned?
+
+3. **Enhancement Recommendations**: Based on the document type and quality, recommend:
+   - filter: Which filter preset would work best? (original, auto, bw, grayscale, magic)
+   - brightness: Adjustment value from -30 to +30
+   - contrast: Adjustment value from -30 to +30
+   - needs_rotation: Does the document need rotation? (0, 90, 180, 270)
+
+4. **Content Summary**: Brief 1-2 sentence description of what's visible in the document (without reading sensitive personal data)
+
+IMPORTANT:
+- Return ONLY valid JSON, no markdown or explanations
+- Be conservative with enhancements - subtle adjustments are better
+- For text-heavy documents like invoices/contracts, suggest higher contrast
+- For documents with photos, suggest original or auto filter
+- For poor lighting conditions, increase brightness slightly
+
+Return the data in this exact JSON format:
+{
+  "documentType": "invoice",
+  "documentTypeLabel": "Invoice",
+  "quality": {
+    "overall": 85,
+    "clarity": 90,
+    "lighting": 80,
+    "alignment": 85
+  },
+  "enhancements": {
+    "filter": "auto",
+    "brightness": 5,
+    "contrast": 10,
+    "needsRotation": 0
+  },
+  "summary": "A business invoice from ABC Company with itemized charges",
+  "confidence": 92
+}`;
+
+  if (onProgress) onProgress({ stage: 'Processing with AI...', progress: 30 });
+
+  try {
+    const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        contents: [{
+          parts: [
+            { text: prompt },
+            {
+              inlineData: {
+                mimeType: 'image/jpeg',
+                data: dataUrlToBase64(imageData)
+              }
+            }
+          ]
+        }],
+        generationConfig: {
+          temperature: 0.2, // Low temperature for consistent analysis
+          maxOutputTokens: 1024,
+        }
+      })
+    });
+
+    if (onProgress) onProgress({ stage: 'Parsing results...', progress: 80 });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error?.message || `API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    if (!textResponse) {
+      throw new Error('No response from Gemini');
+    }
+
+    // Parse the JSON from the response (handle markdown code blocks)
+    let jsonStr = textResponse.trim();
+
+    if (jsonStr.startsWith('```json')) {
+      jsonStr = jsonStr.slice(7);
+    } else if (jsonStr.startsWith('```')) {
+      jsonStr = jsonStr.slice(3);
+    }
+    if (jsonStr.endsWith('```')) {
+      jsonStr = jsonStr.slice(0, -3);
+    }
+    jsonStr = jsonStr.trim();
+
+    const result = JSON.parse(jsonStr);
+
+    if (onProgress) onProgress({ stage: 'Complete', progress: 100 });
+
+    return {
+      documentType: result.documentType || 'other',
+      documentTypeLabel: result.documentTypeLabel || 'Document',
+      quality: {
+        overall: result.quality?.overall || 70,
+        clarity: result.quality?.clarity || 70,
+        lighting: result.quality?.lighting || 70,
+        alignment: result.quality?.alignment || 70
+      },
+      enhancements: {
+        filter: result.enhancements?.filter || 'auto',
+        brightness: Math.max(-30, Math.min(30, result.enhancements?.brightness || 0)),
+        contrast: Math.max(-30, Math.min(30, result.enhancements?.contrast || 0)),
+        needsRotation: result.enhancements?.needsRotation || 0
+      },
+      summary: result.summary || '',
+      confidence: result.confidence || 70,
+      method: 'gemini'
+    };
+
+  } catch (error) {
+    console.error('Gemini document analysis failed:', error);
+    throw error;
+  }
+}
+
 export default {
   getGeminiApiKey,
   setGeminiApiKey,
   isGeminiAvailable,
   extractIDWithGemini,
+  analyzeDocumentWithGemini,
   initializeGeminiService
 };
