@@ -388,49 +388,14 @@ function FormEditor({ isOpen, onClose, template, onSave }) {
         <div className="form-editor-canvas" ref={containerRef}>
           <div className="canvas-header">
             <h3>Form Template</h3>
-            <div className="canvas-controls">
-              <div className="zoom-controls">
-                <button
-                  className="btn btn-small btn-secondary"
-                  onClick={handleZoomOut}
-                  title="Zoom Out"
-                  disabled={scale <= 0.25}
-                >
-                  −
-                </button>
-                <span className="zoom-display">{Math.round(scale * 100)}%</span>
-                <button
-                  className="btn btn-small btn-secondary"
-                  onClick={handleZoomIn}
-                  title="Zoom In"
-                  disabled={scale >= 3}
-                >
-                  +
-                </button>
-                <button
-                  className="btn btn-small btn-secondary"
-                  onClick={handleZoomReset}
-                  title="Fit to Screen"
-                >
-                  Fit
-                </button>
-                <button
-                  className="btn btn-small btn-secondary"
-                  onClick={handleZoom100}
-                  title="100%"
-                >
-                  100%
-                </button>
-              </div>
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={showPreview}
-                  onChange={(e) => setShowPreview(e.target.checked)}
-                />
-                Show Preview Data
-              </label>
-            </div>
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                checked={showPreview}
+                onChange={(e) => setShowPreview(e.target.checked)}
+              />
+              Show Preview Data
+            </label>
           </div>
 
           <div className="canvas-container">
