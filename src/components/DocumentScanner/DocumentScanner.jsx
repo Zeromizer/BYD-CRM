@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import pdfGenerator from '../../services/pdfGenerator';
 import oneDriveService from '../../services/oneDriveService';
+import { isGeminiAvailable, analyzeDocumentWithGemini } from '../../services/geminiService';
 import './DocumentScanner.css';
 
 /**
@@ -71,6 +72,12 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
   // Export state
   const [isExporting, setIsExporting] = useState(false);
   const [exportProgress, setExportProgress] = useState(0);
+
+  // AI Analysis state
+  const [aiAnalysis, setAiAnalysis] = useState(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [aiEnabled, setAiEnabled] = useState(true); // Enable AI by default
+  const [showAiSuggestions, setShowAiSuggestions] = useState(true);
 
   // Refs
   const videoRef = useRef(null);
@@ -838,18 +845,47 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
     if (!capturedImage || !corners) return;
 
     const img = new Image();
-    img.onload = () => {
+    img.onload = async () => {
       const croppedCanvas = applyPerspectiveTransform(img, corners);
       const croppedImage = croppedCanvas.toDataURL('image/jpeg', 0.95);
 
       setCapturedImage(croppedImage);
       setViewMode(VIEW_MODES.ENHANCE);
 
-      // Reset enhancement values
+      // Reset enhancement values to defaults first
       setCurrentFilter('auto');
       setBrightness(FILTERS.auto.brightness);
       setContrast(FILTERS.auto.contrast);
       setRotation(0);
+      setAiAnalysis(null);
+
+      // Trigger AI analysis if available and enabled
+      if (aiEnabled && isGeminiAvailable()) {
+        setIsAnalyzing(true);
+        try {
+          const analysis = await analyzeDocumentWithGemini(croppedImage);
+          setAiAnalysis(analysis);
+
+          // Auto-apply AI suggestions if enabled
+          if (showAiSuggestions && analysis.enhancements) {
+            const suggestedFilter = analysis.enhancements.filter || 'auto';
+            if (FILTERS[suggestedFilter]) {
+              setCurrentFilter(suggestedFilter);
+              setBrightness(analysis.enhancements.brightness || 0);
+              setContrast(analysis.enhancements.contrast || 0);
+            }
+            // Apply rotation if needed
+            if (analysis.enhancements.needsRotation && analysis.enhancements.needsRotation !== 0) {
+              setRotation(analysis.enhancements.needsRotation);
+            }
+          }
+        } catch (error) {
+          console.warn('AI analysis failed, using default settings:', error);
+          // Continue with default settings if AI fails
+        } finally {
+          setIsAnalyzing(false);
+        }
+      }
     };
     img.src = capturedImage;
   };
@@ -1142,17 +1178,37 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
     setRotation((prev) => (prev + degrees + 360) % 360);
   };
 
+  // Apply AI suggested enhancements
+  const applyAiSuggestions = () => {
+    if (!aiAnalysis?.enhancements) return;
+
+    const suggestedFilter = aiAnalysis.enhancements.filter || 'auto';
+    if (FILTERS[suggestedFilter]) {
+      setCurrentFilter(suggestedFilter);
+      setBrightness(aiAnalysis.enhancements.brightness || 0);
+      setContrast(aiAnalysis.enhancements.contrast || 0);
+    }
+    if (aiAnalysis.enhancements.needsRotation && aiAnalysis.enhancements.needsRotation !== 0) {
+      setRotation(aiAnalysis.enhancements.needsRotation);
+    }
+  };
+
   const confirmEnhancement = async () => {
     const enhancedImage = await getEnhancedImage();
     if (enhancedImage) {
-      // Add to pages
+      // Add to pages with AI analysis data
       const newPage = {
         id: Date.now(),
         image: enhancedImage,
         filter: currentFilter,
         brightness,
         contrast,
-        rotation
+        rotation,
+        // Include AI analysis if available
+        documentType: aiAnalysis?.documentType || null,
+        documentTypeLabel: aiAnalysis?.documentTypeLabel || null,
+        quality: aiAnalysis?.quality || null,
+        summary: aiAnalysis?.summary || null
       };
 
       setPages(prev => [...prev, newPage]);
@@ -1161,6 +1217,7 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
       setBrightness(0);
       setContrast(0);
       setCurrentFilter('auto');
+      setAiAnalysis(null);
       setViewMode(VIEW_MODES.GALLERY);
     }
   };
@@ -1639,6 +1696,67 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
           </div>
 
           <div className="enhance-content">
+            {/* AI Analysis Panel */}
+            {(isAnalyzing || aiAnalysis) && (
+              <div className="ai-analysis-panel">
+                {isAnalyzing ? (
+                  <div className="ai-analyzing">
+                    <div className="ai-spinner" />
+                    <span>AI analyzing document...</span>
+                  </div>
+                ) : aiAnalysis && (
+                  <div className="ai-results">
+                    <div className="ai-doc-type">
+                      <span className="ai-badge">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
+                          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+                        </svg>
+                        AI Detected
+                      </span>
+                      <span className="doc-type-label">{aiAnalysis.documentTypeLabel}</span>
+                      {aiAnalysis.confidence >= 80 && (
+                        <span className="confidence-high" title={`${aiAnalysis.confidence}% confidence`}>
+                          <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                            <polyline points="22 4 12 14.01 9 11.01" stroke="currentColor" fill="none" strokeWidth="2" />
+                          </svg>
+                        </span>
+                      )}
+                    </div>
+                    {aiAnalysis.quality && (
+                      <div className="ai-quality">
+                        <span className="quality-label">Quality:</span>
+                        <div className="quality-bar">
+                          <div
+                            className="quality-fill"
+                            style={{
+                              width: `${aiAnalysis.quality.overall}%`,
+                              backgroundColor: aiAnalysis.quality.overall >= 70 ? '#22c55e' :
+                                              aiAnalysis.quality.overall >= 50 ? '#eab308' : '#ef4444'
+                            }}
+                          />
+                        </div>
+                        <span className="quality-score">{aiAnalysis.quality.overall}%</span>
+                      </div>
+                    )}
+                    {aiAnalysis.summary && (
+                      <div className="ai-summary" title={aiAnalysis.summary}>
+                        {aiAnalysis.summary.length > 60
+                          ? aiAnalysis.summary.substring(0, 60) + '...'
+                          : aiAnalysis.summary}
+                      </div>
+                    )}
+                    <button className="ai-apply-btn" onClick={applyAiSuggestions}>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="14" height="14">
+                        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+                      </svg>
+                      Apply AI Settings
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="enhance-preview">
               <img
                 src={capturedImage}
@@ -1774,6 +1892,9 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
                 <div className="gallery-image">
                   <img src={page.image} alt={`Page ${index + 1}`} />
                   <span className="page-number">{index + 1}</span>
+                  {page.documentTypeLabel && (
+                    <span className="page-doc-type">{page.documentTypeLabel}</span>
+                  )}
                 </div>
                 <div className="gallery-actions">
                   {index > 0 && (
