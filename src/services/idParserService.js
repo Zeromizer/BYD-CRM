@@ -14,7 +14,7 @@
  * - Parallel processing: Processes front+back images simultaneously
  */
 
-import { isGeminiAvailable, extractIDWithGemini } from './geminiService';
+import { isGeminiAvailable, extractIDWithGemini, initializeGeminiService } from './geminiService';
 
 // NRIC/FIN regex patterns
 const NRIC_PATTERN = /[STFGM]\d{7}[A-Z]/gi;
@@ -599,10 +599,16 @@ const processIDImagesWithTesseract = async (frontImageData, backImageData = null
  */
 export const processIDImages = async (frontImageData, backImageData = null, onProgress = null) => {
   try {
+    // Ensure Gemini service is initialized (loads API key from OneDrive if not already loaded)
+    // This is important for cross-device sync - the key might not be in localStorage on this device
+    await initializeGeminiService();
+
     // Try Gemini AI first if available (fast, accurate, requires API key + internet)
     if (isGeminiAvailable()) {
       try {
         console.log('Using Gemini AI for ID extraction...');
+        if (onProgress) onProgress({ stage: 'Using AI scanner...', progress: 5 });
+
         const geminiResult = await extractIDWithGemini(frontImageData, backImageData, onProgress);
 
         // If Gemini returned good results, use them
@@ -618,10 +624,11 @@ export const processIDImages = async (frontImageData, backImageData = null, onPr
         // Fall through to Tesseract
       }
     } else {
-      console.log('Gemini AI not available, using Tesseract OCR...');
+      console.log('Gemini AI not available (no API key or offline), using Tesseract OCR...');
     }
 
     // Fallback to Tesseract OCR
+    if (onProgress) onProgress({ stage: 'Using OCR scanner...', progress: 5 });
     return await processIDImagesWithTesseract(frontImageData, backImageData, onProgress);
   } catch (error) {
     console.error('ID processing error:', error);
