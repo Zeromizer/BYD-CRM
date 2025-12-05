@@ -129,48 +129,4 @@ export function SaveButton({
   );
 }
 
-/**
- * SubmitButton - Specialized button for form submissions
- */
-export function SubmitButton({
-  children = 'Submit',
-  isSubmitting = false,
-  ...props
-}) {
-  return (
-    <AnimatedButton
-      type="submit"
-      variant="primary"
-      isLoading={isSubmitting}
-      loadingText="Submitting..."
-      successText="Submitted!"
-      {...props}
-    >
-      {children}
-    </AnimatedButton>
-  );
-}
-
-/**
- * DeleteButton - Specialized button for delete operations
- */
-export function DeleteButton({
-  children = 'Delete',
-  isDeleting = false,
-  ...props
-}) {
-  return (
-    <AnimatedButton
-      variant="danger"
-      isLoading={isDeleting}
-      loadingText="Deleting..."
-      successText="Deleted!"
-      showSuccess={false}
-      {...props}
-    >
-      {children}
-    </AnimatedButton>
-  );
-}
-
 export default AnimatedButton;
