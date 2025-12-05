@@ -2,6 +2,10 @@ import { useState, useCallback, useRef } from 'react';
 import { getStorageService } from '../../../services/storageServiceSelector';
 import { isFolder } from '../../../utils/fileHelpers';
 
+// Folder cache with TTL for faster navigation
+const folderCache = new Map();
+const FOLDER_CACHE_TTL = 2 * 60 * 1000; // 2 minutes
+
 /**
  * Hook for managing customer documents
  * @param {Object} customer - Current customer
@@ -19,36 +23,55 @@ export function useDocumentManager(customer, isSignedIn, toast) {
   const [selectedDocument, setSelectedDocument] = useState(null);
   const [isViewerOpen, setIsViewerOpen] = useState(false);
 
-  // Load documents from a folder
-  const loadDocuments = useCallback(async (folderId) => {
+  // Helper to process and sort folder items
+  const processFolderItems = useCallback((items) => {
+    let allFiles = items.map(item => ({
+      id: item.id,
+      name: item.name,
+      mimeType: item.folder ? 'folder' : (item.file?.mimeType || 'application/octet-stream'),
+      size: item.size,
+      createdTime: item.createdDateTime,
+      webViewLink: item.webUrl,
+      thumbnailLink: item['@microsoft.graph.downloadUrl'],
+    }));
+
+    // Sort folders first, then files, both alphabetically
+    allFiles.sort((a, b) => {
+      const aIsFolder = isFolder(a.mimeType);
+      const bIsFolder = isFolder(b.mimeType);
+
+      if (aIsFolder && !bIsFolder) return -1;
+      if (!aIsFolder && bIsFolder) return 1;
+      return (a.name || '').localeCompare(b.name || '');
+    });
+
+    return allFiles;
+  }, []);
+
+  // Load documents from a folder (with caching)
+  const loadDocuments = useCallback(async (folderId, forceRefresh = false) => {
     if (!folderId || !isSignedIn) {
       setDocuments([]);
       return;
+    }
+
+    // Check cache first (unless force refresh)
+    if (!forceRefresh) {
+      const cached = folderCache.get(folderId);
+      if (cached && Date.now() - cached.time < FOLDER_CACHE_TTL) {
+        setDocuments(cached.items);
+        return;
+      }
     }
 
     setLoadingDocuments(true);
 
     try {
       const items = await getStorageService().listFolder(folderId);
-      let allFiles = items.map(item => ({
-        id: item.id,
-        name: item.name,
-        mimeType: item.folder ? 'folder' : (item.file?.mimeType || 'application/octet-stream'),
-        size: item.size,
-        createdTime: item.createdDateTime,
-        webViewLink: item.webUrl,
-        thumbnailLink: item['@microsoft.graph.downloadUrl'],
-      }));
+      const allFiles = processFolderItems(items);
 
-      // Sort folders first, then files, both alphabetically
-      allFiles.sort((a, b) => {
-        const aIsFolder = isFolder(a.mimeType);
-        const bIsFolder = isFolder(b.mimeType);
-
-        if (aIsFolder && !bIsFolder) return -1;
-        if (!aIsFolder && bIsFolder) return 1;
-        return (a.name || '').localeCompare(b.name || '');
-      });
+      // Cache the results
+      folderCache.set(folderId, { items: allFiles, time: Date.now() });
 
       setDocuments(allFiles);
     } catch (error) {
@@ -57,7 +80,14 @@ export function useDocumentManager(customer, isSignedIn, toast) {
     } finally {
       setLoadingDocuments(false);
     }
-  }, [isSignedIn]);
+  }, [isSignedIn, processFolderItems]);
+
+  // Invalidate cache for a folder
+  const invalidateFolderCache = useCallback((folderId) => {
+    if (folderId) {
+      folderCache.delete(folderId);
+    }
+  }, []);
 
   // Navigate to a folder
   const navigateToFolder = useCallback((folder) => {
@@ -88,7 +118,7 @@ export function useDocumentManager(customer, isSignedIn, toast) {
     }
   }, [customer]);
 
-  // Delete a document
+  // Delete a document (with optimistic update)
   const deleteDocument = useCallback(async (doc) => {
     const confirmDelete = window.confirm(
       `Are you sure you want to delete "${doc.name}"?\n\nThis will permanently delete the file from cloud storage.`
@@ -96,41 +126,59 @@ export function useDocumentManager(customer, isSignedIn, toast) {
 
     if (!confirmDelete) return false;
 
+    // Optimistic update - remove from UI immediately
+    setDocuments(prev => prev.filter(d => d.id !== doc.id));
+    invalidateFolderCache(currentFolderId);
+
     try {
       await getStorageService().deleteFile(doc.id);
-      await loadDocuments(currentFolderId);
       toast?.success('Document deleted successfully');
       return true;
     } catch (error) {
       console.error('Error deleting document:', error);
+      // Revert on error - reload from server
+      await loadDocuments(currentFolderId, true);
       toast?.error('Failed to delete document. Please try again.');
       return false;
     }
-  }, [currentFolderId, loadDocuments, toast]);
+  }, [currentFolderId, loadDocuments, invalidateFolderCache, toast]);
 
-  // Move a document to another folder
+  // Move a document to another folder (with optimistic update)
   const moveDocument = useCallback(async (file, targetFolderId) => {
+    // Optimistic update - remove from current folder UI
+    setDocuments(prev => prev.filter(d => d.id !== file.id));
+    invalidateFolderCache(currentFolderId);
+    invalidateFolderCache(targetFolderId);
+
     try {
       await getStorageService().moveFile(file.id, targetFolderId);
-      await loadDocuments(currentFolderId);
       return true;
     } catch (error) {
+      // Revert on error - reload from server
+      await loadDocuments(currentFolderId, true);
       toast?.error(`Failed to move file: ${error.message}`);
       return false;
     }
-  }, [currentFolderId, loadDocuments, toast]);
+  }, [currentFolderId, loadDocuments, invalidateFolderCache, toast]);
 
-  // Rename a document
+  // Rename a document (with optimistic update)
   const renameDocument = useCallback(async (doc, newName) => {
+    // Optimistic update - update name in UI immediately
+    setDocuments(prev => prev.map(d =>
+      d.id === doc.id ? { ...d, name: newName } : d
+    ));
+    invalidateFolderCache(currentFolderId);
+
     try {
       await getStorageService().renameFile(doc.id, newName);
-      await loadDocuments(currentFolderId);
       return true;
     } catch (error) {
+      // Revert on error - reload from server
+      await loadDocuments(currentFolderId, true);
       toast?.error(`Failed to rename: ${error.message}`);
       return false;
     }
-  }, [currentFolderId, loadDocuments, toast]);
+  }, [currentFolderId, loadDocuments, invalidateFolderCache, toast]);
 
   // Open document viewer
   const openDocument = useCallback((doc) => {
@@ -153,10 +201,10 @@ export function useDocumentManager(customer, isSignedIn, toast) {
     }
   }, [navigateToFolder, openDocument]);
 
-  // Refresh current folder
+  // Refresh current folder (force refresh bypasses cache)
   const refresh = useCallback(() => {
     if (currentFolderId) {
-      loadDocuments(currentFolderId);
+      loadDocuments(currentFolderId, true); // Force refresh
     }
   }, [currentFolderId, loadDocuments]);
 
@@ -182,6 +230,7 @@ export function useDocumentManager(customer, isSignedIn, toast) {
     handleItemClick,
     refresh,
     setCurrentFolderId,
+    invalidateFolderCache,
   };
 }
 

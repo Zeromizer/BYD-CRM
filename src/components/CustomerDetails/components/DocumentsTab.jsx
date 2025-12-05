@@ -485,7 +485,13 @@ const DocumentItem = memo(function DocumentItem({
       {/* Icon/Thumbnail */}
       <div className="document-icon">
         {itemIsImage && item.thumbnailLink ? (
-          <img src={item.thumbnailLink} alt={item.name} className="thumbnail" />
+          <img
+            src={item.thumbnailLink}
+            alt={item.name}
+            className="thumbnail"
+            loading="lazy"
+            decoding="async"
+          />
         ) : (
           <span className="icon">{getFileIcon(item.mimeType)}</span>
         )}
