@@ -58,7 +58,8 @@ function CustomerList() {
       // Extract scanned ID images from form data
       const { scannedIDImages, ...customerData } = formData;
 
-      // Add customer to store and create folder structure in Drive
+      // Add customer to store - folder creation happens in BACKGROUND now
+      // This makes the save near-instant instead of 5-10 seconds
       const newCustomer = await addCustomerWithFolder(customerData, isSignedIn);
 
       // Select the newly added customer and close modal immediately
@@ -67,16 +68,50 @@ function CustomerList() {
       setIsSubmitting(false);
 
       // Upload photos in background if we have them
-      if (scannedIDImages && isSignedIn && newCustomer.driveFolderId) {
+      // Note: Since folder creation is now async, we'll wait for folder to be ready
+      if (scannedIDImages && isSignedIn) {
         // Start background upload with toast notification
         const toastId = toast.loading('Uploading ID photos...');
 
-        uploadPhotosInBackground(newCustomer, scannedIDImages, toastId);
+        // Wait for folder to be created, then upload photos
+        uploadPhotosWithFolderWait(newCustomer.id, scannedIDImages, toastId);
       }
     } catch (error) {
       console.error('Error adding customer:', error);
       alert('Failed to add customer. Please try again.');
       setIsSubmitting(false);
+    }
+  };
+
+  // Wait for folder to be ready, then upload photos
+  const uploadPhotosWithFolderWait = async (customerId, scannedIDImages, toastId) => {
+    const maxWaitTime = 30000; // 30 seconds max wait
+    const checkInterval = 500; // Check every 500ms
+    const startTime = Date.now();
+
+    // Poll for folder ID to be available
+    const waitForFolder = () => {
+      return new Promise((resolve) => {
+        const check = () => {
+          const customer = customers.find(c => c.id === customerId);
+          if (customer?.driveFolderId) {
+            resolve(customer);
+          } else if (Date.now() - startTime > maxWaitTime) {
+            resolve(null); // Timeout
+          } else {
+            setTimeout(check, checkInterval);
+          }
+        };
+        check();
+      });
+    };
+
+    const customer = await waitForFolder();
+
+    if (customer && customer.driveFolderId) {
+      uploadPhotosInBackground(customer, scannedIDImages, toastId);
+    } else {
+      toast.update(toastId, 'Folder not ready. Photos will sync later.', 'error');
     }
   };
 

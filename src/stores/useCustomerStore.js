@@ -56,34 +56,15 @@ const useCustomerStore = create((set, get) => ({
 
   /**
    * Add customer and create OneDrive folder structure
-   * SIMPLIFIED: Create folder FIRST, then add customer WITH folder IDs
+   * OPTIMIZED: Non-blocking - adds customer immediately, creates folder in background
+   * This reduces perceived wait time from 5-10 seconds to near-instant
    */
   addCustomerWithFolder: async (customerData, isSignedIn) => {
-    const { syncToDrive } = get();
-
     // Generate ID upfront
     const customerId = Date.now();
     const customerName = customerData.name || 'Unnamed Customer';
 
-    // If signed in, create the folder structure FIRST
-    let driveFolderId = null;
-    let driveFolderLink = null;
-
-    if (isSignedIn) {
-      try {
-        const folderInfo = await getStorageService().createCustomerFolderStructure(
-          customerName,
-          customerId
-        );
-
-        driveFolderId = folderInfo.folderId;
-        driveFolderLink = folderInfo.folderUrl;
-      } catch (error) {
-        alert(`Folder creation failed: ${error.message}\nCustomer will be created without folder.`);
-      }
-    }
-
-    // Now create the customer WITH the folder IDs already included
+    // Create the customer immediately WITHOUT waiting for folder creation
     const newCustomer = {
       id: customerId,
       name: customerName,
@@ -101,8 +82,8 @@ const useCustomerStore = create((set, get) => ({
       checklist: getDefaultChecklistState(),
       milestoneDates: getDefaultMilestoneDates(),
       dealClosed: false,
-      driveFolderId,
-      driveFolderLink,
+      driveFolderId: null,  // Will be updated in background
+      driveFolderLink: null,
       // Preserve any additional fields
       ...customerData,
       // Ensure these critical fields aren't overwritten
@@ -110,20 +91,63 @@ const useCustomerStore = create((set, get) => ({
       dateAdded: new Date().toISOString(),
     };
 
-    // Add to store
+    // Add to store immediately
     set((state) => ({
       customers: [...state.customers, newCustomer]
     }));
 
-    // Save to localStorage
+    // Save to localStorage immediately
     get().saveToLocalStorage();
 
-    // If signed in, save ONLY this new customer to Drive (not all customers!)
-    if (isSignedIn && driveFolderId) {
-      await get().saveCustomerToFolder(newCustomer, isSignedIn);
+    // If signed in, create folder and sync in BACKGROUND (non-blocking)
+    if (isSignedIn) {
+      get().createFolderInBackground(newCustomer);
     }
 
     return newCustomer;
+  },
+
+  /**
+   * Create folder for customer in background (non-blocking)
+   * Updates the customer with folder IDs once created
+   */
+  createFolderInBackground: async (customer) => {
+    try {
+      console.log('Creating folder in background for:', customer.name);
+
+      // Create the folder structure
+      const folderInfo = await getStorageService().createCustomerFolderStructure(
+        customer.name,
+        customer.id
+      );
+
+      if (folderInfo.folderId) {
+        // Update customer in store with folder IDs
+        get().updateCustomer(customer.id, {
+          driveFolderId: folderInfo.folderId,
+          driveFolderLink: folderInfo.folderUrl,
+        });
+
+        // Save to localStorage
+        get().saveToLocalStorage();
+
+        // Get the updated customer from store
+        const updatedCustomer = get().customers.find(c => c.id === customer.id);
+
+        if (updatedCustomer) {
+          // Save customer data to folder (non-blocking, fire and forget with error handling)
+          get().saveCustomerToFolder(updatedCustomer, true).catch(err => {
+            console.error('Background save to folder failed:', err);
+          });
+        }
+
+        console.log('Background folder creation complete:', folderInfo.folderId);
+      }
+    } catch (error) {
+      console.error('Background folder creation failed:', error);
+      // Don't alert - customer is already created locally
+      // Folder can be created later via repair function
+    }
   },
 
   updateCustomer: (id, updates) => {
