@@ -34,6 +34,8 @@ function generateTodoId() {
 
 // Debounce timer for sync
 let syncDebounceTimer = null;
+// Flag to track pending sync-to-drive request
+let pendingSyncToDrive = null;
 
 function getTodoStorageKey(email) {
   if (!email) return 'bydCRM_todos_local';
@@ -85,7 +87,8 @@ const useTodoStore = create((set, get) => ({
   // State
   todos: [],
   isLoading: false,
-  isSyncing: false,
+  isSyncingFrom: false, // Syncing from OneDrive
+  isSyncingTo: false, // Syncing to OneDrive
   sidebarOpen: false,
   activeFilter: 'all',
 
@@ -208,7 +211,8 @@ const useTodoStore = create((set, get) => ({
   // Storage operations
   saveToLocalStorage: (email) => saveTodosToStorage(get().todos, email),
   setTodos: (todos) => set({ todos }),
-  setSyncing: (isSyncing) => set({ isSyncing }),
+  setSyncingFrom: (isSyncingFrom) => set({ isSyncingFrom }),
+  setSyncingTo: (isSyncingTo) => set({ isSyncingTo }),
 
   // Debounced sync
   scheduleSyncToDrive: (email) => {
@@ -221,40 +225,54 @@ const useTodoStore = create((set, get) => ({
 
   // Sync to OneDrive
   syncToDrive: async (email) => {
-    const { todos, isSyncing } = get();
-    if (isSyncing) return;
+    const { todos, isSyncingTo, isSyncingFrom } = get();
 
-    set({ isSyncing: true });
+    // If already syncing TO drive, skip (debounce will handle retry)
+    if (isSyncingTo) {
+      console.log('Todos syncToDrive: already syncing to drive, skipping');
+      return;
+    }
+
+    // If currently syncing FROM drive, queue this sync for later
+    if (isSyncingFrom) {
+      console.log('Todos syncToDrive: syncFromDrive in progress, queuing sync');
+      pendingSyncToDrive = email;
+      return;
+    }
+
+    set({ isSyncingTo: true });
     try {
       const storageService = getStorageService();
       const folderIds = await storageService.getFolderIds();
 
       if (folderIds?.root) {
+        // Get latest todos state (may have changed during async operations)
+        const currentTodos = get().todos;
         const syncTimestamp = new Date().toISOString();
         await storageService.uploadFile(
           folderIds.root,
           ONEDRIVE_DATA_FILES.TODOS,
-          { todos, lastModified: syncTimestamp }
+          { todos: currentTodos, lastModified: syncTimestamp }
         );
         // Save sync timestamp so we know when we last pushed to drive
         if (email) {
           setLastSyncTimestamp(email, syncTimestamp);
         }
-        console.log('Todos synced to OneDrive:', todos.length);
+        console.log('Todos synced to OneDrive:', currentTodos.length);
       }
     } catch (error) {
       console.error('Error syncing todos to Drive:', error);
     } finally {
-      set({ isSyncing: false });
+      set({ isSyncingTo: false });
     }
   },
 
   // Sync from OneDrive
   syncFromDrive: async (email) => {
-    const { isSyncing } = get();
-    if (isSyncing) return;
+    const { isSyncingFrom } = get();
+    if (isSyncingFrom) return;
 
-    set({ isSyncing: true, isLoading: true });
+    set({ isSyncingFrom: true, isLoading: true });
     try {
       const storageService = getStorageService();
       const folderIds = await storageService.getFolderIds();
@@ -327,7 +345,18 @@ const useTodoStore = create((set, get) => ({
         console.error('Error syncing todos from Drive:', error);
       }
     } finally {
-      set({ isSyncing: false, isLoading: false });
+      set({ isSyncingFrom: false, isLoading: false });
+
+      // Process any pending sync-to-drive request that was queued
+      if (pendingSyncToDrive !== null) {
+        const pendingEmail = pendingSyncToDrive;
+        pendingSyncToDrive = null;
+        console.log('Todos: Processing pending syncToDrive after syncFromDrive completed');
+        // Small delay to ensure state is settled
+        setTimeout(() => {
+          get().syncToDrive(pendingEmail);
+        }, 100);
+      }
     }
   },
 
