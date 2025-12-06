@@ -302,20 +302,37 @@ function PrintManager({ isOpen, onClose, customer }) {
     pdfGenerator.openPDFInPrintWindow(pdf, `${customer.name} - Documents`);
   };
 
-  const handleDownload = () => {
-    if (!pdf) return;
-
-    // Generate filename based on selected template(s)
-    let filenamePart;
+  // Helper to get filename part based on selected templates
+  const getFilenamePart = () => {
     if (selectedTemplateIds.length === 1) {
       // Single template - use template name
       const template = templates[selectedTemplateIds[0]];
-      filenamePart = template.name.replace(/\s+/g, '_');
-    } else {
-      // Multiple templates - use descriptive name
-      filenamePart = 'Multiple_Documents';
+      return template.name.replace(/\s+/g, '_');
     }
 
+    // Multiple templates - check if they're all from the same group (same base name)
+    const baseNames = selectedTemplateIds.map(id => {
+      const template = templates[id];
+      if (!template) return null;
+      const parsed = parseTemplateName(template.name);
+      return parsed.baseName;
+    }).filter(Boolean);
+
+    // Check if all templates share the same base name
+    const uniqueBaseNames = [...new Set(baseNames)];
+    if (uniqueBaseNames.length === 1) {
+      // All templates are from the same form group - use the base name
+      return uniqueBaseNames[0].replace(/\s+/g, '_');
+    }
+
+    // Different form groups - use generic name
+    return 'Multiple_Documents';
+  };
+
+  const handleDownload = () => {
+    if (!pdf) return;
+
+    const filenamePart = getFilenamePart();
     const filename = `${customer.name.replace(/\s+/g, '_')}_${filenamePart}_${new Date().toISOString().split('T')[0]}.pdf`;
     pdfGenerator.downloadPDF(pdf, filename);
   };
@@ -367,16 +384,7 @@ function PrintManager({ isOpen, onClose, customer }) {
       }
 
       // Generate filename based on selected template(s)
-      let filenamePart;
-      if (selectedTemplateIds.length === 1) {
-        // Single template - use template name
-        const template = templates[selectedTemplateIds[0]];
-        filenamePart = template.name.replace(/\s+/g, '_');
-      } else {
-        // Multiple templates - use descriptive name
-        filenamePart = 'Multiple_Documents';
-      }
-
+      const filenamePart = getFilenamePart();
       const filename = `${customer.name.replace(/\s+/g, '_')}_${filenamePart}_${new Date().toISOString().split('T')[0]}.pdf`;
       console.log('📄 Generated filename:', filename);
 
