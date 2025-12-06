@@ -287,6 +287,7 @@ class ExcelService {
 
   /**
    * Populate Excel template with customer data
+   * OPTIMIZED: Parallelize file fetch and module load
    */
   async populateExcelTemplate(template, customer, uploadedFile = null) {
     try {
@@ -298,20 +299,28 @@ class ExcelService {
       });
 
       let arrayBuffer;
+      let XlsxPopulate;
 
-      // Get Excel file - either from Drive or uploaded file
+      // OPTIMIZED: Parallelize file fetch and module load
       if (uploadedFile) {
         console.log('📂 Using uploaded file:', uploadedFile.name);
-        arrayBuffer = await uploadedFile.arrayBuffer();
+        // For uploaded files, we can still parallelize with module load
+        [arrayBuffer, XlsxPopulate] = await Promise.all([
+          uploadedFile.arrayBuffer(),
+          loadXlsxPopulate()
+        ]);
       } else if (template.driveFileId) {
         console.log('☁️ Fetching template from Drive:', template.driveFileId);
-        arrayBuffer = await this.fetchFileFromDrive(template.driveFileId);
+        // OPTIMIZATION: Fetch file AND load module in parallel
+        [arrayBuffer, XlsxPopulate] = await Promise.all([
+          this.fetchFileFromDrive(template.driveFileId),
+          loadXlsxPopulate()
+        ]);
       } else {
         throw new Error('No Excel file available. Please upload a file or configure a master template.');
       }
 
-      // Lazy load xlsx-populate and load workbook
-      const XlsxPopulate = await loadXlsxPopulate();
+      // Load workbook from buffer
       const workbook = await XlsxPopulate.fromDataAsync(arrayBuffer);
 
       // Get first sheet
