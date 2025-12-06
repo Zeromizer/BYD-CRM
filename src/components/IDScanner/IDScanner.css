@@ -650,25 +650,130 @@
 
 /* Mobile Responsiveness */
 @media (max-width: 640px) {
+  .id-scanner-overlay {
+    padding: 0;
+  }
+
   .id-scanner-modal {
     max-height: 100vh;
     border-radius: 0;
   }
 
+  .id-scanner-header {
+    padding: 0.75rem 1rem;
+  }
+
+  .id-scanner-header h2 {
+    font-size: 1.1rem;
+  }
+
   .id-scanner-progress {
-    padding: 1rem;
+    padding: 0.75rem 0.5rem;
+  }
+
+  .progress-step {
+    gap: 0.25rem;
+  }
+
+  .step-number {
+    width: 28px;
+    height: 28px;
+    font-size: 0.75rem;
+  }
+
+  .step-label {
+    font-size: 0.65rem;
   }
 
   .progress-line {
-    width: 40px;
+    width: 24px;
+    margin: 0 0.25rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .id-scanner-content {
+    padding: 0.75rem;
+  }
+
+  /* Compact review section */
+  .review-section {
+    padding: 0;
+  }
+
+  .confidence-badge {
+    margin-bottom: 0.5rem;
+  }
+
+  .scanner-method,
+  .confidence {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.65rem;
+  }
+
+  .review-instruction {
+    font-size: 0.8rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .review-form {
+    padding: 0.75rem;
+    margin-bottom: 0.75rem;
   }
 
   .review-form .form-row {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .review-form .form-group {
+    gap: 0.25rem;
   }
 
   .review-form .form-group.full-width {
-    grid-column: 1;
+    grid-column: 1 / -1;
+  }
+
+  .review-form label {
+    font-size: 0.65rem;
+  }
+
+  .review-form input {
+    padding: 0.5rem 0.625rem;
+    font-size: 0.875rem;
+  }
+
+  /* Compact image thumbnails */
+  .scanned-images {
+    margin-bottom: 0.75rem;
+  }
+
+  .scanned-images h4 {
+    font-size: 0.75rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .image-thumbnails {
+    flex-direction: row;
+    gap: 0.5rem;
+  }
+
+  .thumbnail {
+    gap: 0.25rem;
+  }
+
+  .thumbnail img {
+    width: 80px;
+    height: 54px;
+  }
+
+  .thumbnail span {
+    font-size: 0.65rem;
+  }
+
+  .images-note {
+    font-size: 0.65rem;
+    margin-top: 0.5rem;
   }
 
   .preview-actions {
@@ -676,15 +781,75 @@
   }
 
   .review-actions {
-    flex-direction: column;
+    flex-direction: row;
+    gap: 0.75rem;
   }
 
-  .image-thumbnails {
-    flex-direction: column;
-    align-items: center;
+  .review-actions .btn {
+    flex: 1;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+  }
+
+  /* Ask license section compact */
+  .ask-license-section {
+    padding: 1rem;
+  }
+
+  .ask-license-icon {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .ask-license-section h3 {
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .ask-license-description {
+    font-size: 0.8rem;
+    margin-bottom: 1rem;
   }
 
   .ask-license-actions {
-    flex-direction: column;
+    flex-direction: row;
+    gap: 0.75rem;
+  }
+
+  .ask-license-actions .btn {
+    flex: 1;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+  }
+
+  /* Processing section compact */
+  .processing-section {
+    padding: 1rem;
+  }
+
+  .processing-animation {
+    width: 80px;
+    height: 54px;
+    margin-bottom: 1rem;
+  }
+
+  /* Capture section compact */
+  .capture-start {
+    padding: 1rem;
+  }
+
+  .id-icon {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .capture-instruction {
+    font-size: 0.8rem;
+    margin-bottom: 1rem;
+  }
+
+  /* License capture section */
+  .license-capture-section {
+    padding: 1rem;
   }
 }
