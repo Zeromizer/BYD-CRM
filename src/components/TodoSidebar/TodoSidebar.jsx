@@ -17,6 +17,7 @@ import {
   Flag,
   Milestone,
   RefreshCw,
+  Pencil,
 } from 'lucide-react';
 import './TodoSidebar.css';
 
@@ -93,9 +94,10 @@ const getTodoCompletion = (todo, customers) => {
 };
 
 // Single Todo Item Component
-const TodoItem = memo(function TodoItem({ todo, isCompleted, onToggle, onDelete, showCustomer, showMilestone = true }) {
+const TodoItem = memo(function TodoItem({ todo, isCompleted, onToggle, onDelete, onEdit, showCustomer, showMilestone = true }) {
   const isOverdue = todo.dueDate && new Date(todo.dueDate) < new Date() && !isCompleted;
   const milestone = todo.milestoneId ? getMilestoneInfo(todo.milestoneId) : null;
+  const canEdit = !todo._isLinked; // Only allow editing non-linked tasks
 
   return (
     <div className={`todo-item ${isCompleted ? 'completed' : ''} ${isOverdue ? 'overdue' : ''}`}>
@@ -139,9 +141,16 @@ const TodoItem = memo(function TodoItem({ todo, isCompleted, onToggle, onDelete,
         </div>
       </div>
 
-      <button className="todo-delete" onClick={() => onDelete(todo.id)} aria-label="Delete todo">
-        <Trash2 size={14} />
-      </button>
+      <div className="todo-actions">
+        {canEdit && onEdit && (
+          <button className="todo-edit" onClick={() => onEdit(todo)} aria-label="Edit todo">
+            <Pencil size={14} />
+          </button>
+        )}
+        <button className="todo-delete" onClick={() => onDelete(todo.id)} aria-label="Delete todo">
+          <Trash2 size={14} />
+        </button>
+      </div>
     </div>
   );
 });
@@ -251,8 +260,115 @@ const QuickAddForm = memo(function QuickAddForm({ onAdd, customers }) {
   );
 });
 
+// Edit Todo Modal Component
+const EditTodoModal = memo(function EditTodoModal({ todo, customers, onSave, onClose }) {
+  const [text, setText] = useState(todo.text || '');
+  const [priority, setPriority] = useState(todo.priority || 'medium');
+  const [dueDate, setDueDate] = useState(todo.dueDate || '');
+  const [customerId, setCustomerId] = useState(todo.customerId ? String(todo.customerId) : '');
+  const [milestoneId, setMilestoneId] = useState(todo.milestoneId || '');
+
+  const selectedCustomer = customers.find((c) => c.id === Number(customerId));
+
+  const handleMilestoneChange = (newMilestoneId) => {
+    setMilestoneId(newMilestoneId);
+    // Auto-fill due date from customer's milestone date if not already set
+    if (!dueDate && selectedCustomer?.milestoneDates?.[newMilestoneId]) {
+      setDueDate(selectedCustomer.milestoneDates[newMilestoneId]);
+    }
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!text.trim()) return;
+
+    onSave({
+      text: text.trim(),
+      priority,
+      dueDate: dueDate || null,
+      customerId: customerId ? Number(customerId) : null,
+      customerName: selectedCustomer?.name || null,
+      milestoneId: milestoneId || null,
+    });
+  };
+
+  return (
+    <div className="edit-todo-overlay" onClick={onClose}>
+      <div className="edit-todo-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="edit-todo-header">
+          <h3>Edit Task</h3>
+          <button className="close-btn" onClick={onClose} aria-label="Close">
+            <X size={20} />
+          </button>
+        </div>
+
+        <form className="edit-todo-form" onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label>Task</label>
+            <input
+              type="text"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder="Task description..."
+              className="edit-todo-input"
+              autoFocus
+            />
+          </div>
+
+          <div className="form-group">
+            <label>Priority</label>
+            <select value={priority} onChange={(e) => setPriority(e.target.value)}>
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label>Due Date</label>
+            <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+          </div>
+
+          <div className="form-group">
+            <label>Customer</label>
+            <select value={customerId} onChange={(e) => setCustomerId(e.target.value)}>
+              <option value="">Global (No customer)</option>
+              {customers.map((customer) => (
+                <option key={customer.id} value={customer.id}>
+                  {customer.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label>Stage</label>
+            <select value={milestoneId} onChange={(e) => handleMilestoneChange(e.target.value)}>
+              <option value="">No stage</option>
+              {MILESTONES.map((milestone) => (
+                <option key={milestone.id} value={milestone.id}>
+                  {milestone.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="edit-todo-actions">
+            <button type="button" className="cancel-btn" onClick={onClose}>
+              Cancel
+            </button>
+            <button type="submit" className="save-btn" disabled={!text.trim()}>
+              Save Changes
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+});
+
 // Customer Group Component
-const CustomerGroup = memo(function CustomerGroup({ customerName, todos, onToggle, onDelete }) {
+const CustomerGroup = memo(function CustomerGroup({ customerName, todos, onToggle, onDelete, onEdit }) {
   const [expanded, setExpanded] = useState(true);
 
   return (
@@ -272,6 +388,7 @@ const CustomerGroup = memo(function CustomerGroup({ customerName, todos, onToggl
               isCompleted={todo._isCompleted}
               onToggle={onToggle}
               onDelete={onDelete}
+              onEdit={onEdit}
               showCustomer={false}
             />
           ))}
@@ -282,7 +399,7 @@ const CustomerGroup = memo(function CustomerGroup({ customerName, todos, onToggl
 });
 
 // Milestone Group Component
-const MilestoneGroup = memo(function MilestoneGroup({ milestone, todos, onToggle, onDelete }) {
+const MilestoneGroup = memo(function MilestoneGroup({ milestone, todos, onToggle, onDelete, onEdit }) {
   const [expanded, setExpanded] = useState(true);
 
   return (
@@ -308,6 +425,7 @@ const MilestoneGroup = memo(function MilestoneGroup({ milestone, todos, onToggle
               isCompleted={todo._isCompleted}
               onToggle={onToggle}
               onDelete={onDelete}
+              onEdit={onEdit}
               showCustomer={true}
               showMilestone={false}
             />
@@ -325,6 +443,7 @@ const TodoSidebar = memo(function TodoSidebar() {
   const activeFilter = useActiveFilter();
   const {
     addTodo,
+    updateTodo,
     deleteTodo,
     toggleStandaloneTodo,
     clearCompleted,
@@ -341,6 +460,7 @@ const TodoSidebar = memo(function TodoSidebar() {
   const saveCustomersToLocal = useCustomerStore((state) => state.saveToLocalStorage);
 
   const [isSyncing, setIsSyncing] = useState(false);
+  const [editingTodo, setEditingTodo] = useState(null);
 
   // Initialize todos on mount
   useEffect(() => {
@@ -402,6 +522,27 @@ const TodoSidebar = memo(function TodoSidebar() {
     },
     [deleteTodo, userEmail, isSignedIn]
   );
+
+  // Handle edit todo - open modal
+  const handleEditTodo = useCallback((todo) => {
+    setEditingTodo(todo);
+  }, []);
+
+  // Handle save edit
+  const handleSaveEdit = useCallback(
+    (updates) => {
+      if (editingTodo) {
+        updateTodo(editingTodo.id, updates, userEmail, isSignedIn);
+        setEditingTodo(null);
+      }
+    },
+    [editingTodo, updateTodo, userEmail, isSignedIn]
+  );
+
+  // Handle close edit modal
+  const handleCloseEdit = useCallback(() => {
+    setEditingTodo(null);
+  }, []);
 
   // Handle clear completed
   const handleClearCompleted = useCallback(() => {
@@ -571,6 +712,7 @@ const TodoSidebar = memo(function TodoSidebar() {
                   todos={groupedByCustomer['__global__']}
                   onToggle={handleToggleTodo}
                   onDelete={handleDeleteTodo}
+                  onEdit={handleEditTodo}
                 />
               )}
               {Object.entries(groupedByCustomer)
@@ -582,6 +724,7 @@ const TodoSidebar = memo(function TodoSidebar() {
                     todos={customerTodos}
                     onToggle={handleToggleTodo}
                     onDelete={handleDeleteTodo}
+                    onEdit={handleEditTodo}
                   />
                 ))}
             </>
@@ -593,6 +736,7 @@ const TodoSidebar = memo(function TodoSidebar() {
                   todos={groupedByMilestone['__none__']}
                   onToggle={handleToggleTodo}
                   onDelete={handleDeleteTodo}
+                  onEdit={handleEditTodo}
                 />
               )}
               {MILESTONES.map((milestone) => {
@@ -605,6 +749,7 @@ const TodoSidebar = memo(function TodoSidebar() {
                     todos={milestoneTodos}
                     onToggle={handleToggleTodo}
                     onDelete={handleDeleteTodo}
+                    onEdit={handleEditTodo}
                   />
                 );
               })}
@@ -625,6 +770,7 @@ const TodoSidebar = memo(function TodoSidebar() {
                     isCompleted={todo._isCompleted}
                     onToggle={handleToggleTodo}
                     onDelete={handleDeleteTodo}
+                    onEdit={handleEditTodo}
                     showCustomer={true}
                   />
                 ))
@@ -652,6 +798,16 @@ const TodoSidebar = memo(function TodoSidebar() {
 
       {/* Overlay for mobile */}
       {sidebarOpen && <div className="todo-sidebar-overlay" onClick={toggleSidebar} />}
+
+      {/* Edit Todo Modal */}
+      {editingTodo && (
+        <EditTodoModal
+          todo={editingTodo}
+          customers={customers}
+          onSave={handleSaveEdit}
+          onClose={handleCloseEdit}
+        />
+      )}
     </>
   );
 });

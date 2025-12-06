@@ -441,6 +441,14 @@
   color: var(--color-error);
 }
 
+.todo-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.todo-edit,
 .todo-delete {
   background: transparent;
   border: none;
@@ -454,8 +462,13 @@
   flex-shrink: 0;
 }
 
+.todo-item:hover .todo-edit,
 .todo-item:hover .todo-delete {
   opacity: 1;
+}
+
+.todo-edit:hover {
+  color: var(--color-primary);
 }
 
 .todo-delete:hover {
@@ -603,6 +616,130 @@
   background: rgba(239, 68, 68, 0.1);
 }
 
+/* Edit Todo Modal */
+.edit-todo-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-md);
+}
+
+.edit-todo-modal {
+  background: var(--color-background-secondary);
+  border-radius: var(--radius-lg);
+  width: 100%;
+  max-width: 400px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow-xl);
+}
+
+.edit-todo-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-md);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.edit-todo-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.edit-todo-form {
+  padding: var(--spacing-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+}
+
+.edit-todo-form .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.edit-todo-form .form-group label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
+.edit-todo-form .form-group input,
+.edit-todo-form .form-group select {
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-background-primary);
+  color: var(--color-text-primary);
+  font-size: 14px;
+  min-height: auto;
+}
+
+.edit-todo-form .form-group input:focus,
+.edit-todo-form .form-group select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.edit-todo-input {
+  width: 100%;
+}
+
+.edit-todo-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-sm);
+}
+
+.edit-todo-actions .cancel-btn,
+.edit-todo-actions .save-btn {
+  flex: 1;
+  padding: 10px 16px;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  min-height: auto;
+  transition: all 0.2s;
+}
+
+.edit-todo-actions .cancel-btn {
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+}
+
+.edit-todo-actions .cancel-btn:hover {
+  background: var(--color-background-tertiary);
+  color: var(--color-text-primary);
+}
+
+.edit-todo-actions .save-btn {
+  background: var(--color-primary);
+  border: none;
+  color: white;
+}
+
+.edit-todo-actions .save-btn:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+}
+
+.edit-todo-actions .save-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* Mobile Responsive */
 @media (max-width: 768px) {
   .todo-sidebar {
@@ -642,8 +779,15 @@
     font-size: 15px;
   }
 
+  .todo-edit,
   .todo-delete {
     opacity: 1;
     padding: 8px;
+  }
+
+  .edit-todo-modal {
+    max-width: 100%;
+    margin: var(--spacing-md);
+    max-height: calc(100vh - 40px);
   }
 }
