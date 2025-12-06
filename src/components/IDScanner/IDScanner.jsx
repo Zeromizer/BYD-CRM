@@ -536,7 +536,7 @@ function IDScanner({ isOpen, onClose, onDataExtracted }) {
                 </div>
 
                 <div className="form-row">
-                  <div className="form-group full-width">
+                  <div className="form-group">
                     <label htmlFor="address">Address</label>
                     <input
                       type="text"
@@ -547,10 +547,7 @@ function IDScanner({ isOpen, onClose, onDataExtracted }) {
                       placeholder="Block, Street, Unit"
                     />
                   </div>
-                </div>
-
-                <div className="form-row">
-                  <div className="form-group full-width">
+                  <div className="form-group">
                     <label htmlFor="addressContinue">Address (continued)</label>
                     <input
                       type="text"
@@ -558,7 +555,7 @@ function IDScanner({ isOpen, onClose, onDataExtracted }) {
                       name="addressContinue"
                       value={editableData.addressContinue}
                       onChange={handleEditChange}
-                      placeholder="SINGAPORE + Postal Code"
+                      placeholder="SINGAPORE + Postal"
                     />
                   </div>
                 </div>
@@ -765,7 +762,7 @@ function IDScanner({ isOpen, onClose, onDataExtracted }) {
                   </div>
                 </div>
                 <div className="form-row">
-                  <div className="form-group full-width">
+                  <div className="form-group">
                     <label>Address</label>
                     <input
                       type="text"
@@ -775,16 +772,14 @@ function IDScanner({ isOpen, onClose, onDataExtracted }) {
                       placeholder="Block, Street, Unit"
                     />
                   </div>
-                </div>
-                <div className="form-row">
-                  <div className="form-group full-width">
+                  <div className="form-group">
                     <label>Address (continued)</label>
                     <input
                       type="text"
                       name="addressContinue"
                       value={editableData.addressContinue}
                       onChange={handleEditChange}
-                      placeholder="SINGAPORE + Postal Code"
+                      placeholder="SINGAPORE + Postal"
                     />
                   </div>
                 </div>
