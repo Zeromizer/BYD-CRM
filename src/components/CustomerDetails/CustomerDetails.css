@@ -179,6 +179,43 @@
   stroke: var(--color-error);
 }
 
+/* Archive action styles */
+.action-menu-item-archive-completed {
+  color: #16a34a;
+}
+
+.action-menu-item-archive-completed:hover {
+  background: #dcfce7;
+}
+
+.action-menu-item-archive-completed svg {
+  stroke: #16a34a;
+}
+
+.action-menu-item-archive-lost {
+  color: #d97706;
+}
+
+.action-menu-item-archive-lost:hover {
+  background: #fef3c7;
+}
+
+.action-menu-item-archive-lost svg {
+  stroke: #d97706;
+}
+
+.action-menu-item-restore {
+  color: #0284c7;
+}
+
+.action-menu-item-restore:hover {
+  background: #e0f2fe;
+}
+
+.action-menu-item-restore svg {
+  stroke: #0284c7;
+}
+
 .btn-secondary {
   background: #f5f5f5;
   color: var(--color-text-on-card);

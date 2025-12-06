@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, Archive, Users } from 'lucide-react';
 import useCustomerStore from '../../stores/useCustomerStore';
 import useAuthStore from '../../stores/useAuthStore';
 import { getStorageService } from '../../services/storageServiceSelector';
@@ -18,6 +18,7 @@ function CustomerList() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [animateItems, setAnimateItems] = useState(false);
+  const [showArchived, setShowArchived] = useState(false); // Toggle to show archived customers
   const prevCustomersLength = useRef(customers.length);
 
   // Trigger animation when customers list changes
@@ -31,7 +32,21 @@ function CustomerList() {
     }
   }, [customers.length]);
 
+  // Count archived customers for badge
+  const archivedCount = customers.filter(c => c.archiveStatus).length;
+  const activeCount = customers.filter(c => !c.archiveStatus).length;
+
   const filteredCustomers = customers.filter((customer) => {
+    // First filter by archive status
+    if (showArchived) {
+      // When showing archived, only show archived customers
+      if (!customer.archiveStatus) return false;
+    } else {
+      // When showing active, hide archived customers
+      if (customer.archiveStatus) return false;
+    }
+
+    // Then filter by search term
     const search = searchTerm.toLowerCase();
     return (
       customer.name?.toLowerCase().includes(search) ||
@@ -203,10 +218,20 @@ function CustomerList() {
           <input
             type="text"
             className="search-input"
-            placeholder="Search customers..."
+            placeholder={showArchived ? "Search archived..." : "Search customers..."}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
+          <button
+            className={`btn-toggle-archived ${showArchived ? 'active' : ''}`}
+            onClick={() => setShowArchived(!showArchived)}
+            title={showArchived ? `Show Active (${activeCount})` : `Show Archived (${archivedCount})`}
+          >
+            {showArchived ? <Users size={18} /> : <Archive size={18} />}
+            {!showArchived && archivedCount > 0 && (
+              <span className="archive-badge">{archivedCount}</span>
+            )}
+          </button>
           <button
             className="btn-add-customer"
             onClick={handleAddCustomer}
@@ -221,8 +246,17 @@ function CustomerList() {
             <CustomerListSkeleton count={5} />
           ) : filteredCustomers.length === 0 ? (
             <div className="empty-state animate-fadeIn">
-              <p>No customers yet</p>
-              <p className="empty-hint">Tap + to add a customer</p>
+              {showArchived ? (
+                <>
+                  <p>No archived customers</p>
+                  <p className="empty-hint">Archived customers will appear here</p>
+                </>
+              ) : (
+                <>
+                  <p>No customers yet</p>
+                  <p className="empty-hint">Tap + to add a customer</p>
+                </>
+              )}
             </div>
           ) : (
             filteredCustomers.map((customer, index) => {
@@ -232,12 +266,19 @@ function CustomerList() {
               return (
                 <div
                   key={customer.id}
-                  className={`customer-item ${selectedCustomerId === customer.id ? 'active' : ''} ${animateItems ? 'list-item-animated' : ''}`}
+                  className={`customer-item ${selectedCustomerId === customer.id ? 'active' : ''} ${animateItems ? 'list-item-animated' : ''} ${customer.archiveStatus ? 'archived' : ''}`}
                   style={animateItems ? { animationDelay: `${Math.min(index, 10) * 50}ms` } : {}}
                   onClick={() => selectCustomer(customer.id)}
                 >
                   <div className="customer-info">
-                    <div className="customer-name">{customer.name || 'Unnamed'}</div>
+                    <div className="customer-name">
+                      {customer.name || 'Unnamed'}
+                      {customer.archiveStatus && (
+                        <span className={`archive-status-badge ${customer.archiveStatus}`}>
+                          {customer.archiveStatus === 'completed' ? 'Completed' : 'Lost'}
+                        </span>
+                      )}
+                    </div>
                     <div className="customer-vsa">{customer.vsaNo || 'No VSA'}</div>
                     <div className="customer-milestone-progress">
                       {MILESTONES.map((milestone, milestoneIndex) => {

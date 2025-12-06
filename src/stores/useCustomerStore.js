@@ -41,6 +41,8 @@ const useCustomerStore = create((set, get) => ({
       checklist: getDefaultChecklistState(),
       milestoneDates: getDefaultMilestoneDates(),
       dealClosed: false,
+      archiveStatus: null, // null = active, 'lost' = lost lead, 'completed' = deal completed
+      archivedAt: null,
       driveFolderId: null,
       driveFolderLink: null,
       // Preserve any additional fields from vanilla JS
@@ -82,6 +84,8 @@ const useCustomerStore = create((set, get) => ({
       checklist: getDefaultChecklistState(),
       milestoneDates: getDefaultMilestoneDates(),
       dealClosed: false,
+      archiveStatus: null, // null = active, 'lost' = lost lead, 'completed' = deal completed
+      archivedAt: null,
       driveFolderId: null,  // Will be updated in background
       driveFolderLink: null,
       // Preserve any additional fields
@@ -105,6 +109,61 @@ const useCustomerStore = create((set, get) => ({
     }
 
     return newCustomer;
+  },
+
+  /**
+   * Archive a customer (mark as lost or completed)
+   * @param {number} id - Customer ID
+   * @param {string} status - 'lost' or 'completed'
+   * @param {boolean} isSignedIn - Whether user is signed into OneDrive
+   */
+  archiveCustomer: async (id, status, isSignedIn) => {
+    const validStatuses = ['lost', 'completed'];
+    if (!validStatuses.includes(status)) {
+      console.error('Invalid archive status:', status);
+      return;
+    }
+
+    get().updateCustomer(id, {
+      archiveStatus: status,
+      archivedAt: new Date().toISOString(),
+    });
+
+    get().saveToLocalStorage();
+
+    // Sync to OneDrive if signed in
+    if (isSignedIn) {
+      const customer = get().customers.find(c => c.id === id);
+      if (customer) {
+        get().saveCustomerToFolder(customer, isSignedIn).catch(err => {
+          console.error('Failed to sync archived customer to OneDrive:', err);
+        });
+      }
+    }
+  },
+
+  /**
+   * Unarchive a customer (restore to active)
+   * @param {number} id - Customer ID
+   * @param {boolean} isSignedIn - Whether user is signed into OneDrive
+   */
+  unarchiveCustomer: async (id, isSignedIn) => {
+    get().updateCustomer(id, {
+      archiveStatus: null,
+      archivedAt: null,
+    });
+
+    get().saveToLocalStorage();
+
+    // Sync to OneDrive if signed in
+    if (isSignedIn) {
+      const customer = get().customers.find(c => c.id === id);
+      if (customer) {
+        get().saveCustomerToFolder(customer, isSignedIn).catch(err => {
+          console.error('Failed to sync unarchived customer to OneDrive:', err);
+        });
+      }
+    }
   },
 
   /**
