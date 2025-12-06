@@ -152,10 +152,10 @@ class DocumentRenderer {
         this.drawFields(ctx, template.fields, customerData, dpi);
       }
 
-      // Return canvas and data URL
+      // Return canvas and data URL (maximum quality for print)
       return {
         canvas,
-        dataUrl: canvas.toDataURL('image/jpeg', 0.95),
+        dataUrl: canvas.toDataURL('image/jpeg', 1.0),
         width: image.width,
         height: image.height,
         dpi,
@@ -289,7 +289,7 @@ class DocumentRenderer {
 
       // Draw all loaded images
       for (const { index, image, error } of imageResults) {
-        const padding = this.pointsToPixels(18, dpi); // 0.25 inch padding
+        const padding = this.pointsToPixels(9, dpi); // 0.125 inch padding (reduced for ~20% larger images)
         const maxImgWidth = quarterWidth - (padding * 2);
         const maxImgHeight = quarterHeight - (padding * 2);
 
@@ -322,10 +322,10 @@ class DocumentRenderer {
           // Draw placeholder for failed or missing image
           ctx.fillStyle = '#f5f5f5';
           ctx.fillRect(
-            positions[index].x + this.pointsToPixels(18, dpi),
-            positions[index].y + this.pointsToPixels(18, dpi),
-            quarterWidth - this.pointsToPixels(36, dpi),
-            quarterHeight - this.pointsToPixels(36, dpi)
+            positions[index].x + padding,
+            positions[index].y + padding,
+            quarterWidth - (padding * 2),
+            quarterHeight - (padding * 2)
           );
 
           ctx.fillStyle = '#999999';

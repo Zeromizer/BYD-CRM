@@ -133,8 +133,8 @@ const preprocessImageForOCR = async (imageDataUrl) => {
 
       ctx.putImageData(imageData, 0, 0);
 
-      // Use slightly lower quality JPEG (0.88 vs 0.95) for faster processing
-      resolve(canvas.toDataURL('image/jpeg', 0.88));
+      // High quality JPEG for better print output
+      resolve(canvas.toDataURL('image/jpeg', 0.95));
     };
     img.onerror = () => {
       // On error, return original image
