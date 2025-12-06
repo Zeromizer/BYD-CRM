@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { FolderOpen, ScanLine } from 'lucide-react';
+import { FolderOpen, ScanLine, Archive, ArchiveRestore } from 'lucide-react';
 import useCustomerStore from '../../stores/useCustomerStore';
 import useAuthStore from '../../stores/useAuthStore';
 import { getStorageService } from '../../services/storageServiceSelector';
@@ -105,7 +105,7 @@ const extractVsaData = (customer) => ({
 });
 
 function CustomerDetails() {
-  const { customers, selectedCustomerId, selectCustomer, updateCustomer, deleteCustomerHybrid, saveCustomerToFolder, saveToLocalStorage } = useCustomerStore();
+  const { customers, selectedCustomerId, selectCustomer, updateCustomer, deleteCustomerHybrid, saveCustomerToFolder, saveToLocalStorage, archiveCustomer, unarchiveCustomer } = useCustomerStore();
   const { isSignedIn } = useAuthStore();
   const toast = useToast();
 
@@ -126,6 +126,8 @@ function CustomerDetails() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deleteFolderChecked, setDeleteFolderChecked] = useState(false);
   const [showActionsMenu, setShowActionsMenu] = useState(false);
+  const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false);
+  const [archiveType, setArchiveType] = useState(null); // 'lost' or 'completed'
 
   // Memoize extractors to prevent unnecessary hook updates
   const memoizedDetailsExtractor = useCallback(extractDetailsData, []);
@@ -431,6 +433,48 @@ function CustomerDetails() {
                     <span>Populate Excel</span>
                   </button>
                   <div className="action-menu-divider"></div>
+
+                  {/* Archive Actions */}
+                  {customer.archiveStatus ? (
+                    <button
+                      className="action-menu-item action-menu-item-restore"
+                      onClick={() => {
+                        setShowActionsMenu(false);
+                        unarchiveCustomer(customer.id, isSignedIn);
+                        toast.success('Customer restored to active');
+                      }}
+                    >
+                      <ArchiveRestore size={18} />
+                      <span>Restore to Active</span>
+                    </button>
+                  ) : (
+                    <>
+                      <button
+                        className="action-menu-item action-menu-item-archive-completed"
+                        onClick={() => {
+                          setShowActionsMenu(false);
+                          setArchiveType('completed');
+                          setIsArchiveModalOpen(true);
+                        }}
+                      >
+                        <Archive size={18} />
+                        <span>Archive as Completed</span>
+                      </button>
+                      <button
+                        className="action-menu-item action-menu-item-archive-lost"
+                        onClick={() => {
+                          setShowActionsMenu(false);
+                          setArchiveType('lost');
+                          setIsArchiveModalOpen(true);
+                        }}
+                      >
+                        <Archive size={18} />
+                        <span>Archive as Lost</span>
+                      </button>
+                    </>
+                  )}
+
+                  <div className="action-menu-divider"></div>
                   <button
                     className="action-menu-item action-menu-item-danger"
                     onClick={() => {
@@ -679,6 +723,57 @@ function CustomerDetails() {
               className="btn btn-secondary"
               onClick={() => setIsDeleteModalOpen(false)}
               disabled={isSubmitting}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Archive Confirmation Modal */}
+      <Modal
+        isOpen={isArchiveModalOpen}
+        onClose={() => setIsArchiveModalOpen(false)}
+        title={`Archive Customer as ${archiveType === 'completed' ? 'Completed' : 'Lost'}`}
+        size="small"
+      >
+        <div className="archive-modal-content">
+          <p style={{ marginBottom: '15px', color: 'var(--color-text-secondary)' }}>
+            {archiveType === 'completed' ? (
+              <>
+                Mark <strong>{customer?.name}</strong> as a completed deal?
+                <br /><br />
+                This customer will be moved to the archive and hidden from your main customer list.
+              </>
+            ) : (
+              <>
+                Mark <strong>{customer?.name}</strong> as a lost lead?
+                <br /><br />
+                This customer will be moved to the archive and hidden from your main customer list.
+              </>
+            )}
+          </p>
+          <p style={{ fontSize: '13px', color: 'var(--color-text-tertiary)', marginBottom: '20px' }}>
+            You can restore this customer at any time from the archive.
+          </p>
+          <div className="delete-actions">
+            <button
+              className={`btn ${archiveType === 'completed' ? 'btn-success' : 'btn-warning'}`}
+              onClick={() => {
+                archiveCustomer(customer.id, archiveType, isSignedIn);
+                setIsArchiveModalOpen(false);
+                toast.success(`Customer archived as ${archiveType}`);
+              }}
+              style={archiveType === 'completed'
+                ? { backgroundColor: '#16a34a', borderColor: '#16a34a' }
+                : { backgroundColor: '#f59e0b', borderColor: '#f59e0b' }
+              }
+            >
+              {archiveType === 'completed' ? 'Archive as Completed' : 'Archive as Lost'}
+            </button>
+            <button
+              className="btn btn-secondary"
+              onClick={() => setIsArchiveModalOpen(false)}
             >
               Cancel
             </button>
