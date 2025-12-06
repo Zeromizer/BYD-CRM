@@ -386,7 +386,7 @@ function PrintManager({ isOpen, onClose, customer }) {
 
       // Upload to customer's main folder
       console.log('📤 Uploading PDF to Drive...');
-      await getStorageService().uploadFile(filename, blob, customerFolderId);
+      await getStorageService().uploadFileToFolder(filename, blob, customerFolderId);
       console.log('✅ PDF uploaded successfully');
 
       toast.success(`PDF saved to OneDrive: ${customer.name}`);
