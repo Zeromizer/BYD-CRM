@@ -27,6 +27,7 @@ function IDScanner({ isOpen, onClose, onDataExtracted }) {
     addressContinue: '',
     licenseStartDate: ''
   });
+  const [isPortraitMode, setIsPortraitMode] = useState(false);
 
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -65,6 +66,7 @@ function IDScanner({ isOpen, onClose, onDataExtracted }) {
       addressContinue: '',
       licenseStartDate: ''
     });
+    setIsPortraitMode(false);
     stopCamera();
   };
 
@@ -144,9 +146,9 @@ function IDScanner({ isOpen, onClose, onDataExtracted }) {
     const videoWidth = video.videoWidth;
     const videoHeight = video.videoHeight;
 
-    // The camera view container has aspect ratio 4:3 with object-fit: cover
+    // The camera view container has aspect ratio 4:3 (landscape) or 3:4 (portrait)
     // We need to crop the video to match what's visible in the view
-    const containerAspect = 4 / 3;
+    const containerAspect = isPortraitMode ? 3 / 4 : 4 / 3;
     const videoAspect = videoWidth / videoHeight;
 
     let cropX = 0;
@@ -389,7 +391,7 @@ function IDScanner({ isOpen, onClose, onDataExtracted }) {
               )}
 
               {cameraActive && (
-                <div className="camera-view">
+                <div className={`camera-view ${isPortraitMode ? 'portrait' : ''}`}>
                   <video
                     ref={videoRef}
                     autoPlay
@@ -401,7 +403,7 @@ function IDScanner({ isOpen, onClose, onDataExtracted }) {
 
                   {/* ID Guide Overlay */}
                   <div className="id-guide-overlay">
-                    <div className="id-guide-frame">
+                    <div className={`id-guide-frame ${isPortraitMode ? 'portrait' : ''}`}>
                       <div className="corner top-left"></div>
                       <div className="corner top-right"></div>
                       <div className="corner bottom-left"></div>
@@ -413,6 +415,13 @@ function IDScanner({ isOpen, onClose, onDataExtracted }) {
                   </div>
 
                   <div className="camera-controls">
+                    <button
+                      className="btn-orientation-toggle"
+                      onClick={() => setIsPortraitMode(!isPortraitMode)}
+                      title={isPortraitMode ? 'Switch to Landscape' : 'Switch to Portrait'}
+                    >
+                      {isPortraitMode ? '📱' : '🖼️'}
+                    </button>
                     <button className="btn-capture" onClick={capturePhoto}>
                       <div className="capture-ring">
                         <div className="capture-button"></div>
@@ -425,7 +434,7 @@ function IDScanner({ isOpen, onClose, onDataExtracted }) {
               {/* Preview captured image */}
               {(step === 'front' ? frontImage : backImage) && !cameraActive && (
                 <div className="preview-section">
-                  <div className="preview-image-container">
+                  <div className={`preview-image-container ${isPortraitMode ? 'portrait' : ''}`}>
                     <img
                       src={step === 'front' ? frontImage : backImage}
                       alt={`${step} of ID`}
@@ -640,7 +649,7 @@ function IDScanner({ isOpen, onClose, onDataExtracted }) {
               )}
 
               {cameraActive && (
-                <div className="camera-view">
+                <div className={`camera-view ${isPortraitMode ? 'portrait' : ''}`}>
                   <video
                     ref={videoRef}
                     autoPlay
@@ -652,7 +661,7 @@ function IDScanner({ isOpen, onClose, onDataExtracted }) {
 
                   {/* License Guide Overlay */}
                   <div className="id-guide-overlay">
-                    <div className="id-guide-frame">
+                    <div className={`id-guide-frame ${isPortraitMode ? 'portrait' : ''}`}>
                       <div className="corner top-left"></div>
                       <div className="corner top-right"></div>
                       <div className="corner bottom-left"></div>
@@ -664,6 +673,13 @@ function IDScanner({ isOpen, onClose, onDataExtracted }) {
                   </div>
 
                   <div className="camera-controls">
+                    <button
+                      className="btn-orientation-toggle"
+                      onClick={() => setIsPortraitMode(!isPortraitMode)}
+                      title={isPortraitMode ? 'Switch to Landscape' : 'Switch to Portrait'}
+                    >
+                      {isPortraitMode ? '📱' : '🖼️'}
+                    </button>
                     <button className="btn-capture" onClick={capturePhoto}>
                       <div className="capture-ring">
                         <div className="capture-button"></div>
@@ -676,7 +692,7 @@ function IDScanner({ isOpen, onClose, onDataExtracted }) {
               {/* Preview captured license image */}
               {(step === 'license-front' ? licenseFrontImage : licenseBackImage) && !cameraActive && (
                 <div className="preview-section">
-                  <div className="preview-image-container">
+                  <div className={`preview-image-container ${isPortraitMode ? 'portrait' : ''}`}>
                     <img
                       src={step === 'license-front' ? licenseFrontImage : licenseBackImage}
                       alt={`${step === 'license-front' ? 'Front' : 'Back'} of License`}
