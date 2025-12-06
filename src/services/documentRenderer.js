@@ -453,6 +453,7 @@ class DocumentRenderer {
   /**
    * Render documents with back pages in parallel (for PrintManager)
    * This is the fully optimized rendering pipeline
+   * OPTIMIZED: Front and back pages now render truly in parallel (not chained)
    *
    * @param {Array} templateConfigs - Array of {template, doubleSidedConfig}
    * @param {Object} customerData - Customer data mapping
@@ -473,8 +474,9 @@ class DocumentRenderer {
     // Step 2: Prefetch ALL images in parallel (both templates and back page images)
     await this.prefetchImages(allFileIds);
 
-    // Step 3: Render all front and back pages in parallel
-    const renderPromises = templateConfigs.flatMap(({ template, doubleSidedConfig }) => {
+    // Step 3: Render all front and back pages TRULY in parallel
+    // OPTIMIZATION: Get dimensions from cached images upfront, so back pages don't wait for front
+    const renderPromises = templateConfigs.flatMap(({ template, doubleSidedConfig }, configIndex) => {
       const promises = [];
 
       // Front page render
@@ -483,19 +485,25 @@ class DocumentRenderer {
         templateId: template.id,
         pageType: 'front',
         templateName: template.name,
-        order: templateConfigs.indexOf({ template, doubleSidedConfig }) * 2
+        order: configIndex * 2
       }));
       promises.push(frontPromise);
 
-      // Back page render (if double-sided)
+      // Back page render (if double-sided) - NOW PARALLEL with front page
       if (doubleSidedConfig?.enabled && doubleSidedConfig.images?.length > 0) {
-        const backPromise = frontPromise.then(async (frontRender) => {
+        // OPTIMIZATION: Get dimensions from cached template image directly
+        // This allows back page to render in parallel with front page
+        const backPromise = (async () => {
+          // Get dimensions from the cached template image (already prefetched)
+          const templateImage = await this.getCachedImage(template.fileId);
+          const dpi = template.dpi || this.defaultDPI;
+
           const backRender = await this.renderBackPageWithImages(
             doubleSidedConfig.images,
             {
-              width: frontRender.width,
-              height: frontRender.height,
-              dpi: frontRender.dpi
+              width: templateImage.width,
+              height: templateImage.height,
+              dpi: dpi
             }
           );
           return {
@@ -503,9 +511,9 @@ class DocumentRenderer {
             templateId: template.id,
             pageType: 'back',
             templateName: template.name,
-            order: templateConfigs.indexOf({ template, doubleSidedConfig }) * 2 + 1
+            order: configIndex * 2 + 1
           };
-        });
+        })();
         promises.push(backPromise);
       }
 
