@@ -228,9 +228,6 @@ function CustomerList() {
             title={showArchived ? `Show Active (${activeCount})` : `Show Archived (${archivedCount})`}
           >
             {showArchived ? <Users size={18} /> : <Archive size={18} />}
-            {!showArchived && archivedCount > 0 && (
-              <span className="archive-badge">{archivedCount}</span>
-            )}
           </button>
           <button
             className="btn-add-customer"
