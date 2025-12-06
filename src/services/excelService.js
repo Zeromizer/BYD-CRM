@@ -1,6 +1,6 @@
 import { getStorageService, getAuthService } from './storageServiceSelector';
 import { PRZ_TYPES } from '../constants/vehicleData';
-import * as userStorage from './userStorage';
+import userStorage from './userStorage';
 
 /**
  * Excel Service for populating Excel templates with customer data
