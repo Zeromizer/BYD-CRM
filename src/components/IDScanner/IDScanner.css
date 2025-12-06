@@ -176,6 +176,12 @@
   object-fit: cover;
 }
 
+/* Portrait mode for digital ID (Singpass) */
+.camera-view.portrait {
+  aspect-ratio: 3/4;
+  max-width: 375px;
+}
+
 /* ID Guide Overlay */
 .id-guide-overlay {
   position: absolute;
@@ -196,6 +202,12 @@
   border: 2px dashed rgba(255, 255, 255, 0.6);
   border-radius: 12px;
   position: relative;
+}
+
+/* Portrait guide frame for digital ID */
+.id-guide-frame.portrait {
+  aspect-ratio: 0.65; /* Portrait ratio for Singpass digital ID */
+  width: 75%;
 }
 
 .corner {
@@ -255,6 +267,28 @@
   right: 0;
   display: flex;
   justify-content: center;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+/* Orientation toggle button */
+.btn-orientation-toggle {
+  background: rgba(0, 0, 0, 0.5);
+  border: 2px solid white;
+  border-radius: 50%;
+  width: 48px;
+  height: 48px;
+  font-size: 1.25rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.btn-orientation-toggle:hover {
+  background: rgba(0, 0, 0, 0.7);
+  transform: scale(1.05);
 }
 
 .btn-capture {
@@ -304,6 +338,14 @@
   border-radius: 12px;
   overflow: hidden;
   margin-bottom: 1rem;
+}
+
+/* Portrait preview for digital ID */
+.preview-image-container.portrait {
+  aspect-ratio: 3/4;
+  max-width: 375px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .preview-image {
