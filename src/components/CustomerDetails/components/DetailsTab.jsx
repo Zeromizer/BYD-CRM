@@ -97,6 +97,16 @@ function DetailsTab({
               disabled={isSubmitting}
             />
           </div>
+          <div className="inline-edit-item">
+            <label htmlFor="licenseStartDate">License Start Date</label>
+            <DateInput
+              id="licenseStartDate"
+              name="licenseStartDate"
+              value={formData.licenseStartDate || ''}
+              onChange={handleInputChange}
+              disabled={isSubmitting}
+            />
+          </div>
         </div>
       </div>
 

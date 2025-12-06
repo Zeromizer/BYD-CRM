@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { processIDImages, cleanupOCRWorker } from '../../services/idParserService';
+import { extractLicenseWithGemini } from '../../services/geminiService';
 import './IDScanner.css';
 
 /**
@@ -23,7 +24,8 @@ function IDScanner({ isOpen, onClose, onDataExtracted }) {
     nric: '',
     dob: '',
     address: '',
-    addressContinue: ''
+    addressContinue: '',
+    licenseStartDate: ''
   });
 
   const videoRef = useRef(null);
@@ -60,7 +62,8 @@ function IDScanner({ isOpen, onClose, onDataExtracted }) {
       nric: '',
       dob: '',
       address: '',
-      addressContinue: ''
+      addressContinue: '',
+      licenseStartDate: ''
     });
     stopCamera();
   };
@@ -203,7 +206,7 @@ function IDScanner({ isOpen, onClose, onDataExtracted }) {
     startCamera();
   };
 
-  const handleNextStep = () => {
+  const handleNextStep = async () => {
     if (step === 'front' && frontImage) {
       setStep('back');
     } else if (step === 'back' && backImage) {
@@ -211,6 +214,21 @@ function IDScanner({ isOpen, onClose, onDataExtracted }) {
     } else if (step === 'license-front' && licenseFrontImage) {
       setStep('license-back');
     } else if (step === 'license-back' && licenseBackImage) {
+      // Extract license start date from license front image
+      setProcessingStatus({ stage: 'Extracting license data...', progress: 10 });
+      try {
+        const licenseData = await extractLicenseWithGemini(licenseFrontImage, setProcessingStatus);
+        if (licenseData.licenseStartDate) {
+          setEditableData(prev => ({
+            ...prev,
+            licenseStartDate: licenseData.licenseStartDate
+          }));
+        }
+      } catch (err) {
+        console.warn('Failed to extract license data:', err);
+        // Continue to final review even if extraction fails
+      }
+      setProcessingStatus({ stage: '', progress: 0 });
       setStep('final-review');
     }
   };
@@ -733,6 +751,15 @@ function IDScanner({ isOpen, onClose, onDataExtracted }) {
                       type="date"
                       name="dob"
                       value={editableData.dob}
+                      onChange={handleEditChange}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>License Start Date</label>
+                    <input
+                      type="date"
+                      name="licenseStartDate"
+                      value={editableData.licenseStartDate}
                       onChange={handleEditChange}
                     />
                   </div>

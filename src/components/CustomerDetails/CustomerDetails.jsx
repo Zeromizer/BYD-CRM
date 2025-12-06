@@ -31,6 +31,7 @@ const extractDetailsData = (customer) => ({
   nric: customer.nric || '',
   occupation: customer.occupation || '',
   dob: customer.dob || '',
+  licenseStartDate: customer.licenseStartDate || '',
   salesConsultant: customer.salesConsultant || '',
   vsaNo: customer.vsaNo || '',
   address: customer.address || '',
