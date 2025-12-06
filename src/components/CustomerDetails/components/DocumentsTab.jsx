@@ -194,7 +194,7 @@ function DocumentsTab({
           <div className="breadcrumb-actions">
             <button
               className="breadcrumb-refresh"
-              onClick={() => onLoadDocuments(currentFolderId)}
+              onClick={() => onLoadDocuments(currentFolderId, true)}
               title="Refresh folder contents"
               disabled={loadingDocuments}
             >
