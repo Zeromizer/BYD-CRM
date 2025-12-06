@@ -90,10 +90,13 @@ function CustomerList() {
     const startTime = Date.now();
 
     // Poll for folder ID to be available
+    // IMPORTANT: Use getState() to get fresh data, not stale closure
     const waitForFolder = () => {
       return new Promise((resolve) => {
         const check = () => {
-          const customer = customers.find(c => c.id === customerId);
+          // Get fresh state from store (not stale closure)
+          const currentCustomers = useCustomerStore.getState().customers;
+          const customer = currentCustomers.find(c => c.id === customerId);
           if (customer?.driveFolderId) {
             resolve(customer);
           } else if (Date.now() - startTime > maxWaitTime) {
