@@ -169,6 +169,48 @@ class OneDriveService {
   }
 
   /**
+   * Get or create a folder with full details (including webUrl)
+   * OPTIMIZED: Avoids extra API call by returning creation response directly
+   *
+   * @param {string} folderName - The name of the folder to get or create
+   * @param {string} parentFolderId - The parent folder ID (defaults to 'root')
+   * @returns {Object} - { id: string, webUrl: string|null }
+   */
+  async getOrCreateFolderWithDetails(folderName, parentFolderId = 'root') {
+    const cacheKey = `${parentFolderId}:${folderName}`;
+
+    // Check cache for full details
+    if (this.folderIdCache[cacheKey] && typeof this.folderIdCache[cacheKey] === 'object') {
+      return this.folderIdCache[cacheKey];
+    }
+
+    try {
+      // Try to find existing folder
+      const parentPath = parentFolderId === 'root'
+        ? '/me/drive/root/children'
+        : `/me/drive/items/${parentFolderId}/children`;
+
+      const result = await this.request(`${parentPath}?$filter=name eq '${encodeURIComponent(folderName)}'`);
+
+      if (result.value && result.value.length > 0) {
+        const folder = result.value[0];
+        const folderDetails = { id: folder.id, webUrl: folder.webUrl || null };
+        this.folderIdCache[cacheKey] = folderDetails;
+        return folderDetails;
+      }
+
+      // Create folder if not exists - response includes webUrl
+      const newFolder = await this.createFolder(parentFolderId, folderName);
+      const folderDetails = { id: newFolder.id, webUrl: newFolder.webUrl || null };
+      this.folderIdCache[cacheKey] = folderDetails;
+      return folderDetails;
+    } catch (error) {
+      console.error(`Error getting/creating folder "${folderName}":`, error);
+      throw error;
+    }
+  }
+
+  /**
    * Create a new folder
    */
   async createFolder(parentId, folderName) {
@@ -936,9 +978,10 @@ class OneDriveService {
    * Create customer folder structure
    * Matches Google Drive service API
    * Only creates the main customer folder - subfolders are created on demand by other features
+   * OPTIMIZED: Uses getOrCreateFolderWithDetails to avoid extra getFolder() API call
    */
   async createCustomerFolderStructure(customerName, customerId) {
-    const folderIds = await this.getFolderIds();
+    const folderIds = await this.getFolderIds(true); // Skip validation for speed
 
     // Create customer folder using customer name
     // Sanitize name to remove characters not allowed in folder names
@@ -947,22 +990,15 @@ class OneDriveService {
       .replace(/\s+/g, ' ')          // Normalize spaces
       .trim()
       || customerId;                 // Fallback to ID if name is empty
-    const customerFolderId = await this.getOrCreateFolder(sanitizedName, folderIds.customersData);
 
-    // Get folder details to retrieve webUrl
-    let folderUrl = null;
-    try {
-      const folderDetails = await this.getFolder(customerFolderId);
-      folderUrl = folderDetails.webUrl || null;
-    } catch (error) {
-      console.warn('Could not fetch folder URL:', error);
-    }
+    // OPTIMIZED: Get folder ID and webUrl in one call (no extra getFolder() needed)
+    const folderDetails = await this.getOrCreateFolderWithDetails(sanitizedName, folderIds.customersData);
 
     // Subfolders (NIRC, Test Drive, etc.) are created on demand when needed
 
     return {
-      folderId: customerFolderId,
-      folderUrl: folderUrl,
+      folderId: folderDetails.id,
+      folderUrl: folderDetails.webUrl,
     };
   }
 
