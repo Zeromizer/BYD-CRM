@@ -169,6 +169,18 @@ const useExcelStore = create((set, get) => ({
     get().saveToDrive(); // Sync to Drive
   },
 
+  // Bulk import templates (saves once at the end to avoid race conditions)
+  bulkImportTemplates: (templates) => {
+    set((state) => ({
+      excelTemplates: {
+        ...state.excelTemplates,
+        ...templates,
+      },
+    }));
+    get().saveToLocalStorage();
+    get().saveToDrive(); // Sync to Drive once
+  },
+
   // Update template
   updateTemplate: (templateId, updates) => {
     set((state) => ({
