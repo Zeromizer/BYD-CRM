@@ -11,8 +11,8 @@
 
 import oneDriveService from './oneDriveService';
 
-// Use Gemini 2.5 Flash Live - faster and more capable
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent';
+// Use Gemini 2.5 Flash - faster and more capable
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
 
 // LocalStorage key for API key (cached locally for offline use)
 const API_KEY_STORAGE_KEY = 'bydcrm_gemini_api_key';
