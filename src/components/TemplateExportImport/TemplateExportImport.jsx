@@ -8,7 +8,7 @@ import './TemplateExportImport.css';
 
 function TemplateExportImport({ isOpen, onClose }) {
   const { templates: documentTemplates, saveToLocalStorage: saveDocTemplates, loadFromLocalStorage: loadDocTemplates, queueSync: queueDocSync } = useDocumentStore();
-  const { excelTemplates, addTemplate: addExcelTemplate } = useExcelStore();
+  const { excelTemplates, bulkImportTemplates } = useExcelStore();
   const { isSignedIn } = useAuthStore();
 
   const [activeTab, setActiveTab] = useState('export'); // 'export' | 'import'
@@ -132,13 +132,19 @@ function TemplateExportImport({ isOpen, onClose }) {
           });
         }
 
-        // Save Excel templates
+        // Save Excel templates (bulk import to avoid race conditions)
         if (importResults.excelTemplates) {
+          // Collect only newly imported templates
+          const templatesToImport = {};
           Object.entries(importResults.excelTemplates.merged).forEach(([templateId, template]) => {
             if (template.importedAt) {
-              addExcelTemplate(templateId, template);
+              templatesToImport[templateId] = template;
             }
           });
+          // Bulk import all at once (single save to localStorage and Drive)
+          if (Object.keys(templatesToImport).length > 0) {
+            bulkImportTemplates(templatesToImport);
+          }
           results.push({
             type: 'Excel Templates',
             imported: importResults.excelTemplates.imported
@@ -175,12 +181,17 @@ function TemplateExportImport({ isOpen, onClose }) {
         if (data.type === 'excel_templates' || data.type === 'all_templates') {
           const excelResult = templateExportService.importExcelTemplates(data, excelTemplates);
 
-          // Add each imported template using the store's addTemplate method
+          // Collect only newly imported templates for bulk import
+          const templatesToImport = {};
           Object.entries(excelResult.merged).forEach(([templateId, template]) => {
             if (template.importedAt) {
-              addExcelTemplate(templateId, template);
+              templatesToImport[templateId] = template;
             }
           });
+          // Bulk import all at once (single save to localStorage and Drive)
+          if (Object.keys(templatesToImport).length > 0) {
+            bulkImportTemplates(templatesToImport);
+          }
 
           results.push({
             type: 'Excel Templates',
