@@ -7,7 +7,7 @@ import templateExportService from '../../services/templateExportService';
 import './TemplateExportImport.css';
 
 function TemplateExportImport({ isOpen, onClose }) {
-  const { templates: documentTemplates, saveToLocalStorage: saveDocTemplates, loadFromLocalStorage: loadDocTemplates, queueSync: queueDocSync } = useDocumentStore();
+  const { templates: documentTemplates, bulkImportTemplates: bulkImportDocTemplates } = useDocumentStore();
   const { excelTemplates, bulkImportTemplates } = useExcelStore();
   const { isSignedIn } = useAuthStore();
 
@@ -116,14 +116,18 @@ function TemplateExportImport({ isOpen, onClose }) {
           (progress) => setImportProgress(progress)
         );
 
-        // Save document templates
+        // Save document templates (bulk import to avoid race conditions)
         if (importResults.documentTemplates) {
-          saveDocTemplates(importResults.documentTemplates.merged);
-          loadDocTemplates();
-
-          // Sync each imported document template to cloud storage
-          for (const item of importResults.documentTemplates.imported) {
-            queueDocSync(item.templateId);
+          // Collect only newly imported templates
+          const docTemplatesToImport = {};
+          Object.entries(importResults.documentTemplates.merged).forEach(([templateId, template]) => {
+            if (template.importedAt) {
+              docTemplatesToImport[templateId] = template;
+            }
+          });
+          // Bulk import all at once (single save to localStorage and cloud)
+          if (Object.keys(docTemplatesToImport).length > 0) {
+            await bulkImportDocTemplates(docTemplatesToImport);
           }
 
           results.push({
@@ -162,13 +166,16 @@ function TemplateExportImport({ isOpen, onClose }) {
         if (data.type === 'document_templates' || data.type === 'all_templates') {
           const docResult = templateExportService.importDocumentTemplates(data, documentTemplates);
 
-          // Save merged templates to localStorage and reload
-          saveDocTemplates(docResult.merged);
-          loadDocTemplates();
-
-          // Sync each imported document template to cloud storage
-          for (const item of docResult.imported) {
-            queueDocSync(item.templateId);
+          // Collect only newly imported templates for bulk import
+          const docTemplatesToImport = {};
+          Object.entries(docResult.merged).forEach(([templateId, template]) => {
+            if (template.importedAt) {
+              docTemplatesToImport[templateId] = template;
+            }
+          });
+          // Bulk import all at once (single save to localStorage and cloud)
+          if (Object.keys(docTemplatesToImport).length > 0) {
+            await bulkImportDocTemplates(docTemplatesToImport);
           }
 
           results.push({

@@ -154,6 +154,38 @@ const useDocumentStore = create((set, get) => ({
   },
 
   /**
+   * Bulk import templates (saves once at the end to avoid race conditions)
+   * Used when importing templates from ZIP/JSON files
+   */
+  bulkImportTemplates: async (templatesToImport) => {
+    try {
+      const { templates } = get();
+      const updatedTemplates = {
+        ...templates,
+        ...templatesToImport,
+      };
+
+      // Update state
+      set({ templates: updatedTemplates });
+
+      // Save to localStorage once
+      get().saveToLocalStorage(updatedTemplates);
+
+      // Sync all templates to cloud once
+      try {
+        await getStorageService().saveDocumentTemplateToDrive(updatedTemplates);
+      } catch (error) {
+        console.error('Failed to sync imported templates to cloud:', error);
+      }
+
+      return true;
+    } catch (error) {
+      set({ error: error.message });
+      throw error;
+    }
+  },
+
+  /**
    * Create new template
    */
   createTemplate: async (templateData) => {
