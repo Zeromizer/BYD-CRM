@@ -545,10 +545,12 @@ class TemplateExportService {
             }
 
             // Upload to Document Templates folder
+            const fileName = template._backgroundFileName || template.fileName;
+            const mimeType = this._getMimeTypeFromFilename(fileName);
             const file = new File(
               [template._backgroundFileBlob],
-              template._backgroundFileName || template.fileName,
-              { type: 'application/pdf' }
+              fileName,
+              { type: mimeType }
             );
 
             // Use storage service to upload document background
@@ -648,6 +650,25 @@ class TemplateExportService {
    */
   _generateId() {
     return `template_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
+
+  /**
+   * Get MIME type from filename extension
+   */
+  _getMimeTypeFromFilename(filename) {
+    const ext = filename.split('.').pop().toLowerCase();
+    const mimeTypes = {
+      'pdf': 'application/pdf',
+      'png': 'image/png',
+      'jpg': 'image/jpeg',
+      'jpeg': 'image/jpeg',
+      'gif': 'image/gif',
+      'webp': 'image/webp',
+      'bmp': 'image/bmp',
+      'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'xls': 'application/vnd.ms-excel',
+    };
+    return mimeTypes[ext] || 'application/octet-stream';
   }
 
   /**
