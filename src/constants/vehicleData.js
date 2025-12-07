@@ -47,6 +47,7 @@ export const BENEFITS_OPTIONS = [
   'BYD Mic Set',
   'BYD Thermo Flask',
   'Ceramic Coating',
+  '2x Ceramic Coating',
   'Dark Interior Combination',
   'F&R Recording Cam',
   'Free Charger Capped $3000',
@@ -69,6 +70,7 @@ export const BENEFITS_OPTIONS = [
   'Upgrade Crystalline Solar Film',
   '2x Paint Sealer Protection PKG',
   '$1000 Service Credits',
+  "X'mas $500 Service Credits",
 ];
 
 export const INSURANCE_COMPANIES = [
