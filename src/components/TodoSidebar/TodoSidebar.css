@@ -428,13 +428,20 @@
 }
 
 .todo-due,
-.todo-customer,
 .todo-priority {
   display: flex;
   align-items: center;
   gap: 4px;
   font-size: 11px;
   color: var(--color-text-tertiary);
+}
+
+.todo-customer {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--color-primary);
 }
 
 .todo-due.overdue {
