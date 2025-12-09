@@ -186,7 +186,7 @@ function InvoiceTab({
               type="text"
               id="invoice_vehicleNo"
               name="vehicleNo"
-              value={formData.vehicleNo || vsaData?.registrationNo || ''}
+              value={formData.vehicleNo || ''}
               onChange={handleInputChange}
               placeholder="Registration number"
               disabled={isSubmitting}
@@ -195,12 +195,11 @@ function InvoiceTab({
           <div className="inline-edit-item">
             <label htmlFor="invoice_regDate">Reg Date</label>
             <input
-              type="text"
+              type="date"
               id="invoice_regDate"
               name="regDate"
               value={formData.regDate || ''}
               onChange={handleInputChange}
-              placeholder="Registration date"
               disabled={isSubmitting}
             />
           </div>
@@ -209,7 +208,7 @@ function InvoiceTab({
             <select
               id="invoice_makeModel"
               name="makeModel"
-              value={formData.makeModel || vsaData?.makeModel || ''}
+              value={formData.makeModel || ''}
               onChange={handleInputChange}
               disabled={isSubmitting}
             >
@@ -267,7 +266,7 @@ function InvoiceTab({
               type="text"
               id="invoice_deliveryDate"
               name="deliveryDate"
-              value={formData.deliveryDate || vsaData?.deliveryDate || ''}
+              value={formData.deliveryDate || ''}
               onChange={handleInputChange}
               placeholder="Estimated delivery date"
               disabled={isSubmitting}
@@ -350,7 +349,7 @@ function InvoiceTab({
               <input
                 type="text"
                 name="installment"
-                value={formData.installment || vsaData?.monthlyRepayment || ''}
+                value={formData.installment || ''}
                 onChange={handleInputChange}
                 placeholder="0.00"
                 disabled={isSubmitting}
@@ -364,7 +363,7 @@ function InvoiceTab({
               <input
                 type="text"
                 name="insuranceFee"
-                value={formData.insuranceFee || vsaData?.insuranceFee || ''}
+                value={formData.insuranceFee || ''}
                 onChange={handleInputChange}
                 placeholder="0.00"
                 disabled={isSubmitting}
@@ -483,7 +482,7 @@ function InvoiceTab({
               <input
                 type="text"
                 name="depositPaid"
-                value={formData.depositPaid || vsaData?.deposit || ''}
+                value={formData.depositPaid || ''}
                 onChange={handleInputChange}
                 placeholder="0.00"
                 disabled={isSubmitting}
@@ -567,7 +566,7 @@ function InvoiceTab({
               type="text"
               id="invoice_interestRate"
               name="interestRate"
-              value={formData.interestRate || vsaData?.interest || ''}
+              value={formData.interestRate || ''}
               onChange={handleInputChange}
               placeholder="e.g., 2.28"
               disabled={isSubmitting}
@@ -579,7 +578,7 @@ function InvoiceTab({
               type="text"
               id="invoice_tenure"
               name="tenure"
-              value={formData.tenure || vsaData?.tenure || ''}
+              value={formData.tenure || ''}
               onChange={handleInputChange}
               placeholder="e.g., 84"
               disabled={isSubmitting}
@@ -605,7 +604,7 @@ function InvoiceTab({
               type="text"
               id="invoice_monthlyPayment"
               name="monthlyPayment"
-              value={formData.monthlyPayment || vsaData?.monthlyRepayment || ''}
+              value={formData.monthlyPayment || ''}
               onChange={handleInputChange}
               placeholder="Monthly payment"
               disabled={isSubmitting}
@@ -623,7 +622,7 @@ function InvoiceTab({
             <select
               id="invoice_insuranceCompany"
               name="insuranceCompany"
-              value={formData.insuranceCompany || vsaData?.insuranceCompany || ''}
+              value={formData.insuranceCompany || ''}
               onChange={handleInputChange}
               disabled={isSubmitting}
             >
@@ -639,7 +638,7 @@ function InvoiceTab({
               type="text"
               id="invoice_insurancePremium"
               name="insurancePremium"
-              value={formData.insurancePremium || vsaData?.insuranceFee || ''}
+              value={formData.insurancePremium || ''}
               onChange={handleInputChange}
               placeholder="Premium amount"
               disabled={isSubmitting}
@@ -673,7 +672,7 @@ function InvoiceTab({
               type="text"
               id="invoice_tradeInVehicleNo"
               name="tradeInVehicleNo"
-              value={formData.tradeInVehicleNo || vsaData?.tradeInCarNo || ''}
+              value={formData.tradeInVehicleNo || ''}
               onChange={handleInputChange}
               placeholder="Vehicle registration"
               disabled={isSubmitting}
@@ -685,7 +684,7 @@ function InvoiceTab({
               type="text"
               id="invoice_tradeInMakeModel"
               name="tradeInMakeModel"
-              value={formData.tradeInMakeModel || vsaData?.tradeInCarModel || ''}
+              value={formData.tradeInMakeModel || ''}
               onChange={handleInputChange}
               placeholder="Make and model"
               disabled={isSubmitting}
@@ -709,7 +708,7 @@ function InvoiceTab({
               type="text"
               id="invoice_tradeInPrice"
               name="tradeInPrice"
-              value={formData.tradeInPrice || vsaData?.tradeInAmount || ''}
+              value={formData.tradeInPrice || ''}
               onChange={handleInputChange}
               placeholder="Trade-in price"
               disabled={isSubmitting}
