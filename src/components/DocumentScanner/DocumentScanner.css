@@ -1188,6 +1188,11 @@
   color: white;
 }
 
+.export-btn.drive-pdf {
+  background: #0891b2;
+  color: white;
+}
+
 /* ========================================
    RESPONSIVE / DESKTOP
    ======================================== */

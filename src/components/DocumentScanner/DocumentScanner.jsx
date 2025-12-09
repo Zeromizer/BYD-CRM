@@ -1376,6 +1376,78 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
     }
   };
 
+  const uploadToOneDriveAsPDF = async () => {
+    if (pages.length === 0 || !customerFolderId) return;
+
+    setIsExporting(true);
+    setExportProgress(0);
+
+    try {
+      const canvases = [];
+
+      for (let i = 0; i < pages.length; i++) {
+        setExportProgress((i / pages.length) * 40);
+
+        const img = new Image();
+        await new Promise((resolve) => {
+          img.onload = resolve;
+          img.src = pages[i].image;
+        });
+
+        const canvas = document.createElement('canvas');
+        // A4 at 150 DPI for good quality
+        canvas.width = 1240;
+        canvas.height = 1754;
+
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Scale image to fit A4 while maintaining aspect ratio
+        const scale = Math.min(canvas.width / img.width, canvas.height / img.height);
+        const x = (canvas.width - img.width * scale) / 2;
+        const y = (canvas.height - img.height * scale) / 2;
+
+        ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+        canvases.push(canvas);
+      }
+
+      setExportProgress(50);
+
+      const pdf = await pdfGenerator.generateMultiPagePDF(canvases, {
+        title: `Scan_${new Date().toISOString().slice(0, 10)}`,
+        orientation: 'portrait'
+      });
+
+      setExportProgress(70);
+
+      // Get PDF as blob
+      const pdfBlob = pdfGenerator.getPDFBlob(pdf);
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const filename = `Scan_${timestamp}.pdf`;
+
+      setExportProgress(85);
+
+      // Upload PDF to OneDrive
+      const fileId = await oneDriveService.uploadFileToFolder(filename, pdfBlob, customerFolderId);
+
+      setExportProgress(100);
+
+      setTimeout(() => {
+        setIsExporting(false);
+        if (onScanComplete) {
+          onScanComplete([{ id: fileId, name: filename }]);
+        }
+        resetScanner();
+      }, 500);
+
+    } catch (err) {
+      console.error('PDF upload error:', err);
+      setError('Failed to upload PDF to OneDrive. Please try again.');
+      setIsExporting(false);
+    }
+  };
+
   const resetScanner = () => {
     stopCamera();
     setPages([]);
@@ -2012,13 +2084,25 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
                 </button>
 
                 {customerFolderId && (
-                  <button className="export-btn drive" onClick={uploadToOneDrive}>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z" />
-                      <polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02" />
-                    </svg>
-                    Upload to Drive
-                  </button>
+                  <>
+                    <button className="export-btn drive-pdf" onClick={uploadToOneDriveAsPDF}>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                        <polyline points="14 2 14 8 20 8" />
+                        <path d="M12 18v-6M9 15l3 3 3-3" />
+                      </svg>
+                      Upload PDF to Drive
+                    </button>
+                    <button className="export-btn drive" onClick={uploadToOneDrive}>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                        <circle cx="8.5" cy="8.5" r="1.5" />
+                        <polyline points="21 15 16 10 5 21" />
+                        <path d="M12 18v-4M10 16l2 2 2-2" />
+                      </svg>
+                      Upload Images to Drive
+                    </button>
+                  </>
                 )}
               </div>
             </div>
