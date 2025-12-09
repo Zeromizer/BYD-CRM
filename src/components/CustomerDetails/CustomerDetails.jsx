@@ -15,6 +15,7 @@ import { useToast } from '../Toast/Toast';
 import DetailsTab from './components/DetailsTab';
 import ProposalTab from './components/ProposalTab';
 import VsaTab from './components/VsaTab';
+import InvoiceTab from './components/InvoiceTab';
 import DocumentsTab from './components/DocumentsTab';
 
 // Import custom hooks
@@ -104,6 +105,52 @@ const extractVsaData = (customer) => ({
   monthlyRepayment: customer.vsa_monthlyRepayment || '',
 });
 
+const extractInvoiceData = (customer) => ({
+  invoiceNumber: customer.invoice_invoiceNumber || '',
+  carType: customer.invoice_carType || 'NEW CAR',
+  vehicleType: customer.invoice_vehicleType || 'NORMAL',
+  salesPerson: customer.invoice_salesPerson || customer.salesConsultant || '',
+  promoCode: customer.invoice_promoCode || '',
+  vehicleNo: customer.invoice_vehicleNo || customer.vsa_registrationNo || '',
+  regDate: customer.invoice_regDate || '',
+  makeModel: customer.invoice_makeModel || customer.vsa_makeModel || '',
+  coeExpDate: customer.invoice_coeExpDate || '',
+  transferCount: customer.invoice_transferCount || '',
+  deliveryDate: customer.invoice_deliveryDate || customer.vsa_deliveryDate || '',
+  mileage: customer.invoice_mileage || '',
+  priceSold: customer.invoice_priceSold || '',
+  financeAmount: customer.invoice_financeAmount || customer.vsa_loanAmount || '',
+  firstPayment: customer.invoice_firstPayment || '',
+  installment: customer.invoice_installment || customer.vsa_monthlyRepayment || '',
+  insuranceFee: customer.invoice_insuranceFee || customer.vsa_insuranceFee || '',
+  roadTax: customer.invoice_roadTax || '',
+  transferFee: customer.invoice_transferFee || '',
+  inspectionFee: customer.invoice_inspectionFee || '',
+  processingFee: customer.invoice_processingFee || '',
+  others: customer.invoice_others || '',
+  accessories1: customer.invoice_accessories1 || '',
+  accessories2: customer.invoice_accessories2 || '',
+  depositPaid: customer.invoice_depositPaid || customer.vsa_deposit || '',
+  othersDeduction: customer.invoice_othersDeduction || '',
+  tradeInBalance: customer.invoice_tradeInBalance || '',
+  financeCompany: customer.invoice_financeCompany || '',
+  financeMode: customer.invoice_financeMode || '',
+  interestRate: customer.invoice_interestRate || customer.vsa_interest || '',
+  tenure: customer.invoice_tenure || customer.vsa_tenure || '',
+  advanceArrears: customer.invoice_advanceArrears || 'ADVANCE',
+  monthlyPayment: customer.invoice_monthlyPayment || customer.vsa_monthlyRepayment || '',
+  insuranceCompany: customer.invoice_insuranceCompany || customer.vsa_insuranceCompany || '',
+  insurancePremium: customer.invoice_insurancePremium || customer.vsa_insuranceFee || '',
+  buyerPaymentMode: customer.invoice_buyerPaymentMode || '',
+  tradeInVehicleNo: customer.invoice_tradeInVehicleNo || customer.vsa_tradeInCarNo || '',
+  tradeInMakeModel: customer.invoice_tradeInMakeModel || customer.vsa_tradeInCarModel || '',
+  tradeInRegDate: customer.invoice_tradeInRegDate || '',
+  tradeInPrice: customer.invoice_tradeInPrice || customer.vsa_tradeInAmount || '',
+  tradeInSettlement: customer.invoice_tradeInSettlement || '',
+  overtrade: customer.invoice_overtrade || '',
+  remarks: customer.invoice_remarks || '',
+});
+
 function CustomerDetails() {
   const { customers, selectedCustomerId, selectCustomer, updateCustomer, deleteCustomerHybrid, saveCustomerToFolder, saveToLocalStorage, archiveCustomer, unarchiveCustomer } = useCustomerStore();
   const { isSignedIn } = useAuthStore();
@@ -133,11 +180,13 @@ function CustomerDetails() {
   const memoizedDetailsExtractor = useCallback(extractDetailsData, []);
   const memoizedProposalExtractor = useCallback(extractProposalData, []);
   const memoizedVsaExtractor = useCallback(extractVsaData, []);
+  const memoizedInvoiceExtractor = useCallback(extractInvoiceData, []);
 
   // Form hooks
   const detailsForm = useCustomerForm(customer, memoizedDetailsExtractor);
   const proposalForm = useCustomerForm(customer, memoizedProposalExtractor, 'proposal_');
   const vsaForm = useCustomerForm(customer, memoizedVsaExtractor, 'vsa_');
+  const invoiceForm = useCustomerForm(customer, memoizedInvoiceExtractor, 'invoice_');
   const guarantorsHook = useGuarantors(customer);
 
   // Document management hooks
@@ -269,6 +318,37 @@ function CustomerDetails() {
       setIsSubmitting(false);
     }
   }, [customer, vsaForm, isSignedIn, updateCustomer, saveToLocalStorage, saveCustomerToFolder, toast]);
+
+  const handleInvoiceSave = useCallback(async () => {
+    if (!customer) return;
+
+    setIsSubmitting(true);
+    try {
+      const updates = invoiceForm.buildUpdateObject();
+      // Set lastModified timestamp for both local and Drive saves
+      const lastModified = new Date().toISOString();
+      updateCustomer(customer.id, updates);
+      saveToLocalStorage();
+
+      console.log('handleInvoiceSave: isSignedIn=', isSignedIn, 'driveFolderId=', customer.driveFolderId);
+      if (isSignedIn && customer.driveFolderId) {
+        // Include all current customer data plus updates and ensure lastModified is set
+        console.log('handleInvoiceSave: Calling saveCustomerToFolder...');
+        await saveCustomerToFolder({ ...customer, ...updates, lastModified }, isSignedIn);
+        console.log('handleInvoiceSave: saveCustomerToFolder completed');
+      } else {
+        console.log('handleInvoiceSave: Skipping OneDrive save - condition not met');
+      }
+
+      invoiceForm.markAsSaved();
+      toast.success('Invoice saved successfully');
+    } catch (error) {
+      console.error('Error updating invoice:', error);
+      toast.error('Failed to update invoice. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [customer, invoiceForm, isSignedIn, updateCustomer, saveToLocalStorage, saveCustomerToFolder, toast]);
 
   // Delete customer handler
   const handleDeleteConfirm = useCallback(async () => {
@@ -507,6 +587,9 @@ function CustomerDetails() {
           <button className={`tab ${activeTab === 'vsa' ? 'active' : ''}`} onClick={() => setActiveTab('vsa')}>
             VSA
           </button>
+          <button className={`tab ${activeTab === 'invoice' ? 'active' : ''}`} onClick={() => setActiveTab('invoice')}>
+            Invoice
+          </button>
           <button className={`tab ${activeTab === 'status' ? 'active' : ''}`} onClick={() => setActiveTab('status')}>
             Status
           </button>
@@ -580,6 +663,26 @@ function CustomerDetails() {
                 onFieldChange={vsaForm.handleChange}
                 onSave={handleVsaSave}
                 onCancel={vsaForm.resetForm}
+              />
+            </div>
+          )}
+
+          {activeTab === 'invoice' && (
+            <div key="invoice" className="tab-content-wrapper">
+              <InvoiceTab
+                formData={invoiceForm.formData}
+                customerName={customer.name}
+                customerNric={customer.nric}
+                customerPhone={customer.phone}
+                customerEmail={customer.email}
+                salesConsultant={customer.salesConsultant}
+                vsaData={vsaForm.formData}
+                hasChanges={invoiceForm.hasChanges}
+                isSubmitting={isSubmitting}
+                onFieldChange={invoiceForm.handleChange}
+                onSave={handleInvoiceSave}
+                onCancel={invoiceForm.resetForm}
+                customerId={customer.id}
               />
             </div>
           )}

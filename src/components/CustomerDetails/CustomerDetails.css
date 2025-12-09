@@ -1878,3 +1878,273 @@
   }
 }
 
+/* ============================================= */
+/* Invoice Tab Styles                            */
+/* ============================================= */
+
+.invoice-header-section {
+  background: linear-gradient(135deg, var(--color-card-background) 0%, var(--color-background-tertiary) 100%);
+  border: 1px solid var(--color-border-light);
+  border-radius: 8px;
+}
+
+.invoice-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.invoice-header h3 {
+  margin: 0;
+  color: var(--color-primary);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.invoice-number {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.invoice-number label {
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.invoice-number-input {
+  font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-primary);
+  background: var(--color-card-background);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  padding: 6px 10px;
+  width: 140px;
+  text-align: center;
+}
+
+/* Pricing Grid for Invoice */
+.invoice-pricing-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pricing-row {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px dashed var(--color-border-light);
+}
+
+.pricing-row:last-child {
+  border-bottom: none;
+}
+
+.pricing-row label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.price-input {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 200px;
+}
+
+.price-input span {
+  font-weight: 600;
+  color: var(--color-text-tertiary);
+}
+
+.price-input input {
+  flex: 1;
+  padding: 8px 12px;
+  font-size: 14px;
+  font-weight: 500;
+  text-align: right;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: var(--color-card-background);
+  color: var(--color-text-on-card);
+  transition: border-color 0.2s;
+}
+
+.price-input input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.price-display {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 200px;
+  padding: 8px 12px;
+  background: var(--color-background-tertiary);
+  border-radius: 4px;
+}
+
+.price-display span:first-child {
+  font-weight: 600;
+  color: var(--color-text-tertiary);
+}
+
+.calculated-value {
+  flex: 1;
+  text-align: right;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-on-card);
+}
+
+.subtotal-row {
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 2px solid var(--color-border);
+  border-bottom: none;
+}
+
+.subtotal-row label {
+  font-weight: 700;
+  color: var(--color-text-on-card);
+}
+
+.subtotal-row .calculated-value {
+  font-weight: 700;
+}
+
+.balance-row {
+  margin-top: 12px;
+  padding: 12px 0;
+  background: linear-gradient(135deg, var(--color-primary) 0%, #1e40af 100%);
+  border-radius: 6px;
+  padding: 12px 16px;
+}
+
+.balance-row label {
+  font-size: 16px;
+  font-weight: 700;
+  color: white;
+}
+
+.balance-display {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+}
+
+.balance-display span:first-child {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.balance-row .calculated-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: white;
+}
+
+/* Read-only fields in Invoice */
+.readonly-field {
+  background: var(--color-background-tertiary) !important;
+  color: var(--color-text-secondary) !important;
+  cursor: not-allowed;
+  border-color: var(--color-border-light) !important;
+}
+
+.calculated-field {
+  font-weight: 600;
+  color: var(--color-primary) !important;
+}
+
+/* Invoice Disclaimer */
+.invoice-disclaimer {
+  background: #fef3c7;
+  border: 1px solid #f59e0b;
+  border-radius: 6px;
+}
+
+.disclaimer-text {
+  font-size: 11px;
+  font-weight: 600;
+  color: #92400e;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0;
+}
+
+/* Mobile responsiveness for Invoice */
+@media (max-width: 768px) {
+  .invoice-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .invoice-number {
+    width: 100%;
+  }
+
+  .invoice-number-input {
+    flex: 1;
+  }
+
+  .pricing-row {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .pricing-row label {
+    font-size: 11px;
+  }
+
+  .price-input,
+  .price-display {
+    max-width: none;
+    width: 100%;
+  }
+
+  .balance-row {
+    padding: 10px 12px;
+  }
+
+  .balance-row label {
+    font-size: 14px;
+  }
+
+  .balance-row .calculated-value {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .invoice-number label {
+    font-size: 12px;
+  }
+
+  .invoice-number-input {
+    font-size: 12px;
+    padding: 4px 8px;
+  }
+
+  .pricing-row label {
+    font-size: 10px;
+  }
+
+  .price-input input {
+    font-size: 13px;
+    padding: 6px 10px;
+  }
+}
+
