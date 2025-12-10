@@ -102,4 +102,5 @@ export const ONEDRIVE_DATA_FILES = {
   EXCEL: 'excel.json',
   TODOS: 'todos.json',
   SETTINGS: 'settings.json',
+  WHATSAPP: 'whatsapp_messages.json',
 };

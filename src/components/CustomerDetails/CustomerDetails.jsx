@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { FolderOpen, ScanLine, Archive, ArchiveRestore } from 'lucide-react';
+import { FolderOpen, ScanLine, Archive, ArchiveRestore, MessageCircle } from 'lucide-react';
 import useCustomerStore from '../../stores/useCustomerStore';
 import useAuthStore from '../../stores/useAuthStore';
 import { getStorageService } from '../../services/storageServiceSelector';
@@ -17,6 +17,7 @@ import ProposalTab from './components/ProposalTab';
 import VsaTab from './components/VsaTab';
 import InvoiceTab from './components/InvoiceTab';
 import DocumentsTab from './components/DocumentsTab';
+import WhatsappTab from './components/WhatsappTab';
 
 // Import custom hooks
 import { useCustomerForm, useGuarantors } from './hooks/useCustomerForm';
@@ -594,6 +595,13 @@ function CustomerDetails() {
             Status
           </button>
           <button
+            className={`tab tab-icon ${activeTab === 'whatsapp' ? 'active' : ''}`}
+            onClick={() => setActiveTab('whatsapp')}
+            title="WhatsApp"
+          >
+            <MessageCircle size={18} />
+          </button>
+          <button
             className={`tab tab-icon ${activeTab === 'documents' ? 'active' : ''}`}
             onClick={() => setActiveTab('documents')}
             title="Documents"
@@ -690,6 +698,12 @@ function CustomerDetails() {
           {activeTab === 'status' && (
             <div key="status" className="tab-content-wrapper">
               <MilestoneTracker customer={customer} />
+            </div>
+          )}
+
+          {activeTab === 'whatsapp' && (
+            <div key="whatsapp" className="tab-content-wrapper">
+              <WhatsappTab customer={customer} />
             </div>
           )}
 
