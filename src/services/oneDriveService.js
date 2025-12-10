@@ -622,15 +622,21 @@ class OneDriveService {
   /**
    * Get cached folder IDs or initialize structure
    * @param {boolean} skipValidation - Skip validation for performance (use during warmup)
+   *
+   * PERFORMANCE OPTIMIZATION: After warmup has completed, automatically skip validation
+   * since warmup already validated the folder structure.
    */
   async getFolderIds(skipValidation = false) {
+    // OPTIMIZATION: Skip validation if warmup has already validated the folders
+    const shouldSkipValidation = skipValidation || this.hasWarmedUp;
+
     const cached = localStorage.getItem('onedrive_folder_ids');
     if (cached) {
       try {
         const folderIds = JSON.parse(cached);
 
-        // Skip validation if requested (for faster cold start)
-        if (skipValidation) {
+        // Skip validation if requested or warmup has completed
+        if (shouldSkipValidation) {
           return folderIds;
         }
 
@@ -1030,6 +1036,9 @@ class OneDriveService {
    * @param {string} customerId - Customer ID for logging
    * @param {string} folderId - OneDrive folder ID containing customer data
    * @returns {Object|null} - Customer data or null if not found/error
+   *
+   * PERFORMANCE OPTIMIZATION: Skip folder validation after warmup has completed.
+   * The catch block handles 404 errors for deleted/moved folders.
    */
   async loadCustomerData(customerId, folderId) {
     // Handle missing folder ID
@@ -1039,12 +1048,15 @@ class OneDriveService {
     }
 
     try {
-      // First validate the folder exists
-      const folderExists = await this.validateFolderId(folderId);
-      if (!folderExists) {
-        console.warn(`loadCustomerData: Folder ${folderId} not found for customer ${customerId} - folder may have been deleted or moved`);
-        // Return a special marker to indicate folder needs repair
-        return { _folderNotFound: true, customerId, folderId };
+      // OPTIMIZATION: Skip folder validation after warmup - 404 errors are caught below
+      // This eliminates one API call per customer during sync
+      if (!this.hasWarmedUp) {
+        // Only validate folder during cold start (no warmup yet)
+        const folderExists = await this.validateFolderId(folderId);
+        if (!folderExists) {
+          console.warn(`loadCustomerData: Folder ${folderId} not found for customer ${customerId} - folder may have been deleted or moved`);
+          return { _folderNotFound: true, customerId, folderId };
+        }
       }
 
       const customerFile = await this.findFile(folderId, ONEDRIVE_DATA_FILES.CUSTOMER_DETAILS);
@@ -1054,7 +1066,7 @@ class OneDriveService {
       }
       return this.downloadFileAsJson(customerFile.id);
     } catch (error) {
-      // Check for 404 errors specifically
+      // Check for 404 errors specifically (handles deleted/moved folders)
       if (error.message?.includes('404') || error.message?.includes('not found') || error.message?.includes('could not be found')) {
         console.warn(`loadCustomerData: 404 error for customer ${customerId}, folder ${folderId} - ${error.message}`);
         return { _folderNotFound: true, customerId, folderId };
