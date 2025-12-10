@@ -27,6 +27,9 @@ class OneDriveService {
 
     // OPTIMIZATION: Track warmup state to skip validation on subsequent syncs
     this.hasWarmedUp = false;
+
+    // PERFORMANCE: Request timeout to fail fast on slow/stuck requests
+    this.REQUEST_TIMEOUT_MS = 10000; // 10 second timeout (instead of browser default ~60s)
   }
 
   // ============================================================
@@ -49,36 +52,53 @@ class OneDriveService {
 
   /**
    * Make authenticated request to Microsoft Graph API
+   * Includes timeout handling to fail fast on slow/stuck requests
    */
   async request(endpoint, options = {}) {
     const headers = await this.getHeaders(options.contentType);
 
-    const response = await fetch(`${GRAPH_BASE_URL}${endpoint}`, {
-      ...options,
-      headers: {
-        ...headers,
-        ...options.headers,
-      },
-    });
+    // PERFORMANCE: Add timeout to prevent hanging on slow Microsoft API responses
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.REQUEST_TIMEOUT_MS);
 
-    // Handle 204 No Content
-    if (response.status === 204) {
-      return null;
-    }
+    try {
+      const response = await fetch(`${GRAPH_BASE_URL}${endpoint}`, {
+        ...options,
+        headers: {
+          ...headers,
+          ...options.headers,
+        },
+        signal: controller.signal,
+      });
 
-    // Handle errors
-    if (!response.ok) {
-      let errorMessage = `Request failed with status ${response.status}`;
-      try {
-        const error = await response.json();
-        errorMessage = error.error?.message || errorMessage;
-      } catch {
-        // Ignore JSON parse errors
+      clearTimeout(timeoutId);
+
+      // Handle 204 No Content
+      if (response.status === 204) {
+        return null;
       }
-      throw new Error(errorMessage);
-    }
 
-    return response.json();
+      // Handle errors
+      if (!response.ok) {
+        let errorMessage = `Request failed with status ${response.status}`;
+        try {
+          const error = await response.json();
+          errorMessage = error.error?.message || errorMessage;
+        } catch {
+          // Ignore JSON parse errors
+        }
+        throw new Error(errorMessage);
+      }
+
+      return response.json();
+    } catch (error) {
+      clearTimeout(timeoutId);
+      // Convert AbortError to a more descriptive timeout error
+      if (error.name === 'AbortError') {
+        throw new Error(`Request timeout after ${this.REQUEST_TIMEOUT_MS}ms: ${endpoint}`);
+      }
+      throw error;
+    }
   }
 
   /**
@@ -279,21 +299,36 @@ class OneDriveService {
       ? JSON.stringify(content)
       : content;
 
-    const response = await fetch(`${GRAPH_BASE_URL}${path}`, {
-      method: 'PUT',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': contentType,
-      },
-      body,
-    });
+    // PERFORMANCE: Add timeout to prevent hanging on slow uploads
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.REQUEST_TIMEOUT_MS);
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error?.message || 'Upload failed');
+    try {
+      const response = await fetch(`${GRAPH_BASE_URL}${path}`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': contentType,
+        },
+        body,
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error?.message || 'Upload failed');
+      }
+
+      return response.json();
+    } catch (error) {
+      clearTimeout(timeoutId);
+      if (error.name === 'AbortError') {
+        throw new Error(`Upload timeout after ${this.REQUEST_TIMEOUT_MS}ms for file: ${fileName}`);
+      }
+      throw error;
     }
-
-    return response.json();
   }
 
   /**
@@ -335,20 +370,35 @@ class OneDriveService {
 
     const token = await msAuthService.getAccessToken();
 
-    const response = await fetch(`${GRAPH_BASE_URL}/me/drive/items/${fileId}/content`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    // PERFORMANCE: Add timeout to prevent hanging on slow downloads
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.REQUEST_TIMEOUT_MS);
 
-    if (!response.ok) {
-      if (response.status === 400 || response.status === 404) {
-        throw new Error(`File not found in OneDrive (${response.status}). The file may have been deleted or moved. Please re-upload the template.`);
+    try {
+      const response = await fetch(`${GRAPH_BASE_URL}/me/drive/items/${fileId}/content`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        if (response.status === 400 || response.status === 404) {
+          throw new Error(`File not found in OneDrive (${response.status}). The file may have been deleted or moved. Please re-upload the template.`);
+        }
+        throw new Error(`Download failed: ${response.status}`);
       }
-      throw new Error(`Download failed: ${response.status}`);
-    }
 
-    return response;
+      return response;
+    } catch (error) {
+      clearTimeout(timeoutId);
+      if (error.name === 'AbortError') {
+        throw new Error(`Download timeout after ${this.REQUEST_TIMEOUT_MS}ms for file: ${fileId}`);
+      }
+      throw error;
+    }
   }
 
   /**
