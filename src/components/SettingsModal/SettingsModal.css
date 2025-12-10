@@ -1,5 +1,46 @@
 .settings-modal {
-  padding: 1rem 0;
+  padding: 0;
+}
+
+/* Tab Navigation */
+.settings-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--border-color, #e0e0e0);
+  margin-bottom: 1.5rem;
+}
+
+.settings-tab {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.875rem 1.25rem;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--text-secondary, #666);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.settings-tab:hover {
+  color: var(--text-primary, #1a1a1a);
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.settings-tab.active {
+  color: var(--primary-color, #0066cc);
+  border-bottom-color: var(--primary-color, #0066cc);
+}
+
+.settings-tab svg {
+  opacity: 0.7;
+}
+
+.settings-tab.active svg {
+  opacity: 1;
 }
 
 .settings-section {
@@ -160,6 +201,122 @@
   border: 1px solid rgba(239, 68, 68, 0.2);
 }
 
+.settings-message.info {
+  background: rgba(59, 130, 246, 0.1);
+  color: #2563eb;
+  border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+/* Checkbox Label */
+.settings-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  font-weight: 500;
+  color: var(--text-primary, #1a1a1a);
+}
+
+.settings-checkbox-label input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primary-color, #0066cc);
+  cursor: pointer;
+}
+
+/* Select Dropdown */
+.settings-select {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  border: 1px solid var(--border-color, #e0e0e0);
+  border-radius: 8px;
+  background: var(--input-bg, #fff);
+  color: var(--text-primary, #1a1a1a);
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  padding-right: 2.5rem;
+}
+
+.settings-select:focus {
+  outline: none;
+  border-color: var(--primary-color, #0066cc);
+  box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
+}
+
+.settings-select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Provider Settings */
+.provider-settings {
+  background: var(--surface-color, #f8f9fa);
+  border-radius: 10px;
+  padding: 1rem;
+  margin-top: 0.5rem;
+  margin-bottom: 1rem;
+  border: 1px solid var(--border-color, #e0e0e0);
+}
+
+.provider-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border-color, #e0e0e0);
+}
+
+.provider-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.provider-badge.twilio {
+  background: #f22f46;
+  color: white;
+}
+
+.provider-badge.meta {
+  background: #0668e1;
+  color: white;
+}
+
+.provider-badge.dialog {
+  background: #25d366;
+  color: white;
+}
+
+.provider-link {
+  font-size: 0.85rem;
+  color: var(--primary-color, #0066cc);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.provider-link:hover {
+  text-decoration: underline;
+}
+
+/* Field Hint */
+.field-hint {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.8rem;
+  color: var(--text-tertiary, #888);
+}
+
 .settings-actions {
   display: flex;
   gap: 1rem;
@@ -170,6 +327,24 @@
 
 /* Dark mode support */
 @media (prefers-color-scheme: dark) {
+  .settings-tabs {
+    border-bottom-color: #404040;
+  }
+
+  .settings-tab {
+    color: #a0a0a0;
+  }
+
+  .settings-tab:hover {
+    color: #f0f0f0;
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  .settings-tab.active {
+    color: #3b82f6;
+    border-bottom-color: #3b82f6;
+  }
+
   .settings-section-title {
     color: #f0f0f0;
   }
@@ -198,5 +373,38 @@
   .toggle-visibility-btn:hover {
     background: #333;
     color: #f0f0f0;
+  }
+
+  .settings-select {
+    background-color: #2a2a2a;
+    border-color: #404040;
+    color: #f0f0f0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23a0a0a0' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  }
+
+  .settings-select:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+  }
+
+  .settings-checkbox-label {
+    color: #f0f0f0;
+  }
+
+  .provider-settings {
+    background: #1a1a1a;
+    border-color: #404040;
+  }
+
+  .provider-header {
+    border-bottom-color: #404040;
+  }
+
+  .provider-link {
+    color: #60a5fa;
+  }
+
+  .field-hint {
+    color: #808080;
   }
 }
