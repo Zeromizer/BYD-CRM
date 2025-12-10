@@ -338,13 +338,13 @@ function WhatsappTab({ customer }) {
     <div className="whatsapp-tab">
       {/* Header */}
       <div className="whatsapp-header">
-        <div className="customer-info">
-          <div className="customer-avatar">
+        <div className="wa-customer-info">
+          <div className="wa-customer-avatar">
             {customer.name?.charAt(0)?.toUpperCase() || '?'}
           </div>
-          <div className="customer-details">
+          <div className="wa-customer-details">
             <h3>{customer.name}</h3>
-            <span className="customer-phone">{customer.phone || 'No phone'}</span>
+            <span className="wa-customer-phone">{customer.phone || 'No phone'}</span>
           </div>
         </div>
 
