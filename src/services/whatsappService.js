@@ -66,7 +66,8 @@ const DEFAULT_CONFIG = {
   twilio: {
     accountSid: '',
     authToken: '',
-    fromNumber: '' // WhatsApp sender number (e.g., whatsapp:+14155238886)
+    fromNumber: '', // WhatsApp sender number (e.g., whatsapp:+14155238886)
+    functionUrl: '' // Twilio Function URL for sending messages (bypasses CORS)
   },
   // 360dialog settings
   threesixtyDialog: {
@@ -179,7 +180,9 @@ export function isWhatsAppEnabled() {
     case WHATSAPP_PROVIDERS.META_CLOUD:
       return !!(config.meta.phoneNumberId && config.meta.accessToken);
     case WHATSAPP_PROVIDERS.TWILIO:
-      return !!(config.twilio.accountSid && config.twilio.authToken && config.twilio.fromNumber);
+      // Twilio Function URL is the preferred method (avoids CORS issues)
+      // Fall back to direct API if credentials are provided
+      return !!(config.twilio.functionUrl || (config.twilio.accountSid && config.twilio.authToken && config.twilio.fromNumber));
     case WHATSAPP_PROVIDERS.THREESIXTY_DIALOG:
       return !!(config.threesixtyDialog.apiKey);
     default:
@@ -323,6 +326,38 @@ function buildMessagePayload(provider, to, message, config) {
 }
 
 /**
+ * Send a WhatsApp message via Twilio Function
+ * This bypasses CORS restrictions by using a serverless proxy
+ * @param {string} to - Recipient phone number
+ * @param {Object} message - Message object
+ * @param {Object} config - WhatsApp config
+ * @returns {Promise<Object>} Send result
+ */
+async function sendViaTwilioFunction(to, message, config) {
+  const functionUrl = config.twilio.functionUrl;
+  const formattedTo = formatPhoneForWhatsApp(to);
+
+  const response = await fetch(functionUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      to: formattedTo,
+      message: message.body || message.caption || ''
+    })
+  });
+
+  const result = await response.json();
+
+  if (!response.ok || !result.success) {
+    throw new Error(result.error || 'Failed to send message via Twilio Function');
+  }
+
+  return result;
+}
+
+/**
  * Send a WhatsApp message
  * @param {string} to - Recipient phone number
  * @param {Object} message - Message object { type, body, documentUrl, caption, filename }
@@ -336,10 +371,23 @@ export async function sendMessage(to, message, options = {}) {
     throw new Error('WhatsApp is not configured. Please set up your WhatsApp API credentials in Settings.');
   }
 
-  const { url, headers } = getProviderEndpoint(config.provider, config);
-  const body = buildMessagePayload(config.provider, to, message, config);
-
   try {
+    // Use Twilio Function if configured (recommended for browser-based apps)
+    if (config.provider === WHATSAPP_PROVIDERS.TWILIO && config.twilio.functionUrl) {
+      const result = await sendViaTwilioFunction(to, message, config);
+      return {
+        success: true,
+        messageId: result.sid,
+        timestamp: new Date().toISOString(),
+        to,
+        message
+      };
+    }
+
+    // Fall back to direct API call (may have CORS issues in browser)
+    const { url, headers } = getProviderEndpoint(config.provider, config);
+    const body = buildMessagePayload(config.provider, to, message, config);
+
     const response = await fetch(url, {
       method: 'POST',
       headers,
