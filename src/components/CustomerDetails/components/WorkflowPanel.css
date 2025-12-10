@@ -1,0 +1,375 @@
+.workflow-panel {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.workflow-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.header-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.header-title h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.header-title svg {
+  color: #6366f1;
+}
+
+.setup-required {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #f59e0b;
+  background: #fef3c7;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+/* Alerts */
+.workflow-alert {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  font-size: 13px;
+}
+
+.workflow-alert.error {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+.workflow-alert.success {
+  background: #f0fdf4;
+  color: #16a34a;
+  border: 1px solid #bbf7d0;
+}
+
+.workflow-alert button {
+  margin-left: auto;
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  color: inherit;
+  opacity: 0.7;
+}
+
+.workflow-alert button:hover {
+  opacity: 1;
+}
+
+/* Workflow List */
+.workflow-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Workflow Card */
+.workflow-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  overflow: hidden;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.workflow-card:hover {
+  border-color: #6366f1;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.1);
+}
+
+.workflow-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  cursor: pointer;
+  background: #fafafa;
+}
+
+.workflow-card-header:hover {
+  background: #f5f5f5;
+}
+
+.workflow-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.workflow-icon {
+  color: #6366f1;
+}
+
+.workflow-info h4 {
+  margin: 0 0 2px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.workflow-info p {
+  margin: 0;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.workflow-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-trigger {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: #6366f1;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-trigger:hover:not(:disabled) {
+  background: #4f46e5;
+}
+
+.btn-trigger:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
+
+.workflow-card-body {
+  padding: 14px 16px;
+  border-top: 1px solid #e5e7eb;
+  background: white;
+}
+
+.workflow-field {
+  margin-bottom: 12px;
+}
+
+.workflow-field label {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 6px;
+}
+
+.workflow-field textarea {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 13px;
+  resize: vertical;
+  font-family: inherit;
+}
+
+.workflow-field textarea:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.workflow-preview {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.workflow-preview strong {
+  color: #374151;
+}
+
+/* Workflow History */
+.workflow-history-section {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.history-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 0;
+  background: none;
+  border: none;
+  font-size: 13px;
+  font-weight: 500;
+  color: #6b7280;
+  cursor: pointer;
+}
+
+.history-toggle:hover {
+  color: #111827;
+}
+
+.workflow-history {
+  margin-top: 12px;
+}
+
+.no-history {
+  text-align: center;
+  font-size: 13px;
+  color: #9ca3af;
+  padding: 16px;
+}
+
+.history-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  background: #f9fafb;
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+
+.history-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.history-type {
+  font-size: 13px;
+  font-weight: 500;
+  color: #111827;
+  text-transform: capitalize;
+}
+
+.history-time {
+  font-size: 11px;
+  color: #6b7280;
+}
+
+/* Status Badge */
+.workflow-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.status-gray {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.status-blue {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.status-yellow {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.status-green {
+  background: #d1fae5;
+  color: #059669;
+}
+
+.status-red {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+/* Spinning animation */
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .workflow-panel {
+    background: #1f2937;
+  }
+
+  .header-title h3 {
+    color: #f9fafb;
+  }
+
+  .workflow-card {
+    border-color: #374151;
+  }
+
+  .workflow-card-header {
+    background: #111827;
+  }
+
+  .workflow-card-header:hover {
+    background: #1f2937;
+  }
+
+  .workflow-info h4 {
+    color: #f9fafb;
+  }
+
+  .workflow-info p {
+    color: #9ca3af;
+  }
+
+  .workflow-card-body {
+    background: #1f2937;
+    border-color: #374151;
+  }
+
+  .workflow-field label {
+    color: #d1d5db;
+  }
+
+  .workflow-field textarea {
+    background: #111827;
+    border-color: #374151;
+    color: #f9fafb;
+  }
+
+  .history-item {
+    background: #111827;
+  }
+
+  .history-type {
+    color: #f9fafb;
+  }
+}
