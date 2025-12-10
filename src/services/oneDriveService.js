@@ -1464,10 +1464,13 @@ class OneDriveService {
   /**
    * Load app settings from OneDrive
    * Returns empty object if no settings file exists
+   * @param {Object} options - Options for loading settings
+   * @param {boolean} options.skipValidation - Skip folder validation for performance (use during parallel warmup)
    */
-  async loadSettings() {
+  async loadSettings(options = {}) {
+    const { skipValidation = false } = options;
     try {
-      const folderIds = await this.getFolderIds();
+      const folderIds = await this.getFolderIds(skipValidation);
       const file = await this.findFile(folderIds.root, ONEDRIVE_DATA_FILES.SETTINGS);
 
       if (!file) {
@@ -1552,21 +1555,25 @@ class OneDriveService {
     const startTime = Date.now();
 
     // Get folder IDs with validation (will reinitialize if root folder is invalid)
-    const folderIds = await this.getFolderIds(false); // false = validate
+    // NOTE: getFolderIds(false) already validates the root folder, so we only need
+    // to validate additional critical folders (customersData) afterwards
+    const folderIds = await this.getFolderIds(false); // false = validate root folder
 
-    // Validate all critical folder IDs exist
-    const criticalFolders = ['root', 'customersData'];
-    const foldersToValidate = criticalFolders
+    // OPTIMIZATION: Only validate additional folders (root was already validated by getFolderIds)
+    const additionalFolders = ['customersData'];
+    const foldersToValidate = additionalFolders
       .filter(key => folderIds[key])
       .map(key => folderIds[key]);
 
-    const validationResults = await this.batchValidateFolderIds(foldersToValidate);
-    const allValid = foldersToValidate.every(id => validationResults.get(id));
+    if (foldersToValidate.length > 0) {
+      const validationResults = await this.batchValidateFolderIds(foldersToValidate);
+      const allValid = foldersToValidate.every(id => validationResults.get(id));
 
-    if (!allValid) {
-      console.warn('OneDrive warmup: Some critical folders are invalid, reinitializing...');
-      this.clearCache();
-      await this.initializeCrmStructure();
+      if (!allValid) {
+        console.warn('OneDrive warmup: Some critical folders are invalid, reinitializing...');
+        this.clearCache();
+        await this.initializeCrmStructure();
+      }
     }
 
     // Mark as warmed up for subsequent syncs

@@ -84,10 +84,12 @@ class SyncCoordinator {
 
     try {
       // OPTIMIZATION Phase 2+3: Warmup - preload folder IDs (uses cache on subsequent syncs)
+      // NOTE: initializeGeminiService() uses localStorage fast path to avoid duplicate
+      // folder validation API calls. Background sync from OneDrive happens after 5s.
       const warmupStart = Date.now();
       await Promise.all([
         getStorageService().warmup(),
-        initializeGeminiService(), // Load Gemini API key from OneDrive settings
+        initializeGeminiService(), // Load Gemini API key (localStorage fast path)
       ]);
       console.log(`Sync warmup: ${Date.now() - warmupStart}ms`);
 
