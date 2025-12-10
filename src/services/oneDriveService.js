@@ -29,7 +29,11 @@ class OneDriveService {
     this.hasWarmedUp = false;
 
     // PERFORMANCE: Request timeout to fail fast on slow/stuck requests
-    this.REQUEST_TIMEOUT_MS = 10000; // 10 second timeout (instead of browser default ~60s)
+    this.REQUEST_TIMEOUT_MS = 15000; // 15 second timeout (instead of browser default ~60s)
+
+    // RELIABILITY: Retry configuration for transient errors (502, 503, 504)
+    this.MAX_RETRIES = 2;
+    this.RETRY_DELAY_MS = 1000; // 1 second delay between retries
   }
 
   // ============================================================
@@ -52,9 +56,9 @@ class OneDriveService {
 
   /**
    * Make authenticated request to Microsoft Graph API
-   * Includes timeout handling to fail fast on slow/stuck requests
+   * Includes timeout handling and retry logic for transient errors
    */
-  async request(endpoint, options = {}) {
+  async request(endpoint, options = {}, retryCount = 0) {
     const headers = await this.getHeaders(options.contentType);
 
     // PERFORMANCE: Add timeout to prevent hanging on slow Microsoft API responses
@@ -78,6 +82,13 @@ class OneDriveService {
         return null;
       }
 
+      // RELIABILITY: Retry on transient server errors (502, 503, 504)
+      if ([502, 503, 504].includes(response.status) && retryCount < this.MAX_RETRIES) {
+        console.warn(`OneDrive: Got ${response.status}, retrying in ${this.RETRY_DELAY_MS}ms... (attempt ${retryCount + 1}/${this.MAX_RETRIES})`);
+        await new Promise(resolve => setTimeout(resolve, this.RETRY_DELAY_MS * (retryCount + 1)));
+        return this.request(endpoint, options, retryCount + 1);
+      }
+
       // Handle errors
       if (!response.ok) {
         let errorMessage = `Request failed with status ${response.status}`;
@@ -95,6 +106,12 @@ class OneDriveService {
       clearTimeout(timeoutId);
       // Convert AbortError to a more descriptive timeout error
       if (error.name === 'AbortError') {
+        // Retry on timeout if we haven't exceeded retries
+        if (retryCount < this.MAX_RETRIES) {
+          console.warn(`OneDrive: Request timeout, retrying... (attempt ${retryCount + 1}/${this.MAX_RETRIES})`);
+          await new Promise(resolve => setTimeout(resolve, this.RETRY_DELAY_MS * (retryCount + 1)));
+          return this.request(endpoint, options, retryCount + 1);
+        }
         throw new Error(`Request timeout after ${this.REQUEST_TIMEOUT_MS}ms: ${endpoint}`);
       }
       throw error;
@@ -362,7 +379,7 @@ class OneDriveService {
   /**
    * Download file content (raw response)
    */
-  async downloadFile(fileId) {
+  async downloadFile(fileId, retryCount = 0) {
     // Validate fileId before making request
     if (!fileId || typeof fileId !== 'string' || fileId.trim() === '') {
       throw new Error('Invalid file ID. The file reference may be corrupted.');
@@ -384,6 +401,13 @@ class OneDriveService {
 
       clearTimeout(timeoutId);
 
+      // RELIABILITY: Retry on transient server errors (502, 503, 504)
+      if ([502, 503, 504].includes(response.status) && retryCount < this.MAX_RETRIES) {
+        console.warn(`OneDrive: Download got ${response.status}, retrying... (attempt ${retryCount + 1}/${this.MAX_RETRIES})`);
+        await new Promise(resolve => setTimeout(resolve, this.RETRY_DELAY_MS * (retryCount + 1)));
+        return this.downloadFile(fileId, retryCount + 1);
+      }
+
       if (!response.ok) {
         if (response.status === 400 || response.status === 404) {
           throw new Error(`File not found in OneDrive (${response.status}). The file may have been deleted or moved. Please re-upload the template.`);
@@ -395,6 +419,12 @@ class OneDriveService {
     } catch (error) {
       clearTimeout(timeoutId);
       if (error.name === 'AbortError') {
+        // Retry on timeout
+        if (retryCount < this.MAX_RETRIES) {
+          console.warn(`OneDrive: Download timeout, retrying... (attempt ${retryCount + 1}/${this.MAX_RETRIES})`);
+          await new Promise(resolve => setTimeout(resolve, this.RETRY_DELAY_MS * (retryCount + 1)));
+          return this.downloadFile(fileId, retryCount + 1);
+        }
         throw new Error(`Download timeout after ${this.REQUEST_TIMEOUT_MS}ms for file: ${fileId}`);
       }
       throw error;
