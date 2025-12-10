@@ -65,13 +65,44 @@ export async function setGeminiApiKey(apiKey, syncToCloud = true) {
 /**
  * Initialize Gemini service - loads API key from OneDrive
  * Called on app startup after user signs in
+ *
+ * PERFORMANCE OPTIMIZATION: Uses localStorage first (fast path), only loads
+ * from OneDrive if no cached key exists. This avoids duplicate API calls
+ * during parallel sync warmup.
  */
 export async function initializeGeminiService() {
   if (isInitialized) return;
 
   try {
+    // FAST PATH: Check localStorage first (avoids OneDrive API call during warmup)
+    const localKey = localStorage.getItem(API_KEY_STORAGE_KEY);
+    if (localKey) {
+      cachedApiKey = localKey;
+      isInitialized = true;
+      console.log('Gemini API key loaded from localStorage (fast path)');
+
+      // Schedule background sync from OneDrive (non-blocking)
+      // This ensures we pick up any changes from other devices
+      if (navigator.onLine) {
+        setTimeout(async () => {
+          try {
+            const settings = await oneDriveService.loadSettings({ skipValidation: true });
+            if (settings.geminiApiKey && settings.geminiApiKey !== cachedApiKey) {
+              cachedApiKey = settings.geminiApiKey;
+              localStorage.setItem(API_KEY_STORAGE_KEY, settings.geminiApiKey);
+              console.log('Gemini API key updated from OneDrive (background sync)');
+            }
+          } catch (e) {
+            // Ignore background sync errors
+          }
+        }, 5000); // Delay 5s to avoid competing with initial sync
+      }
+      return;
+    }
+
+    // SLOW PATH: No local key, must load from OneDrive
     if (navigator.onLine) {
-      const settings = await oneDriveService.loadSettings();
+      const settings = await oneDriveService.loadSettings({ skipValidation: true });
       if (settings.geminiApiKey) {
         cachedApiKey = settings.geminiApiKey;
         // Update localStorage for offline access
