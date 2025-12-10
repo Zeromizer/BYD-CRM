@@ -22,6 +22,7 @@ function SettingsModal({ isOpen, onClose }) {
   // WhatsApp state
   const [whatsappProvider, setWhatsappProvider] = useState('');
   const [whatsappEnabled, setWhatsappEnabledState] = useState(false);
+  const [twilioFunctionUrl, setTwilioFunctionUrl] = useState('');
   const [twilioAccountSid, setTwilioAccountSid] = useState('');
   const [twilioAuthToken, setTwilioAuthToken] = useState('');
   const [twilioFromNumber, setTwilioFromNumber] = useState('');
@@ -48,6 +49,7 @@ function SettingsModal({ isOpen, onClose }) {
       setWhatsappEnabledState(waConfig.enabled || false);
 
       // Twilio
+      setTwilioFunctionUrl(waConfig.twilio?.functionUrl || '');
       setTwilioAccountSid(waConfig.twilio?.accountSid || '');
       setTwilioAuthToken(waConfig.twilio?.authToken || '');
       setTwilioFromNumber(waConfig.twilio?.fromNumber || '');
@@ -91,6 +93,7 @@ function SettingsModal({ isOpen, onClose }) {
 
       // Update provider-specific settings
       config.twilio = {
+        functionUrl: twilioFunctionUrl.trim(),
         accountSid: twilioAccountSid.trim(),
         authToken: twilioAuthToken.trim(),
         fromNumber: twilioFromNumber.trim()
@@ -129,8 +132,9 @@ function SettingsModal({ isOpen, onClose }) {
 
     switch (whatsappProvider) {
       case WHATSAPP_PROVIDERS.TWILIO:
-        isValid = !!(twilioAccountSid && twilioAuthToken && twilioFromNumber);
-        errorMsg = 'Please fill in Account SID, Auth Token, and From Number';
+        // Function URL is the recommended approach
+        isValid = !!twilioFunctionUrl || !!(twilioAccountSid && twilioAuthToken && twilioFromNumber);
+        errorMsg = 'Please fill in the Function URL (recommended) or Account SID, Auth Token, and From Number';
         break;
       case WHATSAPP_PROVIDERS.META_CLOUD:
         isValid = !!(metaPhoneNumberId && metaAccessToken);
@@ -330,6 +334,24 @@ function SettingsModal({ isOpen, onClose }) {
                   <a href="https://console.twilio.com" target="_blank" rel="noopener noreferrer" className="provider-link">
                     Open Console →
                   </a>
+                </div>
+
+                <div className="settings-field">
+                  <label htmlFor="twilio-function-url">Twilio Function URL (Recommended)</label>
+                  <input
+                    id="twilio-function-url"
+                    type="text"
+                    value={twilioFunctionUrl}
+                    onChange={(e) => setTwilioFunctionUrl(e.target.value)}
+                    placeholder="https://your-service.twil.io/send-whatsapp"
+                    className="settings-input"
+                    disabled={saving}
+                  />
+                  <span className="field-hint">Create a Twilio Function to bypass browser restrictions</span>
+                </div>
+
+                <div className="settings-divider">
+                  <span>Or use direct API (may have CORS issues)</span>
                 </div>
 
                 <div className="settings-field">

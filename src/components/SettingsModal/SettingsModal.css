@@ -317,6 +317,27 @@
   color: var(--text-tertiary, #888);
 }
 
+/* Settings Divider */
+.settings-divider {
+  display: flex;
+  align-items: center;
+  margin: 1rem 0;
+  color: var(--text-tertiary, #888);
+  font-size: 0.8rem;
+}
+
+.settings-divider::before,
+.settings-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border-color, #e0e0e0);
+}
+
+.settings-divider span {
+  padding: 0 0.75rem;
+}
+
 .settings-actions {
   display: flex;
   gap: 1rem;
