@@ -355,17 +355,24 @@ async function sendViaTwilioFunction(to, message, config) {
   const responseText = await response.text();
   console.log('Twilio Function response:', response.status, responseText);
 
-  // Try to parse as JSON
+  // Try to parse as JSON (handle double-encoded responses from Twilio Functions)
   let result;
   try {
     result = JSON.parse(responseText);
+    // If result is still a string, it was double-encoded - parse again
+    if (typeof result === 'string') {
+      console.log('Response was double-encoded, parsing again...');
+      result = JSON.parse(result);
+    }
   } catch (parseError) {
     console.error('Failed to parse response as JSON:', parseError);
     throw new Error(`Invalid response from Twilio Function: ${responseText.substring(0, 100)}`);
   }
 
+  console.log('Parsed result:', result);
+
   if (!response.ok || !result.success) {
-    throw new Error(result.error || `Twilio Function error (${response.status}): ${responseText.substring(0, 100)}`);
+    throw new Error(result.error || `Twilio Function error (${response.status}): ${JSON.stringify(result)}`);
   }
 
   return result;
