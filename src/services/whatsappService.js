@@ -336,6 +336,9 @@ function buildMessagePayload(provider, to, message, config) {
 async function sendViaTwilioFunction(to, message, config) {
   const functionUrl = config.twilio.functionUrl;
   const formattedTo = formatPhoneForWhatsApp(to);
+  const messageBody = message.body || message.caption || '';
+
+  console.log('Sending via Twilio Function:', { functionUrl, to: formattedTo, message: messageBody });
 
   const response = await fetch(functionUrl, {
     method: 'POST',
@@ -344,14 +347,25 @@ async function sendViaTwilioFunction(to, message, config) {
     },
     body: JSON.stringify({
       to: formattedTo,
-      message: message.body || message.caption || ''
+      message: messageBody
     })
   });
 
-  const result = await response.json();
+  // Get response text first for debugging
+  const responseText = await response.text();
+  console.log('Twilio Function response:', response.status, responseText);
+
+  // Try to parse as JSON
+  let result;
+  try {
+    result = JSON.parse(responseText);
+  } catch (parseError) {
+    console.error('Failed to parse response as JSON:', parseError);
+    throw new Error(`Invalid response from Twilio Function: ${responseText.substring(0, 100)}`);
+  }
 
   if (!response.ok || !result.success) {
-    throw new Error(result.error || 'Failed to send message via Twilio Function');
+    throw new Error(result.error || `Twilio Function error (${response.status}): ${responseText.substring(0, 100)}`);
   }
 
   return result;
