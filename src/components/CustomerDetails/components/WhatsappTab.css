@@ -176,6 +176,7 @@
 
 .message-bubble.outgoing {
   background-color: #dcf8c6;
+  color: #111b21;
   margin-left: auto;
   border-bottom-right-radius: 2px;
 }
@@ -187,6 +188,7 @@
 
 .message-bubble.incoming {
   background-color: white;
+  color: #111b21;
   margin-right: auto;
   border-bottom-left-radius: 2px;
 }
@@ -237,6 +239,7 @@
   font-size: 14px;
   line-height: 1.4;
   white-space: pre-wrap;
+  color: inherit;
 }
 
 .message-meta {
@@ -345,10 +348,10 @@
 .input-wrapper textarea {
   width: 100%;
   padding: 10px 14px;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-border, #e0e0e0);
   border-radius: 20px;
-  background-color: var(--color-bg-primary);
-  color: var(--color-text-primary);
+  background-color: var(--color-bg-primary, #ffffff);
+  color: #111b21;
   font-size: 14px;
   resize: none;
   min-height: 40px;
@@ -358,12 +361,18 @@
   transition: border-color 0.2s;
 }
 
+[data-theme="dark"] .input-wrapper textarea {
+  background-color: #2a3942;
+  color: #e9edef;
+  border-color: #3b4a54;
+}
+
 .input-wrapper textarea:focus {
   border-color: #25D366;
 }
 
 .input-wrapper textarea::placeholder {
-  color: var(--color-text-tertiary);
+  color: var(--color-text-tertiary, #8696a0);
 }
 
 .btn-send {
