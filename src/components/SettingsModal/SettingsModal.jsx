@@ -8,6 +8,11 @@ import {
   WHATSAPP_PROVIDERS,
   initializeWhatsAppService
 } from '../../services/whatsappService';
+import {
+  getWorkflowConfig,
+  setWorkflowConfig,
+  isWorkflowEnabled
+} from '../../services/workflowService';
 import './SettingsModal.css';
 
 /**
@@ -31,10 +36,17 @@ function SettingsModal({ isOpen, onClose }) {
   const [dialogApiKey, setDialogApiKey] = useState('');
   const [showWhatsappSecrets, setShowWhatsappSecrets] = useState(false);
 
+  // Workflow state
+  const [workflowEnabled, setWorkflowEnabledState] = useState(false);
+  const [n8nBaseUrl, setN8nBaseUrl] = useState('');
+  const [webhookDocSigning, setWebhookDocSigning] = useState('');
+  const [webhookAppointment, setWebhookAppointment] = useState('');
+  const [webhookFollowUp, setWebhookFollowUp] = useState('');
+
   // UI state
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState(null);
-  const [activeTab, setActiveTab] = useState('ai'); // 'ai' or 'whatsapp'
+  const [activeTab, setActiveTab] = useState('ai'); // 'ai', 'whatsapp', or 'workflows'
 
   // Load current settings when modal opens
   useEffect(() => {
@@ -60,6 +72,14 @@ function SettingsModal({ isOpen, onClose }) {
 
       // 360dialog
       setDialogApiKey(waConfig.threesixtyDialog?.apiKey || '');
+
+      // Load Workflow config
+      const wfConfig = getWorkflowConfig();
+      setWorkflowEnabledState(wfConfig.enabled || false);
+      setN8nBaseUrl(wfConfig.n8nBaseUrl || '');
+      setWebhookDocSigning(wfConfig.webhooks?.documentSigning || '');
+      setWebhookAppointment(wfConfig.webhooks?.appointmentConfirmation || '');
+      setWebhookFollowUp(wfConfig.webhooks?.followUp || '');
 
       setMessage(null);
     }
@@ -155,6 +175,32 @@ function SettingsModal({ isOpen, onClose }) {
     }
   };
 
+  // Save Workflow settings
+  const handleSaveWorkflows = async () => {
+    setSaving(true);
+    setMessage(null);
+
+    try {
+      const config = getWorkflowConfig();
+
+      config.enabled = workflowEnabled;
+      config.n8nBaseUrl = n8nBaseUrl.trim();
+      config.webhooks = {
+        documentSigning: webhookDocSigning.trim(),
+        appointmentConfirmation: webhookAppointment.trim(),
+        followUp: webhookFollowUp.trim(),
+        custom: config.webhooks?.custom || ''
+      };
+
+      await setWorkflowConfig(config);
+      setMessage({ type: 'success', text: 'Workflow settings saved!' });
+    } catch (error) {
+      setMessage({ type: 'error', text: 'Failed to save: ' + error.message });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleClearGemini = async () => {
     if (!apiKey) return;
 
@@ -174,6 +220,7 @@ function SettingsModal({ isOpen, onClose }) {
 
   const isGeminiConfigured = isGeminiAvailable();
   const isWhatsappConfigured = isWhatsAppEnabled();
+  const isWorkflowConfigured = isWorkflowEnabled();
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Settings" size="medium">
@@ -199,6 +246,16 @@ function SettingsModal({ isOpen, onClose }) {
               <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
             </svg>
             WhatsApp
+          </button>
+          <button
+            className={`settings-tab ${activeTab === 'workflows' ? 'active' : ''}`}
+            onClick={() => { setActiveTab('workflows'); setMessage(null); }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"></path>
+            </svg>
+            Workflows
           </button>
         </div>
 
@@ -509,6 +566,130 @@ function SettingsModal({ isOpen, onClose }) {
               <button
                 className="btn btn-primary"
                 onClick={handleSaveWhatsApp}
+                disabled={saving}
+              >
+                {saving ? 'Saving...' : 'Save'}
+              </button>
+            </div>
+          </section>
+        )}
+
+        {/* Workflows Tab */}
+        {activeTab === 'workflows' && (
+          <section className="settings-section">
+            <h3 className="settings-section-title">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"></path>
+              </svg>
+              n8n Workflow Automation
+            </h3>
+
+            <div className="settings-description">
+              <p>
+                Connect n8n to automate customer workflows with AI-powered WhatsApp conversations.
+              </p>
+              <p className="settings-note">
+                Get started at{' '}
+                <a href="https://n8n.io" target="_blank" rel="noopener noreferrer">
+                  n8n.io
+                </a>
+              </p>
+            </div>
+
+            {/* Enable Toggle */}
+            <div className="settings-field">
+              <label className="settings-checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={workflowEnabled}
+                  onChange={(e) => setWorkflowEnabledState(e.target.checked)}
+                  disabled={saving}
+                />
+                <span>Enable Workflow Automation</span>
+              </label>
+            </div>
+
+            {/* n8n Base URL */}
+            <div className="settings-field">
+              <label htmlFor="n8n-base-url">n8n Instance URL (optional)</label>
+              <input
+                id="n8n-base-url"
+                type="text"
+                value={n8nBaseUrl}
+                onChange={(e) => setN8nBaseUrl(e.target.value)}
+                placeholder="https://your-instance.app.n8n.cloud"
+                className="settings-input"
+                disabled={saving}
+              />
+              <span className="field-hint">Your n8n cloud or self-hosted URL</span>
+            </div>
+
+            <div className="settings-divider">
+              <span>Webhook URLs (from n8n)</span>
+            </div>
+
+            {/* Document Signing Webhook */}
+            <div className="settings-field">
+              <label htmlFor="webhook-doc-signing">Document Signing Workflow</label>
+              <input
+                id="webhook-doc-signing"
+                type="text"
+                value={webhookDocSigning}
+                onChange={(e) => setWebhookDocSigning(e.target.value)}
+                placeholder="https://your-instance.app.n8n.cloud/webhook/..."
+                className="settings-input"
+                disabled={saving}
+              />
+              <span className="field-hint">Webhook URL for document signing requests</span>
+            </div>
+
+            {/* Appointment Confirmation Webhook */}
+            <div className="settings-field">
+              <label htmlFor="webhook-appointment">Appointment Confirmation Workflow</label>
+              <input
+                id="webhook-appointment"
+                type="text"
+                value={webhookAppointment}
+                onChange={(e) => setWebhookAppointment(e.target.value)}
+                placeholder="https://your-instance.app.n8n.cloud/webhook/..."
+                className="settings-input"
+                disabled={saving}
+              />
+              <span className="field-hint">Webhook URL for appointment confirmations</span>
+            </div>
+
+            {/* Follow-up Webhook */}
+            <div className="settings-field">
+              <label htmlFor="webhook-followup">AI Follow-up Workflow</label>
+              <input
+                id="webhook-followup"
+                type="text"
+                value={webhookFollowUp}
+                onChange={(e) => setWebhookFollowUp(e.target.value)}
+                placeholder="https://your-instance.app.n8n.cloud/webhook/..."
+                className="settings-input"
+                disabled={saving}
+              />
+              <span className="field-hint">Webhook URL for AI-powered follow-ups</span>
+            </div>
+
+            <div className="settings-status">
+              <span className={`status-indicator ${isWorkflowConfigured ? 'active' : 'inactive'}`}>
+                {isWorkflowConfigured ? 'Workflows Active' : 'Workflows Not Configured'}
+              </span>
+            </div>
+
+            {message && (
+              <div className={`settings-message ${message.type}`}>
+                {message.text}
+              </div>
+            )}
+
+            <div className="settings-actions">
+              <button
+                className="btn btn-primary"
+                onClick={handleSaveWorkflows}
                 disabled={saving}
               >
                 {saving ? 'Saving...' : 'Save'}
