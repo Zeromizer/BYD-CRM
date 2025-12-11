@@ -103,16 +103,6 @@ function InvoiceTab({
     };
   }, [vsaData?.insuranceFee, vsaData?.insuranceSubsidy]);
 
-  // Others from VSA Pricing & Deposit - Add Others
-  const othersData = useMemo(() => {
-    const value = parseNum(vsaData?.addOthers);
-    return {
-      value,
-      tooltip: `From VSA Pricing & Deposit`,
-      source: 'VSA'
-    };
-  }, [vsaData?.addOthers]);
-
   // Calculate sub-total: First Payment + fees (installment only if interest > 2.5%)
   const subTotal = useMemo(() => {
     const firstPayment = firstPaymentData.value;
@@ -123,12 +113,12 @@ function InvoiceTab({
     const transferFee = parseNum(formData.transferFee);
     const inspectionFee = parseNum(formData.inspectionFee);
     const processingFee = parseNum(formData.processingFee);
-    const others = othersData.value;
+    const others = parseNum(formData.others);
     const accessories1 = parseNum(formData.accessories1);
     const accessories2 = parseNum(formData.accessories2);
 
     return firstPayment + installment + insuranceFee + roadTax + transferFee + inspectionFee + processingFee + others + accessories1 + accessories2;
-  }, [formData, firstPaymentData.value, installmentData, insuranceFeeData.value, othersData.value]);
+  }, [formData, firstPaymentData.value, installmentData, insuranceFeeData.value]);
 
   // Calculate trade-in balance
   const tradeInBalance = useMemo(() => {
@@ -307,17 +297,17 @@ function InvoiceTab({
           </div>
           <div className="pricing-row">
             <label>OTHERS</label>
-            <PriceTooltip field="others" tooltip={othersData.tooltip} source={othersData.source}>
-              <div className="price-input">
-                <span>$</span>
-                <input
-                  type="text"
-                  readOnly
-                  value={formatNum(othersData.value)}
-                  className="price-value-text"
-                />
-              </div>
-            </PriceTooltip>
+            <div className="price-input">
+              <span>$</span>
+              <input
+                type="text"
+                name="others"
+                value={formData.others || ''}
+                onChange={handleInputChange}
+                placeholder="0.00"
+                disabled={isSubmitting}
+              />
+            </div>
           </div>
           <div className="pricing-row">
             <label>ACCESSORIES / ADD ON</label>
