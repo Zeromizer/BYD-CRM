@@ -52,6 +52,7 @@ const CURRENCY_FIELDS = new Set([
   'loanAmount',
   'adminFee',
   'monthlyRepayment',
+  'invoiceInstallmentConditional',
   // Proposal - Pricing
   'proposalSellingPrice',
   'proposalDownpayment',
@@ -151,6 +152,9 @@ class ExcelService {
       monthlyRepayment: customer.vsa_monthlyRepayment || '',
       loanSummary: this.formatLoanSummary(customer.vsa_loanAmount, customer.vsa_interest, customer.vsa_tenure),
 
+      // Invoice - Conditional Installment (only included if interest > 2.5%)
+      invoiceInstallmentConditional: this.getConditionalInstallment(customer.vsa_interest, customer.vsa_monthlyRepayment),
+
       // Proposal Details
       proposalModel: customer.proposal_model || '',
       proposalBank: customer.proposal_bank || '',
@@ -209,6 +213,19 @@ class ExcelService {
     const parts = [loanStr, interestStr, tenureStr].filter(p => p);
 
     return `LOAN AMOUNT ${parts.join(' x ')}`;
+  }
+
+  /**
+   * Get conditional installment value
+   * Only returns the installment amount if interest rate > 2.5%
+   * Returns empty string if interest rate <= 2.5%
+   */
+  getConditionalInstallment(interest, monthlyRepayment) {
+    const interestRate = parseFloat((interest || '0').toString().replace(/[^0-9.-]/g, ''));
+    if (interestRate > 2.5) {
+      return monthlyRepayment || '';
+    }
+    return '';
   }
 
   /**

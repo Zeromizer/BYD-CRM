@@ -7,7 +7,8 @@ import { SaveButton } from '../../AnimatedButton/AnimatedButton';
  * Loan Amount = Loan Amount (from VSA)
  * First Payment = Price Sold - Loan Amount
  * Insurance Fee = VSA Insurance Fee - Insurance Subsidy
- * Sub-Total = First Payment + all fees below it
+ * Installment = Monthly Repayment (only included if interest rate > 2.5%)
+ * Sub-Total = First Payment + conditional fees
  */
 function InvoiceTab({
   formData,
@@ -72,6 +73,25 @@ function InvoiceTab({
     };
   }, [priceSoldData.value, loanAmountData.value]);
 
+  // Interest rate and installment logic
+  // If interest rate > 2.5%, include installment in sub-total
+  // If interest rate <= 2.5%, exclude installment from sub-total
+  const installmentData = useMemo(() => {
+    const interestRate = parseNum(vsaData?.interest);
+    const monthlyRepayment = parseNum(vsaData?.monthlyRepayment || formData.installment);
+    const includeInSubtotal = interestRate > 2.5;
+
+    return {
+      value: monthlyRepayment,
+      interestRate,
+      includeInSubtotal,
+      tooltip: includeInSubtotal
+        ? `Monthly Repayment: $${formatNum(monthlyRepayment)}\nInterest Rate: ${interestRate}% (> 2.5%)\n✓ Included in Sub-Total`
+        : `Monthly Repayment: $${formatNum(monthlyRepayment)}\nInterest Rate: ${interestRate}% (≤ 2.5%)\n✗ Not included in Sub-Total`,
+      source: 'VSA Remarks & Loan'
+    };
+  }, [vsaData?.interest, vsaData?.monthlyRepayment, formData.installment]);
+
   // Calculate Insurance Fee: VSA Insurance Fee - Insurance Subsidy
   const insuranceFeeData = useMemo(() => {
     const insuranceFee = parseNum(vsaData?.insuranceFee);
@@ -83,10 +103,11 @@ function InvoiceTab({
     };
   }, [vsaData?.insuranceFee, vsaData?.insuranceSubsidy]);
 
-  // Calculate sub-total: First Payment + all fees
+  // Calculate sub-total: First Payment + fees (installment only if interest > 2.5%)
   const subTotal = useMemo(() => {
     const firstPayment = firstPaymentData.value;
-    const installment = parseNum(formData.installment);
+    // Only include installment if interest rate > 2.5%
+    const installment = installmentData.includeInSubtotal ? installmentData.value : 0;
     const insuranceFee = insuranceFeeData.value;
     const roadTax = parseNum(formData.roadTax);
     const transferFee = parseNum(formData.transferFee);
@@ -97,7 +118,7 @@ function InvoiceTab({
     const accessories2 = parseNum(formData.accessories2);
 
     return firstPayment + installment + insuranceFee + roadTax + transferFee + inspectionFee + processingFee + others + accessories1 + accessories2;
-  }, [formData, firstPaymentData.value, insuranceFeeData.value]);
+  }, [formData, firstPaymentData.value, installmentData, insuranceFeeData.value]);
 
   // Calculate trade-in balance
   const tradeInBalance = useMemo(() => {
@@ -181,19 +202,19 @@ function InvoiceTab({
               <span className="tooltip-icon">ⓘ</span>
             </PriceTooltip>
           </div>
-          <div className="pricing-row">
+          <div className={`pricing-row ${!installmentData.includeInSubtotal ? 'excluded-from-total' : ''}`}>
             <label>INSTALLMENT</label>
-            <div className="price-input">
-              <span>$</span>
-              <input
-                type="text"
-                name="installment"
-                value={formData.installment || ''}
-                onChange={handleInputChange}
-                placeholder="0.00"
-                disabled={isSubmitting}
-              />
-            </div>
+            <PriceTooltip
+              field="installment"
+              tooltip={installmentData.tooltip}
+              source={installmentData.source}
+            >
+              <div className="price-input">
+                <span>$</span>
+                <span className="price-value-text">{formatNum(installmentData.value)}</span>
+              </div>
+              <span className="tooltip-icon">ⓘ</span>
+            </PriceTooltip>
           </div>
           <div className="pricing-row">
             <label>INSURANCE FEE</label>

@@ -74,6 +74,7 @@ const FIELD_NAMES = {
   insuranceSubsidy: 'Insurance Subsidy',
   monthlyRepayment: 'Monthly Repayment',
   loanSummary: 'Loan Summary (Combined)',
+  invoiceInstallmentConditional: 'Invoice Installment (if interest > 2.5%)',
 
   // Proposal Details
   proposalModel: 'Proposal - Model',
@@ -1055,6 +1056,10 @@ function ExcelIntegration() {
                     <option value="insuranceSubsidy">Insurance Subsidy</option>
                     <option value="monthlyRepayment">Monthly Repayment</option>
                     <option value="loanSummary">Loan Summary (Combined)</option>
+                  </optgroup>
+
+                  <optgroup label="Invoice">
+                    <option value="invoiceInstallmentConditional">Installment (if interest &gt; 2.5%)</option>
                   </optgroup>
 
                   <optgroup label="Proposal">

@@ -13,6 +13,15 @@ const getPrzTypeLabel = (value) => {
   return found ? found.label : value;
 };
 
+// Helper to get conditional installment (only if interest > 2.5%)
+const getConditionalInstallment = (interest, monthlyRepayment) => {
+  const interestRate = parseFloat((interest || '0').toString().replace(/[^0-9.-]/g, ''));
+  if (interestRate > 2.5) {
+    return monthlyRepayment || '';
+  }
+  return '';
+};
+
 /**
  * All available field types with display names and categories
  */
@@ -86,6 +95,7 @@ export const FIELD_TYPES = {
   insuranceSubsidy: { label: 'Insurance Subsidy', category: 'Remarks & Loan' },
   monthlyRepayment: { label: 'Monthly Repayment', category: 'Remarks & Loan' },
   loanSummary: { label: 'Loan Summary (Combined)', category: 'Remarks & Loan' },
+  invoiceInstallmentConditional: { label: 'Invoice Installment (if interest > 2.5%)', category: 'Invoice' },
 
   // Proposal Details
   proposalModel: { label: 'Model', category: 'Proposal' },
@@ -281,6 +291,9 @@ export function getCustomerDataMapping(customer) {
     insuranceSubsidy: customer.vsa_insuranceSubsidy || '',
     monthlyRepayment: customer.vsa_monthlyRepayment || '',
 
+    // Invoice - Conditional Installment (only if interest > 2.5%)
+    invoiceInstallmentConditional: getConditionalInstallment(customer.vsa_interest, customer.vsa_monthlyRepayment),
+
     // Proposal Details
     proposalModel: customer.proposal_model || '',
     proposalBank: customer.proposal_bank || '',
@@ -395,6 +408,7 @@ export function getSampleCustomerData() {
     adminFee: '$500',
     insuranceSubsidy: '$150',
     monthlyRepayment: '$1,950',
+    invoiceInstallmentConditional: '$1,950', // Included because interest 2.88% > 2.5%
 
     // Proposal
     proposalModel: 'BYD ATTO 3 Premium',
