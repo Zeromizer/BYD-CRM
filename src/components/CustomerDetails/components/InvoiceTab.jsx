@@ -1,9 +1,10 @@
-import { memo, useCallback, useMemo } from 'react';
+import { memo, useCallback, useMemo, useState } from 'react';
 import { SaveButton } from '../../AnimatedButton/AnimatedButton';
 
 /**
  * InvoiceTab - Pricing section for invoice
  * First Payment is calculated as Purchase Price with COE - Loan Amount
+ * Insurance Fee is calculated as VSA Insurance Fee - Insurance Subsidy
  */
 function InvoiceTab({
   formData,
@@ -14,10 +15,17 @@ function InvoiceTab({
   onSave,
   onCancel,
 }) {
+  const [activeTooltip, setActiveTooltip] = useState(null);
+
   const handleInputChange = useCallback((e) => {
     const { name, value } = e.target;
     onFieldChange(name, value);
   }, [onFieldChange]);
+
+  // Toggle tooltip (for mobile click)
+  const toggleTooltip = useCallback((field) => {
+    setActiveTooltip(prev => prev === field ? null : field);
+  }, []);
 
   // Parse number helper
   const parseNum = (val) => {
@@ -32,16 +40,31 @@ function InvoiceTab({
   };
 
   // Calculate First Payment: Purchase Price with COE - Loan Amount
-  const firstPayment = useMemo(() => {
+  const firstPaymentData = useMemo(() => {
     const purchasePriceWithCOE = parseNum(vsaData?.purchasePriceWithCOE || formData.priceSold);
     const loanAmount = parseNum(formData.financeAmount || vsaData?.loanAmount);
-    return purchasePriceWithCOE - loanAmount;
+    return {
+      value: purchasePriceWithCOE - loanAmount,
+      tooltip: `Purchase Price with COE: $${formatNum(purchasePriceWithCOE)}\nLoan Amount: $${formatNum(loanAmount)}`,
+      source: 'VSA'
+    };
   }, [vsaData?.purchasePriceWithCOE, vsaData?.loanAmount, formData.priceSold, formData.financeAmount]);
+
+  // Calculate Insurance Fee: VSA Insurance Fee - Insurance Subsidy
+  const insuranceFeeData = useMemo(() => {
+    const insuranceFee = parseNum(vsaData?.insuranceFee);
+    const insuranceSubsidy = parseNum(vsaData?.insuranceSubsidy);
+    return {
+      value: insuranceFee - insuranceSubsidy,
+      tooltip: `Insurance Fee: $${formatNum(insuranceFee)}\nInsurance Subsidy: -$${formatNum(insuranceSubsidy)}`,
+      source: 'VSA Insurance'
+    };
+  }, [vsaData?.insuranceFee, vsaData?.insuranceSubsidy]);
 
   // Calculate sub-total
   const subTotal = useMemo(() => {
     const priceSold = parseNum(formData.priceSold);
-    const insuranceFee = parseNum(formData.insuranceFee);
+    const insuranceFee = insuranceFeeData.value;
     const roadTax = parseNum(formData.roadTax);
     const transferFee = parseNum(formData.transferFee);
     const inspectionFee = parseNum(formData.inspectionFee);
@@ -51,7 +74,7 @@ function InvoiceTab({
     const accessories2 = parseNum(formData.accessories2);
 
     return priceSold + insuranceFee + roadTax + transferFee + inspectionFee + processingFee + others + accessories1 + accessories2;
-  }, [formData]);
+  }, [formData, insuranceFeeData.value]);
 
   // Calculate trade-in balance
   const tradeInBalance = useMemo(() => {
@@ -69,6 +92,24 @@ function InvoiceTab({
     return subTotal - deposit - othersDeduction - tradeIn;
   }, [subTotal, formData.depositPaid, formData.othersDeduction, formData.tradeInBalance, tradeInBalance]);
 
+  // Tooltip component
+  const PriceTooltip = ({ field, tooltip, source, children }) => (
+    <div
+      className="price-with-tooltip"
+      onClick={() => toggleTooltip(field)}
+      onMouseEnter={() => setActiveTooltip(field)}
+      onMouseLeave={() => setActiveTooltip(null)}
+    >
+      {children}
+      {activeTooltip === field && (
+        <div className="price-tooltip">
+          <div className="tooltip-source">Source: {source}</div>
+          <div className="tooltip-content">{tooltip}</div>
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <>
       {/* Pricing Section */}
@@ -77,10 +118,17 @@ function InvoiceTab({
         <div className="invoice-pricing-grid">
           <div className="pricing-row">
             <label>FIRST PAYMENT</label>
-            <div className="price-input">
-              <span>$</span>
-              <span className="price-value-text">{formatNum(firstPayment)}</span>
-            </div>
+            <PriceTooltip
+              field="firstPayment"
+              tooltip={firstPaymentData.tooltip}
+              source={firstPaymentData.source}
+            >
+              <div className="price-input has-tooltip">
+                <span>$</span>
+                <span className="price-value-text">{formatNum(firstPaymentData.value)}</span>
+                <span className="tooltip-icon">ⓘ</span>
+              </div>
+            </PriceTooltip>
           </div>
           <div className="pricing-row">
             <label>INSTALLMENT</label>
@@ -98,17 +146,17 @@ function InvoiceTab({
           </div>
           <div className="pricing-row">
             <label>INSURANCE FEE</label>
-            <div className="price-input">
-              <span>$</span>
-              <input
-                type="text"
-                name="insuranceFee"
-                value={formData.insuranceFee || ''}
-                onChange={handleInputChange}
-                placeholder="0.00"
-                disabled={isSubmitting}
-              />
-            </div>
+            <PriceTooltip
+              field="insuranceFee"
+              tooltip={insuranceFeeData.tooltip}
+              source={insuranceFeeData.source}
+            >
+              <div className="price-input has-tooltip">
+                <span>$</span>
+                <span className="price-value-text">{formatNum(insuranceFeeData.value)}</span>
+                <span className="tooltip-icon">ⓘ</span>
+              </div>
+            </PriceTooltip>
           </div>
           <div className="pricing-row">
             <label>ROAD TAX</label>

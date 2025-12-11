@@ -2059,6 +2059,63 @@
   color: var(--color-text-on-card);
 }
 
+/* Tooltip styles for calculated fields */
+.price-with-tooltip {
+  position: relative;
+  flex: 1;
+  cursor: pointer;
+}
+
+.price-input.has-tooltip {
+  position: relative;
+}
+
+.tooltip-icon {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 12px;
+  color: var(--color-primary);
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.price-with-tooltip:hover .tooltip-icon {
+  opacity: 1;
+}
+
+.price-tooltip {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 100;
+  min-width: 220px;
+  padding: 12px;
+  background: var(--color-card-background);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  white-space: pre-line;
+}
+
+.tooltip-source {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--color-border-light);
+}
+
+.tooltip-content {
+  font-size: 13px;
+  color: var(--color-text-on-card);
+  line-height: 1.6;
+}
+
 .balance-row {
   margin-top: 12px;
   padding: 12px 0;
