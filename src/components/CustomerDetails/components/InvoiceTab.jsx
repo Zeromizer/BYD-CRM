@@ -77,9 +77,9 @@ function InvoiceTab({
         <div className="invoice-pricing-grid">
           <div className="pricing-row">
             <label>FIRST PAYMENT</label>
-            <div className="price-display">
+            <div className="price-input">
               <span>$</span>
-              <span className="calculated-value bold-value">{formatNum(firstPayment)}</span>
+              <span className="price-value-text">{formatNum(firstPayment)}</span>
             </div>
           </div>
           <div className="pricing-row">
@@ -212,7 +212,7 @@ function InvoiceTab({
             <label>SUB-TOTAL</label>
             <div className="price-input">
               <span>$</span>
-              <span className="bold-value">{formatNum(subTotal)}</span>
+              <span className="price-value-text bold-value">{formatNum(subTotal)}</span>
             </div>
           </div>
           <div className="pricing-row">
