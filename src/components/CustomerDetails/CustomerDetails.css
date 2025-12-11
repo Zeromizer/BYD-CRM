@@ -2026,6 +2026,26 @@
   font-weight: 700;
 }
 
+/* Simplified subtotal row - same styling as regular rows but with bold numbers */
+.subtotal-row-simple {
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 2px solid var(--color-border);
+  border-bottom: none;
+}
+
+.subtotal-row-simple label {
+  font-weight: 700;
+  color: var(--color-text-on-card);
+}
+
+/* Bold value styling for calculated fields */
+.bold-value {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--color-text-on-card);
+}
+
 .balance-row {
   margin-top: 12px;
   padding: 12px 0;
