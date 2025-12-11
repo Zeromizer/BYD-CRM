@@ -137,22 +137,36 @@ function InvoiceTab({
   }, [subTotal, formData.depositPaid, formData.othersDeduction, formData.tradeInBalance, tradeInBalance]);
 
   // Tooltip component
-  const PriceTooltip = ({ field, tooltip, source, children }) => (
-    <div
-      className="price-with-tooltip"
-      onClick={() => toggleTooltip(field)}
-      onMouseEnter={() => setActiveTooltip(field)}
-      onMouseLeave={() => setActiveTooltip(null)}
-    >
-      {children}
-      {activeTooltip === field && (
-        <div className="price-tooltip">
-          <div className="tooltip-source">Source: {source}</div>
-          <div className="tooltip-content">{tooltip}</div>
-        </div>
-      )}
-    </div>
-  );
+  const PriceTooltip = ({ field, tooltip, source, children }) => {
+    const handleIconClick = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      toggleTooltip(field);
+    };
+
+    return (
+      <div
+        className="price-with-tooltip"
+        onMouseEnter={() => setActiveTooltip(field)}
+        onMouseLeave={() => setActiveTooltip(null)}
+      >
+        {children}
+        <span
+          className="tooltip-icon"
+          onClick={handleIconClick}
+          onTouchEnd={handleIconClick}
+        >
+          ⓘ
+        </span>
+        {activeTooltip === field && (
+          <div className="price-tooltip">
+            <div className="tooltip-source">Source: {source}</div>
+            <div className="tooltip-content">{tooltip}</div>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <>
@@ -171,7 +185,6 @@ function InvoiceTab({
                 <span>$</span>
                 <span className="price-value-text">{formatNum(priceSoldData.value)}</span>
               </div>
-              <span className="tooltip-icon">ⓘ</span>
             </PriceTooltip>
           </div>
           <div className="pricing-row">
@@ -185,7 +198,6 @@ function InvoiceTab({
                 <span>$</span>
                 <span className="price-value-text">{formatNum(loanAmountData.value)}</span>
               </div>
-              <span className="tooltip-icon">ⓘ</span>
             </PriceTooltip>
           </div>
           <div className="pricing-row">
@@ -199,7 +211,6 @@ function InvoiceTab({
                 <span>$</span>
                 <span className="price-value-text">{formatNum(firstPaymentData.value)}</span>
               </div>
-              <span className="tooltip-icon">ⓘ</span>
             </PriceTooltip>
           </div>
           <div className={`pricing-row ${!installmentData.includeInSubtotal ? 'excluded-from-total' : ''}`}>
@@ -213,7 +224,6 @@ function InvoiceTab({
                 <span>$</span>
                 <span className="price-value-text">{formatNum(installmentData.value)}</span>
               </div>
-              <span className="tooltip-icon">ⓘ</span>
             </PriceTooltip>
           </div>
           <div className="pricing-row">
@@ -227,7 +237,6 @@ function InvoiceTab({
                 <span>$</span>
                 <span className="price-value-text">{formatNum(insuranceFeeData.value)}</span>
               </div>
-              <span className="tooltip-icon">ⓘ</span>
             </PriceTooltip>
           </div>
           <div className="pricing-row">

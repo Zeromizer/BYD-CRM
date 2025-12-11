@@ -2074,28 +2074,48 @@
 
 .tooltip-icon {
   flex-shrink: 0;
-  font-size: 14px;
+  font-size: 16px;
   color: var(--color-primary);
   opacity: 0.6;
   transition: opacity 0.2s;
+  cursor: pointer;
+  padding: 8px;
+  margin: -8px;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
 }
 
-.price-with-tooltip:hover .tooltip-icon {
+.price-with-tooltip:hover .tooltip-icon,
+.tooltip-icon:active {
   opacity: 1;
 }
 
 .price-tooltip {
   position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
-  z-index: 100;
-  min-width: 220px;
+  top: calc(100% + 12px);
+  right: -8px;
+  z-index: 1000;
+  min-width: 200px;
+  max-width: 280px;
   padding: 12px;
   background: var(--color-card-background);
   border: 1px solid var(--color-border);
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
   white-space: pre-line;
+}
+
+/* Mobile tooltip positioning */
+@media (max-width: 768px) {
+  .price-tooltip {
+    position: fixed;
+    top: auto;
+    bottom: 80px;
+    left: 16px;
+    right: 16px;
+    max-width: none;
+    width: calc(100% - 32px);
+  }
 }
 
 .tooltip-source {
