@@ -2115,6 +2115,17 @@
   line-height: 1.6;
 }
 
+/* Excluded from total styling - grayed out row */
+.pricing-row.excluded-from-total {
+  opacity: 0.5;
+}
+
+.pricing-row.excluded-from-total label::after {
+  content: ' *';
+  color: var(--color-text-tertiary);
+  font-size: 11px;
+}
+
 .balance-row {
   margin-top: 12px;
   padding: 12px 0;

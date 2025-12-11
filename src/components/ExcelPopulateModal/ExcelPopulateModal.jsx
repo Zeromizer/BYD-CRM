@@ -74,6 +74,7 @@ const FIELD_NAMES = {
   insuranceSubsidy: 'Insurance Subsidy',
   monthlyRepayment: 'Monthly Repayment',
   loanSummary: 'Loan Summary (Combined)',
+  invoiceInstallmentConditional: 'Invoice Installment (if interest > 2.5%)',
 
   // Proposal Details
   proposalModel: 'Proposal - Model',
