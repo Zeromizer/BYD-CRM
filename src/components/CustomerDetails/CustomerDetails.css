@@ -2105,16 +2105,29 @@
   white-space: pre-line;
 }
 
-/* Mobile tooltip positioning */
+/* Mobile tooltip - bottom sheet style */
 @media (max-width: 768px) {
   .price-tooltip {
+    position: fixed !important;
+    top: auto !important;
+    bottom: 100px !important;
+    left: 20px !important;
+    right: 20px !important;
+    max-width: none !important;
+    width: auto !important;
+    border-radius: 12px;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.25);
+  }
+
+  .price-tooltip::before {
+    content: '';
     position: fixed;
-    top: auto;
-    bottom: 80px;
-    left: 16px;
-    right: 16px;
-    max-width: none;
-    width: calc(100% - 32px);
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: -1;
   }
 }
 
