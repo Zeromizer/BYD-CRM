@@ -2136,7 +2136,13 @@
 }
 
 /* Excluded from total styling - grayed out row */
-.pricing-row.excluded-from-total {
+/* Apply opacity to individual elements, not the row, to preserve tooltip stacking context */
+.pricing-row.excluded-from-total > label {
+  opacity: 0.5;
+}
+
+.pricing-row.excluded-from-total .price-with-tooltip .price-input,
+.pricing-row.excluded-from-total .price-with-tooltip .tooltip-icon {
   opacity: 0.5;
 }
 
