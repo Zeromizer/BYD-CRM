@@ -123,11 +123,11 @@ function InvoiceTab({
               tooltip={firstPaymentData.tooltip}
               source={firstPaymentData.source}
             >
-              <div className="price-input has-tooltip">
+              <div className="price-input">
                 <span>$</span>
                 <span className="price-value-text">{formatNum(firstPaymentData.value)}</span>
-                <span className="tooltip-icon">ⓘ</span>
               </div>
+              <span className="tooltip-icon">ⓘ</span>
             </PriceTooltip>
           </div>
           <div className="pricing-row">
@@ -151,11 +151,11 @@ function InvoiceTab({
               tooltip={insuranceFeeData.tooltip}
               source={insuranceFeeData.source}
             >
-              <div className="price-input has-tooltip">
+              <div className="price-input">
                 <span>$</span>
                 <span className="price-value-text">{formatNum(insuranceFeeData.value)}</span>
-                <span className="tooltip-icon">ⓘ</span>
               </div>
+              <span className="tooltip-icon">ⓘ</span>
             </PriceTooltip>
           </div>
           <div className="pricing-row">

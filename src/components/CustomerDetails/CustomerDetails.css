@@ -2062,22 +2062,21 @@
 /* Tooltip styles for calculated fields */
 .price-with-tooltip {
   position: relative;
-  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   cursor: pointer;
 }
 
-.price-input.has-tooltip {
-  position: relative;
+.price-with-tooltip .price-input {
+  flex: 1;
 }
 
 .tooltip-icon {
-  position: absolute;
-  right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 12px;
+  flex-shrink: 0;
+  font-size: 14px;
   color: var(--color-primary);
-  opacity: 0.7;
+  opacity: 0.6;
   transition: opacity 0.2s;
 }
 
