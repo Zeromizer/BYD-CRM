@@ -3,8 +3,11 @@ import { SaveButton } from '../../AnimatedButton/AnimatedButton';
 
 /**
  * InvoiceTab - Pricing section for invoice
- * First Payment is calculated as Purchase Price with COE - Loan Amount
- * Insurance Fee is calculated as VSA Insurance Fee - Insurance Subsidy
+ * Price Sold = Purchase Price with COE (from VSA)
+ * Loan Amount = Loan Amount (from VSA)
+ * First Payment = Price Sold - Loan Amount
+ * Insurance Fee = VSA Insurance Fee - Insurance Subsidy
+ * Sub-Total = First Payment + all fees below it
  */
 function InvoiceTab({
   formData,
@@ -39,16 +42,35 @@ function InvoiceTab({
     return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
 
-  // Calculate First Payment: Purchase Price with COE - Loan Amount
-  const firstPaymentData = useMemo(() => {
-    const purchasePriceWithCOE = parseNum(vsaData?.purchasePriceWithCOE || formData.priceSold);
-    const loanAmount = parseNum(formData.financeAmount || vsaData?.loanAmount);
+  // Price Sold: Purchase Price with COE from VSA
+  const priceSoldData = useMemo(() => {
+    const value = parseNum(vsaData?.purchasePriceWithCOE);
     return {
-      value: purchasePriceWithCOE - loanAmount,
-      tooltip: `Purchase Price with COE: $${formatNum(purchasePriceWithCOE)}\nLoan Amount: $${formatNum(loanAmount)}`,
+      value,
+      tooltip: `From VSA Vehicle Package`,
       source: 'VSA'
     };
-  }, [vsaData?.purchasePriceWithCOE, vsaData?.loanAmount, formData.priceSold, formData.financeAmount]);
+  }, [vsaData?.purchasePriceWithCOE]);
+
+  // Loan Amount from VSA
+  const loanAmountData = useMemo(() => {
+    const value = parseNum(vsaData?.loanAmount);
+    return {
+      value,
+      tooltip: `From VSA Remarks & Loan`,
+      source: 'VSA'
+    };
+  }, [vsaData?.loanAmount]);
+
+  // Calculate First Payment: Price Sold - Loan Amount
+  const firstPaymentData = useMemo(() => {
+    const value = priceSoldData.value - loanAmountData.value;
+    return {
+      value,
+      tooltip: `Price Sold: $${formatNum(priceSoldData.value)}\nLoan Amount: -$${formatNum(loanAmountData.value)}`,
+      source: 'Calculated'
+    };
+  }, [priceSoldData.value, loanAmountData.value]);
 
   // Calculate Insurance Fee: VSA Insurance Fee - Insurance Subsidy
   const insuranceFeeData = useMemo(() => {
@@ -61,9 +83,10 @@ function InvoiceTab({
     };
   }, [vsaData?.insuranceFee, vsaData?.insuranceSubsidy]);
 
-  // Calculate sub-total
+  // Calculate sub-total: First Payment + all fees
   const subTotal = useMemo(() => {
-    const priceSold = parseNum(formData.priceSold);
+    const firstPayment = firstPaymentData.value;
+    const installment = parseNum(formData.installment);
     const insuranceFee = insuranceFeeData.value;
     const roadTax = parseNum(formData.roadTax);
     const transferFee = parseNum(formData.transferFee);
@@ -73,8 +96,8 @@ function InvoiceTab({
     const accessories1 = parseNum(formData.accessories1);
     const accessories2 = parseNum(formData.accessories2);
 
-    return priceSold + insuranceFee + roadTax + transferFee + inspectionFee + processingFee + others + accessories1 + accessories2;
-  }, [formData, insuranceFeeData.value]);
+    return firstPayment + installment + insuranceFee + roadTax + transferFee + inspectionFee + processingFee + others + accessories1 + accessories2;
+  }, [formData, firstPaymentData.value, insuranceFeeData.value]);
 
   // Calculate trade-in balance
   const tradeInBalance = useMemo(() => {
@@ -116,6 +139,34 @@ function InvoiceTab({
       <div className="info-section">
         <h3>Pricing</h3>
         <div className="invoice-pricing-grid">
+          <div className="pricing-row">
+            <label>PRICE SOLD</label>
+            <PriceTooltip
+              field="priceSold"
+              tooltip={priceSoldData.tooltip}
+              source={priceSoldData.source}
+            >
+              <div className="price-input">
+                <span>$</span>
+                <span className="price-value-text">{formatNum(priceSoldData.value)}</span>
+              </div>
+              <span className="tooltip-icon">ⓘ</span>
+            </PriceTooltip>
+          </div>
+          <div className="pricing-row">
+            <label>LOAN AMOUNT</label>
+            <PriceTooltip
+              field="loanAmount"
+              tooltip={loanAmountData.tooltip}
+              source={loanAmountData.source}
+            >
+              <div className="price-input">
+                <span>$</span>
+                <span className="price-value-text">{formatNum(loanAmountData.value)}</span>
+              </div>
+              <span className="tooltip-icon">ⓘ</span>
+            </PriceTooltip>
+          </div>
           <div className="pricing-row">
             <label>FIRST PAYMENT</label>
             <PriceTooltip
