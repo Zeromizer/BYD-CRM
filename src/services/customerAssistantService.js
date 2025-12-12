@@ -322,13 +322,19 @@ export const generateWhatsAppUrl = (phone, message) => {
 export const openWhatsApp = (phone, message) => {
   const url = generateWhatsAppUrl(phone, message);
   if (url) {
-    // Use a hidden anchor to trigger WhatsApp directly without opening a browser tab
-    const link = document.createElement('a');
-    link.href = url;
-    link.style.display = 'none';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // Use a hidden iframe to trigger WhatsApp without navigating away or opening a visible tab
+    const iframe = document.createElement('iframe');
+    iframe.style.cssText = 'position:absolute;width:0;height:0;border:none;visibility:hidden;';
+    iframe.src = url;
+    document.body.appendChild(iframe);
+
+    // Clean up iframe after protocol handler triggers
+    setTimeout(() => {
+      if (iframe.parentNode) {
+        document.body.removeChild(iframe);
+      }
+    }, 2000);
+
     return true;
   }
   return false;
