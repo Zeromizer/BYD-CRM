@@ -42,6 +42,7 @@ const FIELD_NAMES = {
   tradeInCarNo: 'Trade in Car No',
   tradeInCarModel: 'Trade in Car Model',
   tradeInAmount: 'Trade In Amount',
+  tradeInSettlementCost: 'Settlement Cost',
   tradeInOwnerNotCustomer: 'Trade-In Owner Different',
   tradeInOwnerName: 'Trade-In Owner Name',
   tradeInOwnerNric: 'Trade-In Owner NRIC',
