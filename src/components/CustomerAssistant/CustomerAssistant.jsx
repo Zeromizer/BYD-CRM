@@ -135,7 +135,7 @@ function DocumentPicker({
     setLoading(true);
     setError(null);
     try {
-      const files = await oneDriveService.listFolderContents(folderId);
+      const files = await oneDriveService.listFolder(folderId);
       setDocuments(files || []);
     } catch (err) {
       console.error('Failed to load documents:', err);
