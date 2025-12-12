@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { FolderOpen, ScanLine, Archive, ArchiveRestore, Workflow, MessageCircle } from 'lucide-react';
+import { FolderOpen, ScanLine, Archive, ArchiveRestore, Workflow, MessageCircle, Paperclip, Folder, File, Image, FileText, FileSpreadsheet, X, Loader } from 'lucide-react';
 import useCustomerStore from '../../stores/useCustomerStore';
 import useAuthStore from '../../stores/useAuthStore';
 import { getStorageService } from '../../services/storageServiceSelector';
@@ -23,6 +23,8 @@ import WorkflowPanel from './components/WorkflowPanel';
 import { useCustomerForm, useGuarantors } from './hooks/useCustomerForm';
 import { useDocumentManager, useDragDrop, useTouchMenu } from './hooks/useDocumentManager';
 import { openWhatsApp } from '../../services/customerAssistantService';
+import { getShareableLink } from '../../services/whatsappDocumentService';
+import oneDriveService from '../../services/oneDriveService';
 
 import './CustomerDetails.css';
 
@@ -179,6 +181,12 @@ function CustomerDetails() {
   const [archiveType, setArchiveType] = useState(null); // 'lost' or 'completed'
   const [isWhatsAppModalOpen, setIsWhatsAppModalOpen] = useState(false);
   const [whatsAppMessage, setWhatsAppMessage] = useState('');
+  const [showWhatsAppDocPicker, setShowWhatsAppDocPicker] = useState(false);
+  const [whatsAppAttachments, setWhatsAppAttachments] = useState([]);
+  const [docPickerDocuments, setDocPickerDocuments] = useState([]);
+  const [docPickerLoading, setDocPickerLoading] = useState(false);
+  const [docPickerError, setDocPickerError] = useState(null);
+  const [docPickerPath, setDocPickerPath] = useState([]);
 
   // Memoize extractors to prevent unnecessary hook updates
   const memoizedDetailsExtractor = useCallback(extractDetailsData, []);
@@ -440,6 +448,99 @@ function CustomerDetails() {
       }
     }
   }, [documentManager.folderPath, toast]);
+
+  // Document picker helper function
+  const getFileIcon = useCallback((filename) => {
+    const ext = filename?.toLowerCase().split('.').pop();
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
+      return <Image size={16} />;
+    }
+    if (['xlsx', 'xls', 'csv'].includes(ext)) {
+      return <FileSpreadsheet size={16} />;
+    }
+    if (ext === 'pdf') {
+      return <FileText size={16} />;
+    }
+    return <File size={16} />;
+  }, []);
+
+  // Load documents for WhatsApp doc picker
+  const loadWhatsAppDocuments = useCallback(async (folderId) => {
+    setDocPickerLoading(true);
+    setDocPickerError(null);
+    try {
+      const files = await oneDriveService.listFolder(folderId);
+      setDocPickerDocuments(files || []);
+    } catch (err) {
+      console.error('Failed to load documents:', err);
+      setDocPickerError('Failed to load documents');
+      setDocPickerDocuments([]);
+    } finally {
+      setDocPickerLoading(false);
+    }
+  }, []);
+
+  // Open WhatsApp doc picker
+  const openWhatsAppDocPicker = useCallback(() => {
+    if (customer?.driveFolderId) {
+      setDocPickerPath([{ id: customer.driveFolderId, name: 'Customer Folder' }]);
+      loadWhatsAppDocuments(customer.driveFolderId);
+      setShowWhatsAppDocPicker(true);
+    }
+  }, [customer?.driveFolderId, loadWhatsAppDocuments]);
+
+  // Handle folder navigation in doc picker
+  const handleDocPickerFolderClick = useCallback((folder) => {
+    setDocPickerPath(prev => [...prev, { id: folder.id, name: folder.name }]);
+    loadWhatsAppDocuments(folder.id);
+  }, [loadWhatsAppDocuments]);
+
+  // Handle breadcrumb click in doc picker
+  const handleDocPickerBreadcrumb = useCallback((index) => {
+    const newPath = docPickerPath.slice(0, index + 1);
+    setDocPickerPath(newPath);
+    loadWhatsAppDocuments(newPath[newPath.length - 1].id);
+  }, [docPickerPath, loadWhatsAppDocuments]);
+
+  // Handle file selection in doc picker
+  const handleDocPickerSelectFile = useCallback(async (file) => {
+    try {
+      setDocPickerLoading(true);
+      const shareLink = await getShareableLink(file.id);
+      const newAttachment = {
+        id: file.id,
+        name: file.name,
+        shareLink,
+      };
+      // Don't add duplicates
+      if (!whatsAppAttachments.some(a => a.id === file.id)) {
+        setWhatsAppAttachments(prev => [...prev, newAttachment]);
+      }
+      setShowWhatsAppDocPicker(false);
+    } catch (err) {
+      console.error('Failed to get shareable link:', err);
+      setDocPickerError('Failed to create shareable link');
+    } finally {
+      setDocPickerLoading(false);
+    }
+  }, [whatsAppAttachments]);
+
+  // Remove attachment
+  const removeWhatsAppAttachment = useCallback((docId) => {
+    setWhatsAppAttachments(prev => prev.filter(a => a.id !== docId));
+  }, []);
+
+  // Build full message with attachments
+  const fullWhatsAppMessage = useMemo(() => {
+    let msg = whatsAppMessage;
+    if (whatsAppAttachments.length > 0) {
+      msg += '\n\n📎 Documents:';
+      whatsAppAttachments.forEach((doc) => {
+        msg += `\n• ${doc.name}: ${doc.shareLink}`;
+      });
+    }
+    return msg;
+  }, [whatsAppMessage, whatsAppAttachments]);
 
   // Empty state
   if (!customer) {
@@ -931,7 +1032,11 @@ function CustomerDetails() {
       {/* WhatsApp Quick Compose Modal */}
       <Modal
         isOpen={isWhatsAppModalOpen}
-        onClose={() => setIsWhatsAppModalOpen(false)}
+        onClose={() => {
+          setIsWhatsAppModalOpen(false);
+          setWhatsAppAttachments([]);
+          setShowWhatsAppDocPicker(false);
+        }}
         title="Send WhatsApp Message"
         size="medium"
       >
@@ -948,15 +1053,130 @@ function CustomerDetails() {
               value={whatsAppMessage}
               onChange={(e) => setWhatsAppMessage(e.target.value)}
               placeholder="Type your message..."
-              rows={5}
+              rows={4}
               autoFocus
             />
           </div>
 
+          {/* Attachments Section */}
+          <div className="whatsapp-attachments-section">
+            <label>Attachments</label>
+            <div className="whatsapp-attachments-list">
+              {whatsAppAttachments.map((doc) => (
+                <div key={doc.id} className="whatsapp-attached-doc">
+                  <Paperclip size={12} />
+                  <span>{doc.name}</span>
+                  <button
+                    className="btn-remove-attachment"
+                    onClick={() => removeWhatsAppAttachment(doc.id)}
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              ))}
+              <button
+                className="btn-add-attachment"
+                onClick={openWhatsAppDocPicker}
+                disabled={!isSignedIn || !customer?.driveFolderId}
+              >
+                <Paperclip size={14} />
+                Attach File
+              </button>
+            </div>
+            {!isSignedIn && (
+              <p className="attachment-hint">Connect to OneDrive to attach files</p>
+            )}
+            {isSignedIn && !customer?.driveFolderId && (
+              <p className="attachment-hint">No folder for this customer yet</p>
+            )}
+          </div>
+
+          {/* Document Picker Inline */}
+          {showWhatsAppDocPicker && (
+            <div className="whatsapp-doc-picker">
+              <div className="doc-picker-header">
+                <span>Select a document</span>
+                <button
+                  className="btn-close-picker"
+                  onClick={() => setShowWhatsAppDocPicker(false)}
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              {/* Breadcrumb */}
+              <div className="doc-picker-breadcrumb">
+                {docPickerPath.map((folder, index) => (
+                  <span key={folder.id}>
+                    {index > 0 && <span className="breadcrumb-sep">/</span>}
+                    <button
+                      className="breadcrumb-btn"
+                      onClick={() => handleDocPickerBreadcrumb(index)}
+                    >
+                      {folder.name}
+                    </button>
+                  </span>
+                ))}
+              </div>
+
+              {/* File List */}
+              <div className="doc-picker-list">
+                {docPickerLoading ? (
+                  <div className="doc-picker-loading">
+                    <Loader size={20} className="spinning" />
+                    <span>Loading...</span>
+                  </div>
+                ) : docPickerError ? (
+                  <div className="doc-picker-error">{docPickerError}</div>
+                ) : docPickerDocuments.length === 0 ? (
+                  <div className="doc-picker-empty">No files in this folder</div>
+                ) : (
+                  <>
+                    {/* Folders first */}
+                    {docPickerDocuments.filter(d => d.folder).map((folder) => (
+                      <div
+                        key={folder.id}
+                        className="doc-picker-item folder"
+                        onClick={() => handleDocPickerFolderClick(folder)}
+                      >
+                        <Folder size={16} />
+                        <span>{folder.name}</span>
+                      </div>
+                    ))}
+                    {/* Then files */}
+                    {docPickerDocuments.filter(d => !d.folder).map((file) => (
+                      <div
+                        key={file.id}
+                        className="doc-picker-item file"
+                        onClick={() => handleDocPickerSelectFile(file)}
+                      >
+                        {getFileIcon(file.name)}
+                        <span>{file.name}</span>
+                      </div>
+                    ))}
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Preview with attachments */}
+          {(whatsAppMessage || whatsAppAttachments.length > 0) && (
+            <div className="whatsapp-preview">
+              <label>Preview</label>
+              <div className="whatsapp-preview-content">
+                {fullWhatsAppMessage}
+              </div>
+            </div>
+          )}
+
           <div className="whatsapp-modal-actions">
             <button
               className="btn btn-secondary"
-              onClick={() => setIsWhatsAppModalOpen(false)}
+              onClick={() => {
+                setIsWhatsAppModalOpen(false);
+                setWhatsAppAttachments([]);
+              }}
             >
               Cancel
             </button>
@@ -964,9 +1184,10 @@ function CustomerDetails() {
               className="btn btn-whatsapp"
               onClick={() => {
                 if (customer.phone && whatsAppMessage.trim()) {
-                  openWhatsApp(customer.phone, whatsAppMessage);
+                  openWhatsApp(customer.phone, fullWhatsAppMessage);
                   setIsWhatsAppModalOpen(false);
                   setWhatsAppMessage('');
+                  setWhatsAppAttachments([]);
                   toast.success('Opening WhatsApp...');
                 } else if (!customer.phone) {
                   toast.error('Customer has no phone number');
