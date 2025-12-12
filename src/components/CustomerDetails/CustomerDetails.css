@@ -2637,3 +2637,45 @@
 .spinning {
   animation: spin 1s linear infinite;
 }
+
+
+/* WhatsApp Preview Header */
+.whatsapp-preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.whatsapp-preview-header label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text-on-card);
+}
+
+/* Copy Button */
+.btn-copy-message {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  background: var(--color-card-background);
+  border: 1px solid var(--color-border-light);
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.btn-copy-message:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  background: #f0f9ff;
+}
+
+.btn-copy-message.copied {
+  background: #ecfdf5;
+  border-color: #10b981;
+  color: #059669;
+}

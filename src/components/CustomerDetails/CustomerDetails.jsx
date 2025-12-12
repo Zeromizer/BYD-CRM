@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { FolderOpen, ScanLine, Archive, ArchiveRestore, Workflow, MessageCircle, Paperclip, Folder, File, Image, FileText, FileSpreadsheet, X, Loader } from 'lucide-react';
+import { FolderOpen, ScanLine, Archive, ArchiveRestore, Workflow, MessageCircle, Paperclip, Folder, File, Image, FileText, FileSpreadsheet, X, Loader, Copy, Check } from 'lucide-react';
 import useCustomerStore from '../../stores/useCustomerStore';
 import useAuthStore from '../../stores/useAuthStore';
 import { getStorageService } from '../../services/storageServiceSelector';
@@ -187,6 +187,7 @@ function CustomerDetails() {
   const [docPickerLoading, setDocPickerLoading] = useState(false);
   const [docPickerError, setDocPickerError] = useState(null);
   const [docPickerPath, setDocPickerPath] = useState([]);
+  const [messageCopied, setMessageCopied] = useState(false);
 
   // Memoize extractors to prevent unnecessary hook updates
   const memoizedDetailsExtractor = useCallback(extractDetailsData, []);
@@ -1163,7 +1164,22 @@ function CustomerDetails() {
           {/* Preview with attachments */}
           {(whatsAppMessage || whatsAppAttachments.length > 0) && (
             <div className="whatsapp-preview">
-              <label>Preview</label>
+              <div className="whatsapp-preview-header">
+                <label>Preview</label>
+                <button
+                  className={`btn-copy-message ${messageCopied ? 'copied' : ''}`}
+                  onClick={() => {
+                    navigator.clipboard.writeText(fullWhatsAppMessage);
+                    setMessageCopied(true);
+                    toast.success('Message copied to clipboard');
+                    setTimeout(() => setMessageCopied(false), 2000);
+                  }}
+                  title="Copy to clipboard"
+                >
+                  {messageCopied ? <Check size={14} /> : <Copy size={14} />}
+                  {messageCopied ? 'Copied' : 'Copy'}
+                </button>
+              </div>
               <div className="whatsapp-preview-content">
                 {fullWhatsAppMessage}
               </div>
