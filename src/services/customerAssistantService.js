@@ -322,7 +322,13 @@ export const generateWhatsAppUrl = (phone, message) => {
 export const openWhatsApp = (phone, message) => {
   const url = generateWhatsAppUrl(phone, message);
   if (url) {
-    window.open(url, '_blank');
+    // Use a hidden anchor to trigger WhatsApp directly without opening a browser tab
+    const link = document.createElement('a');
+    link.href = url;
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
     return true;
   }
   return false;
