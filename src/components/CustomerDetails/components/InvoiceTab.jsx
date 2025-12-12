@@ -382,6 +382,34 @@ function InvoiceTab({
             </div>
           </div>
           <div className="pricing-row">
+            <label>TRADE-IN PRICE</label>
+            <div className="price-input">
+              <span>$</span>
+              <input
+                type="text"
+                name="tradeInPrice"
+                value={formData.tradeInPrice || ''}
+                onChange={handleInputChange}
+                placeholder="0.00"
+                disabled={isSubmitting}
+              />
+            </div>
+          </div>
+          <div className="pricing-row">
+            <label>SETTLEMENT COST (-)</label>
+            <div className="price-input">
+              <span>$</span>
+              <input
+                type="text"
+                name="tradeInSettlement"
+                value={formData.tradeInSettlement || ''}
+                onChange={handleInputChange}
+                placeholder="0.00"
+                disabled={isSubmitting}
+              />
+            </div>
+          </div>
+          <div className="pricing-row">
             <label>TRADE-IN-BAL (-)</label>
             <div className="price-input">
               <span>$</span>

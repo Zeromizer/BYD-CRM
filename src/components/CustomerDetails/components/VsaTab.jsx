@@ -254,6 +254,18 @@ function VsaTab({
               disabled={isSubmitting}
             />
           </div>
+          <div className="inline-edit-item">
+            <label htmlFor="vsa_tradeInSettlementCost">Settlement Cost</label>
+            <input
+              type="text"
+              id="vsa_tradeInSettlementCost"
+              name="tradeInSettlementCost"
+              value={formData.tradeInSettlementCost || ''}
+              onChange={handleInputChange}
+              placeholder="Settlement cost"
+              disabled={isSubmitting}
+            />
+          </div>
         </div>
 
         <div className="inline-edit-grid" style={{ marginTop: '16px' }}>

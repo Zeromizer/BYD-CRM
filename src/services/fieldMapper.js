@@ -62,6 +62,7 @@ export const FIELD_TYPES = {
   tradeInCarNo: { label: 'Trade in Car No', category: 'Trade-In' },
   tradeInCarModel: { label: 'Trade in Car Model', category: 'Trade-In' },
   tradeInAmount: { label: 'Trade In Amount', category: 'Trade-In' },
+  tradeInSettlementCost: { label: 'Settlement Cost', category: 'Trade-In' },
   tradeInOwnerNotCustomer: { label: 'Trade In Owner Not Customer', category: 'Trade-In' },
   tradeInOwnerName: { label: 'Trade In Owner Name', category: 'Trade-In' },
   tradeInOwnerNric: { label: 'Trade In Owner NRIC', category: 'Trade-In' },
@@ -258,6 +259,7 @@ export function getCustomerDataMapping(customer) {
     tradeInCarNo: customer.vsa_tradeInCarNo || '',
     tradeInCarModel: customer.vsa_tradeInCarModel || '',
     tradeInAmount: customer.vsa_tradeInAmount || '',
+    tradeInSettlementCost: customer.vsa_tradeInSettlementCost || '',
     tradeInOwnerNotCustomer: customer.vsa_tradeInOwnerNotCustomer || false,
     tradeInOwnerName: customer.vsa_tradeInOwnerName || '',
     tradeInOwnerNric: customer.vsa_tradeInOwnerNric || '',
@@ -386,6 +388,7 @@ export function getSampleCustomerData() {
     tradeInCarNo: 'SXX1234A',
     tradeInCarModel: 'Honda Civic 2018',
     tradeInAmount: '$15,000',
+    tradeInSettlementCost: '$5,000',
 
     // Delivery
     dateOfRegistration: '15/06/2025',
