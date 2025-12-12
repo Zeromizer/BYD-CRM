@@ -3,7 +3,7 @@
  *
  * Main dashboard for AI-powered customer messaging.
  * Features click-to-send via WhatsApp Web, AI message generation,
- * and comprehensive action tracking.
+ * document attachment via shareable links, and comprehensive action tracking.
  */
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
@@ -12,24 +12,24 @@ import {
   Send,
   Sparkles,
   RefreshCw,
-  Filter,
   Clock,
   AlertCircle,
   CheckCircle,
-  ChevronDown,
-  ChevronRight,
   Users,
-  Calendar,
   Zap,
   SkipForward,
   Edit3,
   ExternalLink,
   Copy,
   Check,
-  Bell,
-  Settings,
-  History,
   FileText,
+  Paperclip,
+  X,
+  Folder,
+  File,
+  Image,
+  FileSpreadsheet,
+  Loader,
 } from 'lucide-react';
 import useCustomerStore, { useCustomers } from '../../stores/useCustomerStore';
 import useCustomerAssistantStore, {
@@ -40,15 +40,33 @@ import useCustomerAssistantStore, {
 import useAuthStore from '../../stores/useAuthStore';
 import {
   generateMessage,
-  generateWhatsAppUrl,
   openWhatsApp,
   generateActionsForAllCustomers,
   AI_PERSONALITIES,
 } from '../../services/customerAssistantService';
 import { logMessageSent, logMessageQueued } from '../../services/activityLogService';
-import { MESSAGE_PRIORITY, MESSAGE_FRAMEWORK, MILESTONES } from '../../constants/customerAssistantConfig';
+import { getCustomerDocuments, getShareableLink } from '../../services/whatsappDocumentService';
+import oneDriveService from '../../services/oneDriveService';
+import { MESSAGE_PRIORITY } from '../../constants/customerAssistantConfig';
 import { MILESTONES as MILESTONE_CONFIG } from '../../constants/milestones';
 import './CustomerAssistant.css';
+
+/**
+ * Get icon for file type
+ */
+function getFileIcon(filename) {
+  const ext = filename?.toLowerCase().split('.').pop();
+  if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
+    return <Image size={16} />;
+  }
+  if (['xlsx', 'xls', 'csv'].includes(ext)) {
+    return <FileSpreadsheet size={16} />;
+  }
+  if (ext === 'pdf') {
+    return <FileText size={16} />;
+  }
+  return <File size={16} />;
+}
 
 /**
  * Priority Badge Component
@@ -84,22 +102,193 @@ function MilestoneBadge({ milestoneId }) {
 }
 
 /**
+ * Document Picker Component
+ */
+function DocumentPicker({
+  isOpen,
+  onClose,
+  customerId,
+  customerFolderId,
+  onSelectDocument,
+  isSignedIn
+}) {
+  const [documents, setDocuments] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [currentFolder, setCurrentFolder] = useState(null);
+  const [folderPath, setFolderPath] = useState([]);
+
+  // Load documents when picker opens
+  useEffect(() => {
+    if (isOpen && customerFolderId && isSignedIn) {
+      loadDocuments(customerFolderId);
+      setCurrentFolder({ id: customerFolderId, name: 'Customer Folder' });
+      setFolderPath([{ id: customerFolderId, name: 'Customer Folder' }]);
+    }
+  }, [isOpen, customerFolderId, isSignedIn]);
+
+  const loadDocuments = async (folderId) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const files = await oneDriveService.listFolderContents(folderId);
+      setDocuments(files || []);
+    } catch (err) {
+      console.error('Failed to load documents:', err);
+      setError('Failed to load documents');
+      setDocuments([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFolderClick = (folder) => {
+    setFolderPath([...folderPath, { id: folder.id, name: folder.name }]);
+    setCurrentFolder(folder);
+    loadDocuments(folder.id);
+  };
+
+  const handleBreadcrumbClick = (index) => {
+    const newPath = folderPath.slice(0, index + 1);
+    setFolderPath(newPath);
+    const folder = newPath[newPath.length - 1];
+    setCurrentFolder(folder);
+    loadDocuments(folder.id);
+  };
+
+  const handleSelectFile = async (file) => {
+    try {
+      setLoading(true);
+      // Generate shareable link
+      const shareLink = await getShareableLink(file.id);
+      onSelectDocument({
+        id: file.id,
+        name: file.name,
+        shareLink,
+      });
+      onClose();
+    } catch (err) {
+      console.error('Failed to get shareable link:', err);
+      setError('Failed to create shareable link');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="document-picker-overlay" onClick={onClose}>
+      <div className="document-picker" onClick={(e) => e.stopPropagation()}>
+        <div className="document-picker-header">
+          <h3><Paperclip size={18} /> Attach Document</h3>
+          <button className="btn-close" onClick={onClose}>
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Breadcrumb navigation */}
+        <div className="document-picker-breadcrumb">
+          {folderPath.map((folder, index) => (
+            <span key={folder.id}>
+              {index > 0 && <span className="breadcrumb-separator">/</span>}
+              <button
+                className="breadcrumb-item"
+                onClick={() => handleBreadcrumbClick(index)}
+              >
+                {folder.name}
+              </button>
+            </span>
+          ))}
+        </div>
+
+        <div className="document-picker-content">
+          {!isSignedIn ? (
+            <div className="picker-message">
+              <AlertCircle size={24} />
+              <p>Please connect to OneDrive to access documents</p>
+            </div>
+          ) : !customerFolderId ? (
+            <div className="picker-message">
+              <Folder size={24} />
+              <p>No folder found for this customer</p>
+            </div>
+          ) : loading ? (
+            <div className="picker-message">
+              <Loader size={24} className="spinning" />
+              <p>Loading documents...</p>
+            </div>
+          ) : error ? (
+            <div className="picker-message picker-error">
+              <AlertCircle size={24} />
+              <p>{error}</p>
+            </div>
+          ) : documents.length === 0 ? (
+            <div className="picker-message">
+              <FileText size={24} />
+              <p>No documents in this folder</p>
+            </div>
+          ) : (
+            <ul className="document-list">
+              {/* Folders first */}
+              {documents.filter(d => d.folder).map((folder) => (
+                <li
+                  key={folder.id}
+                  className="document-item folder-item"
+                  onClick={() => handleFolderClick(folder)}
+                >
+                  <Folder size={18} />
+                  <span className="document-name">{folder.name}</span>
+                </li>
+              ))}
+              {/* Then files */}
+              {documents.filter(d => !d.folder).map((file) => (
+                <li
+                  key={file.id}
+                  className="document-item file-item"
+                  onClick={() => handleSelectFile(file)}
+                >
+                  {getFileIcon(file.name)}
+                  <span className="document-name">{file.name}</span>
+                  <span className="document-size">
+                    {file.size ? `${(file.size / 1024).toFixed(1)} KB` : ''}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <div className="document-picker-footer">
+          <p className="picker-hint">
+            Select a document to attach a shareable link to your message
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
  * Action Card Component
  */
 function ActionCard({
   action,
+  customer,
   isSelected,
   isGenerating,
+  isSignedIn,
   onSelect,
   onGenerate,
   onSend,
   onSkip,
   onEdit,
+  onAttachDocument,
 }) {
-  const [showDetails, setShowDetails] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [editedMessage, setEditedMessage] = useState('');
   const [copied, setCopied] = useState(false);
+  const [showDocPicker, setShowDocPicker] = useState(false);
 
   const handleCopy = useCallback(() => {
     if (action.generatedMessage) {
@@ -123,6 +312,22 @@ function ActionCard({
     setEditMode(false);
     setEditedMessage('');
   }, []);
+
+  const handleDocumentSelect = useCallback((doc) => {
+    onAttachDocument(action.id, doc);
+  }, [action.id, onAttachDocument]);
+
+  // Build display message with attachments
+  const displayMessage = useMemo(() => {
+    let msg = action.generatedMessage || '';
+    if (action.attachedDocuments?.length > 0) {
+      msg += '\n\n📎 Attached Documents:';
+      action.attachedDocuments.forEach((doc) => {
+        msg += `\n• ${doc.name}: ${doc.shareLink}`;
+      });
+    }
+    return msg;
+  }, [action.generatedMessage, action.attachedDocuments]);
 
   return (
     <div
@@ -153,7 +358,7 @@ function ActionCard({
 
         {action.generatedMessage && !editMode && (
           <div className="generated-message">
-            <p>{action.generatedMessage}</p>
+            <p>{displayMessage}</p>
           </div>
         )}
 
@@ -187,6 +392,18 @@ function ActionCard({
           <div className="generating">
             <RefreshCw size={16} className="spinning" />
             <span>Generating message...</span>
+          </div>
+        )}
+
+        {/* Attached documents display */}
+        {action.attachedDocuments?.length > 0 && !editMode && (
+          <div className="attached-documents">
+            {action.attachedDocuments.map((doc, index) => (
+              <div key={index} className="attached-doc">
+                <Paperclip size={12} />
+                <span>{doc.name}</span>
+              </div>
+            ))}
           </div>
         )}
       </div>
@@ -226,6 +443,17 @@ function ActionCard({
                 title="Edit message"
               >
                 <Edit3 size={14} />
+              </button>
+              <button
+                className="btn-icon-small"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowDocPicker(true);
+                }}
+                title="Attach document"
+                disabled={!isSignedIn || !customer?.driveFolderId}
+              >
+                <Paperclip size={14} />
               </button>
               <button
                 className="btn-icon-small"
@@ -273,6 +501,16 @@ function ActionCard({
           <span>Related: {action.messageConfig.documents.join(', ')}</span>
         </div>
       )}
+
+      {/* Document Picker Modal */}
+      <DocumentPicker
+        isOpen={showDocPicker}
+        onClose={() => setShowDocPicker(false)}
+        customerId={action.customerId}
+        customerFolderId={customer?.driveFolderId}
+        onSelectDocument={handleDocumentSelect}
+        isSignedIn={isSignedIn}
+      />
     </div>
   );
 }
@@ -380,7 +618,6 @@ function CustomerAssistant() {
 
   const {
     initialize,
-    addAction,
     updateAction,
     setGeneratedMessage,
     markAsSent,
@@ -413,6 +650,13 @@ function CustomerAssistant() {
     const urgentCount = actionQueue.filter(a => a.priority === MESSAGE_PRIORITY.URGENT).length;
     return { ...baseCounts, urgent: urgentCount };
   }, [actionQueue, getActionCounts]);
+
+  // Create customer lookup map
+  const customerMap = useMemo(() => {
+    const map = {};
+    customers.forEach(c => { map[c.id] = c; });
+    return map;
+  }, [customers]);
 
   /**
    * Refresh actions - generate new actions based on customer state
@@ -474,8 +718,17 @@ function CustomerAssistant() {
 
     const customer = customers.find(c => c.id === action.customerId);
 
+    // Build full message with attachments
+    let fullMessage = action.generatedMessage;
+    if (action.attachedDocuments?.length > 0) {
+      fullMessage += '\n\n📎 Documents:';
+      action.attachedDocuments.forEach((doc) => {
+        fullMessage += `\n• ${doc.name}: ${doc.shareLink}`;
+      });
+    }
+
     // Open WhatsApp Web
-    const opened = openWhatsApp(action.customerPhone, action.generatedMessage);
+    const opened = openWhatsApp(action.customerPhone, fullMessage);
 
     if (opened) {
       // Mark as sent
@@ -486,7 +739,7 @@ function CustomerAssistant() {
         logMessageSent(
           customer.id,
           action.messageConfig?.id || 'manual',
-          action.generatedMessage,
+          fullMessage,
           'whatsapp_web'
         );
       }
@@ -509,6 +762,21 @@ function CustomerAssistant() {
       editedAt: new Date().toISOString(),
     });
   }, [updateAction]);
+
+  /**
+   * Attach document to action
+   */
+  const handleAttachDocument = useCallback((actionId, document) => {
+    const action = actionQueue.find(a => a.id === actionId);
+    const currentDocs = action?.attachedDocuments || [];
+
+    // Don't add duplicate
+    if (currentDocs.some(d => d.id === document.id)) return;
+
+    updateAction(actionId, {
+      attachedDocuments: [...currentDocs, document],
+    });
+  }, [actionQueue, updateAction]);
 
   return (
     <div className="customer-assistant">
@@ -564,13 +832,16 @@ function CustomerAssistant() {
               <ActionCard
                 key={action.id}
                 action={action}
+                customer={customerMap[action.customerId]}
                 isSelected={selectedActionId === action.id}
                 isGenerating={isGenerating && generatingActionId === action.id}
+                isSignedIn={isSignedIn}
                 onSelect={selectAction}
                 onGenerate={handleGenerate}
                 onSend={handleSend}
                 onSkip={handleSkip}
                 onEdit={handleEdit}
+                onAttachDocument={handleAttachDocument}
               />
             ))}
           </div>
@@ -583,9 +854,9 @@ function CustomerAssistant() {
         <ol>
           <li><strong>Refresh Actions</strong> - Scan customers and generate suggested messages</li>
           <li><strong>Generate</strong> - AI creates a personalized message based on customer context</li>
+          <li><strong>Attach Documents</strong> - Click <Paperclip size={12} style={{display: 'inline', verticalAlign: 'middle'}} /> to attach OneDrive files as shareable links</li>
           <li><strong>Review & Edit</strong> - Review the message and make any adjustments</li>
           <li><strong>Send via WhatsApp</strong> - Opens WhatsApp Web with the message pre-filled</li>
-          <li><strong>Press Send</strong> - In WhatsApp, press send to deliver the message</li>
         </ol>
       </div>
     </div>
