@@ -30,6 +30,9 @@ import {
   Image,
   FileSpreadsheet,
   Loader,
+  Plus,
+  ChevronDown,
+  Trash2,
 } from 'lucide-react';
 import useCustomerStore, { useCustomers } from '../../stores/useCustomerStore';
 import useCustomerAssistantStore, {
@@ -43,11 +46,12 @@ import {
   openWhatsApp,
   generateActionsForAllCustomers,
   AI_PERSONALITIES,
+  fillMessageTemplate,
 } from '../../services/customerAssistantService';
 import { logMessageSent, logMessageQueued } from '../../services/activityLogService';
-import { getCustomerDocuments, getShareableLink } from '../../services/whatsappDocumentService';
+import { getShareableLink } from '../../services/whatsappDocumentService';
 import oneDriveService from '../../services/oneDriveService';
-import { MESSAGE_PRIORITY } from '../../constants/customerAssistantConfig';
+import { MESSAGE_PRIORITY, MESSAGE_FRAMEWORK } from '../../constants/customerAssistantConfig';
 import { MILESTONES as MILESTONE_CONFIG } from '../../constants/milestones';
 import './CustomerAssistant.css';
 
@@ -264,6 +268,326 @@ function DocumentPicker({
             Select a document to attach a shareable link to your message
           </p>
         </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Compose Message Modal Component
+ */
+function ComposeMessageModal({
+  isOpen,
+  onClose,
+  customers,
+  isSignedIn,
+  personality,
+}) {
+  const [selectedCustomerId, setSelectedCustomerId] = useState('');
+  const [selectedMessageType, setSelectedMessageType] = useState('');
+  const [message, setMessage] = useState('');
+  const [attachedDocuments, setAttachedDocuments] = useState([]);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [showDocPicker, setShowDocPicker] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Get selected customer
+  const selectedCustomer = useMemo(() => {
+    return customers.find(c => c.id === selectedCustomerId);
+  }, [customers, selectedCustomerId]);
+
+  // Filter customers based on search
+  const filteredCustomers = useMemo(() => {
+    if (!searchQuery) return customers.filter(c => !c.archiveStatus);
+    const query = searchQuery.toLowerCase();
+    return customers.filter(c =>
+      !c.archiveStatus &&
+      (c.name?.toLowerCase().includes(query) || c.phone?.includes(query))
+    );
+  }, [customers, searchQuery]);
+
+  // Get message templates for selected customer's milestone
+  const messageTemplates = useMemo(() => {
+    if (!selectedCustomer) return [];
+    const milestone = selectedCustomer.checklist?.currentMilestone || 'test_drive';
+    const milestoneConfig = MESSAGE_FRAMEWORK[milestone];
+    if (!milestoneConfig) return [];
+    return milestoneConfig.messages.map(m => ({
+      id: m.id,
+      title: m.title,
+      template: m.template,
+      config: m,
+    }));
+  }, [selectedCustomer]);
+
+  // Reset form when modal opens/closes
+  useEffect(() => {
+    if (!isOpen) {
+      setSelectedCustomerId('');
+      setSelectedMessageType('');
+      setMessage('');
+      setAttachedDocuments([]);
+      setSearchQuery('');
+    }
+  }, [isOpen]);
+
+  // Handle AI message generation
+  const handleGenerate = async () => {
+    if (!selectedCustomer) return;
+
+    setIsGenerating(true);
+    try {
+      // Find message config
+      const messageConfig = messageTemplates.find(m => m.id === selectedMessageType)?.config;
+
+      if (messageConfig) {
+        const result = await generateMessage(selectedCustomer, messageConfig, { personality });
+        setMessage(result.message);
+      } else {
+        // Generate a general message
+        const generalConfig = {
+          title: 'General Message',
+          description: 'A general follow-up message',
+          template: `Hi {customerName}! Hope you're doing well. Just checking in regarding your ${selectedCustomer.vsa_makeModel || selectedCustomer.proposal_model || 'BYD'} journey. Let me know if you have any questions!`,
+          aiContext: 'Generate a friendly, professional follow-up message for this customer based on their current stage.',
+        };
+        const result = await generateMessage(selectedCustomer, generalConfig, { personality });
+        setMessage(result.message);
+      }
+
+      // Log activity
+      logMessageQueued(selectedCustomer.id, selectedMessageType || 'manual', message);
+    } catch (error) {
+      console.error('Failed to generate message:', error);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  // Handle document selection
+  const handleDocumentSelect = (doc) => {
+    if (!attachedDocuments.some(d => d.id === doc.id)) {
+      setAttachedDocuments([...attachedDocuments, doc]);
+    }
+  };
+
+  // Handle document removal
+  const handleRemoveDocument = (docId) => {
+    setAttachedDocuments(attachedDocuments.filter(d => d.id !== docId));
+  };
+
+  // Build full message with attachments
+  const fullMessage = useMemo(() => {
+    let msg = message;
+    if (attachedDocuments.length > 0) {
+      msg += '\n\n📎 Documents:';
+      attachedDocuments.forEach((doc) => {
+        msg += `\n• ${doc.name}: ${doc.shareLink}`;
+      });
+    }
+    return msg;
+  }, [message, attachedDocuments]);
+
+  // Handle send
+  const handleSend = () => {
+    if (!selectedCustomer?.phone || !message) return;
+
+    const opened = openWhatsApp(selectedCustomer.phone, fullMessage);
+
+    if (opened) {
+      // Log activity
+      logMessageSent(
+        selectedCustomer.id,
+        selectedMessageType || 'manual',
+        fullMessage,
+        'whatsapp_web'
+      );
+      onClose();
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="compose-modal-overlay" onClick={onClose}>
+      <div className="compose-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="compose-modal-header">
+          <h2><Plus size={20} /> Compose Message</h2>
+          <button className="btn-close" onClick={onClose}>
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="compose-modal-body">
+          {/* Customer Selector */}
+          <div className="compose-field">
+            <label>Select Customer</label>
+            <div className="customer-selector">
+              <input
+                type="text"
+                placeholder="Search customers..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="customer-search"
+              />
+              {!selectedCustomer ? (
+                <div className="customer-list-dropdown">
+                  {filteredCustomers.length === 0 ? (
+                    <div className="no-customers">No customers found</div>
+                  ) : (
+                    filteredCustomers.slice(0, 10).map(customer => (
+                      <div
+                        key={customer.id}
+                        className="customer-option"
+                        onClick={() => {
+                          setSelectedCustomerId(customer.id);
+                          setSearchQuery('');
+                        }}
+                      >
+                        <div className="customer-option-avatar">
+                          {customer.name?.charAt(0)?.toUpperCase() || '?'}
+                        </div>
+                        <div className="customer-option-info">
+                          <span className="customer-option-name">{customer.name}</span>
+                          <span className="customer-option-phone">{customer.phone || 'No phone'}</span>
+                        </div>
+                        <MilestoneBadge milestoneId={customer.checklist?.currentMilestone} />
+                      </div>
+                    ))
+                  )}
+                </div>
+              ) : (
+                <div className="selected-customer">
+                  <div className="customer-option selected">
+                    <div className="customer-option-avatar">
+                      {selectedCustomer.name?.charAt(0)?.toUpperCase() || '?'}
+                    </div>
+                    <div className="customer-option-info">
+                      <span className="customer-option-name">{selectedCustomer.name}</span>
+                      <span className="customer-option-phone">{selectedCustomer.phone || 'No phone'}</span>
+                    </div>
+                    <MilestoneBadge milestoneId={selectedCustomer.checklist?.currentMilestone} />
+                    <button
+                      className="btn-clear-customer"
+                      onClick={() => setSelectedCustomerId('')}
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Message Type Selector (optional) */}
+          {selectedCustomer && messageTemplates.length > 0 && (
+            <div className="compose-field">
+              <label>Message Type (optional)</label>
+              <select
+                value={selectedMessageType}
+                onChange={(e) => setSelectedMessageType(e.target.value)}
+              >
+                <option value="">Custom Message</option>
+                {messageTemplates.map(template => (
+                  <option key={template.id} value={template.id}>
+                    {template.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Message Input */}
+          <div className="compose-field">
+            <label>
+              Message
+              {selectedCustomer && (
+                <button
+                  className="btn-generate-inline"
+                  onClick={handleGenerate}
+                  disabled={isGenerating}
+                >
+                  <Sparkles size={14} />
+                  {isGenerating ? 'Generating...' : 'AI Generate'}
+                </button>
+              )}
+            </label>
+            <textarea
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder={selectedCustomer ? "Type your message or click 'AI Generate'..." : "Select a customer first..."}
+              rows={6}
+              disabled={!selectedCustomer}
+            />
+          </div>
+
+          {/* Attach Documents */}
+          {selectedCustomer && (
+            <div className="compose-field">
+              <label>Attachments</label>
+              <div className="compose-attachments">
+                {attachedDocuments.map((doc) => (
+                  <div key={doc.id} className="attached-doc">
+                    <Paperclip size={12} />
+                    <span>{doc.name}</span>
+                    <button
+                      className="btn-remove-doc"
+                      onClick={() => handleRemoveDocument(doc.id)}
+                    >
+                      <X size={12} />
+                    </button>
+                  </div>
+                ))}
+                <button
+                  className="btn-attach"
+                  onClick={() => setShowDocPicker(true)}
+                  disabled={!isSignedIn || !selectedCustomer?.driveFolderId}
+                >
+                  <Paperclip size={14} />
+                  Attach File
+                </button>
+              </div>
+              {!isSignedIn && (
+                <p className="attach-hint">Connect to OneDrive to attach files</p>
+              )}
+            </div>
+          )}
+
+          {/* Preview */}
+          {message && (
+            <div className="compose-field">
+              <label>Preview</label>
+              <div className="message-preview">
+                <p>{fullMessage}</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="compose-modal-footer">
+          <button className="btn-cancel" onClick={onClose}>
+            Cancel
+          </button>
+          <button
+            className="btn-send-compose"
+            onClick={handleSend}
+            disabled={!selectedCustomer?.phone || !message}
+          >
+            <Send size={16} />
+            Send via WhatsApp
+            <ExternalLink size={12} />
+          </button>
+        </div>
+
+        {/* Document Picker */}
+        <DocumentPicker
+          isOpen={showDocPicker}
+          onClose={() => setShowDocPicker(false)}
+          customerId={selectedCustomerId}
+          customerFolderId={selectedCustomer?.driveFolderId}
+          onSelectDocument={handleDocumentSelect}
+          isSignedIn={isSignedIn}
+        />
       </div>
     </div>
   );
@@ -637,6 +961,7 @@ function CustomerAssistant() {
 
   const [personality, setPersonality] = useState('professional');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [showComposeModal, setShowComposeModal] = useState(false);
 
   // Initialize store on mount
   useEffect(() => {
@@ -787,6 +1112,13 @@ function CustomerAssistant() {
           <h1>Customer Assistant</h1>
         </div>
         <div className="header-actions">
+          <button
+            className="btn-compose"
+            onClick={() => setShowComposeModal(true)}
+          >
+            <Plus size={16} />
+            Compose
+          </button>
           <div className="personality-selector">
             <label>Tone:</label>
             <select
@@ -852,13 +1184,22 @@ function CustomerAssistant() {
       <div className="assistant-instructions">
         <h4>How it works:</h4>
         <ol>
+          <li><strong>Compose</strong> - Click to manually select a customer and write your message</li>
           <li><strong>Refresh Actions</strong> - Scan customers and generate suggested messages</li>
           <li><strong>Generate</strong> - AI creates a personalized message based on customer context</li>
           <li><strong>Attach Documents</strong> - Click <Paperclip size={12} style={{display: 'inline', verticalAlign: 'middle'}} /> to attach OneDrive files as shareable links</li>
-          <li><strong>Review & Edit</strong> - Review the message and make any adjustments</li>
           <li><strong>Send via WhatsApp</strong> - Opens WhatsApp Web with the message pre-filled</li>
         </ol>
       </div>
+
+      {/* Compose Message Modal */}
+      <ComposeMessageModal
+        isOpen={showComposeModal}
+        onClose={() => setShowComposeModal(false)}
+        customers={customers}
+        isSignedIn={isSignedIn}
+        personality={personality}
+      />
     </div>
   );
 }
