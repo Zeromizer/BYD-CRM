@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { FolderOpen, ScanLine, Archive, ArchiveRestore, Workflow } from 'lucide-react';
+import { FolderOpen, ScanLine, Archive, ArchiveRestore, Workflow, MessageCircle } from 'lucide-react';
 import useCustomerStore from '../../stores/useCustomerStore';
 import useAuthStore from '../../stores/useAuthStore';
 import { getStorageService } from '../../services/storageServiceSelector';
@@ -22,6 +22,7 @@ import WorkflowPanel from './components/WorkflowPanel';
 // Import custom hooks
 import { useCustomerForm, useGuarantors } from './hooks/useCustomerForm';
 import { useDocumentManager, useDragDrop, useTouchMenu } from './hooks/useDocumentManager';
+import { openWhatsApp } from '../../services/customerAssistantService';
 
 import './CustomerDetails.css';
 
@@ -176,6 +177,8 @@ function CustomerDetails() {
   const [showActionsMenu, setShowActionsMenu] = useState(false);
   const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false);
   const [archiveType, setArchiveType] = useState(null); // 'lost' or 'completed'
+  const [isWhatsAppModalOpen, setIsWhatsAppModalOpen] = useState(false);
+  const [whatsAppMessage, setWhatsAppMessage] = useState('');
 
   // Memoize extractors to prevent unnecessary hook updates
   const memoizedDetailsExtractor = useCallback(extractDetailsData, []);
@@ -465,6 +468,19 @@ function CustomerDetails() {
           </button>
 
           <h2>{customer.name}</h2>
+
+          {/* WhatsApp Shortcut Button */}
+          <button
+            className="btn-whatsapp-shortcut"
+            onClick={() => {
+              setWhatsAppMessage(`Hi ${customer.name}! `);
+              setIsWhatsAppModalOpen(true);
+            }}
+            aria-label="Send WhatsApp message"
+            title="Send WhatsApp message"
+          >
+            <MessageCircle size={20} />
+          </button>
 
           {/* Actions Dropdown */}
           <div className="actions-dropdown">
@@ -911,6 +927,59 @@ function CustomerDetails() {
         onClose={() => setIsPrintManagerOpen(false)}
         customer={customer}
       />
+
+      {/* WhatsApp Quick Compose Modal */}
+      <Modal
+        isOpen={isWhatsAppModalOpen}
+        onClose={() => setIsWhatsAppModalOpen(false)}
+        title="Send WhatsApp Message"
+        size="medium"
+      >
+        <div className="whatsapp-compose-modal">
+          <div className="whatsapp-recipient">
+            <span className="recipient-label">To:</span>
+            <span className="recipient-name">{customer.name}</span>
+            <span className="recipient-phone">{customer.phone || 'No phone number'}</span>
+          </div>
+
+          <div className="whatsapp-message-field">
+            <label>Message</label>
+            <textarea
+              value={whatsAppMessage}
+              onChange={(e) => setWhatsAppMessage(e.target.value)}
+              placeholder="Type your message..."
+              rows={5}
+              autoFocus
+            />
+          </div>
+
+          <div className="whatsapp-modal-actions">
+            <button
+              className="btn btn-secondary"
+              onClick={() => setIsWhatsAppModalOpen(false)}
+            >
+              Cancel
+            </button>
+            <button
+              className="btn btn-whatsapp"
+              onClick={() => {
+                if (customer.phone && whatsAppMessage.trim()) {
+                  openWhatsApp(customer.phone, whatsAppMessage);
+                  setIsWhatsAppModalOpen(false);
+                  setWhatsAppMessage('');
+                  toast.success('Opening WhatsApp...');
+                } else if (!customer.phone) {
+                  toast.error('Customer has no phone number');
+                }
+              }}
+              disabled={!customer.phone || !whatsAppMessage.trim()}
+            >
+              <MessageCircle size={16} />
+              Send via WhatsApp
+            </button>
+          </div>
+        </div>
+      </Modal>
     </>
   );
 }
