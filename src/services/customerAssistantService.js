@@ -318,23 +318,13 @@ export const generateWhatsAppUrl = (phone, message) => {
 
 /**
  * Open WhatsApp Web with pre-filled message
+ * Note: Opens a browser tab briefly - this is unavoidable with wa.me links
+ * If WhatsApp desktop is already open, close and reopen it for message to populate correctly
  */
 export const openWhatsApp = (phone, message) => {
   const url = generateWhatsAppUrl(phone, message);
   if (url) {
-    // Use a hidden iframe to trigger WhatsApp without navigating away or opening a visible tab
-    const iframe = document.createElement('iframe');
-    iframe.style.cssText = 'position:absolute;width:0;height:0;border:none;visibility:hidden;';
-    iframe.src = url;
-    document.body.appendChild(iframe);
-
-    // Clean up iframe after protocol handler triggers
-    setTimeout(() => {
-      if (iframe.parentNode) {
-        document.body.removeChild(iframe);
-      }
-    }, 2000);
-
+    window.open(url, '_blank', 'noopener,noreferrer');
     return true;
   }
   return false;
