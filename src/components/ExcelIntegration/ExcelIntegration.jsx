@@ -1022,6 +1022,7 @@ function ExcelIntegration() {
                     <option value="tradeInCarNo">Trade in Car No</option>
                     <option value="tradeInCarModel">Trade in Car Model</option>
                     <option value="tradeInAmount">Trade In Amount</option>
+                    <option value="tradeInSettlementCost">Settlement Cost</option>
                     <option value="tradeInOwnerNotCustomer">Trade-In Owner Different</option>
                     <option value="tradeInOwnerName">Trade-In Owner Name</option>
                     <option value="tradeInOwnerNric">Trade-In Owner NRIC</option>
