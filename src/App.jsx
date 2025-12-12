@@ -9,6 +9,7 @@ import './App.css';
 const Dashboard = lazy(() => import('./components/Dashboard/Dashboard'));
 const DocumentManager = lazy(() => import('./components/Documents/DocumentManager/DocumentManager'));
 const ExcelIntegration = lazy(() => import('./components/ExcelIntegration/ExcelIntegration'));
+const CustomerAssistant = lazy(() => import('./components/CustomerAssistant/CustomerAssistant'));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -26,6 +27,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Layout />}>
               <Route index element={<Dashboard />} />
+              <Route path="assistant" element={<CustomerAssistant />} />
               <Route path="documents" element={<DocumentManager />} />
               <Route path="excel" element={<ExcelIntegration />} />
               <Route path="*" element={<Navigate to="/" replace />} />
