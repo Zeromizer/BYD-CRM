@@ -205,9 +205,17 @@ class DocumentRenderer {
     ctx.textAlign = field.alignment || 'left';
     ctx.textBaseline = 'top';
 
+    // Fields that should auto-wrap to 2 lines (Model and Trade in Model)
+    const autoWrapFields = ['proposalModel', 'proposalTradeInModel'];
+    const shouldAutoWrap = autoWrapFields.includes(field.fieldType);
+
     // Handle multi-line text
-    if (field.multiline) {
-      this.drawMultilineText(ctx, value, field.x, field.y, field.maxWidth, fontSizePx * 1.2);
+    if (field.multiline || shouldAutoWrap) {
+      // Use field's maxWidth if set, otherwise calculate based on font size
+      // Default maxWidth allows ~25-30 characters before wrapping
+      const defaultMaxWidth = this.pointsToPixels(150, dpi); // ~2 inches at print DPI
+      const maxWidth = field.maxWidth || defaultMaxWidth;
+      this.drawMultilineText(ctx, value, field.x, field.y, maxWidth, fontSizePx * 1.2);
     } else {
       // Single line text
       ctx.fillText(value, field.x, field.y);
