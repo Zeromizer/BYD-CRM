@@ -212,8 +212,8 @@ class DocumentRenderer {
     // Handle multi-line text
     if (field.multiline || shouldAutoWrap) {
       // Use field's maxWidth if set, otherwise calculate based on font size
-      // Default maxWidth allows ~50-60 characters before wrapping
-      const defaultMaxWidth = this.pointsToPixels(300, dpi); // ~4 inches at print DPI
+      // Default maxWidth allows ~65-75 characters before wrapping
+      const defaultMaxWidth = this.pointsToPixels(400, dpi); // ~5.5 inches at print DPI
       const maxWidth = field.maxWidth || defaultMaxWidth;
       this.drawMultilineText(ctx, value, field.x, field.y, maxWidth, fontSizePx * 1.2);
     } else {
