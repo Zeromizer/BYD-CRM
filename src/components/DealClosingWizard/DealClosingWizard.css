@@ -298,6 +298,38 @@
   text-transform: uppercase;
 }
 
+.auto-calc-badge {
+  padding: 2px 8px;
+  background: #8b5cf6;
+  color: white;
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: 10px;
+  text-transform: uppercase;
+}
+
+.field-item.auto-calculated {
+  border-color: #c4b5fd;
+  background: #f5f3ff;
+}
+
+.field-item.auto-calculated.filled {
+  border-color: #a78bfa;
+  background: #ede9fe;
+}
+
+.auto-calc-input {
+  background: #f5f3ff !important;
+  color: #6d28d9;
+  font-weight: 600;
+  cursor: default;
+}
+
+.auto-calc-input:focus {
+  border-color: #8b5cf6 !important;
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.15) !important;
+}
+
 .field-input {
   width: 100%;
   padding: 8px 12px;

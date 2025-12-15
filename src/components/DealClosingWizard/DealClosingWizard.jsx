@@ -35,9 +35,9 @@ const REQUIRED_VSA_DETAILS = [
 
 const REQUIRED_LOAN_DETAILS = [
   { key: 'vsa_loanAmount', label: 'Loan Amount', critical: false, condition: 'hasLoan', type: 'text', placeholder: '$150,000' },
-  { key: 'vsa_interest', label: 'Interest Rate', critical: false, condition: 'hasLoan', type: 'text', placeholder: '2.88%' },
-  { key: 'vsa_tenure', label: 'Loan Tenure', critical: false, condition: 'hasLoan', type: 'text', placeholder: '7 years' },
-  { key: 'vsa_monthlyRepayment', label: 'Monthly Repayment', critical: false, condition: 'hasLoan', type: 'text', placeholder: '$1,950' },
+  { key: 'vsa_interest', label: 'Interest Rate (%)', critical: false, condition: 'hasLoan', type: 'text', placeholder: '2.88' },
+  { key: 'vsa_tenure', label: 'Loan Tenure (Years)', critical: false, condition: 'hasLoan', type: 'text', placeholder: '7' },
+  { key: 'vsa_monthlyRepayment', label: 'Monthly Repayment', critical: false, condition: 'hasLoan', type: 'text', placeholder: 'Auto-calculated', autoCalculated: true },
 ];
 
 const REQUIRED_TRADE_IN_DETAILS = [
@@ -132,11 +132,52 @@ function DealClosingWizard({ isOpen, onClose, customer, onOpenPrintManager, onUp
     }
   }, [isOpen]);
 
-  // Handle field change
-  const handleFieldChange = useCallback((key, value) => {
-    setFormData(prev => ({ ...prev, [key]: value }));
-    setHasUnsavedChanges(true);
+  // Calculate monthly repayment based on loan details
+  // Formula: M = P * [r(1+r)^n] / [(1+r)^n - 1]
+  // Where P = principal, r = monthly interest rate, n = number of months
+  const calculateMonthlyRepayment = useCallback((loanAmount, interestRate, tenure) => {
+    // Parse values - remove any non-numeric characters except decimal point
+    const principal = parseFloat(String(loanAmount).replace(/[^0-9.-]/g, '')) || 0;
+    const annualRate = parseFloat(String(interestRate).replace(/[^0-9.-]/g, '')) || 0;
+    const years = parseFloat(String(tenure).replace(/[^0-9.-]/g, '')) || 0;
+
+    if (principal <= 0 || annualRate <= 0 || years <= 0) {
+      return '';
+    }
+
+    const monthlyRate = annualRate / 100 / 12;
+    const numberOfPayments = years * 12;
+
+    // Calculate monthly payment using amortization formula
+    const monthlyPayment = principal *
+      (monthlyRate * Math.pow(1 + monthlyRate, numberOfPayments)) /
+      (Math.pow(1 + monthlyRate, numberOfPayments) - 1);
+
+    // Round up to nearest whole number and format with $ sign
+    return `$${Math.ceil(monthlyPayment).toLocaleString()}`;
   }, []);
+
+  // Handle field change with auto-calculation for monthly repayment
+  const handleFieldChange = useCallback((key, value) => {
+    setFormData(prev => {
+      const newData = { ...prev, [key]: value };
+
+      // Auto-calculate monthly repayment when loan details change
+      if (key === 'vsa_loanAmount' || key === 'vsa_interest' || key === 'vsa_tenure') {
+        const loanAmount = key === 'vsa_loanAmount' ? value : prev.vsa_loanAmount;
+        const interestRate = key === 'vsa_interest' ? value : prev.vsa_interest;
+        const tenure = key === 'vsa_tenure' ? value : prev.vsa_tenure;
+
+        const calculatedRepayment = calculateMonthlyRepayment(loanAmount, interestRate, tenure);
+        if (calculatedRepayment) {
+          newData.vsa_monthlyRepayment = calculatedRepayment;
+        }
+      }
+
+      return newData;
+    });
+    setHasUnsavedChanges(true);
+  }, [calculateMonthlyRepayment]);
 
   // Save changes
   const saveChanges = useCallback(async () => {
@@ -296,7 +337,7 @@ function DealClosingWizard({ isOpen, onClose, customer, onOpenPrintManager, onUp
     const isFilled = hasValue(field.key);
 
     return (
-      <div key={field.key} className={`field-item editable ${isFilled ? 'filled' : 'missing'} ${field.critical ? 'critical' : ''}`}>
+      <div key={field.key} className={`field-item editable ${isFilled ? 'filled' : 'missing'} ${field.critical ? 'critical' : ''} ${field.autoCalculated ? 'auto-calculated' : ''}`}>
         <div className="field-status-icon">
           {isFilled ? (
             <CheckCircle size={18} className="field-icon success" />
@@ -311,6 +352,7 @@ function DealClosingWizard({ isOpen, onClose, customer, onOpenPrintManager, onUp
           <label className="field-label">
             {field.label}
             {field.critical && !isFilled && <span className="required-badge">Required</span>}
+            {field.autoCalculated && <span className="auto-calc-badge">Auto-calculated</span>}
           </label>
 
           {field.type === 'select' ? (
@@ -330,7 +372,8 @@ function DealClosingWizard({ isOpen, onClose, customer, onOpenPrintManager, onUp
               value={value}
               onChange={(e) => handleFieldChange(field.key, e.target.value)}
               placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
-              className={`field-input ${!isFilled && field.critical ? 'error' : ''}`}
+              className={`field-input ${!isFilled && field.critical ? 'error' : ''} ${field.autoCalculated ? 'auto-calc-input' : ''}`}
+              readOnly={field.autoCalculated}
             />
           )}
         </div>
