@@ -1,42 +1,35 @@
 :root {
-  /* Theme Colors - BYD Motor-East Design System (Light Theme) */
-  --color-primary: #0D9488; /* Teal accent */
-  --color-primary-hover: #0F766E;
-  --color-primary-light: rgba(13, 148, 136, 0.1);
-  --color-primary-dark: #115E59;
+  /* Theme Colors - BYD Motor-East Design System */
+  --color-primary: #00BCD4; /* Cyan accent */
+  --color-primary-hover: #00ACC1;
+  --color-primary-light: rgba(0, 188, 212, 0.1);
 
-  --color-background-primary: #F3F4F6; /* Light gray page background */
-  --color-background-secondary: #1E293B; /* Dark navy for header */
-  --color-background-tertiary: #E5E7EB; /* Light gray for hover states */
+  --color-background-primary: #1f2937; /* Dark navy */
+  --color-background-secondary: #111827; /* Darker navy */
+  --color-background-tertiary: #374151; /* Medium navy */
 
   --color-card-background: #ffffff;
   --color-card-dark: #1e293b; /* Dark blue for inner cards */
 
   --color-text-primary: #ffffff;
-  --color-text-secondary: #64748B;
-  --color-text-tertiary: #94A3B8;
-  --color-text-on-card: #1E293B;
-  --color-text-dark: #0F172A;
+  --color-text-secondary: #9ca3af;
+  --color-text-tertiary: #6b7280;
+  --color-text-on-card: #1a1a2e;
 
-  --color-border: #E2E8F0;
-  --color-border-light: #F1F5F9;
+  --color-border: #374151;
+  --color-border-light: #e5e7eb;
 
   --color-success: #10b981;
   --color-warning: #f59e0b;
   --color-error: #ef4444;
   --color-info: #3b82f6;
 
-  /* Status Badge Colors */
-  --color-status-pending: #F97316; /* Coral/Orange for pending delivery */
-  --color-status-complete: #10B981;
-  --color-status-in-progress: #F59E0B;
-
   /* Stage Colors - Professional Muted Palette */
-  --color-stage-test-drive: #10B981; /* Green */
-  --color-stage-close-deal: #F59E0B; /* Yellow/Orange */
-  --color-stage-registration: #0D9488; /* Teal */
-  --color-stage-delivery: #3B82F6; /* Blue */
-  --color-stage-nps: #8B5CF6; /* Purple */
+  --color-stage-test-drive: #64748b;
+  --color-stage-close-deal: #0891b2;
+  --color-stage-registration: #6366f1;
+  --color-stage-delivery: #059669;
+  --color-stage-nps: #d97706;
 
   /* Typography */
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -82,7 +75,7 @@ body {
   min-width: 320px;
   min-height: 100vh;
   background-color: var(--color-background-primary);
-  color: var(--color-text-on-card);
+  color: var(--color-text-primary);
   overflow-x: hidden; /* Prevent horizontal scroll on mobile */
   width: 100%;
 }
@@ -156,11 +149,11 @@ input, textarea, select {
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--color-border-light);
+  background: var(--color-background-secondary);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--color-border);
+  background: var(--color-background-tertiary);
   border-radius: var(--radius-sm);
 }
 
