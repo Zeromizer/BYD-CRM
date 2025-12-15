@@ -132,25 +132,27 @@ function DealClosingWizard({ isOpen, onClose, customer, onOpenPrintManager, onUp
     }
   }, [isOpen]);
 
-  // Calculate monthly repayment based on loan details
-  // Formula: M = P * [r(1+r)^n] / [(1+r)^n - 1]
-  // Where P = principal, r = monthly interest rate, n = number of months
+  // Calculate monthly repayment based on loan details using FLAT RATE method
+  // (commonly used for car loans in Singapore)
+  // Formula: Monthly = (Principal + Total Interest) / Months
+  // Where Total Interest = Principal × Annual Rate × Years
   const calculateMonthlyRepayment = useCallback((loanAmount, interestRate, tenureMonths) => {
     // Parse values - remove any non-numeric characters except decimal point
     const principal = parseFloat(String(loanAmount).replace(/[^0-9.-]/g, '')) || 0;
     const annualRate = parseFloat(String(interestRate).replace(/[^0-9.-]/g, '')) || 0;
-    const numberOfPayments = parseFloat(String(tenureMonths).replace(/[^0-9.-]/g, '')) || 0;
+    const months = parseFloat(String(tenureMonths).replace(/[^0-9.-]/g, '')) || 0;
 
-    if (principal <= 0 || annualRate <= 0 || numberOfPayments <= 0) {
+    if (principal <= 0 || annualRate <= 0 || months <= 0) {
       return '';
     }
 
-    const monthlyRate = annualRate / 100 / 12;
+    // Convert months to years for interest calculation
+    const years = months / 12;
 
-    // Calculate monthly payment using amortization formula
-    const monthlyPayment = principal *
-      (monthlyRate * Math.pow(1 + monthlyRate, numberOfPayments)) /
-      (Math.pow(1 + monthlyRate, numberOfPayments) - 1);
+    // Flat rate calculation
+    const totalInterest = principal * (annualRate / 100) * years;
+    const totalAmount = principal + totalInterest;
+    const monthlyPayment = totalAmount / months;
 
     // Round up to nearest whole number and format with $ sign
     return `$${Math.ceil(monthlyPayment).toLocaleString()}`;
