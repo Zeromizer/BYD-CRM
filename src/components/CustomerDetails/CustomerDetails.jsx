@@ -1062,7 +1062,9 @@ function CustomerDetails() {
           });
           if (Object.keys(updates).length > 0) {
             updateCustomer(customer.id, updates);
-            // Auto-save to cloud if signed in
+            // Always save to localStorage for persistence
+            saveToLocalStorage();
+            // Also save to cloud if signed in
             if (isSignedIn) {
               try {
                 await saveCustomerToFolder(customer.id);
