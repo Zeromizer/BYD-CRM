@@ -1,5 +1,6 @@
 import { memo, useCallback, useMemo, useState } from 'react';
 import { SaveButton } from '../../AnimatedButton/AnimatedButton';
+import { parseCurrency, isCurrencyField } from '../../../utils/currencyUtils';
 
 /**
  * InvoiceTab - Pricing section for invoice
@@ -9,6 +10,8 @@ import { SaveButton } from '../../AnimatedButton/AnimatedButton';
  * Insurance Fee = VSA Insurance Fee - Insurance Subsidy
  * Installment = Monthly Repayment (only included if interest rate > 2.5%)
  * Sub-Total = First Payment + conditional fees
+ *
+ * Currency fields are stored as plain numbers for Excel compatibility
  */
 function InvoiceTab({
   formData,
@@ -21,9 +24,14 @@ function InvoiceTab({
 }) {
   const [activeTooltip, setActiveTooltip] = useState(null);
 
+  // Handle input change - parse currency fields to store as plain numbers
   const handleInputChange = useCallback((e) => {
     const { name, value } = e.target;
-    onFieldChange(name, value);
+    if (isCurrencyField(name, 'invoice')) {
+      onFieldChange(name, parseCurrency(value));
+    } else {
+      onFieldChange(name, value);
+    }
   }, [onFieldChange]);
 
   // Toggle tooltip (for mobile click)

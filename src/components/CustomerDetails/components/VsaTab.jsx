@@ -1,9 +1,11 @@
 import { memo, useCallback } from 'react';
 import { VEHICLE_MODELS, BODY_COLOURS, INSURANCE_COMPANIES, PRZ_TYPES } from '../../../constants/vehicleData';
 import { SaveButton } from '../../AnimatedButton/AnimatedButton';
+import { parseCurrency, formatCurrency, isCurrencyField } from '../../../utils/currencyUtils';
 
 /**
  * VsaTab - Vehicle Sales Agreement form
+ * Currency fields are stored as plain numbers for Excel compatibility
  */
 function VsaTab({
   formData,
@@ -16,10 +18,26 @@ function VsaTab({
   onSave,
   onCancel,
 }) {
+  // Handle input change - parse currency fields to store as plain numbers
   const handleInputChange = useCallback((e) => {
     const { name, value, type, checked } = e.target;
-    onFieldChange(name, type === 'checkbox' ? checked : value);
+    if (type === 'checkbox') {
+      onFieldChange(name, checked);
+    } else if (isCurrencyField(name, 'vsa')) {
+      onFieldChange(name, parseCurrency(value));
+    } else {
+      onFieldChange(name, value);
+    }
   }, [onFieldChange]);
+
+  // Get display value - format currency fields for display
+  const getDisplayValue = useCallback((fieldName) => {
+    const value = formData[fieldName];
+    if (isCurrencyField(fieldName, 'vsa') && value !== '' && value !== null && value !== undefined) {
+      return formatCurrency(value);
+    }
+    return value || '';
+  }, [formData]);
 
   return (
     <>
@@ -121,9 +139,9 @@ function VsaTab({
               type="text"
               id="vsa_sellingWithCOE"
               name="sellingWithCOE"
-              value={formData.sellingWithCOE || ''}
+              value={getDisplayValue('sellingWithCOE')}
               onChange={handleInputChange}
-              placeholder="Price with COE"
+              placeholder="$185,888"
               disabled={isSubmitting}
             />
           </div>
@@ -133,9 +151,9 @@ function VsaTab({
               type="text"
               id="vsa_sellingPriceList"
               name="sellingPriceList"
-              value={formData.sellingPriceList || ''}
+              value={getDisplayValue('sellingPriceList')}
               onChange={handleInputChange}
-              placeholder="List price"
+              placeholder="$188,888"
               disabled={isSubmitting}
             />
           </div>
@@ -145,9 +163,9 @@ function VsaTab({
               type="text"
               id="vsa_purchasePriceWithCOE"
               name="purchasePriceWithCOE"
-              value={formData.purchasePriceWithCOE || ''}
+              value={getDisplayValue('purchasePriceWithCOE')}
               onChange={handleInputChange}
-              placeholder="Final purchase price"
+              placeholder="$185,888"
               disabled={isSubmitting}
             />
           </div>
@@ -169,9 +187,9 @@ function VsaTab({
               type="text"
               id="vsa_deposit"
               name="deposit"
-              value={formData.deposit || ''}
+              value={getDisplayValue('deposit')}
               onChange={handleInputChange}
-              placeholder="Deposit amount"
+              placeholder="$18,588"
               disabled={isSubmitting}
             />
           </div>
@@ -181,9 +199,9 @@ function VsaTab({
               type="text"
               id="vsa_lessOthers"
               name="lessOthers"
-              value={formData.lessOthers || ''}
+              value={getDisplayValue('lessOthers')}
               onChange={handleInputChange}
-              placeholder="Other deductions"
+              placeholder="$0"
               disabled={isSubmitting}
             />
           </div>
@@ -193,9 +211,9 @@ function VsaTab({
               type="text"
               id="vsa_addOthers"
               name="addOthers"
-              value={formData.addOthers || ''}
+              value={getDisplayValue('addOthers')}
               onChange={handleInputChange}
-              placeholder="Other additions"
+              placeholder="$0"
               disabled={isSubmitting}
             />
           </div>
@@ -248,9 +266,9 @@ function VsaTab({
               type="text"
               id="vsa_tradeInAmount"
               name="tradeInAmount"
-              value={formData.tradeInAmount || ''}
+              value={getDisplayValue('tradeInAmount')}
               onChange={handleInputChange}
-              placeholder="Trade-in value"
+              placeholder="$15,000"
               disabled={isSubmitting}
             />
           </div>
@@ -260,9 +278,9 @@ function VsaTab({
               type="text"
               id="vsa_tradeInSettlementCost"
               name="tradeInSettlementCost"
-              value={formData.tradeInSettlementCost || ''}
+              value={getDisplayValue('tradeInSettlementCost')}
               onChange={handleInputChange}
-              placeholder="Settlement cost"
+              placeholder="$5,000"
               disabled={isSubmitting}
             />
           </div>
@@ -446,9 +464,9 @@ function VsaTab({
               type="text"
               id="vsa_insuranceFee"
               name="insuranceFee"
-              value={formData.insuranceFee || ''}
+              value={getDisplayValue('insuranceFee')}
               onChange={handleInputChange}
-              placeholder="Insurance premium"
+              placeholder="$2,500"
               disabled={isSubmitting}
             />
           </div>
@@ -458,9 +476,9 @@ function VsaTab({
               type="text"
               id="vsa_insuranceSubsidy"
               name="insuranceSubsidy"
-              value={formData.insuranceSubsidy || ''}
+              value={getDisplayValue('insuranceSubsidy')}
               onChange={handleInputChange}
-              placeholder="Subsidy amount"
+              placeholder="$500"
               disabled={isSubmitting}
             />
           </div>
@@ -506,9 +524,9 @@ function VsaTab({
               type="text"
               id="vsa_loanAmount"
               name="loanAmount"
-              value={formData.loanAmount || ''}
+              value={getDisplayValue('loanAmount')}
               onChange={handleInputChange}
-              placeholder="Loan amount"
+              placeholder="$100,000"
               disabled={isSubmitting}
             />
           </div>
@@ -520,7 +538,7 @@ function VsaTab({
               name="interest"
               value={formData.interest || ''}
               onChange={handleInputChange}
-              placeholder="Interest rate"
+              placeholder="2.28"
               disabled={isSubmitting}
             />
           </div>
@@ -532,7 +550,7 @@ function VsaTab({
               name="tenure"
               value={formData.tenure || ''}
               onChange={handleInputChange}
-              placeholder="Loan tenure"
+              placeholder="84"
               disabled={isSubmitting}
             />
           </div>
@@ -542,9 +560,9 @@ function VsaTab({
               type="text"
               id="vsa_adminFee"
               name="adminFee"
-              value={formData.adminFee || ''}
+              value={getDisplayValue('adminFee')}
               onChange={handleInputChange}
-              placeholder="Admin fee"
+              placeholder="$500"
               disabled={isSubmitting}
             />
           </div>
@@ -554,9 +572,9 @@ function VsaTab({
               type="text"
               id="vsa_monthlyRepayment"
               name="monthlyRepayment"
-              value={formData.monthlyRepayment || ''}
+              value={getDisplayValue('monthlyRepayment')}
               onChange={handleInputChange}
-              placeholder="Monthly payment"
+              placeholder="$1,381"
               disabled={isSubmitting}
             />
           </div>
