@@ -1051,6 +1051,27 @@ function CustomerDetails() {
           setIsDealWizardOpen(false);
           setIsPrintManagerOpen(true);
         }}
+        onUpdateCustomer={async (formData) => {
+          if (!customer) return;
+          // Build update object with changed fields
+          const updates = {};
+          Object.entries(formData).forEach(([key, value]) => {
+            if (value !== customer[key]) {
+              updates[key] = value;
+            }
+          });
+          if (Object.keys(updates).length > 0) {
+            updateCustomer(customer.id, updates);
+            // Auto-save to cloud if signed in
+            if (isSignedIn) {
+              try {
+                await saveCustomerToFolder(customer.id);
+              } catch (error) {
+                console.error('Failed to save to cloud:', error);
+              }
+            }
+          }
+        }}
       />
 
       {/* WhatsApp Quick Compose Modal */}

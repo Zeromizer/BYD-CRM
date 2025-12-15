@@ -1,6 +1,7 @@
-import { useState, useMemo, useCallback } from 'react';
-import { CheckCircle, XCircle, AlertCircle, ChevronRight, Printer, FileText, User, Car, CreditCard, ClipboardList } from 'lucide-react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import { CheckCircle, XCircle, AlertCircle, ChevronRight, Printer, FileText, User, Car, CreditCard, ClipboardList, Save, Edit3 } from 'lucide-react';
 import Modal from '../Modal/Modal';
+import { VEHICLE_MODELS, BODY_COLOURS } from '../../constants/vehicleData';
 import './DealClosingWizard.css';
 
 /**
@@ -8,39 +9,41 @@ import './DealClosingWizard.css';
  *
  * Ensures all required customer details and documents are ready
  * before the customer leaves, preventing missing items.
+ *
+ * Now supports inline editing of fields directly within the wizard!
  */
 
-// Required fields for each step
+// Field configurations with input types
 const REQUIRED_CUSTOMER_DETAILS = [
-  { key: 'name', label: 'Customer Name', critical: true },
-  { key: 'nric', label: 'NRIC/FIN', critical: true },
-  { key: 'phone', label: 'Phone Number', critical: true },
-  { key: 'email', label: 'Email Address', critical: false },
-  { key: 'address', label: 'Address', critical: true },
-  { key: 'dob', label: 'Date of Birth', critical: false },
-  { key: 'occupation', label: 'Occupation', critical: false },
+  { key: 'name', label: 'Customer Name', critical: true, type: 'text' },
+  { key: 'nric', label: 'NRIC/FIN', critical: true, type: 'text', placeholder: 'S1234567A' },
+  { key: 'phone', label: 'Phone Number', critical: true, type: 'tel', placeholder: '+65 9123 4567' },
+  { key: 'email', label: 'Email Address', critical: false, type: 'email', placeholder: 'email@example.com' },
+  { key: 'address', label: 'Address', critical: true, type: 'text', placeholder: 'Block/Street Address' },
+  { key: 'dob', label: 'Date of Birth', critical: false, type: 'date' },
+  { key: 'occupation', label: 'Occupation', critical: false, type: 'text' },
 ];
 
 const REQUIRED_VSA_DETAILS = [
-  { key: 'vsa_makeModel', label: 'Make & Model', critical: true },
-  { key: 'vsa_bodyColour', label: 'Body Colour', critical: true },
-  { key: 'vsa_sellingWithCOE', label: 'Selling Price with COE', critical: true },
-  { key: 'vsa_purchasePriceWithCOE', label: 'Purchase Price with COE', critical: true },
-  { key: 'vsa_deposit', label: 'Deposit Amount', critical: true },
-  { key: 'vsa_deliveryDate', label: 'Approximate Delivery Date', critical: false },
+  { key: 'vsa_makeModel', label: 'Make & Model', critical: true, type: 'select', options: VEHICLE_MODELS },
+  { key: 'vsa_bodyColour', label: 'Body Colour', critical: true, type: 'select', options: BODY_COLOURS },
+  { key: 'vsa_sellingWithCOE', label: 'Selling Price with COE', critical: true, type: 'text', placeholder: '$185,888' },
+  { key: 'vsa_purchasePriceWithCOE', label: 'Purchase Price with COE', critical: true, type: 'text', placeholder: '$185,888' },
+  { key: 'vsa_deposit', label: 'Deposit Amount', critical: true, type: 'text', placeholder: '$18,588' },
+  { key: 'vsa_deliveryDate', label: 'Approximate Delivery Date', critical: false, type: 'date' },
 ];
 
 const REQUIRED_LOAN_DETAILS = [
-  { key: 'vsa_loanAmount', label: 'Loan Amount', critical: false, condition: 'hasLoan' },
-  { key: 'vsa_interest', label: 'Interest Rate', critical: false, condition: 'hasLoan' },
-  { key: 'vsa_tenure', label: 'Loan Tenure', critical: false, condition: 'hasLoan' },
-  { key: 'vsa_monthlyRepayment', label: 'Monthly Repayment', critical: false, condition: 'hasLoan' },
+  { key: 'vsa_loanAmount', label: 'Loan Amount', critical: false, condition: 'hasLoan', type: 'text', placeholder: '$150,000' },
+  { key: 'vsa_interest', label: 'Interest Rate', critical: false, condition: 'hasLoan', type: 'text', placeholder: '2.88%' },
+  { key: 'vsa_tenure', label: 'Loan Tenure', critical: false, condition: 'hasLoan', type: 'text', placeholder: '7 years' },
+  { key: 'vsa_monthlyRepayment', label: 'Monthly Repayment', critical: false, condition: 'hasLoan', type: 'text', placeholder: '$1,950' },
 ];
 
 const REQUIRED_TRADE_IN_DETAILS = [
-  { key: 'vsa_tradeInCarNo', label: 'Trade-In Car Number', critical: false, condition: 'hasTradeIn' },
-  { key: 'vsa_tradeInCarModel', label: 'Trade-In Car Model', critical: false, condition: 'hasTradeIn' },
-  { key: 'vsa_tradeInAmount', label: 'Trade-In Amount', critical: false, condition: 'hasTradeIn' },
+  { key: 'vsa_tradeInCarNo', label: 'Trade-In Car Number', critical: false, condition: 'hasTradeIn', type: 'text', placeholder: 'SXX1234A' },
+  { key: 'vsa_tradeInCarModel', label: 'Trade-In Car Model', critical: false, condition: 'hasTradeIn', type: 'text' },
+  { key: 'vsa_tradeInAmount', label: 'Trade-In Amount', critical: false, condition: 'hasTradeIn', type: 'text', placeholder: '$15,000' },
 ];
 
 const REQUIRED_DOCUMENTS = [
@@ -98,28 +101,81 @@ const OPTIONAL_DOCUMENTS = [
   },
 ];
 
-function DealClosingWizard({ isOpen, onClose, customer, onOpenPrintManager }) {
+function DealClosingWizard({ isOpen, onClose, customer, onOpenPrintManager, onUpdateCustomer }) {
   const [currentStep, setCurrentStep] = useState(0);
   const [checkedDocuments, setCheckedDocuments] = useState({});
   const [checkedSignatures, setCheckedSignatures] = useState({});
+  const [formData, setFormData] = useState({});
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
-  // Determine if customer has loan or trade-in
-  const hasLoan = useMemo(() => {
-    return !!(customer?.vsa_loanAmount && parseFloat(customer.vsa_loanAmount.toString().replace(/[^0-9.-]/g, '')) > 0);
-  }, [customer?.vsa_loanAmount]);
+  // Initialize form data from customer when modal opens
+  useEffect(() => {
+    if (isOpen && customer) {
+      const initialData = {};
+      [...REQUIRED_CUSTOMER_DETAILS, ...REQUIRED_VSA_DETAILS, ...REQUIRED_LOAN_DETAILS, ...REQUIRED_TRADE_IN_DETAILS].forEach(field => {
+        initialData[field.key] = customer[field.key] || '';
+      });
+      setFormData(initialData);
+      setHasUnsavedChanges(false);
+    }
+  }, [isOpen, customer]);
 
-  const hasTradeIn = useMemo(() => {
-    return !!(customer?.vsa_tradeInCarNo || customer?.vsa_tradeInCarModel);
-  }, [customer?.vsa_tradeInCarNo, customer?.vsa_tradeInCarModel]);
+  // Reset state when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setCurrentStep(0);
+      setCheckedDocuments({});
+      setCheckedSignatures({});
+      setFormData({});
+      setHasUnsavedChanges(false);
+    }
+  }, [isOpen]);
+
+  // Handle field change
+  const handleFieldChange = useCallback((key, value) => {
+    setFormData(prev => ({ ...prev, [key]: value }));
+    setHasUnsavedChanges(true);
+  }, []);
+
+  // Save changes
+  const saveChanges = useCallback(async () => {
+    if (!hasUnsavedChanges || !onUpdateCustomer) return;
+
+    setIsSaving(true);
+    try {
+      await onUpdateCustomer(formData);
+      setHasUnsavedChanges(false);
+    } catch (error) {
+      console.error('Failed to save:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [formData, hasUnsavedChanges, onUpdateCustomer]);
+
+  // Get current value (from formData if edited, otherwise from customer)
+  const getValue = useCallback((key) => {
+    if (formData[key] !== undefined) return formData[key];
+    return customer?.[key] || '';
+  }, [formData, customer]);
 
   // Check if a field has value
   const hasValue = useCallback((key) => {
-    if (!customer) return false;
-    const value = customer[key];
+    const value = getValue(key);
     if (value === null || value === undefined) return false;
     if (typeof value === 'string') return value.trim().length > 0;
     return true;
-  }, [customer]);
+  }, [getValue]);
+
+  // Determine if customer has loan or trade-in (check both form data and customer)
+  const hasLoan = useMemo(() => {
+    const loanAmount = getValue('vsa_loanAmount');
+    return !!(loanAmount && parseFloat(loanAmount.toString().replace(/[^0-9.-]/g, '')) > 0);
+  }, [getValue]);
+
+  const hasTradeIn = useMemo(() => {
+    return !!(getValue('vsa_tradeInCarNo') || getValue('vsa_tradeInCarModel'));
+  }, [getValue]);
 
   // Check if condition is met for conditional fields
   const meetsCondition = useCallback((condition) => {
@@ -185,17 +241,30 @@ function DealClosingWizard({ isOpen, onClose, customer, onOpenPrintManager }) {
     }
   }, [customerDetailsStatus, vsaDetailsStatus, applicableDocuments, checkedDocuments, checkedSignatures]);
 
-  // Navigation
-  const handleNext = () => {
+  // Navigation with auto-save
+  const handleNext = async () => {
+    if (hasUnsavedChanges) {
+      await saveChanges();
+    }
     if (currentStep < 3) {
       setCurrentStep(currentStep + 1);
     }
   };
 
-  const handleBack = () => {
+  const handleBack = async () => {
+    if (hasUnsavedChanges) {
+      await saveChanges();
+    }
     if (currentStep > 0) {
       setCurrentStep(currentStep - 1);
     }
+  };
+
+  const handleClose = async () => {
+    if (hasUnsavedChanges) {
+      await saveChanges();
+    }
+    onClose();
   };
 
   const handleReset = () => {
@@ -221,41 +290,77 @@ function DealClosingWizard({ isOpen, onClose, customer, onOpenPrintManager }) {
     { id: 3, title: 'Signatures', icon: ClipboardList },
   ];
 
-  // Render field status item
-  const renderFieldItem = (field, isFilled) => (
-    <div key={field.key} className={`field-item ${isFilled ? 'filled' : 'missing'} ${field.critical ? 'critical' : ''}`}>
-      {isFilled ? (
-        <CheckCircle size={18} className="field-icon success" />
-      ) : field.critical ? (
-        <XCircle size={18} className="field-icon error" />
-      ) : (
-        <AlertCircle size={18} className="field-icon warning" />
-      )}
-      <span className="field-label">{field.label}</span>
-      {field.critical && !isFilled && <span className="required-badge">Required</span>}
-      {isFilled && customer && (
-        <span className="field-value">{customer[field.key]}</span>
-      )}
-    </div>
-  );
+  // Render editable field
+  const renderEditableField = (field) => {
+    const value = getValue(field.key);
+    const isFilled = hasValue(field.key);
+
+    return (
+      <div key={field.key} className={`field-item editable ${isFilled ? 'filled' : 'missing'} ${field.critical ? 'critical' : ''}`}>
+        <div className="field-status-icon">
+          {isFilled ? (
+            <CheckCircle size={18} className="field-icon success" />
+          ) : field.critical ? (
+            <XCircle size={18} className="field-icon error" />
+          ) : (
+            <AlertCircle size={18} className="field-icon warning" />
+          )}
+        </div>
+
+        <div className="field-content">
+          <label className="field-label">
+            {field.label}
+            {field.critical && !isFilled && <span className="required-badge">Required</span>}
+          </label>
+
+          {field.type === 'select' ? (
+            <select
+              value={value}
+              onChange={(e) => handleFieldChange(field.key, e.target.value)}
+              className={`field-input ${!isFilled && field.critical ? 'error' : ''}`}
+            >
+              <option value="">Select {field.label}</option>
+              {field.options?.map(opt => (
+                <option key={opt} value={opt}>{opt}</option>
+              ))}
+            </select>
+          ) : (
+            <input
+              type={field.type || 'text'}
+              value={value}
+              onChange={(e) => handleFieldChange(field.key, e.target.value)}
+              placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
+              className={`field-input ${!isFilled && field.critical ? 'error' : ''}`}
+            />
+          )}
+        </div>
+      </div>
+    );
+  };
 
   if (!isOpen || !customer) return null;
 
   return (
     <Modal
       isOpen={isOpen}
-      onClose={onClose}
+      onClose={handleClose}
       title="Deal Closing Checklist"
       size="large"
     >
       <div className="deal-wizard">
         {/* Customer Info Banner */}
         <div className="wizard-customer-info">
-          <h3>{customer.name}</h3>
+          <h3>{getValue('name') || customer.name}</h3>
           <div className="customer-quick-info">
-            {customer.phone && <span>{customer.phone}</span>}
-            {customer.nric && <span>{customer.nric}</span>}
+            {getValue('phone') && <span>{getValue('phone')}</span>}
+            {getValue('nric') && <span>{getValue('nric')}</span>}
           </div>
+          {hasUnsavedChanges && (
+            <div className="unsaved-indicator">
+              <Edit3 size={14} />
+              <span>Unsaved changes</span>
+            </div>
+          )}
         </div>
 
         {/* Progress Steps */}
@@ -270,7 +375,10 @@ function DealClosingWizard({ isOpen, onClose, customer, onOpenPrintManager }) {
               <div
                 key={step.id}
                 className={`progress-step ${isActive ? 'active' : ''} ${isComplete ? 'complete' : ''} ${isPast ? 'past' : ''}`}
-                onClick={() => setCurrentStep(index)}
+                onClick={() => {
+                  if (hasUnsavedChanges) saveChanges();
+                  setCurrentStep(index);
+                }}
               >
                 <div className="step-indicator">
                   {isComplete ? <CheckCircle size={20} /> : <Icon size={20} />}
@@ -288,7 +396,7 @@ function DealClosingWizard({ isOpen, onClose, customer, onOpenPrintManager }) {
           {currentStep === 0 && (
             <div className="wizard-step">
               <div className="step-header">
-                <h4>Verify Customer Details</h4>
+                <h4>Verify & Fill Customer Details</h4>
                 <div className={`completion-badge ${customerDetailsStatus.percentage === 100 ? 'complete' : customerDetailsStatus.criticalMissing.length === 0 ? 'warning' : 'error'}`}>
                   {customerDetailsStatus.percentage}% Complete
                 </div>
@@ -297,19 +405,17 @@ function DealClosingWizard({ isOpen, onClose, customer, onOpenPrintManager }) {
               {customerDetailsStatus.criticalMissing.length > 0 && (
                 <div className="alert alert-error">
                   <XCircle size={18} />
-                  <span><strong>{customerDetailsStatus.criticalMissing.length}</strong> required field(s) missing - must be filled before proceeding!</span>
+                  <span><strong>{customerDetailsStatus.criticalMissing.length}</strong> required field(s) missing - fill them in below!</span>
                 </div>
               )}
 
-              <div className="fields-grid">
-                {customerDetailsStatus.fields.map(field =>
-                  renderFieldItem(field, hasValue(field.key))
-                )}
+              <div className="fields-list">
+                {customerDetailsStatus.fields.map(field => renderEditableField(field))}
               </div>
 
               <div className="step-tip">
                 <FileText size={16} />
-                <span>Tip: Make sure NRIC and address are correctly entered for the VSA form.</span>
+                <span>Tip: Fill in any missing details directly here. Changes are auto-saved when you proceed.</span>
               </div>
             </div>
           )}
@@ -318,7 +424,7 @@ function DealClosingWizard({ isOpen, onClose, customer, onOpenPrintManager }) {
           {currentStep === 1 && (
             <div className="wizard-step">
               <div className="step-header">
-                <h4>Verify VSA Details</h4>
+                <h4>Verify & Fill VSA Details</h4>
                 <div className={`completion-badge ${vsaDetailsStatus.percentage === 100 ? 'complete' : vsaDetailsStatus.criticalMissing.length === 0 ? 'warning' : 'error'}`}>
                   {vsaDetailsStatus.percentage}% Complete
                 </div>
@@ -332,36 +438,32 @@ function DealClosingWizard({ isOpen, onClose, customer, onOpenPrintManager }) {
               )}
 
               <div className="section-title">Vehicle Details</div>
-              <div className="fields-grid">
-                {vsaDetailsStatus.fields.map(field =>
-                  renderFieldItem(field, hasValue(field.key))
-                )}
+              <div className="fields-list">
+                {vsaDetailsStatus.fields.map(field => renderEditableField(field))}
               </div>
 
-              {hasLoan && loanDetailsStatus && (
+              {(hasLoan || !getValue('vsa_loanAmount')) && (
                 <>
                   <div className="section-title">
                     <CreditCard size={16} />
                     Loan Details
+                    <span className="section-hint">(Fill loan amount if customer has financing)</span>
                   </div>
-                  <div className="fields-grid">
-                    {loanDetailsStatus.fields.map(field =>
-                      renderFieldItem(field, hasValue(field.key))
-                    )}
+                  <div className="fields-list">
+                    {REQUIRED_LOAN_DETAILS.map(field => renderEditableField(field))}
                   </div>
                 </>
               )}
 
-              {hasTradeIn && tradeInDetailsStatus && (
+              {(hasTradeIn || (!getValue('vsa_tradeInCarNo') && !getValue('vsa_tradeInCarModel'))) && (
                 <>
                   <div className="section-title">
                     <Car size={16} />
                     Trade-In Details
+                    <span className="section-hint">(Fill if customer is trading in a vehicle)</span>
                   </div>
-                  <div className="fields-grid">
-                    {tradeInDetailsStatus.fields.map(field =>
-                      renderFieldItem(field, hasValue(field.key))
-                    )}
+                  <div className="fields-list">
+                    {REQUIRED_TRADE_IN_DETAILS.map(field => renderEditableField(field))}
                   </div>
                 </>
               )}
@@ -487,13 +589,21 @@ function DealClosingWizard({ isOpen, onClose, customer, onOpenPrintManager }) {
 
         {/* Footer */}
         <div className="wizard-footer">
-          <button className="btn btn-secondary" onClick={handleReset}>
-            Reset
-          </button>
+          <div className="footer-left">
+            <button className="btn btn-secondary" onClick={handleReset}>
+              Reset
+            </button>
+            {hasUnsavedChanges && (
+              <button className="btn btn-save" onClick={saveChanges} disabled={isSaving}>
+                <Save size={16} />
+                {isSaving ? 'Saving...' : 'Save Changes'}
+              </button>
+            )}
+          </div>
 
           <div className="footer-nav">
             {currentStep > 0 && (
-              <button className="btn btn-secondary" onClick={handleBack}>
+              <button className="btn btn-secondary" onClick={handleBack} disabled={isSaving}>
                 Back
               </button>
             )}
@@ -502,15 +612,15 @@ function DealClosingWizard({ isOpen, onClose, customer, onOpenPrintManager }) {
               <button
                 className="btn btn-primary"
                 onClick={handleNext}
-                disabled={currentStep === 0 && customerDetailsStatus.criticalMissing.length > 0}
+                disabled={isSaving}
               >
-                Next Step
+                {hasUnsavedChanges ? 'Save & Next' : 'Next Step'}
                 <ChevronRight size={16} />
               </button>
             ) : (
-              <button className="btn btn-success" onClick={onClose}>
+              <button className="btn btn-success" onClick={handleClose} disabled={isSaving}>
                 <CheckCircle size={16} />
-                Complete
+                {hasUnsavedChanges ? 'Save & Complete' : 'Complete'}
               </button>
             )}
           </div>
