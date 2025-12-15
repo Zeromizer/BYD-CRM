@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, ChevronDown } from 'lucide-react';
 import useAuthStore, { useCurrentUserName } from '../../stores/useAuthStore';
 import useCustomerStore from '../../stores/useCustomerStore';
 import syncCoordinator from '../../services/syncCoordinator';
@@ -131,37 +130,21 @@ function Header() {
           {/* Sync Status Indicator - shows when there are pending/failed syncs */}
           {isSignedIn && <SyncStatusIndicator />}
 
-          {/* Notification Bell */}
-          <button
-            className="notification-btn"
-            title="Notifications"
-            aria-label="Notifications"
-          >
-            <Bell size={20} />
-            {/* Show badge if there are notifications */}
-            {/* <span className="notification-badge"></span> */}
-          </button>
+          {/* Show account name when signed in */}
+          {isSignedIn && currentUserName && (
+            <span className="account-name" title={currentUserName}>
+              {currentUserName}
+            </span>
+          )}
 
-          {/* User Profile Section */}
-          <div
-            className="user-profile"
+          <button
+            className={`auth-button ${isSignedIn ? 'connected' : ''}`}
             onClick={handleAuth}
             title={isSignedIn ? 'Connected to OneDrive - Click to disconnect' : 'Click to connect to OneDrive'}
           >
-            <div className="user-avatar">
-              {currentUserName ? currentUserName.charAt(0).toUpperCase() : 'U'}
-            </div>
-            <div className="user-info">
-              <span className="user-name">
-                {currentUserName || 'Guest User'}
-              </span>
-              <span className={`user-status ${isSignedIn ? '' : 'disconnected'}`}>
-                <span className="status-dot"></span>
-                {isSignedIn ? 'Connected' : 'Not Connected'}
-              </span>
-            </div>
-            <ChevronDown size={16} className="profile-dropdown-arrow" />
-          </div>
+            <span className="status-dot"></span>
+            <span>{isSignedIn ? 'Connected' : 'Connect Drive'}</span>
+          </button>
 
           <div className="mobile-menu">
             <button
