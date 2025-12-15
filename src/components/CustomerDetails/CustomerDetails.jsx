@@ -1067,7 +1067,9 @@ function CustomerDetails() {
             // Also save to cloud if signed in
             if (isSignedIn) {
               try {
-                await saveCustomerToFolder(customer.id);
+                // Build the updated customer object with the new data
+                const updatedCustomer = { ...customer, ...updates };
+                await saveCustomerToFolder(updatedCustomer, isSignedIn);
               } catch (error) {
                 console.error('Failed to save to cloud:', error);
               }
