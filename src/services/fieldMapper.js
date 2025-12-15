@@ -14,10 +14,16 @@ const getPrzTypeLabel = (value) => {
 };
 
 // Helper to get conditional installment (only if interest > 2.5%)
+// Returns formatted currency for document display
 const getConditionalInstallment = (interest, monthlyRepayment) => {
   const interestRate = parseFloat((interest || '0').toString().replace(/[^0-9.-]/g, ''));
-  if (interestRate > 2.5) {
-    return monthlyRepayment || '';
+  if (interestRate > 2.5 && monthlyRepayment) {
+    // Format as currency for document display
+    const num = parseFloat(String(monthlyRepayment).replace(/[^0-9.-]/g, ''));
+    if (!isNaN(num)) {
+      return `$${num.toLocaleString()}`;
+    }
+    return monthlyRepayment;
   }
   return '';
 };
@@ -209,6 +215,34 @@ function parseCurrency(value) {
 }
 
 /**
+ * Format number as currency for document display
+ * Adds $ prefix and thousand separators
+ * @param {string|number} value - The value to format
+ * @returns {string} - Formatted currency string (e.g., "$185,888")
+ */
+function formatCurrencyForDocument(value) {
+  if (value === null || value === undefined || value === '') return '';
+  const num = parseFloat(String(value).replace(/[^0-9.-]/g, ''));
+  if (isNaN(num)) return '';
+  return `$${num.toLocaleString()}`;
+}
+
+/**
+ * Format number as percentage for document display
+ * Adds % suffix
+ * @param {string|number} value - The value to format
+ * @returns {string} - Formatted percentage string (e.g., "2.88%")
+ */
+function formatPercentageForDocument(value) {
+  if (value === null || value === undefined || value === '') return '';
+  // If already has %, return as-is
+  if (String(value).includes('%')) return String(value);
+  const num = parseFloat(String(value).replace(/[^0-9.-]/g, ''));
+  if (isNaN(num)) return '';
+  return `${num}%`;
+}
+
+/**
  * Extract customer data mapping from customer object
  * This creates a flat object with all possible field values
  */
@@ -244,22 +278,22 @@ export function getCustomerDataMapping(customer) {
     upholstery: customer.vsa_upholstery || '',
     przType: getPrzTypeLabel(customer.vsa_przType),
 
-    // VSA Details - BYD New Car Package
+    // VSA Details - BYD New Car Package (currency fields formatted for document display)
     package: customer.vsa_package || '',
-    sellingWithCOE: customer.vsa_sellingWithCOE || '',
-    sellingPriceList: customer.vsa_sellingPriceList || '',
-    purchasePriceWithCOE: customer.vsa_purchasePriceWithCOE || '',
+    sellingWithCOE: formatCurrencyForDocument(customer.vsa_sellingWithCOE),
+    sellingPriceList: formatCurrencyForDocument(customer.vsa_sellingPriceList),
+    purchasePriceWithCOE: formatCurrencyForDocument(customer.vsa_purchasePriceWithCOE),
     coeRebateLevel: customer.vsa_coeRebateLevel || '',
-    deposit: customer.vsa_deposit || '',
-    lessOthers: customer.vsa_lessOthers || '',
-    addOthers: customer.vsa_addOthers || '',
+    deposit: formatCurrencyForDocument(customer.vsa_deposit),
+    lessOthers: formatCurrencyForDocument(customer.vsa_lessOthers),
+    addOthers: formatCurrencyForDocument(customer.vsa_addOthers),
     deliveryDate: customer.vsa_deliveryDate || '',
 
-    // VSA Details - Trade In Car Details
+    // VSA Details - Trade In Car Details (currency fields formatted)
     tradeInCarNo: customer.vsa_tradeInCarNo || '',
     tradeInCarModel: customer.vsa_tradeInCarModel || '',
-    tradeInAmount: customer.vsa_tradeInAmount || '',
-    tradeInSettlementCost: customer.vsa_tradeInSettlementCost || '',
+    tradeInAmount: formatCurrencyForDocument(customer.vsa_tradeInAmount),
+    tradeInSettlementCost: formatCurrencyForDocument(customer.vsa_tradeInSettlementCost),
     tradeInOwnerNotCustomer: customer.vsa_tradeInOwnerNotCustomer || false,
     tradeInOwnerName: customer.vsa_tradeInOwnerName || '',
     tradeInOwnerNric: customer.vsa_tradeInOwnerNric || '',
@@ -278,39 +312,39 @@ export function getCustomerDataMapping(customer) {
     engineNo: customer.vsa_engineNo || '',
     motorNo: customer.vsa_motorNo || '',
 
-    // VSA Details - Insurance
+    // VSA Details - Insurance (currency fields formatted)
     insuranceCompany: customer.vsa_insuranceCompany || '',
-    insuranceFee: customer.vsa_insuranceFee || '',
-    insuranceFeeNet: netInsuranceFee.toFixed(2),
+    insuranceFee: formatCurrencyForDocument(customer.vsa_insuranceFee),
+    insuranceFeeNet: formatCurrencyForDocument(netInsuranceFee),
 
-    // VSA Details - Remarks
+    // VSA Details - Remarks & Loan (currency and percentage fields formatted)
     remarks1: customer.vsa_remarks1 || '',
     remarks2: customer.vsa_remarks2 || '',
-    loanAmount: customer.vsa_loanAmount || '',
-    interest: customer.vsa_interest || '',
-    tenure: customer.vsa_tenure || '',
-    adminFee: customer.vsa_adminFee || '',
-    insuranceSubsidy: customer.vsa_insuranceSubsidy || '',
-    monthlyRepayment: customer.vsa_monthlyRepayment || '',
+    loanAmount: formatCurrencyForDocument(customer.vsa_loanAmount),
+    interest: formatPercentageForDocument(customer.vsa_interest),
+    tenure: customer.vsa_tenure ? `${customer.vsa_tenure} months` : '',
+    adminFee: formatCurrencyForDocument(customer.vsa_adminFee),
+    insuranceSubsidy: formatCurrencyForDocument(customer.vsa_insuranceSubsidy),
+    monthlyRepayment: formatCurrencyForDocument(customer.vsa_monthlyRepayment),
 
     // Invoice - Conditional Installment (only if interest > 2.5%)
     invoiceInstallmentConditional: getConditionalInstallment(customer.vsa_interest, customer.vsa_monthlyRepayment),
 
-    // Proposal Details
+    // Proposal Details (currency and percentage fields formatted)
     proposalModel: customer.proposal_model || '',
     proposalBank: customer.proposal_bank || '',
-    proposalSellingPrice: customer.proposal_sellingPrice || '',
-    proposalInterestRate: customer.proposal_interestRate || '',
-    proposalDownpayment: customer.proposal_downpayment || '',
-    proposalLoanTenure: customer.proposal_loanTenure || '',
-    proposalLoanAmount: customer.proposal_loanAmount || '',
-    proposalAdminFee: customer.proposal_adminFee || '',
-    proposalReferralFee: customer.proposal_referralFee || '',
+    proposalSellingPrice: formatCurrencyForDocument(customer.proposal_sellingPrice),
+    proposalInterestRate: formatPercentageForDocument(customer.proposal_interestRate),
+    proposalDownpayment: formatCurrencyForDocument(customer.proposal_downpayment),
+    proposalLoanTenure: customer.proposal_loanTenure ? `${customer.proposal_loanTenure} months` : '',
+    proposalLoanAmount: formatCurrencyForDocument(customer.proposal_loanAmount),
+    proposalAdminFee: formatCurrencyForDocument(customer.proposal_adminFee),
+    proposalReferralFee: formatCurrencyForDocument(customer.proposal_referralFee),
     proposalTradeInModel: customer.proposal_tradeInModel || '',
-    proposalLowLoanSurcharge: customer.proposal_lowLoanSurcharge || '',
+    proposalLowLoanSurcharge: formatCurrencyForDocument(customer.proposal_lowLoanSurcharge),
     proposalTradeInCarPlate: customer.proposal_tradeInCarPlate || '',
-    proposalNoLoanSurcharge: customer.proposal_noLoanSurcharge || '',
-    proposalQuotedTradeInPrice: customer.proposal_quotedTradeInPrice || '',
+    proposalNoLoanSurcharge: formatCurrencyForDocument(customer.proposal_noLoanSurcharge),
+    proposalQuotedTradeInPrice: formatCurrencyForDocument(customer.proposal_quotedTradeInPrice),
     proposalBenefit1: customer.proposal_benefit1 || '',
     proposalBenefit2: customer.proposal_benefit2 || '',
     proposalBenefit3: customer.proposal_benefit3 || '',
