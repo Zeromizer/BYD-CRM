@@ -216,6 +216,20 @@
   stroke: #0284c7;
 }
 
+/* Deal Closing Wizard button */
+.action-menu-item-deal {
+  color: #0891b2;
+  font-weight: 600;
+}
+
+.action-menu-item-deal:hover {
+  background: #cffafe;
+}
+
+.action-menu-item-deal svg {
+  stroke: #0891b2;
+}
+
 .btn-secondary {
   background: #f5f5f5;
   color: var(--color-text-on-card);

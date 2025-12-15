@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { FolderOpen, ScanLine, Archive, ArchiveRestore, Workflow, MessageCircle, Paperclip, Folder, File, Image, FileText, FileSpreadsheet, X, Loader, Copy, Check } from 'lucide-react';
+import { FolderOpen, ScanLine, Archive, ArchiveRestore, Workflow, MessageCircle, Paperclip, Folder, File, Image, FileText, FileSpreadsheet, X, Loader, Copy, Check, ClipboardCheck } from 'lucide-react';
 import useCustomerStore from '../../stores/useCustomerStore';
 import useAuthStore from '../../stores/useAuthStore';
 import { getStorageService } from '../../services/storageServiceSelector';
@@ -9,6 +9,7 @@ import PrintManager from '../Documents/PrintManager/PrintManager';
 import DocumentViewer from '../DocumentViewer/DocumentViewer';
 import DocumentScanner from '../DocumentScanner/DocumentScanner';
 import MilestoneTracker from '../MilestoneTracker/MilestoneTracker';
+import DealClosingWizard from '../DealClosingWizard/DealClosingWizard';
 import { useToast } from '../Toast/Toast';
 
 // Import extracted components
@@ -188,6 +189,7 @@ function CustomerDetails() {
   const [docPickerError, setDocPickerError] = useState(null);
   const [docPickerPath, setDocPickerPath] = useState([]);
   const [messageCopied, setMessageCopied] = useState(false);
+  const [isDealWizardOpen, setIsDealWizardOpen] = useState(false);
 
   // Memoize extractors to prevent unnecessary hook updates
   const memoizedDetailsExtractor = useCallback(extractDetailsData, []);
@@ -602,6 +604,16 @@ function CustomerDetails() {
               <>
                 <div className="actions-backdrop" onClick={() => setShowActionsMenu(false)}></div>
                 <div className="actions-menu">
+                  <button
+                    className="action-menu-item action-menu-item-deal"
+                    onClick={() => {
+                      setShowActionsMenu(false);
+                      setIsDealWizardOpen(true);
+                    }}
+                  >
+                    <ClipboardCheck size={18} />
+                    <span>Deal Closing Checklist</span>
+                  </button>
                   <button
                     className="action-menu-item"
                     onClick={() => {
@@ -1028,6 +1040,17 @@ function CustomerDetails() {
         isOpen={isPrintManagerOpen}
         onClose={() => setIsPrintManagerOpen(false)}
         customer={customer}
+      />
+
+      {/* Deal Closing Wizard */}
+      <DealClosingWizard
+        isOpen={isDealWizardOpen}
+        onClose={() => setIsDealWizardOpen(false)}
+        customer={customer}
+        onOpenPrintManager={() => {
+          setIsDealWizardOpen(false);
+          setIsPrintManagerOpen(true);
+        }}
       />
 
       {/* WhatsApp Quick Compose Modal */}
