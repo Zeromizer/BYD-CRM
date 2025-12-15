@@ -36,7 +36,7 @@ const REQUIRED_VSA_DETAILS = [
 const REQUIRED_LOAN_DETAILS = [
   { key: 'vsa_loanAmount', label: 'Loan Amount', critical: false, condition: 'hasLoan', type: 'text', placeholder: '$150,000' },
   { key: 'vsa_interest', label: 'Interest Rate (%)', critical: false, condition: 'hasLoan', type: 'text', placeholder: '2.88' },
-  { key: 'vsa_tenure', label: 'Loan Tenure (Years)', critical: false, condition: 'hasLoan', type: 'text', placeholder: '7' },
+  { key: 'vsa_tenure', label: 'Loan Tenure (Months)', critical: false, condition: 'hasLoan', type: 'text', placeholder: '84' },
   { key: 'vsa_monthlyRepayment', label: 'Monthly Repayment', critical: false, condition: 'hasLoan', type: 'text', placeholder: 'Auto-calculated', autoCalculated: true },
 ];
 
@@ -135,18 +135,17 @@ function DealClosingWizard({ isOpen, onClose, customer, onOpenPrintManager, onUp
   // Calculate monthly repayment based on loan details
   // Formula: M = P * [r(1+r)^n] / [(1+r)^n - 1]
   // Where P = principal, r = monthly interest rate, n = number of months
-  const calculateMonthlyRepayment = useCallback((loanAmount, interestRate, tenure) => {
+  const calculateMonthlyRepayment = useCallback((loanAmount, interestRate, tenureMonths) => {
     // Parse values - remove any non-numeric characters except decimal point
     const principal = parseFloat(String(loanAmount).replace(/[^0-9.-]/g, '')) || 0;
     const annualRate = parseFloat(String(interestRate).replace(/[^0-9.-]/g, '')) || 0;
-    const years = parseFloat(String(tenure).replace(/[^0-9.-]/g, '')) || 0;
+    const numberOfPayments = parseFloat(String(tenureMonths).replace(/[^0-9.-]/g, '')) || 0;
 
-    if (principal <= 0 || annualRate <= 0 || years <= 0) {
+    if (principal <= 0 || annualRate <= 0 || numberOfPayments <= 0) {
       return '';
     }
 
     const monthlyRate = annualRate / 100 / 12;
-    const numberOfPayments = years * 12;
 
     // Calculate monthly payment using amortization formula
     const monthlyPayment = principal *
