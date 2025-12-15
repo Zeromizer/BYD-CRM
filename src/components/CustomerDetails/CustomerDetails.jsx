@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { FolderOpen, ScanLine, Archive, ArchiveRestore, Workflow, MessageCircle, Paperclip, Folder, File, Image, FileText, FileSpreadsheet, X, Loader, Copy, Check } from 'lucide-react';
+import { FolderOpen, ScanLine, Archive, ArchiveRestore, Workflow, MessageCircle, Paperclip, Folder, File, Image, FileText, FileSpreadsheet, X, Loader, Copy, Check, Phone, Mail } from 'lucide-react';
 import useCustomerStore from '../../stores/useCustomerStore';
 import useAuthStore from '../../stores/useAuthStore';
 import { getStorageService } from '../../services/storageServiceSelector';
@@ -570,6 +570,41 @@ function CustomerDetails() {
           </button>
 
           <h2>{customer.name}</h2>
+
+          {/* Quick Action Buttons */}
+          <div className="header-quick-actions">
+            {customer.phone && (
+              <a
+                href={`tel:${customer.phone}`}
+                className="btn-quick-action"
+                title={`Call ${customer.phone}`}
+              >
+                <Phone size={18} />
+              </a>
+            )}
+            {customer.email && (
+              <a
+                href={`mailto:${customer.email}`}
+                className="btn-quick-action"
+                title={`Email ${customer.email}`}
+              >
+                <Mail size={18} />
+              </a>
+            )}
+          </div>
+
+          {/* Status Badge */}
+          <span className={`customer-status-badge ${
+            customer.currentMilestone === 'nps' ? 'complete' :
+            customer.currentMilestone === 'delivery' ? 'pending' :
+            'in-progress'
+          }`}>
+            {customer.currentMilestone === 'nps' ? 'Completed' :
+             customer.currentMilestone === 'delivery' ? 'Pending Delivery' :
+             customer.currentMilestone === 'registration' ? 'Registration' :
+             customer.currentMilestone === 'close_deal' ? 'Closing Deal' :
+             'Test Drive'}
+          </span>
 
           {/* WhatsApp Shortcut Button */}
           <button
