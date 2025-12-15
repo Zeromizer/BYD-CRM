@@ -13,6 +13,32 @@ import './DealClosingWizard.css';
  * Now supports inline editing of fields directly within the wizard!
  */
 
+// Currency fields that should be stored as plain numbers for Excel compatibility
+const CURRENCY_FIELDS = [
+  'vsa_sellingWithCOE',
+  'vsa_purchasePriceWithCOE',
+  'vsa_deposit',
+  'vsa_loanAmount',
+  'vsa_monthlyRepayment',
+  'vsa_tradeInAmount',
+];
+
+// Parse currency string to plain number (strips $, commas, spaces)
+const parseCurrency = (value) => {
+  if (value === null || value === undefined || value === '') return '';
+  const numStr = String(value).replace(/[^0-9.-]/g, '');
+  const num = parseFloat(numStr);
+  return isNaN(num) ? '' : num;
+};
+
+// Format number as currency for display (adds $ and commas)
+const formatCurrencyDisplay = (value) => {
+  if (value === null || value === undefined || value === '') return '';
+  const num = parseFloat(String(value).replace(/[^0-9.-]/g, ''));
+  if (isNaN(num)) return '';
+  return `$${num.toLocaleString()}`;
+};
+
 // Field configurations with input types
 const REQUIRED_CUSTOMER_DETAILS = [
   { key: 'name', label: 'Customer Name', critical: true, type: 'text' },
@@ -136,6 +162,7 @@ function DealClosingWizard({ isOpen, onClose, customer, onOpenPrintManager, onUp
   // (commonly used for car loans in Singapore)
   // Formula: Monthly = (Principal + Total Interest) / Months
   // Where Total Interest = Principal × Annual Rate × Years
+  // Returns plain number for Excel compatibility
   const calculateMonthlyRepayment = useCallback((loanAmount, interestRate, tenureMonths) => {
     // Parse values - remove any non-numeric characters except decimal point
     const principal = parseFloat(String(loanAmount).replace(/[^0-9.-]/g, '')) || 0;
@@ -154,18 +181,21 @@ function DealClosingWizard({ isOpen, onClose, customer, onOpenPrintManager, onUp
     const totalAmount = principal + totalInterest;
     const monthlyPayment = totalAmount / months;
 
-    // Round up to nearest whole number and format with $ sign
-    return `$${Math.ceil(monthlyPayment).toLocaleString()}`;
+    // Round up to nearest whole number - return plain number for Excel compatibility
+    return Math.ceil(monthlyPayment);
   }, []);
 
   // Handle field change with auto-calculation for monthly repayment
+  // Currency fields are stored as plain numbers for Excel compatibility
   const handleFieldChange = useCallback((key, value) => {
     setFormData(prev => {
-      const newData = { ...prev, [key]: value };
+      // Parse currency fields to store as plain numbers
+      const storedValue = CURRENCY_FIELDS.includes(key) ? parseCurrency(value) : value;
+      const newData = { ...prev, [key]: storedValue };
 
       // Auto-calculate monthly repayment when loan details change
       if (key === 'vsa_loanAmount' || key === 'vsa_interest' || key === 'vsa_tenure') {
-        const loanAmount = key === 'vsa_loanAmount' ? value : prev.vsa_loanAmount;
+        const loanAmount = key === 'vsa_loanAmount' ? storedValue : prev.vsa_loanAmount;
         const interestRate = key === 'vsa_interest' ? value : prev.vsa_interest;
         const tenure = key === 'vsa_tenure' ? value : prev.vsa_tenure;
 
@@ -333,8 +363,12 @@ function DealClosingWizard({ isOpen, onClose, customer, onOpenPrintManager, onUp
   ];
 
   // Render editable field
+  // Currency fields display formatted values but store plain numbers
   const renderEditableField = (field) => {
-    const value = getValue(field.key);
+    const rawValue = getValue(field.key);
+    const isCurrency = CURRENCY_FIELDS.includes(field.key);
+    // Display formatted currency, but use raw value for non-currency fields
+    const displayValue = isCurrency ? formatCurrencyDisplay(rawValue) : rawValue;
     const isFilled = hasValue(field.key);
 
     return (
@@ -358,7 +392,7 @@ function DealClosingWizard({ isOpen, onClose, customer, onOpenPrintManager, onUp
 
           {field.type === 'select' ? (
             <select
-              value={value}
+              value={rawValue}
               onChange={(e) => handleFieldChange(field.key, e.target.value)}
               className={`field-input ${!isFilled && field.critical ? 'error' : ''}`}
             >
@@ -370,7 +404,7 @@ function DealClosingWizard({ isOpen, onClose, customer, onOpenPrintManager, onUp
           ) : (
             <input
               type={field.type || 'text'}
-              value={value}
+              value={displayValue}
               onChange={(e) => handleFieldChange(field.key, e.target.value)}
               placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
               className={`field-input ${!isFilled && field.critical ? 'error' : ''} ${field.autoCalculated ? 'auto-calc-input' : ''}`}

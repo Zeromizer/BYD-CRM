@@ -1,9 +1,11 @@
 import { memo, useCallback } from 'react';
 import { VEHICLE_MODELS, BENEFITS_OPTIONS, BANKS } from '../../../constants/vehicleData';
 import { SaveButton } from '../../AnimatedButton/AnimatedButton';
+import { parseCurrency, formatCurrency, isCurrencyField } from '../../../utils/currencyUtils';
 
 /**
  * ProposalTab - Sales proposal and financing information form
+ * Currency fields are stored as plain numbers for Excel compatibility
  */
 function ProposalTab({
   formData,
@@ -13,10 +15,24 @@ function ProposalTab({
   onSave,
   onCancel,
 }) {
+  // Handle input change - parse currency fields to store as plain numbers
   const handleInputChange = useCallback((e) => {
     const { name, value } = e.target;
-    onFieldChange(name, value);
+    if (isCurrencyField(name, 'proposal')) {
+      onFieldChange(name, parseCurrency(value));
+    } else {
+      onFieldChange(name, value);
+    }
   }, [onFieldChange]);
+
+  // Get display value - format currency fields for display
+  const getDisplayValue = useCallback((fieldName) => {
+    const value = formData[fieldName];
+    if (isCurrencyField(fieldName, 'proposal') && value !== '' && value !== null && value !== undefined) {
+      return formatCurrency(value);
+    }
+    return value || '';
+  }, [formData]);
 
   return (
     <>
@@ -60,9 +76,9 @@ function ProposalTab({
               type="text"
               id="proposal_sellingPrice"
               name="sellingPrice"
-              value={formData.sellingPrice || ''}
+              value={getDisplayValue('sellingPrice')}
               onChange={handleInputChange}
-              placeholder="Enter selling price"
+              placeholder="$185,888"
               disabled={isSubmitting}
             />
           </div>
@@ -91,9 +107,9 @@ function ProposalTab({
               type="text"
               id="proposal_downpayment"
               name="downpayment"
-              value={formData.downpayment || ''}
+              value={getDisplayValue('downpayment')}
               onChange={handleInputChange}
-              placeholder="Enter downpayment"
+              placeholder="$18,588"
               disabled={isSubmitting}
             />
           </div>
@@ -115,9 +131,9 @@ function ProposalTab({
               type="text"
               id="proposal_loanAmount"
               name="loanAmount"
-              value={formData.loanAmount || ''}
+              value={getDisplayValue('loanAmount')}
               onChange={handleInputChange}
-              placeholder="Enter loan amount"
+              placeholder="$150,000"
               disabled={isSubmitting}
             />
           </div>
@@ -127,9 +143,9 @@ function ProposalTab({
               type="text"
               id="proposal_adminFee"
               name="adminFee"
-              value={formData.adminFee || ''}
+              value={getDisplayValue('adminFee')}
               onChange={handleInputChange}
-              placeholder="Enter admin fee"
+              placeholder="$500"
               disabled={isSubmitting}
             />
           </div>
@@ -139,9 +155,9 @@ function ProposalTab({
               type="text"
               id="proposal_referralFee"
               name="referralFee"
-              value={formData.referralFee || ''}
+              value={getDisplayValue('referralFee')}
               onChange={handleInputChange}
-              placeholder="Enter referral fee"
+              placeholder="$500"
               disabled={isSubmitting}
             />
           </div>
@@ -182,9 +198,9 @@ function ProposalTab({
               type="text"
               id="proposal_quotedTradeInPrice"
               name="quotedTradeInPrice"
-              value={formData.quotedTradeInPrice || ''}
+              value={getDisplayValue('quotedTradeInPrice')}
               onChange={handleInputChange}
-              placeholder="Enter quoted price"
+              placeholder="$15,000"
               disabled={isSubmitting}
             />
           </div>
@@ -194,9 +210,9 @@ function ProposalTab({
               type="text"
               id="proposal_lowLoanSurcharge"
               name="lowLoanSurcharge"
-              value={formData.lowLoanSurcharge || ''}
+              value={getDisplayValue('lowLoanSurcharge')}
               onChange={handleInputChange}
-              placeholder="Enter surcharge"
+              placeholder="$1,000"
               disabled={isSubmitting}
             />
           </div>
@@ -206,9 +222,9 @@ function ProposalTab({
               type="text"
               id="proposal_noLoanSurcharge"
               name="noLoanSurcharge"
-              value={formData.noLoanSurcharge || ''}
+              value={getDisplayValue('noLoanSurcharge')}
               onChange={handleInputChange}
-              placeholder="Enter surcharge"
+              placeholder="$2,000"
               disabled={isSubmitting}
             />
           </div>
