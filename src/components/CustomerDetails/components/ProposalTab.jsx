@@ -1,4 +1,5 @@
 import { memo, useCallback } from 'react';
+import { ArrowRightCircle } from 'lucide-react';
 import { VEHICLE_MODELS, BENEFITS_OPTIONS, BANKS } from '../../../constants/vehicleData';
 import { SaveButton } from '../../AnimatedButton/AnimatedButton';
 import { parseCurrency, formatCurrency, isCurrencyField } from '../../../utils/currencyUtils';
@@ -14,6 +15,7 @@ function ProposalTab({
   onFieldChange,
   onSave,
   onCancel,
+  onTransferToVsa,
 }) {
   // Handle input change - parse currency fields to store as plain numbers
   const handleInputChange = useCallback((e) => {
@@ -286,6 +288,19 @@ function ProposalTab({
 
       {/* Action Buttons */}
       <div className="details-actions">
+        <div className="details-actions-left">
+          {onTransferToVsa && (
+            <button
+              className="btn btn-outline-primary"
+              onClick={onTransferToVsa}
+              disabled={isSubmitting}
+              title="Transfer proposal details to VSA"
+            >
+              <ArrowRightCircle size={16} />
+              Transfer to VSA
+            </button>
+          )}
+        </div>
         <div className="details-actions-right">
           {hasChanges && (
             <button

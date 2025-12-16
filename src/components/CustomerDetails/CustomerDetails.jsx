@@ -334,6 +334,44 @@ function CustomerDetails() {
     }
   }, [customer, vsaForm, isSignedIn, updateCustomer, saveToLocalStorage, saveCustomerToFolder, toast]);
 
+  // Transfer proposal details to VSA
+  const handleTransferToVsa = useCallback(() => {
+    if (!proposalForm.formData) return;
+
+    const proposal = proposalForm.formData;
+
+    // Map proposal fields to VSA fields
+    const transferredData = {
+      // Vehicle
+      makeModel: proposal.model || vsaForm.formData.makeModel || '',
+      // Pricing
+      sellingWithCOE: proposal.sellingPrice || vsaForm.formData.sellingWithCOE || '',
+      purchasePriceWithCOE: proposal.sellingPrice || vsaForm.formData.purchasePriceWithCOE || '',
+      deposit: proposal.downpayment || vsaForm.formData.deposit || '',
+      // Loan details
+      loanAmount: proposal.loanAmount || vsaForm.formData.loanAmount || '',
+      interest: proposal.interestRate || vsaForm.formData.interest || '',
+      tenure: proposal.loanTenure || vsaForm.formData.tenure || '',
+      adminFee: proposal.adminFee || vsaForm.formData.adminFee || '',
+      // Trade-in details
+      tradeInCarModel: proposal.tradeInModel || vsaForm.formData.tradeInCarModel || '',
+      tradeInCarNo: proposal.tradeInCarPlate || vsaForm.formData.tradeInCarNo || '',
+      tradeInAmount: proposal.quotedTradeInPrice || vsaForm.formData.tradeInAmount || '',
+    };
+
+    // Merge with existing VSA data (only update fields that have values from proposal)
+    const mergedData = { ...vsaForm.formData };
+    Object.entries(transferredData).forEach(([key, value]) => {
+      if (value !== '' && value !== null && value !== undefined) {
+        mergedData[key] = value;
+      }
+    });
+
+    vsaForm.setFormData(mergedData);
+    setActiveTab('vsa');
+    toast.success('Proposal details transferred to VSA');
+  }, [proposalForm.formData, vsaForm, toast]);
+
   const handleInvoiceSave = useCallback(async () => {
     if (!customer) return;
 
@@ -785,6 +823,7 @@ function CustomerDetails() {
                 onFieldChange={proposalForm.handleChange}
                 onSave={handleProposalSave}
                 onCancel={proposalForm.resetForm}
+                onTransferToVsa={handleTransferToVsa}
               />
             </div>
           )}
