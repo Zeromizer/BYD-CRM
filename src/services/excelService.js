@@ -356,7 +356,15 @@ class ExcelService {
 
       let appliedCount = 0;
       for (const mapping of Object.values(fieldMappings)) {
-        let value = dataMapping[mapping.fieldType];
+        let value;
+
+        // Handle custom field type - use the stored custom value
+        if (mapping.fieldType === '_custom') {
+          value = mapping.customValue || '';
+        } else {
+          value = dataMapping[mapping.fieldType];
+        }
+
         if (value !== undefined && value !== null && value !== '') {
           // Convert currency fields to numbers for proper Excel formulas
           if (CURRENCY_FIELDS.has(mapping.fieldType)) {
