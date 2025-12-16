@@ -395,12 +395,23 @@ class ExcelService {
           if (cellRef.includes('!')) {
             // Format: SheetName!CellRef (e.g., "Sheet1!A1" or "Details!B5")
             const parts = cellRef.split('!');
-            const sheetName = parts[0].replace(/^'|'$/g, ''); // Remove quotes if present
+            const sheetNameInput = parts[0].replace(/^'|'$/g, ''); // Remove quotes if present
             actualCellRef = parts[1];
-            sheet = workbook.sheet(sheetName);
+
+            // Case-insensitive sheet lookup
+            sheet = workbook.sheet(sheetNameInput);
             if (!sheet) {
-              console.warn(`⚠️ Sheet "${sheetName}" not found, skipping cell ${cellRef}`);
-              continue;
+              // Try case-insensitive match
+              const allSheets = workbook.sheets();
+              const matchedSheet = allSheets.find(s =>
+                s.name().toLowerCase() === sheetNameInput.toLowerCase()
+              );
+              if (matchedSheet) {
+                sheet = matchedSheet;
+              } else {
+                console.warn(`⚠️ Sheet "${sheetNameInput}" not found, skipping cell ${cellRef}`);
+                continue;
+              }
             }
           } else {
             // Format: CellRef only (e.g., "A1") - use first sheet
