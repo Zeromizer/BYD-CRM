@@ -26,7 +26,7 @@ export const BODY_COLOURS = [
   'Boulder Grey',
   'Atlantis Grey',
   'Arctic Blue',
-  'Aurora While',
+  'Aurora White',
   'Maldive Purple',
   'Coral Pink',
   'Sand White',
