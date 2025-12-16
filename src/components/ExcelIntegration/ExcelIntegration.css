@@ -117,9 +117,16 @@
 
 .mapping-inputs {
   display: grid;
-  grid-template-columns: 1fr 1fr auto;
+  grid-template-columns: 1fr auto 1fr auto;
   gap: 15px;
   align-items: end;
+}
+
+.loading-sheets {
+  color: #7f8c8d;
+  font-style: italic;
+  padding: 8px 0;
+  display: inline-block;
 }
 
 .mappings-list {

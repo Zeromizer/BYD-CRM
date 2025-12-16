@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import useExcelStore from '../../stores/useExcelStore';
 import useAuthStore from '../../stores/useAuthStore';
 import { getStorageService, getAuthService } from '../../services/storageServiceSelector';
+import excelService from '../../services/excelService';
 import Modal from '../Modal/Modal';
 import JSZip from 'jszip';
 import './ExcelIntegration.css';
@@ -175,6 +176,9 @@ function ExcelIntegration() {
   const [tempMappings, setTempMappings] = useState({});
   const [selectedField, setSelectedField] = useState('name');
   const [cellRef, setCellRef] = useState('');
+  const [availableSheets, setAvailableSheets] = useState([]);
+  const [selectedSheet, setSelectedSheet] = useState('');
+  const [loadingSheets, setLoadingSheets] = useState(false);
 
   const [uploadingMaster, setUploadingMaster] = useState(false);
   const [masterFileToUpload, setMasterFileToUpload] = useState(null);
@@ -305,7 +309,37 @@ function ExcelIntegration() {
     }
   };
 
-  const openMappingModal = (templateId) => {
+  // Load sheet names from Excel file
+  const loadSheetNames = useCallback(async (template) => {
+    if (!template.driveFileId) {
+      setAvailableSheets([]);
+      return;
+    }
+
+    setLoadingSheets(true);
+    try {
+      // Dynamically import xlsx-populate
+      const XlsxPopulate = (await import('xlsx-populate')).default;
+
+      // Fetch the Excel file
+      const arrayBuffer = await excelService.fetchFileFromDrive(template.driveFileId);
+
+      // Load workbook and get sheet names
+      const workbook = await XlsxPopulate.fromDataAsync(arrayBuffer);
+      const sheetNames = workbook.sheets().map(s => s.name());
+
+      setAvailableSheets(sheetNames);
+      // Default to first sheet or empty (meaning first sheet)
+      setSelectedSheet('');
+    } catch (error) {
+      console.error('Error loading sheet names:', error);
+      setAvailableSheets([]);
+    } finally {
+      setLoadingSheets(false);
+    }
+  }, []);
+
+  const openMappingModal = async (templateId) => {
     const template = excelTemplates[templateId];
     if (!template) {
       alert('Template not found');
@@ -314,26 +348,44 @@ function ExcelIntegration() {
 
     setCurrentTemplateId(templateId);
     setTempMappings({ ...(template.fieldMappings || {}) });
+    setSelectedSheet('');
+    setAvailableSheets([]);
     setShowMappingModal(true);
+
+    // Load sheet names in background
+    loadSheetNames(template);
   };
 
   const addMapping = () => {
     if (!cellRef.trim()) {
-      alert('Please enter a cell reference (e.g., A1 or Sheet2!A1)');
+      alert('Please enter a cell reference (e.g., A1)');
       return;
     }
 
-    const cellRefUpper = cellRef.trim().toUpperCase();
+    let cellRefInput = cellRef.trim().toUpperCase();
 
-    // Validate cell reference format - supports "A1" or "SheetName!A1"
-    // Simple format: A1, B5, AA10
-    // Sheet format: Sheet1!A1, 'My Sheet'!B5
-    const simpleRef = /^[A-Z]+[0-9]+$/;
-    const sheetRef = /^['"]?[^!]+['"]?![A-Z]+[0-9]+$/;
+    // Validate cell reference format (just the cell part, e.g., A1, B5)
+    const simpleCellRef = /^[A-Z]+[0-9]+$/;
 
-    if (!simpleRef.test(cellRefUpper) && !sheetRef.test(cellRefUpper)) {
-      alert('Invalid cell reference. Use format like A1, B5, or Sheet2!A1 for specific sheets.');
-      return;
+    // If user already typed sheet!cell format, parse it
+    if (cellRefInput.includes('!')) {
+      const parts = cellRefInput.split('!');
+      const cellPart = parts[1];
+      if (!simpleCellRef.test(cellPart)) {
+        alert('Invalid cell reference. Use format like A1, B5, C10.');
+        return;
+      }
+      // Use as-is since they typed it manually
+    } else {
+      // Validate just the cell ref
+      if (!simpleCellRef.test(cellRefInput)) {
+        alert('Invalid cell reference. Use format like A1, B5, C10.');
+        return;
+      }
+      // Prepend selected sheet if one is selected
+      if (selectedSheet) {
+        cellRefInput = `${selectedSheet.toUpperCase()}!${cellRefInput}`;
+      }
     }
 
     const mappingId = 'mapping_' + Date.now();
@@ -341,7 +393,7 @@ function ExcelIntegration() {
       ...tempMappings,
       [mappingId]: {
         fieldType: selectedField,
-        cellRef: cellRefUpper,
+        cellRef: cellRefInput,
       },
     });
 
@@ -1149,13 +1201,33 @@ function ExcelIntegration() {
                   </optgroup>
                 </select>
               </div>
+              {availableSheets.length > 0 && (
+                <div className="form-group">
+                  <label>Sheet</label>
+                  <select
+                    value={selectedSheet}
+                    onChange={(e) => setSelectedSheet(e.target.value)}
+                  >
+                    <option value="">{availableSheets[0]} (Default)</option>
+                    {availableSheets.map((sheet) => (
+                      <option key={sheet} value={sheet}>{sheet}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+              {loadingSheets && (
+                <div className="form-group">
+                  <label>Sheet</label>
+                  <span className="loading-sheets">Loading sheets...</span>
+                </div>
+              )}
               <div className="form-group">
-                <label>Excel Cell (e.g., A1, B5, Sheet2!A1)</label>
+                <label>Excel Cell (e.g., A1, B5)</label>
                 <input
                   type="text"
                   value={cellRef}
                   onChange={(e) => setCellRef(e.target.value.toUpperCase())}
-                  placeholder="A1 or Sheet2!A1"
+                  placeholder="A1"
                   style={{ textTransform: 'uppercase' }}
                 />
               </div>
