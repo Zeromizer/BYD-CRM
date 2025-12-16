@@ -162,6 +162,7 @@ function DealClosingWizard({ isOpen, onClose, customer, onOpenPrintManager, onUp
     hasTradeIn: false,
     tradeInBuyerIsOwner: true,
     tradeInStillFinanced: false,
+    needsNumberRetention: false,
     needsNcdTransfer: false,
   });
 
@@ -201,6 +202,7 @@ function DealClosingWizard({ isOpen, onClose, customer, onOpenPrintManager, onUp
         hasTradeIn: false,
         tradeInBuyerIsOwner: true,
         tradeInStillFinanced: false,
+        needsNumberRetention: false,
         needsNcdTransfer: false,
       });
     }
@@ -214,6 +216,7 @@ function DealClosingWizard({ isOpen, onClose, customer, onOpenPrintManager, onUp
       if (key === 'hasTradeIn' && !value) {
         newConfig.tradeInBuyerIsOwner = true;
         newConfig.tradeInStillFinanced = false;
+        newConfig.needsNumberRetention = false;
         newConfig.needsNcdTransfer = false;
       }
       if (key === 'hasLoan' && !value) {
@@ -670,6 +673,17 @@ function DealClosingWizard({ isOpen, onClose, customer, onOpenPrintManager, onUp
                       </label>
                     </div>
 
+                    <div className="setup-option">
+                      <label className="setup-toggle">
+                        <input
+                          type="checkbox"
+                          checked={dealConfig.needsNumberRetention}
+                          onChange={(e) => handleDealConfigChange('needsNumberRetention', e.target.checked)}
+                        />
+                        <span className="toggle-label">Customer needs Number Retention</span>
+                      </label>
+                    </div>
+
                     {!dealConfig.tradeInBuyerIsOwner && (
                       <div className="setup-option">
                         <label className="setup-toggle">
@@ -795,6 +809,17 @@ function DealClosingWizard({ isOpen, onClose, customer, onOpenPrintManager, onUp
                 </button>
               </div>
 
+              {/* Number Retention Reminder */}
+              {dealConfig.needsNumberRetention && (
+                <div className="alert alert-warning number-retention-reminder">
+                  <AlertCircle size={20} />
+                  <div className="reminder-content">
+                    <strong>NUMBER RETENTION REQUIRED</strong>
+                    <span>This customer needs to retain their existing plate number. Ensure LTA number retention is processed before vehicle registration.</span>
+                  </div>
+                </div>
+              )}
+
               <div className="alert alert-info">
                 <FileText size={18} />
                 <span>Check off each document after printing. Ensure all copies are ready.</span>
@@ -877,6 +902,17 @@ function DealClosingWizard({ isOpen, onClose, customer, onOpenPrintManager, onUp
                   {applicableDocuments.all.filter(d => checkedSignatures[d.id]).length} / {applicableDocuments.all.length} Signed
                 </div>
               </div>
+
+              {/* Number Retention Reminder */}
+              {dealConfig.needsNumberRetention && (
+                <div className="alert alert-warning number-retention-reminder">
+                  <AlertCircle size={20} />
+                  <div className="reminder-content">
+                    <strong>REMINDER: NUMBER RETENTION</strong>
+                    <span>Do not forget - this customer requires number retention before registration!</span>
+                  </div>
+                </div>
+              )}
 
               <div className="alert alert-warning">
                 <AlertCircle size={18} />
