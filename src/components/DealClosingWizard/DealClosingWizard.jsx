@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
-import { CheckCircle, XCircle, AlertCircle, ChevronRight, Printer, FileText, User, Car, CreditCard, ClipboardList, Save, Edit3 } from 'lucide-react';
+import { CheckCircle, XCircle, AlertCircle, ChevronRight, Printer, FileText, User, Car, CreditCard, ClipboardList, Save, Edit3, Settings, ArrowRightLeft } from 'lucide-react';
 import Modal from '../Modal/Modal';
-import { VEHICLE_MODELS, BODY_COLOURS } from '../../constants/vehicleData';
+import { VEHICLE_MODELS, BODY_COLOURS, BANKS } from '../../constants/vehicleData';
 import './DealClosingWizard.css';
 
 /**
@@ -10,8 +10,15 @@ import './DealClosingWizard.css';
  * Ensures all required customer details and documents are ready
  * before the customer leaves, preventing missing items.
  *
- * Now supports inline editing of fields directly within the wizard!
+ * Step 0: Deal Setup - Configure deal requirements (loan bank, trade-in options)
+ * Step 1: Customer Details - Verify and fill customer information
+ * Step 2: VSA Details - Verify vehicle and pricing details
+ * Step 3: Print Documents - Print all required documents
+ * Step 4: Signatures - Collect all signatures
  */
+
+// Banks that require physical paper signatures (not digital)
+const PHYSICAL_SIGNATURE_BANKS = ['Hong Leong Finance', 'Motorway Credit'];
 
 // Currency fields that should be stored as plain numbers for Excel compatibility
 const CURRENCY_FIELDS = [
@@ -103,14 +110,26 @@ const REQUIRED_DOCUMENTS = [
   },
 ];
 
-const OPTIONAL_DOCUMENTS = [
+// Conditional documents based on deal setup
+const CONDITIONAL_DOCUMENTS = [
+  // Loan documents
   {
     id: 'loan',
     name: 'Loan Application Form',
-    description: 'Bank financing application',
+    description: 'Bank financing application (digital submission)',
     copies: 1,
-    condition: 'hasLoan'
+    condition: 'hasLoan',
+    excludeCondition: 'requiresPhysicalLoanDocs'
   },
+  {
+    id: 'loan_physical',
+    name: 'Loan Application Form (Physical)',
+    description: 'Physical paper loan application - MUST be signed by customer',
+    copies: 2,
+    condition: 'requiresPhysicalLoanDocs',
+    highlight: true
+  },
+  // Trade-in documents
   {
     id: 'trade_in',
     name: 'Trade-In Agreement',
@@ -118,6 +137,35 @@ const OPTIONAL_DOCUMENTS = [
     copies: 1,
     condition: 'hasTradeIn'
   },
+  {
+    id: 'trade_in_owner_auth',
+    name: 'Trade-In Owner Authorization',
+    description: 'Authorization from vehicle owner (buyer is not owner)',
+    copies: 1,
+    condition: 'tradeInBuyerNotOwner'
+  },
+  {
+    id: 'trade_in_settlement',
+    name: 'Trade-In Settlement Letter',
+    description: 'Outstanding loan settlement authorization',
+    copies: 1,
+    condition: 'tradeInStillFinanced'
+  },
+  {
+    id: 'number_retention',
+    name: 'Number Retention Form',
+    description: 'LTA number plate retention application',
+    copies: 1,
+    condition: 'needsNumberRetention'
+  },
+  {
+    id: 'ncd_transfer',
+    name: 'NCD Transfer Form',
+    description: 'No Claim Discount transfer (owner is not buyer)',
+    copies: 1,
+    condition: 'needsNcdTransfer'
+  },
+  // Insurance
   {
     id: 'insurance',
     name: 'Insurance Quotation',
@@ -135,6 +183,19 @@ function DealClosingWizard({ isOpen, onClose, customer, onOpenPrintManager, onUp
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
+  // Deal configuration from setup step
+  const [dealConfig, setDealConfig] = useState({
+    // Loan section
+    hasLoan: false,
+    loanBank: '',
+    // Trade-in section
+    hasTradeIn: false,
+    tradeInBuyerIsOwner: true,
+    tradeInStillFinanced: false,
+    needsNumberRetention: false,
+    needsNcdTransfer: false,
+  });
+
   // Initialize form data from customer when modal opens
   useEffect(() => {
     if (isOpen && customer) {
@@ -144,6 +205,16 @@ function DealClosingWizard({ isOpen, onClose, customer, onOpenPrintManager, onUp
       });
       setFormData(initialData);
       setHasUnsavedChanges(false);
+
+      // Pre-populate deal config based on existing customer data
+      const hasLoanData = !!(customer.vsa_loanAmount && parseFloat(String(customer.vsa_loanAmount).replace(/[^0-9.-]/g, '')) > 0);
+      const hasTradeInData = !!(customer.vsa_tradeInCarNo || customer.vsa_tradeInCarModel);
+      setDealConfig(prev => ({
+        ...prev,
+        hasLoan: hasLoanData,
+        hasTradeIn: hasTradeInData,
+        tradeInBuyerIsOwner: !customer.vsa_tradeInOwnerNotCustomer,
+      }));
     }
   }, [isOpen, customer]);
 
@@ -155,8 +226,47 @@ function DealClosingWizard({ isOpen, onClose, customer, onOpenPrintManager, onUp
       setCheckedSignatures({});
       setFormData({});
       setHasUnsavedChanges(false);
+      setDealConfig({
+        hasLoan: false,
+        loanBank: '',
+        hasTradeIn: false,
+        tradeInBuyerIsOwner: true,
+        tradeInStillFinanced: false,
+        needsNumberRetention: false,
+        needsNcdTransfer: false,
+      });
     }
   }, [isOpen]);
+
+  // Handle deal config changes
+  const handleDealConfigChange = useCallback((key, value) => {
+    setDealConfig(prev => {
+      const newConfig = { ...prev, [key]: value };
+      // Reset dependent options
+      if (key === 'hasTradeIn' && !value) {
+        newConfig.tradeInBuyerIsOwner = true;
+        newConfig.tradeInStillFinanced = false;
+        newConfig.needsNumberRetention = false;
+        newConfig.needsNcdTransfer = false;
+      }
+      if (key === 'hasLoan' && !value) {
+        newConfig.loanBank = '';
+      }
+      if (key === 'tradeInBuyerIsOwner' && value) {
+        newConfig.needsNcdTransfer = false;
+      }
+      return newConfig;
+    });
+  }, []);
+
+  // Derived conditions for documents
+  const requiresPhysicalLoanDocs = useMemo(() => {
+    return dealConfig.hasLoan && PHYSICAL_SIGNATURE_BANKS.includes(dealConfig.loanBank);
+  }, [dealConfig.hasLoan, dealConfig.loanBank]);
+
+  const tradeInBuyerNotOwner = useMemo(() => {
+    return dealConfig.hasTradeIn && !dealConfig.tradeInBuyerIsOwner;
+  }, [dealConfig.hasTradeIn, dealConfig.tradeInBuyerIsOwner]);
 
   // Calculate monthly repayment based on loan details using FLAT RATE method
   // (commonly used for car loans in Singapore)
@@ -239,23 +349,39 @@ function DealClosingWizard({ isOpen, onClose, customer, onOpenPrintManager, onUp
     return true;
   }, [getValue]);
 
-  // Determine if customer has loan or trade-in (check both form data and customer)
-  const hasLoan = useMemo(() => {
-    const loanAmount = getValue('vsa_loanAmount');
-    return !!(loanAmount && parseFloat(loanAmount.toString().replace(/[^0-9.-]/g, '')) > 0);
-  }, [getValue]);
+  // Use dealConfig for loan/trade-in status (from setup step)
+  const hasLoan = dealConfig.hasLoan;
+  const hasTradeIn = dealConfig.hasTradeIn;
 
-  const hasTradeIn = useMemo(() => {
-    return !!(getValue('vsa_tradeInCarNo') || getValue('vsa_tradeInCarModel'));
-  }, [getValue]);
-
-  // Check if condition is met for conditional fields
-  const meetsCondition = useCallback((condition) => {
+  // Check if condition is met for conditional fields/documents
+  const meetsCondition = useCallback((condition, excludeCondition = null) => {
     if (!condition) return true;
-    if (condition === 'hasLoan') return hasLoan;
-    if (condition === 'hasTradeIn') return hasTradeIn;
-    return true;
-  }, [hasLoan, hasTradeIn]);
+
+    // Check exclude condition first
+    if (excludeCondition) {
+      const excludeResult = meetsCondition(excludeCondition);
+      if (excludeResult) return false;
+    }
+
+    switch (condition) {
+      case 'hasLoan':
+        return dealConfig.hasLoan;
+      case 'hasTradeIn':
+        return dealConfig.hasTradeIn;
+      case 'requiresPhysicalLoanDocs':
+        return requiresPhysicalLoanDocs;
+      case 'tradeInBuyerNotOwner':
+        return tradeInBuyerNotOwner;
+      case 'tradeInStillFinanced':
+        return dealConfig.hasTradeIn && dealConfig.tradeInStillFinanced;
+      case 'needsNumberRetention':
+        return dealConfig.hasTradeIn && dealConfig.needsNumberRetention;
+      case 'needsNcdTransfer':
+        return tradeInBuyerNotOwner && dealConfig.needsNcdTransfer;
+      default:
+        return true;
+    }
+  }, [dealConfig, requiresPhysicalLoanDocs, tradeInBuyerNotOwner]);
 
   // Calculate field completeness for each section
   const customerDetailsStatus = useMemo(() => {
@@ -290,35 +416,45 @@ function DealClosingWizard({ isOpen, onClose, customer, onOpenPrintManager, onUp
     return { fields, filled, missing, percentage: Math.round((filled.length / fields.length) * 100) };
   }, [hasValue, hasTradeIn, meetsCondition]);
 
-  // Get applicable documents
+  // Get applicable documents based on deal configuration
   const applicableDocuments = useMemo(() => {
     const required = REQUIRED_DOCUMENTS;
-    const optional = OPTIONAL_DOCUMENTS.filter(doc => meetsCondition(doc.condition));
-    return { required, optional, all: [...required, ...optional] };
+    const conditional = CONDITIONAL_DOCUMENTS.filter(doc =>
+      meetsCondition(doc.condition, doc.excludeCondition)
+    );
+    // Separate highlighted (important) documents
+    const highlighted = conditional.filter(doc => doc.highlight);
+    const regular = conditional.filter(doc => !doc.highlight);
+    return { required, conditional, highlighted, regular, all: [...required, ...conditional] };
   }, [meetsCondition]);
 
   // Check if step is complete
   const isStepComplete = useCallback((stepIndex) => {
     switch (stepIndex) {
-      case 0: // Customer Details
+      case 0: // Deal Setup - always complete once bank is selected if has loan
+        return !dealConfig.hasLoan || (dealConfig.hasLoan && dealConfig.loanBank);
+      case 1: // Customer Details
         return customerDetailsStatus.criticalMissing.length === 0;
-      case 1: // VSA Details
+      case 2: // VSA Details
         return vsaDetailsStatus.criticalMissing.length === 0;
-      case 2: // Documents
-        return applicableDocuments.required.every(doc => checkedDocuments[doc.id]);
-      case 3: // Signatures
-        return applicableDocuments.required.every(doc => checkedSignatures[doc.id]);
+      case 3: // Documents
+        return applicableDocuments.all.every(doc => checkedDocuments[doc.id]);
+      case 4: // Signatures
+        return applicableDocuments.all.every(doc => checkedSignatures[doc.id]);
       default:
         return false;
     }
-  }, [customerDetailsStatus, vsaDetailsStatus, applicableDocuments, checkedDocuments, checkedSignatures]);
+  }, [dealConfig, customerDetailsStatus, vsaDetailsStatus, applicableDocuments, checkedDocuments, checkedSignatures]);
+
+  // Total number of steps
+  const totalSteps = 5;
 
   // Navigation with auto-save
   const handleNext = async () => {
     if (hasUnsavedChanges) {
       await saveChanges();
     }
-    if (currentStep < 3) {
+    if (currentStep < totalSteps - 1) {
       setCurrentStep(currentStep + 1);
     }
   };
@@ -356,10 +492,11 @@ function DealClosingWizard({ isOpen, onClose, customer, onOpenPrintManager, onUp
 
   // Steps configuration
   const steps = [
-    { id: 0, title: 'Customer Details', icon: User },
-    { id: 1, title: 'VSA Details', icon: Car },
-    { id: 2, title: 'Print Documents', icon: Printer },
-    { id: 3, title: 'Signatures', icon: ClipboardList },
+    { id: 0, title: 'Deal Setup', icon: Settings },
+    { id: 1, title: 'Customer Details', icon: User },
+    { id: 2, title: 'VSA Details', icon: Car },
+    { id: 3, title: 'Print Documents', icon: Printer },
+    { id: 4, title: 'Signatures', icon: ClipboardList },
   ];
 
   // Render editable field
@@ -470,8 +607,148 @@ function DealClosingWizard({ isOpen, onClose, customer, onOpenPrintManager, onUp
 
         {/* Step Content */}
         <div className="wizard-content">
-          {/* Step 0: Customer Details */}
+          {/* Step 0: Deal Setup */}
           {currentStep === 0 && (
+            <div className="wizard-step">
+              <div className="step-header">
+                <h4>Configure Deal Requirements</h4>
+              </div>
+
+              <div className="alert alert-info">
+                <Settings size={18} />
+                <span>Select the options that apply to this deal. This will customize the checklist.</span>
+              </div>
+
+              {/* Loan Section */}
+              <div className="setup-section">
+                <div className="setup-section-header">
+                  <CreditCard size={18} />
+                  <h5>Loan / Financing</h5>
+                </div>
+
+                <div className="setup-option">
+                  <label className="setup-toggle">
+                    <input
+                      type="checkbox"
+                      checked={dealConfig.hasLoan}
+                      onChange={(e) => handleDealConfigChange('hasLoan', e.target.checked)}
+                    />
+                    <span className="toggle-label">Customer has loan / financing</span>
+                  </label>
+                </div>
+
+                {dealConfig.hasLoan && (
+                  <div className="setup-suboptions">
+                    <div className="setup-option">
+                      <label className="setup-select-label">Select Bank</label>
+                      <select
+                        value={dealConfig.loanBank}
+                        onChange={(e) => handleDealConfigChange('loanBank', e.target.value)}
+                        className="setup-select"
+                      >
+                        <option value="">-- Select Bank --</option>
+                        {BANKS.map(bank => (
+                          <option key={bank} value={bank}>{bank}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {requiresPhysicalLoanDocs && (
+                      <div className="alert alert-warning setup-alert">
+                        <AlertCircle size={16} />
+                        <span><strong>{dealConfig.loanBank}</strong> requires physical paper loan documents to be signed!</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Trade-In Section */}
+              <div className="setup-section">
+                <div className="setup-section-header">
+                  <ArrowRightLeft size={18} />
+                  <h5>Trade-In</h5>
+                </div>
+
+                <div className="setup-option">
+                  <label className="setup-toggle">
+                    <input
+                      type="checkbox"
+                      checked={dealConfig.hasTradeIn}
+                      onChange={(e) => handleDealConfigChange('hasTradeIn', e.target.checked)}
+                    />
+                    <span className="toggle-label">Customer has trade-in vehicle</span>
+                  </label>
+                </div>
+
+                {dealConfig.hasTradeIn && (
+                  <div className="setup-suboptions">
+                    <div className="setup-option">
+                      <label className="setup-toggle">
+                        <input
+                          type="checkbox"
+                          checked={dealConfig.tradeInBuyerIsOwner}
+                          onChange={(e) => handleDealConfigChange('tradeInBuyerIsOwner', e.target.checked)}
+                        />
+                        <span className="toggle-label">Buyer is the owner of trade-in vehicle</span>
+                      </label>
+                    </div>
+
+                    <div className="setup-option">
+                      <label className="setup-toggle">
+                        <input
+                          type="checkbox"
+                          checked={dealConfig.tradeInStillFinanced}
+                          onChange={(e) => handleDealConfigChange('tradeInStillFinanced', e.target.checked)}
+                        />
+                        <span className="toggle-label">Trade-in car is still being financed</span>
+                      </label>
+                    </div>
+
+                    <div className="setup-option">
+                      <label className="setup-toggle">
+                        <input
+                          type="checkbox"
+                          checked={dealConfig.needsNumberRetention}
+                          onChange={(e) => handleDealConfigChange('needsNumberRetention', e.target.checked)}
+                        />
+                        <span className="toggle-label">Customer needs Number Retention</span>
+                      </label>
+                    </div>
+
+                    {!dealConfig.tradeInBuyerIsOwner && (
+                      <div className="setup-option">
+                        <label className="setup-toggle">
+                          <input
+                            type="checkbox"
+                            checked={dealConfig.needsNcdTransfer}
+                            onChange={(e) => handleDealConfigChange('needsNcdTransfer', e.target.checked)}
+                          />
+                          <span className="toggle-label">NCD Transfer required (owner is not buyer)</span>
+                        </label>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Summary of required documents */}
+              <div className="setup-summary">
+                <h5>Documents Required for This Deal:</h5>
+                <ul className="setup-doc-list">
+                  {applicableDocuments.all.map(doc => (
+                    <li key={doc.id} className={doc.highlight ? 'highlight' : ''}>
+                      {doc.name}
+                      {doc.highlight && <span className="physical-badge">Physical Signature</span>}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
+
+          {/* Step 1: Customer Details */}
+          {currentStep === 1 && (
             <div className="wizard-step">
               <div className="step-header">
                 <h4>Verify & Fill Customer Details</h4>
@@ -498,8 +775,8 @@ function DealClosingWizard({ isOpen, onClose, customer, onOpenPrintManager, onUp
             </div>
           )}
 
-          {/* Step 1: VSA Details */}
-          {currentStep === 1 && (
+          {/* Step 2: VSA Details */}
+          {currentStep === 2 && (
             <div className="wizard-step">
               <div className="step-header">
                 <h4>Verify & Fill VSA Details</h4>
@@ -553,8 +830,8 @@ function DealClosingWizard({ isOpen, onClose, customer, onOpenPrintManager, onUp
             </div>
           )}
 
-          {/* Step 2: Print Documents */}
-          {currentStep === 2 && (
+          {/* Step 3: Print Documents */}
+          {currentStep === 3 && (
             <div className="wizard-step">
               <div className="step-header">
                 <h4>Print Required Documents</h4>
@@ -568,6 +845,32 @@ function DealClosingWizard({ isOpen, onClose, customer, onOpenPrintManager, onUp
                 <FileText size={18} />
                 <span>Check off each document after printing. Ensure all copies are ready.</span>
               </div>
+
+              {/* Highlighted documents (physical signature required) */}
+              {applicableDocuments.highlighted.length > 0 && (
+                <>
+                  <div className="section-title highlight-section">
+                    <AlertCircle size={16} />
+                    Physical Signature Required
+                  </div>
+                  <div className="documents-checklist">
+                    {applicableDocuments.highlighted.map(doc => (
+                      <label key={doc.id} className={`document-item highlight ${checkedDocuments[doc.id] ? 'checked' : ''}`}>
+                        <input
+                          type="checkbox"
+                          checked={checkedDocuments[doc.id] || false}
+                          onChange={() => toggleDocument(doc.id)}
+                        />
+                        <div className="document-info">
+                          <span className="document-name">{doc.name}</span>
+                          <span className="document-desc">{doc.description}</span>
+                        </div>
+                        <span className="document-copies">{doc.copies} copies</span>
+                      </label>
+                    ))}
+                  </div>
+                </>
+              )}
 
               <div className="section-title">Required Documents</div>
               <div className="documents-checklist">
@@ -587,12 +890,12 @@ function DealClosingWizard({ isOpen, onClose, customer, onOpenPrintManager, onUp
                 ))}
               </div>
 
-              {applicableDocuments.optional.length > 0 && (
+              {applicableDocuments.regular.length > 0 && (
                 <>
-                  <div className="section-title">Additional Documents</div>
+                  <div className="section-title">Additional Documents (Based on Deal Setup)</div>
                   <div className="documents-checklist">
-                    {applicableDocuments.optional.map(doc => (
-                      <label key={doc.id} className={`document-item optional ${checkedDocuments[doc.id] ? 'checked' : ''}`}>
+                    {applicableDocuments.regular.map(doc => (
+                      <label key={doc.id} className={`document-item conditional ${checkedDocuments[doc.id] ? 'checked' : ''}`}>
                         <input
                           type="checkbox"
                           checked={checkedDocuments[doc.id] || false}
@@ -611,13 +914,13 @@ function DealClosingWizard({ isOpen, onClose, customer, onOpenPrintManager, onUp
             </div>
           )}
 
-          {/* Step 3: Signatures */}
-          {currentStep === 3 && (
+          {/* Step 4: Signatures */}
+          {currentStep === 4 && (
             <div className="wizard-step">
               <div className="step-header">
                 <h4>Collect Signatures</h4>
-                <div className={`completion-badge ${applicableDocuments.required.every(d => checkedSignatures[d.id]) ? 'complete' : 'warning'}`}>
-                  {applicableDocuments.required.filter(d => checkedSignatures[d.id]).length} / {applicableDocuments.required.length} Signed
+                <div className={`completion-badge ${applicableDocuments.all.every(d => checkedSignatures[d.id]) ? 'complete' : 'warning'}`}>
+                  {applicableDocuments.all.filter(d => checkedSignatures[d.id]).length} / {applicableDocuments.all.length} Signed
                 </div>
               </div>
 
@@ -626,9 +929,38 @@ function DealClosingWizard({ isOpen, onClose, customer, onOpenPrintManager, onUp
                 <span>Verify customer signs all documents before they leave!</span>
               </div>
 
+              {/* Highlighted signatures (physical paper) */}
+              {applicableDocuments.highlighted.length > 0 && (
+                <>
+                  <div className="section-title highlight-section">
+                    <AlertCircle size={16} />
+                    Physical Paper Signatures
+                  </div>
+                  <div className="signatures-checklist">
+                    {applicableDocuments.highlighted.map(doc => (
+                      <label key={doc.id} className={`signature-item highlight ${checkedSignatures[doc.id] ? 'signed' : ''}`}>
+                        <input
+                          type="checkbox"
+                          checked={checkedSignatures[doc.id] || false}
+                          onChange={() => toggleSignature(doc.id)}
+                        />
+                        <div className="signature-info">
+                          <span className="signature-name">{doc.name}</span>
+                          {checkedSignatures[doc.id] && (
+                            <span className="signed-badge">
+                              <CheckCircle size={14} /> Signed
+                            </span>
+                          )}
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </>
+              )}
+
               <div className="section-title">Documents Requiring Signature</div>
               <div className="signatures-checklist">
-                {applicableDocuments.required.map(doc => (
+                {[...applicableDocuments.required, ...applicableDocuments.regular].map(doc => (
                   <label key={doc.id} className={`signature-item ${checkedSignatures[doc.id] ? 'signed' : ''}`}>
                     <input
                       type="checkbox"
@@ -647,7 +979,7 @@ function DealClosingWizard({ isOpen, onClose, customer, onOpenPrintManager, onUp
                 ))}
               </div>
 
-              {applicableDocuments.required.every(d => checkedSignatures[d.id]) && (
+              {applicableDocuments.all.every(d => checkedSignatures[d.id]) && (
                 <div className="success-message">
                   <CheckCircle size={24} />
                   <div>
@@ -686,11 +1018,11 @@ function DealClosingWizard({ isOpen, onClose, customer, onOpenPrintManager, onUp
               </button>
             )}
 
-            {currentStep < 3 ? (
+            {currentStep < totalSteps - 1 ? (
               <button
                 className="btn btn-primary"
                 onClick={handleNext}
-                disabled={isSaving}
+                disabled={isSaving || (currentStep === 0 && dealConfig.hasLoan && !dealConfig.loanBank)}
               >
                 {hasUnsavedChanges ? 'Save & Next' : 'Next Step'}
                 <ChevronRight size={16} />
