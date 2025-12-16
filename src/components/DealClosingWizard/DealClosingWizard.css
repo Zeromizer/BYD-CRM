@@ -616,6 +616,202 @@ select.field-input {
 }
 
 /* Responsive */
+/* Deal Setup Step Styles */
+.setup-section {
+  background: white;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.setup-section-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.setup-section-header svg {
+  color: #0891b2;
+}
+
+.setup-section-header h5 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.setup-option {
+  margin-bottom: 12px;
+}
+
+.setup-toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  padding: 10px 12px;
+  background: #f8fafc;
+  border-radius: 8px;
+  transition: background 0.2s;
+}
+
+.setup-toggle:hover {
+  background: #f1f5f9;
+}
+
+.setup-toggle input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  accent-color: #0891b2;
+  cursor: pointer;
+}
+
+.toggle-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #334155;
+}
+
+.setup-suboptions {
+  margin-left: 32px;
+  margin-top: 12px;
+  padding-left: 16px;
+  border-left: 3px solid #0891b2;
+}
+
+.setup-select-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 6px;
+}
+
+.setup-select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #1e293b;
+  background: white;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+}
+
+.setup-select:focus {
+  outline: none;
+  border-color: #0891b2;
+  box-shadow: 0 0 0 3px rgba(8, 145, 178, 0.1);
+}
+
+.setup-alert {
+  margin-top: 12px;
+  font-size: 13px;
+}
+
+.setup-summary {
+  background: #f0f9ff;
+  border: 2px solid #0891b2;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.setup-summary h5 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #0e7490;
+}
+
+.setup-doc-list {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.setup-doc-list li {
+  padding: 6px 0;
+  font-size: 13px;
+  color: #334155;
+}
+
+.setup-doc-list li.highlight {
+  color: #dc2626;
+  font-weight: 600;
+}
+
+.physical-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  background: #dc2626;
+  color: white;
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: 10px;
+  text-transform: uppercase;
+}
+
+/* Highlight section for physical signatures */
+.section-title.highlight-section {
+  background: #fef2f2;
+  border-color: #dc2626;
+  color: #dc2626;
+  padding: 10px 12px;
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
+
+.section-title.highlight-section svg {
+  color: #dc2626;
+}
+
+/* Highlighted document items */
+.document-item.highlight,
+.signature-item.highlight {
+  border-color: #fca5a5;
+  background: #fef2f2;
+}
+
+.document-item.highlight:hover,
+.signature-item.highlight:hover {
+  border-color: #dc2626;
+  background: #fee2e2;
+}
+
+.document-item.highlight.checked,
+.signature-item.highlight.signed {
+  border-color: #16a34a;
+  background: #f0fdf4;
+}
+
+/* Conditional document items */
+.document-item.conditional {
+  border-style: dashed;
+  border-color: #93c5fd;
+  background: #eff6ff;
+}
+
+.document-item.conditional:hover {
+  border-color: #3b82f6;
+  background: #dbeafe;
+}
+
+.document-item.conditional.checked {
+  border-style: solid;
+  border-color: #16a34a;
+  background: #f0fdf4;
+}
+
 @media (max-width: 768px) {
   .wizard-progress {
     gap: 4px;
@@ -668,5 +864,10 @@ select.field-input {
   .field-item.editable {
     position: relative;
     padding-right: 48px;
+  }
+
+  .setup-suboptions {
+    margin-left: 16px;
+    padding-left: 12px;
   }
 }
