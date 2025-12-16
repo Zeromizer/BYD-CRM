@@ -112,15 +112,7 @@ const REQUIRED_DOCUMENTS = [
 
 // Conditional documents based on deal setup
 const CONDITIONAL_DOCUMENTS = [
-  // Loan documents
-  {
-    id: 'loan',
-    name: 'Loan Application Form',
-    description: 'Bank financing application (digital submission)',
-    copies: 1,
-    condition: 'hasLoan',
-    excludeCondition: 'requiresPhysicalLoanDocs'
-  },
+  // Loan documents - only physical form for Hong Leong Finance & Motorway Credit
   {
     id: 'loan_physical',
     name: 'Loan Application Form (Physical)',
@@ -138,25 +130,11 @@ const CONDITIONAL_DOCUMENTS = [
     condition: 'hasTradeIn'
   },
   {
-    id: 'trade_in_owner_auth',
-    name: 'Trade-In Owner Authorization',
+    id: 'finance_auth_letter',
+    name: 'Finance Authorized Letter',
     description: 'Authorization from vehicle owner (buyer is not owner)',
     copies: 1,
     condition: 'tradeInBuyerNotOwner'
-  },
-  {
-    id: 'trade_in_settlement',
-    name: 'Trade-In Settlement Letter',
-    description: 'Outstanding loan settlement authorization',
-    copies: 1,
-    condition: 'tradeInStillFinanced'
-  },
-  {
-    id: 'number_retention',
-    name: 'Number Retention Form',
-    description: 'LTA number plate retention application',
-    copies: 1,
-    condition: 'needsNumberRetention'
   },
   {
     id: 'ncd_transfer',
@@ -164,14 +142,6 @@ const CONDITIONAL_DOCUMENTS = [
     description: 'No Claim Discount transfer (owner is not buyer)',
     copies: 1,
     condition: 'needsNcdTransfer'
-  },
-  // Insurance
-  {
-    id: 'insurance',
-    name: 'Insurance Quotation',
-    description: 'Vehicle insurance quote for customer review',
-    copies: 1,
-    condition: null
   },
 ];
 
@@ -192,7 +162,6 @@ function DealClosingWizard({ isOpen, onClose, customer, onOpenPrintManager, onUp
     hasTradeIn: false,
     tradeInBuyerIsOwner: true,
     tradeInStillFinanced: false,
-    needsNumberRetention: false,
     needsNcdTransfer: false,
   });
 
@@ -232,7 +201,6 @@ function DealClosingWizard({ isOpen, onClose, customer, onOpenPrintManager, onUp
         hasTradeIn: false,
         tradeInBuyerIsOwner: true,
         tradeInStillFinanced: false,
-        needsNumberRetention: false,
         needsNcdTransfer: false,
       });
     }
@@ -246,7 +214,6 @@ function DealClosingWizard({ isOpen, onClose, customer, onOpenPrintManager, onUp
       if (key === 'hasTradeIn' && !value) {
         newConfig.tradeInBuyerIsOwner = true;
         newConfig.tradeInStillFinanced = false;
-        newConfig.needsNumberRetention = false;
         newConfig.needsNcdTransfer = false;
       }
       if (key === 'hasLoan' && !value) {
@@ -374,8 +341,6 @@ function DealClosingWizard({ isOpen, onClose, customer, onOpenPrintManager, onUp
         return tradeInBuyerNotOwner;
       case 'tradeInStillFinanced':
         return dealConfig.hasTradeIn && dealConfig.tradeInStillFinanced;
-      case 'needsNumberRetention':
-        return dealConfig.hasTradeIn && dealConfig.needsNumberRetention;
       case 'needsNcdTransfer':
         return tradeInBuyerNotOwner && dealConfig.needsNcdTransfer;
       default:
@@ -702,17 +667,6 @@ function DealClosingWizard({ isOpen, onClose, customer, onOpenPrintManager, onUp
                           onChange={(e) => handleDealConfigChange('tradeInStillFinanced', e.target.checked)}
                         />
                         <span className="toggle-label">Trade-in car is still being financed</span>
-                      </label>
-                    </div>
-
-                    <div className="setup-option">
-                      <label className="setup-toggle">
-                        <input
-                          type="checkbox"
-                          checked={dealConfig.needsNumberRetention}
-                          onChange={(e) => handleDealConfigChange('needsNumberRetention', e.target.checked)}
-                        />
-                        <span className="toggle-label">Customer needs Number Retention</span>
                       </label>
                     </div>
 
