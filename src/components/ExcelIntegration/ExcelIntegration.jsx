@@ -319,15 +319,20 @@ function ExcelIntegration() {
 
   const addMapping = () => {
     if (!cellRef.trim()) {
-      alert('Please enter a cell reference (e.g., A1)');
+      alert('Please enter a cell reference (e.g., A1 or Sheet2!A1)');
       return;
     }
 
     const cellRefUpper = cellRef.trim().toUpperCase();
 
-    // Validate cell reference format
-    if (!/^[A-Z]+[0-9]+$/.test(cellRefUpper)) {
-      alert('Invalid cell reference. Please use format like A1, B5, C10, etc.');
+    // Validate cell reference format - supports "A1" or "SheetName!A1"
+    // Simple format: A1, B5, AA10
+    // Sheet format: Sheet1!A1, 'My Sheet'!B5
+    const simpleRef = /^[A-Z]+[0-9]+$/;
+    const sheetRef = /^['"]?[^!]+['"]?![A-Z]+[0-9]+$/;
+
+    if (!simpleRef.test(cellRefUpper) && !sheetRef.test(cellRefUpper)) {
+      alert('Invalid cell reference. Use format like A1, B5, or Sheet2!A1 for specific sheets.');
       return;
     }
 
@@ -1145,12 +1150,12 @@ function ExcelIntegration() {
                 </select>
               </div>
               <div className="form-group">
-                <label>Excel Cell (e.g., A1, B5)</label>
+                <label>Excel Cell (e.g., A1, B5, Sheet2!A1)</label>
                 <input
                   type="text"
                   value={cellRef}
                   onChange={(e) => setCellRef(e.target.value.toUpperCase())}
-                  placeholder="A1"
+                  placeholder="A1 or Sheet2!A1"
                   style={{ textTransform: 'uppercase' }}
                 />
               </div>

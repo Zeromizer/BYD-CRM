@@ -342,9 +342,9 @@ class ExcelService {
       // Load workbook from buffer
       const workbook = await XlsxPopulate.fromDataAsync(arrayBuffer);
 
-      // Get first sheet
-      const sheet = workbook.sheet(0);
-      console.log('✅ Workbook loaded, sheet name:', sheet.name());
+      // Log available sheets for debugging
+      const sheetNames = workbook.sheets().map(s => s.name());
+      console.log('✅ Workbook loaded, available sheets:', sheetNames);
 
       // Get customer data mapping
       const dataMapping = this.getCustomerDataMapping(customer);
@@ -379,8 +379,29 @@ class ExcelService {
             }
           }
 
+          // Parse cell reference - supports "A1" (first sheet) or "SheetName!A1" (specific sheet)
+          const cellRef = mapping.cellRef;
+          let sheet;
+          let actualCellRef;
+
+          if (cellRef.includes('!')) {
+            // Format: SheetName!CellRef (e.g., "Sheet1!A1" or "Details!B5")
+            const parts = cellRef.split('!');
+            const sheetName = parts[0].replace(/^'|'$/g, ''); // Remove quotes if present
+            actualCellRef = parts[1];
+            sheet = workbook.sheet(sheetName);
+            if (!sheet) {
+              console.warn(`⚠️ Sheet "${sheetName}" not found, skipping cell ${cellRef}`);
+              continue;
+            }
+          } else {
+            // Format: CellRef only (e.g., "A1") - use first sheet
+            sheet = workbook.sheet(0);
+            actualCellRef = cellRef;
+          }
+
           // Set cell value - all formatting is automatically preserved
-          sheet.cell(mapping.cellRef).value(value);
+          sheet.cell(actualCellRef).value(value);
           appliedCount++;
         }
       }
