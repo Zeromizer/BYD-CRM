@@ -132,9 +132,9 @@ const CONDITIONAL_DOCUMENTS = [
   {
     id: 'finance_auth_letter',
     name: 'Finance Authorized Letter',
-    description: 'Authorization from vehicle owner (buyer is not owner)',
+    description: 'Finance authorization for trade-in vehicle',
     copies: 1,
-    condition: 'tradeInBuyerNotOwner'
+    condition: 'hasTradeIn'
   },
   {
     id: 'ncd_transfer',
