@@ -176,6 +176,7 @@ function ExcelIntegration() {
   const [tempMappings, setTempMappings] = useState({});
   const [selectedField, setSelectedField] = useState('name');
   const [cellRef, setCellRef] = useState('');
+  const [customValue, setCustomValue] = useState('');
   const [availableSheets, setAvailableSheets] = useState([]);
   const [selectedSheet, setSelectedSheet] = useState('');
   const [loadingSheets, setLoadingSheets] = useState(false);
@@ -362,6 +363,12 @@ function ExcelIntegration() {
       return;
     }
 
+    // Check if custom field is selected but no value provided
+    if (selectedField === '_custom' && !customValue.trim()) {
+      alert('Please enter a custom value');
+      return;
+    }
+
     let cellRefInput = cellRef.trim().toUpperCase();
 
     // Validate cell reference format (just the cell part, e.g., A1, B5)
@@ -389,15 +396,23 @@ function ExcelIntegration() {
     }
 
     const mappingId = 'mapping_' + Date.now();
+    const mapping = {
+      fieldType: selectedField,
+      cellRef: cellRefInput,
+    };
+
+    // Add custom value if this is a custom field
+    if (selectedField === '_custom') {
+      mapping.customValue = customValue.trim();
+    }
+
     setTempMappings({
       ...tempMappings,
-      [mappingId]: {
-        fieldType: selectedField,
-        cellRef: cellRefInput,
-      },
+      [mappingId]: mapping,
     });
 
     setCellRef('');
+    setCustomValue('');
   };
 
   const removeMapping = (mappingId) => {
@@ -1038,8 +1053,11 @@ function ExcelIntegration() {
             <h4>Add Field Mapping</h4>
             <div className="mapping-inputs">
               <div className="form-group">
-                <label>Customer Field</label>
+                <label>Field Type</label>
                 <select value={selectedField} onChange={(e) => setSelectedField(e.target.value)}>
+                  <optgroup label="Custom">
+                    <option value="_custom">✏️ Custom Text / Fixed Value</option>
+                  </optgroup>
                   <optgroup label="Basic Customer Information">
                     <option value="name">Customer Name</option>
                     <option value="phone">Phone Number</option>
@@ -1221,6 +1239,17 @@ function ExcelIntegration() {
                   <span className="loading-sheets">Loading sheets...</span>
                 </div>
               )}
+              {selectedField === '_custom' && (
+                <div className="form-group">
+                  <label>Custom Value</label>
+                  <input
+                    type="text"
+                    value={customValue}
+                    onChange={(e) => setCustomValue(e.target.value)}
+                    placeholder="Enter fixed text or value"
+                  />
+                </div>
+              )}
               <div className="form-group">
                 <label>Excel Cell (e.g., A1, B5)</label>
                 <input
@@ -1246,8 +1275,17 @@ function ExcelIntegration() {
                 {Object.entries(tempMappings).map(([mappingId, mapping]) => (
                   <div key={mappingId} className="mapping-item">
                     <div className="mapping-info">
-                      <strong>{FIELD_NAMES[mapping.fieldType]}</strong> → Cell{' '}
-                      <strong>{mapping.cellRef}</strong>
+                      {mapping.fieldType === '_custom' ? (
+                        <>
+                          <strong>Custom: "{mapping.customValue}"</strong> → Cell{' '}
+                          <strong>{mapping.cellRef}</strong>
+                        </>
+                      ) : (
+                        <>
+                          <strong>{FIELD_NAMES[mapping.fieldType]}</strong> → Cell{' '}
+                          <strong>{mapping.cellRef}</strong>
+                        </>
+                      )}
                     </div>
                     <button
                       className="btn btn-small btn-danger"
