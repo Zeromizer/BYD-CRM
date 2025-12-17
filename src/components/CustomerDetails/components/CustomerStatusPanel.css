@@ -1,0 +1,466 @@
+/* Customer Status Panel - Desktop Sidebar */
+.customer-status-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 20px;
+  background: var(--color-background-secondary);
+  border-left: 1px solid var(--color-border-light);
+  height: 100%;
+  overflow-y: auto;
+  width: 320px;
+  min-width: 320px;
+  flex-shrink: 0;
+}
+
+/* Section Styling */
+.status-section {
+  background: var(--color-card-background);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.status-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0 0 12px 0;
+}
+
+.status-section-title svg {
+  color: var(--color-primary);
+}
+
+.count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 6px;
+  background: var(--color-primary);
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 9px;
+  margin-left: auto;
+}
+
+/* Milestone Progress Bar */
+.milestone-progress-bar {
+  display: flex;
+  gap: 3px;
+  height: 28px;
+  background: var(--color-background-tertiary);
+  border-radius: 14px;
+  padding: 3px;
+  overflow: hidden;
+}
+
+.milestone-segment {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  background: var(--color-background-tertiary);
+  border-radius: 11px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.milestone-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  border-radius: 11px;
+  transition: width 0.4s ease;
+}
+
+.milestone-label {
+  position: relative;
+  z-index: 1;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-text-tertiary);
+  letter-spacing: 0.3px;
+}
+
+.milestone-segment.complete .milestone-label,
+.milestone-segment.current .milestone-label,
+.milestone-segment.past .milestone-label {
+  color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.milestone-segment.current {
+  box-shadow: 0 0 0 2px var(--milestone-color), 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Current Stage Info */
+.current-stage-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 12px;
+  gap: 8px;
+}
+
+.current-stage-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.target-date {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 4px 8px;
+  border-radius: 12px;
+  background: var(--color-background-tertiary);
+  color: var(--color-text-secondary);
+}
+
+.target-date.overdue {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.target-date.urgent {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.target-date.soon {
+  background: #fef9c3;
+  color: #ca8a04;
+}
+
+.target-date.upcoming {
+  background: #ecfdf5;
+  color: #059669;
+}
+
+/* Checklist Items Compact */
+.checklist-items-compact {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.checklist-item-compact {
+  display: flex;
+  align-items: flex-start;
+}
+
+.checklist-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+  width: 100%;
+}
+
+.checklist-label input[type="checkbox"] {
+  display: none;
+}
+
+.custom-checkbox-small {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  border: 2px solid;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  margin-top: 1px;
+}
+
+.checklist-label:hover .custom-checkbox-small {
+  transform: scale(1.1);
+}
+
+.item-text {
+  font-size: 13px;
+  color: var(--color-text-on-card);
+  line-height: 1.4;
+}
+
+.all-complete-message {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background: #ecfdf5;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #059669;
+  font-weight: 500;
+}
+
+.more-items {
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+  font-style: italic;
+  padding-left: 28px;
+}
+
+/* Milestones Quick View */
+.milestones-quick-view {
+  padding: 12px;
+}
+
+.milestones-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.milestone-quick-item {
+  border-radius: 8px;
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.milestone-quick-item.current {
+  background: var(--color-background-tertiary);
+}
+
+.milestone-quick-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 8px 10px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.milestone-quick-header:hover {
+  background: var(--color-background-tertiary);
+}
+
+.milestone-quick-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.milestone-icon-small {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: 2px solid;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.milestone-quick-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-on-card);
+}
+
+.milestone-quick-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mini-progress-bar {
+  width: 40px;
+  height: 4px;
+  background: var(--color-border-light);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.mini-progress-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+.mini-progress-text {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-tertiary);
+  min-width: 28px;
+  text-align: right;
+}
+
+.milestone-quick-right svg {
+  color: var(--color-text-tertiary);
+}
+
+/* Expanded Milestone Items */
+.milestone-expanded-items {
+  padding: 8px 10px 12px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  animation: slideDown 0.2s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.expanded-checklist-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.expanded-checklist-item input[type="checkbox"] {
+  display: none;
+}
+
+.custom-checkbox-tiny {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  min-width: 14px;
+  border: 2px solid;
+  border-radius: 3px;
+  transition: all 0.2s ease;
+  margin-top: 2px;
+}
+
+.expanded-checklist-item:hover .custom-checkbox-tiny {
+  transform: scale(1.1);
+}
+
+.expanded-item-text {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+}
+
+.expanded-item-text.completed {
+  text-decoration: line-through;
+  color: var(--color-text-tertiary);
+}
+
+/* Tasks List Compact */
+.tasks-list-compact {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.task-item-compact {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--color-background-tertiary);
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.task-item-compact:hover {
+  background: var(--color-border-light);
+}
+
+.task-item-compact.completed {
+  opacity: 0.6;
+}
+
+.task-item-compact.overdue:not(.completed) {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+}
+
+.task-check {
+  color: var(--color-text-tertiary);
+  flex-shrink: 0;
+}
+
+.task-item-compact.completed .task-text {
+  text-decoration: line-through;
+  color: var(--color-text-tertiary);
+}
+
+.task-text {
+  font-size: 12px;
+  color: var(--color-text-on-card);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.task-due {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--color-text-tertiary);
+  white-space: nowrap;
+}
+
+.task-due.overdue {
+  color: #dc2626;
+  font-weight: 600;
+}
+
+.task-milestone-badge {
+  font-size: 9px;
+  font-weight: 700;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.empty-tasks {
+  padding: 16px;
+  text-align: center;
+  color: var(--color-text-tertiary);
+  font-size: 13px;
+  font-style: italic;
+}
+
+/* Hide on mobile - will be handled by parent container */
+@media (max-width: 1024px) {
+  .customer-status-panel {
+    display: none;
+  }
+}
