@@ -1,71 +1,39 @@
 :root {
-  /* ============================================
-     MODERN AURORA THEME - Fresh & Creative
-     ============================================ */
+  /* Theme Colors - Cozy Warm Palette */
+  --color-primary: #00BCD4; /* Cyan accent - keeping for BYD brand */
+  --color-primary-hover: #00ACC1;
+  --color-primary-light: rgba(0, 188, 212, 0.08);
 
-  /* Primary Accent - Vibrant Gradient Blue */
-  --color-primary: #6366f1; /* Indigo */
-  --color-primary-hover: #4f46e5;
-  --color-primary-light: rgba(99, 102, 241, 0.1);
-  --color-primary-gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%);
+  --color-background-primary: #EFE9E9; /* Warm cream */
+  --color-background-secondary: #E8E2E2; /* Slightly darker warm cream */
+  --color-background-tertiary: #BDBFCD; /* Soft gray-lavender */
 
-  /* Secondary Accent */
-  --color-accent: #06b6d4; /* Cyan */
-  --color-accent-light: rgba(6, 182, 212, 0.1);
+  --color-card-background: #FAF8F8; /* Off-white warm */
+  --color-card-dark: #23190D; /* Deep brown */
 
-  /* Background Colors - Clean & Modern */
-  --color-background-primary: #f8fafc; /* Very light slate */
-  --color-background-secondary: #f1f5f9; /* Light slate */
-  --color-background-tertiary: #e2e8f0; /* Soft slate */
-  --color-background-gradient: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  --color-text-primary: #23190D; /* Deep dark brown */
+  --color-text-secondary: #596560; /* Sage green-gray */
+  --color-text-tertiary: #8A8A8A; /* Muted gray */
+  --color-text-on-card: #23190D;
 
-  /* Card Colors - Glassmorphism inspired */
-  --color-card-background: #ffffff;
-  --color-card-elevated: rgba(255, 255, 255, 0.9);
-  --color-card-dark: #1e293b; /* Slate 800 */
-  --color-card-glass: rgba(255, 255, 255, 0.7);
+  --color-border: #D4CFC9; /* Warm gray border */
+  --color-border-light: #E8E2E2;
 
-  /* Text Colors - High contrast for readability */
-  --color-text-primary: #0f172a; /* Slate 900 */
-  --color-text-secondary: #475569; /* Slate 600 */
-  --color-text-tertiary: #94a3b8; /* Slate 400 */
-  --color-text-on-card: #1e293b;
-  --color-text-on-dark: #f8fafc;
-
-  /* Border Colors */
-  --color-border: #cbd5e1; /* Slate 300 */
-  --color-border-light: #e2e8f0; /* Slate 200 */
-  --color-border-focus: #6366f1;
-
-  /* Semantic Colors - Vibrant */
   --color-success: #10b981;
-  --color-success-light: rgba(16, 185, 129, 0.1);
   --color-warning: #f59e0b;
-  --color-warning-light: rgba(245, 158, 11, 0.1);
   --color-error: #ef4444;
-  --color-error-light: rgba(239, 68, 68, 0.1);
   --color-info: #3b82f6;
-  --color-info-light: rgba(59, 130, 246, 0.1);
 
-  /* Stage Colors - Gradient-Enhanced Palette */
+  /* Stage Colors - Professional Muted Palette */
   --color-stage-test-drive: #64748b;
-  --color-stage-test-drive-gradient: linear-gradient(135deg, #64748b 0%, #475569 100%);
-  --color-stage-close-deal: #06b6d4;
-  --color-stage-close-deal-gradient: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
-  --color-stage-registration: #8b5cf6;
-  --color-stage-registration-gradient: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
-  --color-stage-delivery: #10b981;
-  --color-stage-delivery-gradient: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  --color-stage-nps: #f59e0b;
-  --color-stage-nps-gradient: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-
-  /* Header Gradient */
-  --color-header-gradient: linear-gradient(135deg, #1e293b 0%, #334155 50%, #1e293b 100%);
-  --color-header-accent: linear-gradient(90deg, #6366f1, #8b5cf6, #a855f7);
+  --color-stage-close-deal: #0891b2;
+  --color-stage-registration: #6366f1;
+  --color-stage-delivery: #059669;
+  --color-stage-nps: #d97706;
 
   /* Typography */
-  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  line-height: 1.6;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  line-height: 1.5;
   font-weight: 400;
 
   color: var(--color-text-primary);
@@ -82,35 +50,18 @@
   --spacing-md: 16px;
   --spacing-lg: 24px;
   --spacing-xl: 32px;
-  --spacing-2xl: 48px;
 
-  /* Border Radius - Softer, more modern */
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
-  --radius-xl: 20px;
-  --radius-2xl: 24px;
-  --radius-full: 9999px;
+  /* Border Radius */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
 
-  /* Shadows - Layered depth */
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.03), 0 1px 3px 0 rgba(0, 0, 0, 0.06);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
-  --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
-  --shadow-inner: inset 0 2px 4px 0 rgba(0, 0, 0, 0.05);
-
-  /* Colored shadows for depth */
-  --shadow-primary: 0 4px 14px 0 rgba(99, 102, 241, 0.25);
-  --shadow-primary-lg: 0 10px 40px -10px rgba(99, 102, 241, 0.35);
-  --shadow-card: 0 4px 20px -2px rgba(0, 0, 0, 0.08), 0 2px 8px -2px rgba(0, 0, 0, 0.04);
-  --shadow-card-hover: 0 12px 28px -4px rgba(0, 0, 0, 0.12), 0 4px 12px -2px rgba(0, 0, 0, 0.06);
-
-  /* Transitions */
-  --transition-fast: 0.15s ease;
-  --transition-base: 0.2s ease;
-  --transition-smooth: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-spring: 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
 }
 
 * {
@@ -148,35 +99,15 @@ button {
   font-weight: 500;
   font-family: inherit;
   cursor: pointer;
-  transition: all var(--transition-smooth);
+  transition: all 0.3s;
   min-height: 44px;
   min-width: 44px;
-  position: relative;
-  overflow: hidden;
 }
 
 button:focus,
 button:focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
-  box-shadow: var(--shadow-primary);
-}
-
-/* Primary button styles */
-.btn-primary {
-  background: var(--color-primary-gradient);
-  color: white;
-  font-weight: 600;
-  box-shadow: var(--shadow-primary);
-}
-
-.btn-primary:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-primary-lg);
-}
-
-.btn-primary:active {
-  transform: translateY(0);
 }
 
 a {
@@ -211,28 +142,21 @@ input, textarea, select {
   }
 }
 
-/* Scrollbar styling - Modern thin design */
+/* Scrollbar styling */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: var(--color-background-secondary);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--color-border);
-  border-radius: var(--radius-full);
-  transition: background var(--transition-fast);
+  background: var(--color-background-tertiary);
+  border-radius: var(--radius-sm);
 }
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-primary);
-}
-
-/* Firefox scrollbar */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: var(--color-border) transparent;
 }
