@@ -1,23 +1,23 @@
 :root {
-  /* Theme Colors - BYD Motor-East Design System (Light Theme) */
-  --color-primary: #00BCD4; /* Cyan accent */
+  /* Theme Colors - Cozy Warm Palette */
+  --color-primary: #00BCD4; /* Cyan accent - keeping for BYD brand */
   --color-primary-hover: #00ACC1;
-  --color-primary-light: rgba(0, 188, 212, 0.1);
+  --color-primary-light: rgba(0, 188, 212, 0.08);
 
-  --color-background-primary: #f8fafc; /* Light gray-blue */
-  --color-background-secondary: #f1f5f9; /* Slightly darker gray */
-  --color-background-tertiary: #e2e8f0; /* Medium gray for accents */
+  --color-background-primary: #EFE9E9; /* Warm cream */
+  --color-background-secondary: #E8E2E2; /* Slightly darker warm cream */
+  --color-background-tertiary: #BDBFCD; /* Soft gray-lavender */
 
-  --color-card-background: #ffffff;
-  --color-card-dark: #1e293b; /* Dark blue for inner cards */
+  --color-card-background: #FAF8F8; /* Off-white warm */
+  --color-card-dark: #23190D; /* Deep brown */
 
-  --color-text-primary: #0f172a; /* Dark slate for main text */
-  --color-text-secondary: #475569; /* Medium slate */
-  --color-text-tertiary: #94a3b8; /* Light slate */
-  --color-text-on-card: #1e293b;
+  --color-text-primary: #23190D; /* Deep dark brown */
+  --color-text-secondary: #596560; /* Sage green-gray */
+  --color-text-tertiary: #8A8A8A; /* Muted gray */
+  --color-text-on-card: #23190D;
 
-  --color-border: #cbd5e1;
-  --color-border-light: #e2e8f0;
+  --color-border: #D4CFC9; /* Warm gray border */
+  --color-border-light: #E8E2E2;
 
   --color-success: #10b981;
   --color-warning: #f59e0b;
