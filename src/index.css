@@ -1,23 +1,23 @@
 :root {
-  /* Theme Colors - BYD Motor-East Design System */
+  /* Theme Colors - BYD Motor-East Design System (Light Theme) */
   --color-primary: #00BCD4; /* Cyan accent */
   --color-primary-hover: #00ACC1;
   --color-primary-light: rgba(0, 188, 212, 0.1);
 
-  --color-background-primary: #1f2937; /* Dark navy */
-  --color-background-secondary: #111827; /* Darker navy */
-  --color-background-tertiary: #374151; /* Medium navy */
+  --color-background-primary: #f8fafc; /* Light gray-blue */
+  --color-background-secondary: #f1f5f9; /* Slightly darker gray */
+  --color-background-tertiary: #e2e8f0; /* Medium gray for accents */
 
   --color-card-background: #ffffff;
   --color-card-dark: #1e293b; /* Dark blue for inner cards */
 
-  --color-text-primary: #ffffff;
-  --color-text-secondary: #9ca3af;
-  --color-text-tertiary: #6b7280;
-  --color-text-on-card: #1a1a2e;
+  --color-text-primary: #0f172a; /* Dark slate for main text */
+  --color-text-secondary: #475569; /* Medium slate */
+  --color-text-tertiary: #94a3b8; /* Light slate */
+  --color-text-on-card: #1e293b;
 
-  --color-border: #374151;
-  --color-border-light: #e5e7eb;
+  --color-border: #cbd5e1;
+  --color-border-light: #e2e8f0;
 
   --color-success: #10b981;
   --color-warning: #f59e0b;
