@@ -214,9 +214,11 @@
   margin-bottom: 4px;
   white-space: nowrap;
   overflow: hidden;
+  overflow-y: visible;
   text-overflow: ellipsis;
-  line-height: 1.4;
-  padding-bottom: 2px;
+  line-height: 1.3;
+  height: 1.3em;
+  padding-bottom: 4px;
 }
 
 .customer-vsa {
