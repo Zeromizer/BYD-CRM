@@ -4,6 +4,29 @@
   height: 100%;
 }
 
+/* Split Layout for Desktop - Main content + Status Panel */
+.customer-details-layout {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.customer-details-main {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* Hide status panel on mobile/tablet */
+@media (max-width: 1024px) {
+  .customer-details-layout {
+    flex-direction: column;
+  }
+}
+
 .customer-details-header {
   display: flex;
   align-items: center;

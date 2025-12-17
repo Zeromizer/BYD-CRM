@@ -19,6 +19,7 @@ import VsaTab from './components/VsaTab';
 import InvoiceTab from './components/InvoiceTab';
 import DocumentsTab from './components/DocumentsTab';
 import WorkflowPanel from './components/WorkflowPanel';
+import CustomerStatusPanel from './components/CustomerStatusPanel';
 
 // Import custom hooks
 import { useCustomerForm, useGuarantors } from './hooks/useCustomerForm';
@@ -597,8 +598,12 @@ function CustomerDetails() {
   return (
     <>
       <div className="customer-details">
-        {/* Header */}
-        <div className="customer-details-header">
+        {/* Split Layout Container for Desktop */}
+        <div className="customer-details-layout">
+          {/* Main Content Area */}
+          <div className="customer-details-main">
+            {/* Header */}
+            <div className="customer-details-header">
           <button
             className="btn-back-arrow"
             onClick={() => selectCustomer(null)}
@@ -941,6 +946,11 @@ function CustomerDetails() {
               )}
             </div>
           )}
+        </div>
+          </div>
+
+          {/* Status Panel - Desktop Sidebar */}
+          <CustomerStatusPanel customer={customer} />
         </div>
       </div>
 
