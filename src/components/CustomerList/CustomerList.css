@@ -1,69 +1,57 @@
-/* ============================================
-   CUSTOMER LIST - Modern Card Design
-   ============================================ */
 .customer-list {
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: var(--color-card-background);
 }
 
 /* Search bar with add button */
 .search-bar-container {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   padding: var(--spacing-md) var(--spacing-lg);
   border-bottom: 1px solid var(--color-border-light);
-  background: linear-gradient(180deg, var(--color-card-background) 0%, var(--color-background-secondary) 100%);
 }
 
 .search-input {
   flex: 1;
-  padding: 12px 16px;
+  padding: 10px 15px;
   border: 1px solid var(--color-border-light);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   font-size: 14px;
-  background: var(--color-card-background);
+  background: #f9fafb;
   color: var(--color-text-on-card);
-  transition: all var(--transition-smooth);
-  box-shadow: var(--shadow-inner);
 }
 
 .search-input:focus {
   outline: none;
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px var(--color-primary-light), var(--shadow-inner);
-}
-
-.search-input::placeholder {
-  color: var(--color-text-tertiary);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
 }
 
 .btn-add-customer {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   padding: 0;
   border: none;
-  border-radius: var(--radius-lg);
-  background: var(--color-primary-gradient);
+  border-radius: var(--radius-md);
+  background: var(--color-primary);
   color: white;
   cursor: pointer;
-  transition: all var(--transition-smooth);
+  transition: all 0.2s;
   flex-shrink: 0;
-  box-shadow: var(--shadow-primary);
 }
 
 .btn-add-customer:hover {
-  transform: translateY(-2px) scale(1.02);
-  box-shadow: var(--shadow-primary-lg);
+  background: var(--color-primary-hover);
+  transform: scale(1.05);
 }
 
 .btn-add-customer:active {
-  transform: scale(0.95);
+  transform: scale(0.98);
 }
 
 /* Archive toggle button */
@@ -72,28 +60,27 @@
   align-items: center;
   justify-content: center;
   position: relative;
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   padding: 0;
   border: 1px solid var(--color-border-light);
-  border-radius: var(--radius-lg);
-  background: var(--color-card-background);
+  border-radius: var(--radius-md);
+  background: #f9fafb;
   color: var(--color-text-tertiary);
   cursor: pointer;
-  transition: all var(--transition-smooth);
+  transition: all 0.2s;
   flex-shrink: 0;
 }
 
 .btn-toggle-archived:hover {
-  background: var(--color-background-secondary);
+  background: #f3f4f6;
   color: var(--color-text-secondary);
-  border-color: var(--color-border);
 }
 
 .btn-toggle-archived.active {
-  background: var(--color-warning-light);
-  border-color: var(--color-warning);
-  color: var(--color-warning);
+  background: #fef3c7;
+  border-color: #f59e0b;
+  color: #d97706;
 }
 
 .archive-badge {
@@ -106,134 +93,105 @@
   font-size: 11px;
   font-weight: 600;
   color: white;
-  background: var(--color-warning);
-  border-radius: var(--radius-full);
+  background: #f59e0b;
+  border-radius: 9px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 4px rgba(245, 158, 11, 0.3);
 }
 
 /* Archived customer item styling */
 .customer-item.archived {
   opacity: 0.75;
-  background: var(--color-warning-light);
+  background: #fefce8;
 }
 
 .customer-item.archived:hover {
-  background: rgba(245, 158, 11, 0.12);
+  background: #fef9c3;
 }
 
 .customer-item.archived.active {
-  background: rgba(245, 158, 11, 0.15);
-  border-left-color: var(--color-warning);
+  background: #fef3c7;
+  border-left-color: #f59e0b;
 }
 
 /* Archive status badge in customer name */
 .archive-status-badge {
   display: inline-block;
   margin-left: 8px;
-  padding: 3px 8px;
+  padding: 2px 8px;
   font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  border-radius: var(--radius-full);
+  border-radius: 10px;
   vertical-align: middle;
 }
 
 .archive-status-badge.completed {
-  background: var(--color-success-light);
-  color: var(--color-success);
+  background: #dcfce7;
+  color: #15803d;
 }
 
 .archive-status-badge.lost {
-  background: var(--color-error-light);
-  color: var(--color-error);
+  background: #fee2e2;
+  color: #b91c1c;
 }
 
 .customer-items {
   flex: 1;
   overflow-y: auto;
-  padding: 12px;
+  padding: 10px;
 }
 
 .customer-item {
   display: flex;
   align-items: center;
   padding: var(--spacing-md);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   cursor: pointer;
-  transition: all var(--transition-smooth);
+  transition: all 0.25s var(--ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1));
   margin-bottom: var(--spacing-sm);
   border-left: 4px solid transparent;
-  background: var(--color-card-background);
-  box-shadow: var(--shadow-sm);
-  position: relative;
-  overflow: hidden;
-}
-
-/* Subtle gradient overlay on hover */
-.customer-item::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(135deg, var(--color-primary-light) 0%, transparent 100%);
-  opacity: 0;
-  transition: opacity var(--transition-smooth);
-  pointer-events: none;
-}
-
-.customer-item:hover::before {
-  opacity: 1;
 }
 
 .customer-item:hover {
+  background: #f9fafb;
   transform: translateX(4px);
-  box-shadow: var(--shadow-md);
-  border-left-color: var(--color-border);
 }
 
 .customer-item:active {
-  transform: scale(0.99);
+  transform: scale(0.98);
 }
 
 .customer-item.active {
   background: var(--color-primary-light);
   border-left: 4px solid var(--color-primary);
-  box-shadow: var(--shadow-md), 0 0 0 1px var(--color-primary-light);
-  animation: selectPulse 0.4s ease;
-}
-
-.customer-item.active::before {
-  opacity: 0;
+  animation: selectPulse 0.4s var(--ease-out-expo, ease);
 }
 
 @keyframes selectPulse {
   0% {
-    box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4);
+    box-shadow: 0 0 0 0 rgba(0, 188, 212, 0.4);
   }
   70% {
-    box-shadow: 0 0 0 12px rgba(99, 102, 241, 0);
+    box-shadow: 0 0 0 10px rgba(0, 188, 212, 0);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(99, 102, 241, 0);
+    box-shadow: 0 0 0 0 rgba(0, 188, 212, 0);
   }
 }
 
 /* List item animation */
 .customer-item.list-item-animated {
   opacity: 0;
-  animation: customerItemFadeIn 0.4s var(--transition-smooth) forwards;
+  animation: customerItemFadeIn 0.4s var(--ease-out-expo, ease) forwards;
 }
 
 @keyframes customerItemFadeIn {
   from {
     opacity: 0;
-    transform: translateY(12px);
+    transform: translateY(15px);
   }
   to {
     opacity: 1;
@@ -248,8 +206,6 @@
 .customer-info {
   flex: 1;
   min-width: 0;
-  position: relative;
-  z-index: 1;
 }
 
 .customer-name {
@@ -259,53 +215,35 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 15px;
 }
 
 .customer-vsa {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--color-text-tertiary);
-  margin-bottom: 8px;
-  font-weight: 500;
+  margin-bottom: 6px;
 }
 
 /* Milestone Progress Bar in Customer List */
 .customer-milestone-progress {
   display: flex;
   gap: 4px;
-  margin-top: 8px;
-  position: relative;
-  z-index: 1;
+  margin-top: 6px;
 }
 
 .milestone-segment {
   flex: 1;
-  height: 26px;
-  border-radius: var(--radius-sm);
+  height: 24px;
+  border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all var(--transition-smooth);
+  transition: all 0.2s ease;
   position: relative;
-  overflow: hidden;
-}
-
-/* Add subtle gradient overlay to segments */
-.milestone-segment::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 50%;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.15) 0%, transparent 100%);
-  pointer-events: none;
 }
 
 .milestone-segment.current {
-  box-shadow: 0 0 0 2px white, 0 0 0 4px var(--milestone-color);
+  box-shadow: 0 0 0 1.5px white, 0 0 0 3px var(--milestone-color);
   z-index: 1;
-  transform: scale(1.02);
 }
 
 .milestone-segment.complete {
@@ -314,7 +252,7 @@
 
 .milestone-segment-label {
   font-size: 10px;
-  font-weight: 700;
+  font-weight: 600;
   color: white;
   text-transform: uppercase;
   letter-spacing: 0.3px;
@@ -322,9 +260,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
   padding: 0 4px;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-  position: relative;
-  z-index: 1;
 }
 
 .milestone-segment.current .milestone-segment-label {
@@ -333,8 +268,7 @@
 }
 
 .milestone-segment:not(.complete):not(.current):not(.past) .milestone-segment-label {
-  color: var(--color-text-tertiary);
-  text-shadow: none;
+  color: #94a3b8;
 }
 
 /* Old badge - hidden */
@@ -373,8 +307,8 @@
   }
 
   .btn-add-customer {
-    width: 48px;
-    height: 48px;
+    width: 44px;
+    height: 44px;
   }
 
   .customer-item {
@@ -387,6 +321,6 @@
   }
 
   .customer-vsa {
-    font-size: 13px;
+    font-size: 14px;
   }
 }
