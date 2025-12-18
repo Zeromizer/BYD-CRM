@@ -26,6 +26,7 @@ function CustomerStatusPanel({ customer }) {
   const { updateCustomer, saveToLocalStorage, saveCustomerToFolder } = useCustomerStore();
   const { isSignedIn } = useAuthStore();
   const [expandedMilestone, setExpandedMilestone] = useState(null);
+  const [showMilestoneDropdown, setShowMilestoneDropdown] = useState(false);
 
   const checklist = customer?.checklist || getDefaultChecklistState();
   const milestoneDates = customer?.milestoneDates || {};
@@ -82,6 +83,28 @@ function CustomerStatusPanel({ customer }) {
     }
   }, [customer, checklist, updateCustomer, saveToLocalStorage, saveCustomerToFolder, isSignedIn]);
 
+  // Handle milestone change
+  const handleMilestoneChange = useCallback(async (milestoneId) => {
+    if (!customer) return;
+
+    const updatedChecklist = {
+      ...checklist,
+      currentMilestone: milestoneId,
+    };
+
+    updateCustomer(customer.id, { checklist: updatedChecklist });
+    saveToLocalStorage();
+    setShowMilestoneDropdown(false);
+
+    if (isSignedIn && customer.driveFolderId) {
+      try {
+        await saveCustomerToFolder({ ...customer, checklist: updatedChecklist }, isSignedIn);
+      } catch (error) {
+        console.error('Error saving milestone to cloud:', error);
+      }
+    }
+  }, [customer, checklist, updateCustomer, saveToLocalStorage, saveCustomerToFolder, isSignedIn]);
+
   return (
     <div className="customer-status-panel">
       {/* Milestone Progress Bar */}
@@ -90,52 +113,39 @@ function CustomerStatusPanel({ customer }) {
           <ListTodo size={16} />
           Progress
         </h4>
-        <div className="milestone-progress-bar">
-          {MILESTONES.map((milestone, index) => {
-            const isComplete = isMilestoneComplete(milestone.id, checklist);
-            const isCurrent = index === currentMilestoneIndex;
-            const isPast = index < currentMilestoneIndex;
-            const progress = getMilestoneProgress(milestone.id, checklist);
-
-            return (
-              <div
-                key={milestone.id}
-                className={`milestone-segment ${isComplete ? 'complete' : ''} ${isCurrent ? 'current' : ''} ${isPast ? 'past' : ''}`}
-                style={{
-                  '--milestone-color': milestone.color,
-                  flex: isCurrent ? 2 : 1,
-                  background: isComplete || isPast ? milestone.color : isCurrent ? milestone.color : '#e2e8f0',
-                  opacity: isComplete || isCurrent || isPast ? 1 : 0.4,
-                }}
-                title={`${milestone.name}: ${progress}%`}
-              >
-                <span className="milestone-label">
-                  {isCurrent ? milestone.name : milestone.shortName}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Current Stage Indicator */}
-        <div className="current-stage-info">
-          <div
-            className="current-stage-badge"
+        <div className="milestone-dropdown-container">
+          <button
+            className="milestone-dropdown-trigger"
             style={{ background: currentMilestone?.color }}
+            onClick={() => setShowMilestoneDropdown(!showMilestoneDropdown)}
           >
-            {getMilestoneIcon(currentMilestone?.iconName, 14, 'white')}
+            {getMilestoneIcon(currentMilestone?.iconName, 16, 'white')}
             <span>{currentMilestone?.name}</span>
-          </div>
-          {milestoneDates[currentMilestoneId] && (
-            <div className={`target-date ${getMilestoneUrgency(milestoneDates[currentMilestoneId])}`}>
-              <Calendar size={12} />
-              {(() => {
-                const days = getDaysUntilMilestone(milestoneDates[currentMilestoneId]);
-                if (days === null) return null;
-                if (days < 0) return `${Math.abs(days)}d overdue`;
-                if (days === 0) return 'Due today';
-                return `${days}d left`;
-              })()}
+            <ChevronDown size={16} className={showMilestoneDropdown ? 'rotated' : ''} />
+          </button>
+
+          {showMilestoneDropdown && (
+            <div className="milestone-dropdown-menu">
+              {MILESTONES.map((milestone) => {
+                const isComplete = isMilestoneComplete(milestone.id, checklist);
+                const isCurrent = milestone.id === currentMilestoneId;
+
+                return (
+                  <button
+                    key={milestone.id}
+                    className={`milestone-dropdown-item ${isCurrent ? 'current' : ''} ${isComplete ? 'complete' : ''}`}
+                    onClick={() => handleMilestoneChange(milestone.id)}
+                  >
+                    <span
+                      className="milestone-color-dot"
+                      style={{ background: milestone.color }}
+                    />
+                    <span className="milestone-dropdown-name">{milestone.name}</span>
+                    {isComplete && <CheckCircle2 size={14} color="#10b981" />}
+                    {isCurrent && !isComplete && <Circle size={14} color={milestone.color} />}
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>
