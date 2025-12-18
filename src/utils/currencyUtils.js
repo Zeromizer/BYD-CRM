@@ -26,6 +26,7 @@ export const CURRENCY_FIELDS = {
     'addOthers',
     'tradeInAmount',
     'tradeInSettlementCost',
+    'numberRetentionFee',
     'insuranceFee',
     'insuranceSubsidy',
     'loanAmount',
