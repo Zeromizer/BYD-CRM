@@ -1,4 +1,4 @@
-import { memo, useCallback } from 'react';
+import { memo, useCallback, useState } from 'react';
 import { VEHICLE_MODELS, BODY_COLOURS, INSURANCE_COMPANIES, PRZ_TYPES } from '../../../constants/vehicleData';
 import { SaveButton } from '../../AnimatedButton/AnimatedButton';
 import { parseCurrency, formatCurrency, isCurrencyField } from '../../../utils/currencyUtils';
@@ -18,26 +18,55 @@ function VsaTab({
   onSave,
   onCancel,
 }) {
-  // Handle input change - parse currency fields to store as plain numbers
+  const [editingField, setEditingField] = useState(null);
+  const [editingValue, setEditingValue] = useState('');
+
+  // Handle input change - don't parse currency while typing
   const handleInputChange = useCallback((e) => {
     const { name, value, type, checked } = e.target;
     if (type === 'checkbox') {
       onFieldChange(name, checked);
     } else if (isCurrencyField(name, 'vsa')) {
-      onFieldChange(name, parseCurrency(value));
+      // Store raw value while editing
+      setEditingValue(value);
     } else {
       onFieldChange(name, value);
     }
   }, [onFieldChange]);
 
-  // Get display value - format currency fields for display
+  // Handle focus - start editing mode
+  const handleFocus = useCallback((e) => {
+    const { name } = e.target;
+    if (isCurrencyField(name, 'vsa')) {
+      setEditingField(name);
+      // Show raw number without formatting
+      const rawValue = formData[name];
+      setEditingValue(rawValue !== null && rawValue !== undefined && rawValue !== '' ? String(rawValue) : '');
+    }
+  }, [formData]);
+
+  // Handle blur - parse and format currency
+  const handleBlur = useCallback((e) => {
+    const { name } = e.target;
+    if (isCurrencyField(name, 'vsa') && editingField === name) {
+      onFieldChange(name, parseCurrency(editingValue));
+      setEditingField(null);
+      setEditingValue('');
+    }
+  }, [editingField, editingValue, onFieldChange]);
+
+  // Get display value - format currency fields for display (except when editing)
   const getDisplayValue = useCallback((fieldName) => {
+    // If currently editing this field, show raw value
+    if (editingField === fieldName) {
+      return editingValue;
+    }
     const value = formData[fieldName];
     if (isCurrencyField(fieldName, 'vsa') && value !== '' && value !== null && value !== undefined) {
       return formatCurrency(value);
     }
     return value || '';
-  }, [formData]);
+  }, [formData, editingField, editingValue]);
 
   return (
     <>
@@ -466,6 +495,8 @@ function VsaTab({
               name="insuranceFee"
               value={getDisplayValue('insuranceFee')}
               onChange={handleInputChange}
+              onFocus={handleFocus}
+              onBlur={handleBlur}
               placeholder="$2,500"
               disabled={isSubmitting}
             />
@@ -478,6 +509,8 @@ function VsaTab({
               name="insuranceSubsidy"
               value={getDisplayValue('insuranceSubsidy')}
               onChange={handleInputChange}
+              onFocus={handleFocus}
+              onBlur={handleBlur}
               placeholder="$500"
               disabled={isSubmitting}
             />
