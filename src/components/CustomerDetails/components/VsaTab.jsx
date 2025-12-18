@@ -320,6 +320,37 @@ function VsaTab({
             <label className="checkbox-label">
               <input
                 type="checkbox"
+                name="numberRetention"
+                checked={formData.numberRetention || false}
+                onChange={handleInputChange}
+                disabled={isSubmitting}
+              />
+              <span style={{ marginLeft: '8px' }}>Number Retention (Retain old car registration)</span>
+            </label>
+          </div>
+          {formData.numberRetention && (
+            <div className="inline-edit-item">
+              <label htmlFor="vsa_numberRetentionFee">Number Retention Fee</label>
+              <input
+                type="text"
+                id="vsa_numberRetentionFee"
+                name="numberRetentionFee"
+                value={getDisplayValue('numberRetentionFee')}
+                onChange={handleInputChange}
+                onFocus={handleFocus}
+                onBlur={handleBlur}
+                placeholder="$100"
+                disabled={isSubmitting}
+              />
+            </div>
+          )}
+        </div>
+
+        <div className="inline-edit-grid" style={{ marginTop: '16px' }}>
+          <div className="inline-edit-item">
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
                 name="tradeInOwnerNotCustomer"
                 checked={formData.tradeInOwnerNotCustomer || false}
                 onChange={handleInputChange}
