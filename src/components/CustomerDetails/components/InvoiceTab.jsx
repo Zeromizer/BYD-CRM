@@ -121,6 +121,16 @@ function InvoiceTab({
     };
   }, [vsaData?.addOthers]);
 
+  // Number Retention Fee from VSA Trade-In
+  const numberRetentionFeeData = useMemo(() => {
+    const value = vsaData?.numberRetention ? parseNum(vsaData?.numberRetentionFee) : 0;
+    return {
+      value,
+      tooltip: `From VSA Trade-In`,
+      source: 'VSA'
+    };
+  }, [vsaData?.numberRetention, vsaData?.numberRetentionFee]);
+
   // Calculate sub-total: First Payment + fees (installment only if interest > 2.5%)
   const subTotal = useMemo(() => {
     const firstPayment = firstPaymentData.value;
@@ -132,11 +142,12 @@ function InvoiceTab({
     const inspectionFee = parseNum(formData.inspectionFee);
     const processingFee = parseNum(formData.processingFee);
     const others = othersData.value;
+    const numberRetentionFee = numberRetentionFeeData.value;
     const accessories1 = parseNum(formData.accessories1);
     const accessories2 = parseNum(formData.accessories2);
 
-    return firstPayment + installment + insuranceFee + roadTax + transferFee + inspectionFee + processingFee + others + accessories1 + accessories2;
-  }, [formData, firstPaymentData.value, installmentData, insuranceFeeData.value, othersData.value]);
+    return firstPayment + installment + insuranceFee + roadTax + transferFee + inspectionFee + processingFee + others + numberRetentionFee + accessories1 + accessories2;
+  }, [formData, firstPaymentData.value, installmentData, insuranceFeeData.value, othersData.value, numberRetentionFeeData.value]);
 
   // Calculate trade-in balance
   const tradeInBalance = useMemo(() => {
@@ -326,6 +337,21 @@ function InvoiceTab({
               </div>
             </PriceTooltip>
           </div>
+          {numberRetentionFeeData.value > 0 && (
+            <div className="pricing-row">
+              <label>NUMBER RETENTION</label>
+              <PriceTooltip
+                field="numberRetentionFee"
+                tooltip={numberRetentionFeeData.tooltip}
+                source={numberRetentionFeeData.source}
+              >
+                <div className="price-input">
+                  <span>$</span>
+                  <span className="price-value-text">{formatNum(numberRetentionFeeData.value)}</span>
+                </div>
+              </PriceTooltip>
+            </div>
+          )}
           <div className="pricing-row">
             <label>ACCESSORIES / ADD ON</label>
             <div className="price-input">
