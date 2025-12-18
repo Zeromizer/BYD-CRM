@@ -70,15 +70,20 @@ export const parseCurrency = (value) => {
 
 /**
  * Format number as currency for display
- * Adds $ prefix and thousand separators
+ * Adds $ prefix and thousand separators, preserves decimals
  * @param {string|number} value - The value to format
- * @returns {string} - Formatted currency string (e.g., "$1,234")
+ * @returns {string} - Formatted currency string (e.g., "$1,234.56")
  */
 export const formatCurrency = (value) => {
   if (value === null || value === undefined || value === '') return '';
   const num = parseFloat(String(value).replace(/[^0-9.-]/g, ''));
   if (isNaN(num)) return '';
-  return `$${num.toLocaleString()}`;
+  // Check if number has decimals
+  const hasDecimals = num % 1 !== 0;
+  if (hasDecimals) {
+    return `$${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  }
+  return `$${num.toLocaleString('en-US')}`;
 };
 
 /**
