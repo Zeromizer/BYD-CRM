@@ -44,6 +44,8 @@ const FIELD_NAMES = {
   tradeInCarModel: 'Trade in Car Model',
   tradeInAmount: 'Trade In Amount',
   tradeInSettlementCost: 'Settlement Cost',
+  numberRetention: 'Number Retention',
+  numberRetentionFee: 'Number Retention Fee',
   tradeInOwnerNotCustomer: 'Trade-In Owner Different',
   tradeInOwnerName: 'Trade-In Owner Name',
   tradeInOwnerNric: 'Trade-In Owner NRIC',
@@ -1098,6 +1100,8 @@ function ExcelIntegration() {
                     <option value="tradeInCarModel">Trade in Car Model</option>
                     <option value="tradeInAmount">Trade In Amount</option>
                     <option value="tradeInSettlementCost">Settlement Cost</option>
+                    <option value="numberRetention">Number Retention</option>
+                    <option value="numberRetentionFee">Number Retention Fee</option>
                     <option value="tradeInOwnerNotCustomer">Trade-In Owner Different</option>
                     <option value="tradeInOwnerName">Trade-In Owner Name</option>
                     <option value="tradeInOwnerNric">Trade-In Owner NRIC</option>
