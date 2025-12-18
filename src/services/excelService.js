@@ -45,6 +45,7 @@ const CURRENCY_FIELDS = new Set([
   // VSA - Trade-In
   'tradeInAmount',
   'tradeInSettlementCost',
+  'numberRetentionFee',
   // VSA - Insurance
   'insuranceFee',
   'insuranceFeeNet',
@@ -120,6 +121,8 @@ class ExcelService {
       tradeInCarModel: customer.vsa_tradeInCarModel || '',
       tradeInAmount: customer.vsa_tradeInAmount || '',
       tradeInSettlementCost: customer.vsa_tradeInSettlementCost || '',
+      numberRetention: customer.vsa_numberRetention || false,
+      numberRetentionFee: customer.vsa_numberRetentionFee || '',
       tradeInOwnerNotCustomer: customer.vsa_tradeInOwnerNotCustomer || '',
       tradeInOwnerName: customer.vsa_tradeInOwnerName || '',
       tradeInOwnerNric: customer.vsa_tradeInOwnerNric || '',
