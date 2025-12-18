@@ -104,17 +104,14 @@ function CustomerStatusPanel({ customer }) {
                 style={{
                   '--milestone-color': milestone.color,
                   flex: isCurrent ? 2 : 1,
+                  background: isComplete || isPast ? milestone.color : isCurrent ? milestone.color : '#e2e8f0',
+                  opacity: isComplete || isCurrent || isPast ? 1 : 0.4,
                 }}
                 title={`${milestone.name}: ${progress}%`}
               >
-                <div
-                  className="milestone-fill"
-                  style={{
-                    width: isComplete || isPast ? '100%' : isCurrent ? `${progress}%` : '0%',
-                    background: milestone.color,
-                  }}
-                />
-                <span className="milestone-label">{milestone.shortName}</span>
+                <span className="milestone-label">
+                  {isCurrent ? milestone.name : milestone.shortName}
+                </span>
               </div>
             );
           })}
