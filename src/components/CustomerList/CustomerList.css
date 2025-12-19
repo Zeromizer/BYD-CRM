@@ -19,7 +19,7 @@
   border: 1px solid var(--color-border-light);
   border-radius: var(--radius-md);
   font-size: 14px;
-  background: #f9fafb;
+  background: var(--color-input-background);
   color: var(--color-text-on-card);
 }
 
@@ -327,4 +327,45 @@
   .customer-vsa {
     font-size: 14px;
   }
+}
+
+/* ============================================
+   Dark Theme Overrides
+   ============================================ */
+:root[data-theme="dark"] .btn-toggle-archived {
+  background: var(--color-background-secondary);
+}
+
+:root[data-theme="dark"] .btn-toggle-archived:hover {
+  background: var(--color-background-tertiary);
+}
+
+:root[data-theme="dark"] .btn-toggle-archived.active {
+  background: rgba(251, 191, 36, 0.2);
+}
+
+:root[data-theme="dark"] .customer-item:hover {
+  background: var(--color-background-secondary);
+}
+
+:root[data-theme="dark"] .customer-item.archived {
+  background: rgba(251, 191, 36, 0.1);
+}
+
+:root[data-theme="dark"] .customer-item.archived:hover {
+  background: rgba(251, 191, 36, 0.15);
+}
+
+:root[data-theme="dark"] .customer-item.archived.active {
+  background: rgba(251, 191, 36, 0.2);
+}
+
+:root[data-theme="dark"] .archive-status-badge.completed {
+  background: rgba(52, 211, 153, 0.2);
+  color: var(--color-success);
+}
+
+:root[data-theme="dark"] .archive-status-badge.lost {
+  background: rgba(248, 113, 113, 0.2);
+  color: var(--color-error);
 }

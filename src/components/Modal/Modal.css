@@ -89,7 +89,7 @@
 }
 
 .modal-close:hover {
-  background: #f3f4f6;
+  background: var(--color-background-tertiary);
   color: var(--color-text-on-card);
 }
 

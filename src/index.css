@@ -62,6 +62,71 @@
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
   --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+
+  /* Input/Form Colors */
+  --color-input-background: #ffffff;
+  --color-input-border: #cbd5e1;
+  --color-input-text: #0f172a;
+  --color-input-placeholder: #94a3b8;
+
+  /* Overlay Colors */
+  --color-overlay: rgba(0, 0, 0, 0.5);
+  --color-modal-background: #ffffff;
+}
+
+/* Dark Theme */
+:root[data-theme="dark"] {
+  /* Primary Colors - Brighter for dark mode visibility */
+  --color-primary: #22d3ee; /* Brighter cyan */
+  --color-primary-hover: #06b6d4;
+  --color-primary-light: rgba(34, 211, 238, 0.15);
+
+  /* Backgrounds - Dark slate palette */
+  --color-background-primary: #0f172a; /* Dark navy */
+  --color-background-secondary: #1e293b; /* Slate 800 */
+  --color-background-tertiary: #334155; /* Slate 700 */
+
+  --color-card-background: #1e293b; /* Dark card */
+  --color-card-dark: #0f172a; /* Darker card */
+
+  /* Text Colors - Light for dark backgrounds */
+  --color-text-primary: #f1f5f9; /* Slate 100 - High contrast */
+  --color-text-secondary: #cbd5e1; /* Slate 300 */
+  --color-text-tertiary: #94a3b8; /* Slate 400 */
+  --color-text-on-card: #f1f5f9;
+
+  /* Borders - Visible on dark backgrounds */
+  --color-border: #475569; /* Slate 600 */
+  --color-border-light: #334155; /* Slate 700 */
+
+  /* Status Colors - Slightly brighter for dark mode */
+  --color-success: #34d399;
+  --color-warning: #fbbf24;
+  --color-error: #f87171;
+  --color-info: #60a5fa;
+
+  /* Stage Colors - Brighter for dark mode */
+  --color-stage-test-drive: #94a3b8;
+  --color-stage-close-deal: #22d3ee;
+  --color-stage-registration: #818cf8;
+  --color-stage-delivery: #34d399;
+  --color-stage-nps: #fbbf24;
+
+  /* Shadows - More subtle on dark backgrounds */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+
+  /* Input/Form Colors */
+  --color-input-background: #1e293b;
+  --color-input-border: #475569;
+  --color-input-text: #f1f5f9;
+  --color-input-placeholder: #64748b;
+
+  /* Overlay Colors */
+  --color-overlay: rgba(0, 0, 0, 0.7);
+  --color-modal-background: #1e293b;
 }
 
 * {
@@ -123,6 +188,21 @@ input, textarea, select {
   font-family: inherit;
   font-size: inherit;
   min-height: 44px;
+  background-color: var(--color-input-background);
+  color: var(--color-input-text);
+  border: 1px solid var(--color-input-border);
+  border-radius: var(--radius-md);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--color-input-placeholder);
+}
+
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
 }
 
 @media (max-width: 768px) {
