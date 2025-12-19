@@ -30,6 +30,7 @@
 /* ============================================
    Foldable Phone Layout - Unfolded State
    Show status panel as compact right sidebar
+   Navigation same as mobile (back arrow visible)
    ============================================ */
 @media (min-width: 600px) and (max-width: 1024px) {
   .customer-details-layout {
@@ -46,7 +47,7 @@
   }
 
   .customer-details-header h2 {
-    font-size: 18px;
+    font-size: 20px;
   }
 
   .customer-details-content {
@@ -54,13 +55,13 @@
   }
 
   .customer-tabs .tab {
-    padding: 10px 12px;
-    font-size: 13px;
+    padding: 12px 14px;
+    font-size: 14px;
   }
 
-  /* Hide back arrow on foldable since both panels visible */
+  /* Show back arrow on foldable (mobile-style navigation) */
   .btn-back-arrow {
-    display: none !important;
+    display: flex !important;
   }
 }
 
@@ -103,8 +104,8 @@
   display: block;
 }
 
-/* Show back arrow on mobile phones only (not on unfolded foldables) */
-@media (max-width: 599px) {
+/* Show back arrow on mobile and foldable (single panel navigation) */
+@media (max-width: 1024px) {
   .btn-back-arrow {
     display: flex !important;
   }
