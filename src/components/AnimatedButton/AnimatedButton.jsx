@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import './AnimatedButton.css';
 
 /**
@@ -30,14 +30,18 @@ function AnimatedButton({
 }) {
   const [buttonState, setButtonState] = useState('idle'); // idle, loading, success
   const [displayText, setDisplayText] = useState(children);
+  // Track previous loading state to detect transition from loading to not loading
+  const wasLoadingRef = useRef(false);
 
   // Handle external loading state changes
   useEffect(() => {
     if (isLoading) {
+      wasLoadingRef.current = true;
       setButtonState('loading');
       setDisplayText(loadingText);
-    } else if (buttonState === 'loading' && showSuccess) {
-      // Transition from loading to success
+    } else if (wasLoadingRef.current && showSuccess) {
+      // Transition from loading to success (was loading, now not loading)
+      wasLoadingRef.current = false;
       setButtonState('success');
       setDisplayText(successText);
       // Reset after success animation
@@ -46,12 +50,13 @@ function AnimatedButton({
         setDisplayText(children);
       }, 1500);
       return () => clearTimeout(timer);
-    } else if (buttonState === 'loading') {
+    } else if (wasLoadingRef.current) {
       // Just reset if no success animation
+      wasLoadingRef.current = false;
       setButtonState('idle');
       setDisplayText(children);
     }
-  }, [isLoading, showSuccess, loadingText, successText, children, buttonState]);
+  }, [isLoading, showSuccess, loadingText, successText, children]);
 
   // Update display text when children change (and not in special state)
   useEffect(() => {
