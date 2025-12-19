@@ -20,10 +20,47 @@
   overflow: hidden;
 }
 
-/* Hide status panel on mobile/tablet */
-@media (max-width: 1024px) {
+/* Hide status panel on mobile phones only */
+@media (max-width: 599px) {
   .customer-details-layout {
     flex-direction: column;
+  }
+}
+
+/* ============================================
+   Foldable Phone Layout - Unfolded State
+   Show status panel as compact right sidebar
+   ============================================ */
+@media (min-width: 600px) and (max-width: 1024px) {
+  .customer-details-layout {
+    flex-direction: row;
+  }
+
+  .customer-details-main {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .customer-details-header {
+    padding: var(--spacing-md);
+  }
+
+  .customer-details-header h2 {
+    font-size: 18px;
+  }
+
+  .customer-details-content {
+    padding: var(--spacing-md);
+  }
+
+  .customer-tabs .tab {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+
+  /* Hide back arrow on foldable since both panels visible */
+  .btn-back-arrow {
+    display: none !important;
   }
 }
 
@@ -66,8 +103,8 @@
   display: block;
 }
 
-/* Show back arrow on mobile and tablets */
-@media (max-width: 1024px) {
+/* Show back arrow on mobile phones only (not on unfolded foldables) */
+@media (max-width: 599px) {
   .btn-back-arrow {
     display: flex !important;
   }

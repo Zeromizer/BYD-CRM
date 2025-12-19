@@ -478,10 +478,82 @@
   font-style: italic;
 }
 
-/* Hide on mobile - will be handled by parent container */
-@media (max-width: 1024px) {
+/* Hide on mobile phones - but show on unfolded foldables */
+@media (max-width: 599px) {
   .customer-status-panel {
     display: none;
+  }
+}
+
+/* ============================================
+   Foldable Phone Layout - Unfolded State
+   Show status panel as a compact right sidebar
+   ============================================ */
+@media (min-width: 600px) and (max-width: 1024px) {
+  .customer-status-panel {
+    display: flex;
+    width: 280px;
+    min-width: 280px;
+    padding: 16px;
+    gap: 16px;
+  }
+
+  .status-section {
+    padding: 12px;
+    border-radius: 10px;
+  }
+
+  .status-section-title {
+    font-size: 12px;
+    margin-bottom: 10px;
+  }
+
+  .milestone-dropdown-trigger {
+    padding: 10px 14px;
+    font-size: 13px;
+  }
+
+  .checklist-items-compact {
+    gap: 6px;
+  }
+
+  .item-text {
+    font-size: 12px;
+  }
+
+  .milestone-quick-name {
+    font-size: 11px;
+  }
+
+  .mini-progress-bar {
+    width: 32px;
+  }
+
+  .mini-progress-text {
+    font-size: 10px;
+    min-width: 24px;
+  }
+
+  .task-item-compact {
+    padding: 6px 8px;
+  }
+
+  .task-text {
+    font-size: 11px;
+  }
+
+  .task-milestone-badge {
+    font-size: 8px;
+    padding: 2px 4px;
+  }
+}
+
+/* Support for screen spanning (foldable hinge detection) */
+@media (horizontal-viewport-segments: 2) {
+  .customer-status-panel {
+    display: flex;
+    width: env(viewport-segment-width 1 0, 280px);
+    min-width: 280px;
   }
 }
 
