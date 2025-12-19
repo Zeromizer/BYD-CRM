@@ -631,6 +631,18 @@
   .status-section-title {
     font-size: 13px;
     margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .add-task-btn {
+    display: flex !important;
+    width: 20px;
+    height: 20px;
+    min-width: 20px;
+    min-height: 20px;
+    flex-shrink: 0;
   }
 
   .milestone-dropdown-trigger {
