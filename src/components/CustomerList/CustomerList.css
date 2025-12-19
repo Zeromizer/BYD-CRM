@@ -345,3 +345,32 @@
     font-size: 14px;
   }
 }
+
+/* ============================================
+   Dark Theme - Explicit overrides
+   ============================================ */
+.theme-dark .customer-name {
+  color: #f1f5f9;
+}
+
+.theme-dark .customer-vsa {
+  color: #cbd5e1;
+}
+
+.theme-dark .customer-item {
+  background: #1e293b;
+  border-color: #475569;
+}
+
+.theme-dark .customer-item:hover {
+  background: #334155;
+}
+
+.theme-dark .customer-item.active {
+  background: rgba(34, 211, 238, 0.15);
+}
+
+.theme-dark .empty-state,
+.theme-dark .empty-hint {
+  color: #94a3b8;
+}
