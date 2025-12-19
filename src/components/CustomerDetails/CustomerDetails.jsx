@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { FolderOpen, ScanLine, Archive, ArchiveRestore, Workflow, MessageCircle, Paperclip, Folder, File, Image, FileText, FileSpreadsheet, X, Loader, Copy, Check, ClipboardCheck } from 'lucide-react';
+import { FolderOpen, ScanLine, Archive, ArchiveRestore, MessageCircle, Paperclip, Folder, File, Image, FileText, FileSpreadsheet, X, Loader, Copy, Check, ClipboardCheck } from 'lucide-react';
 import useCustomerStore from '../../stores/useCustomerStore';
 import useAuthStore from '../../stores/useAuthStore';
 import { getStorageService } from '../../services/storageServiceSelector';
@@ -18,7 +18,6 @@ import ProposalTab from './components/ProposalTab';
 import VsaTab from './components/VsaTab';
 import InvoiceTab from './components/InvoiceTab';
 import DocumentsTab from './components/DocumentsTab';
-import WorkflowPanel from './components/WorkflowPanel';
 import CustomerStatusPanel from './components/CustomerStatusPanel';
 
 // Import custom hooks
@@ -771,13 +770,6 @@ function CustomerDetails() {
             Status
           </button>
           <button
-            className={`tab tab-icon ${activeTab === 'workflows' ? 'active' : ''}`}
-            onClick={() => setActiveTab('workflows')}
-            title="Workflows"
-          >
-            <Workflow size={18} />
-          </button>
-          <button
             className={`tab tab-icon ${activeTab === 'documents' ? 'active' : ''}`}
             onClick={() => setActiveTab('documents')}
             title="Documents"
@@ -875,12 +867,6 @@ function CustomerDetails() {
           {activeTab === 'status' && (
             <div key="status" className="tab-content-wrapper">
               <MilestoneTracker customer={customer} />
-            </div>
-          )}
-
-          {activeTab === 'workflows' && (
-            <div key="workflows" className="tab-content-wrapper">
-              <WorkflowPanel customer={customer} />
             </div>
           )}
 
