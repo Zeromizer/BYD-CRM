@@ -493,10 +493,10 @@
 @media (min-width: 600px) and (max-width: 1024px) {
   .customer-status-panel {
     display: flex;
-    width: 300px;
-    min-width: 300px;
-    padding: 16px;
-    gap: 16px;
+    width: 270px;
+    min-width: 270px;
+    padding: 14px;
+    gap: 14px;
   }
 
   .status-section {
