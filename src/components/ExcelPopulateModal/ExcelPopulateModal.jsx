@@ -331,7 +331,7 @@ function ExcelPopulateModal({ isOpen, onClose, customer }) {
       <div className="excel-populate-modal">
         <div className="populate-form">
           {/* Customer Info */}
-          <div className="customer-info">
+          <div className="populate-customer-info">
             <h4>Customer: {customer.name}</h4>
             <p>Populating Excel template with customer data</p>
           </div>
