@@ -495,13 +495,13 @@
     display: flex;
     width: 270px;
     min-width: 270px;
-    padding: 14px;
-    gap: 14px;
+    padding: 8px 10px;
+    gap: 12px;
   }
 
   .status-section {
-    padding: 14px;
-    border-radius: 10px;
+    padding: 12px;
+    border-radius: 8px;
   }
 
   .status-section-title {
