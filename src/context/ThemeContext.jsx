@@ -17,9 +17,20 @@ export function ThemeProvider({ children }) {
     return 'light';
   });
 
-  // Apply theme to document
+  // Apply theme class to html element
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
+    const html = document.documentElement;
+
+    // Remove both classes first
+    html.classList.remove('theme-light', 'theme-dark');
+
+    // Add the correct class
+    html.classList.add(theme === 'dark' ? 'theme-dark' : 'theme-light');
+
+    // Also set data-theme for any code that might still use it
+    html.setAttribute('data-theme', theme);
+
+    // Save to localStorage
     localStorage.setItem(THEME_KEY, theme);
   }, [theme]);
 

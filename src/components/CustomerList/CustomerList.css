@@ -2,7 +2,7 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: var(--color-background-primary);
+  background: var(--bg-primary);
 }
 
 /* Search bar with add button */
@@ -11,22 +11,22 @@
   align-items: center;
   gap: 8px;
   padding: var(--spacing-md) var(--spacing-lg);
-  border-bottom: 1px solid var(--color-border-light);
-  background: var(--color-background-primary);
+  border-bottom: 1px solid var(--border-light);
+  background: var(--bg-primary);
 }
 
 .search-input {
   flex: 1;
   padding: 10px 15px;
-  border: 1px solid var(--color-border-light);
+  border: 1px solid var(--border-light);
   border-radius: var(--radius-md);
   font-size: 14px;
-  background: var(--color-input-background);
-  color: var(--color-input-text);
+  background: var(--input-bg);
+  color: var(--input-text);
 }
 
 .search-input::placeholder {
-  color: var(--color-input-placeholder);
+  color: var(--input-placeholder);
 }
 
 .search-input:focus {
@@ -69,18 +69,18 @@
   width: 40px;
   height: 40px;
   padding: 0;
-  border: 1px solid var(--color-border-light);
+  border: 1px solid var(--border-light);
   border-radius: var(--radius-md);
-  background: var(--color-background-secondary);
-  color: var(--color-text-tertiary);
+  background: var(--bg-secondary);
+  color: var(--text-tertiary);
   cursor: pointer;
   transition: all 0.2s;
   flex-shrink: 0;
 }
 
 .btn-toggle-archived:hover {
-  background: var(--color-background-tertiary);
-  color: var(--color-text-secondary);
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
 }
 
 .btn-toggle-archived.active {
@@ -110,9 +110,10 @@
   flex: 1;
   overflow-y: auto;
   padding: 10px;
-  background: var(--color-background-primary);
+  background: var(--bg-primary);
 }
 
+/* Customer card - uses theme variables */
 .customer-item {
   display: flex;
   align-items: center;
@@ -121,13 +122,13 @@
   cursor: pointer;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   margin-bottom: var(--spacing-sm);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--border-color);
   border-left: 4px solid transparent;
-  background: var(--color-card-background);
+  background: var(--bg-card);
 }
 
 .customer-item:hover {
-  background: var(--color-background-tertiary);
+  background: var(--bg-tertiary);
   transform: translateX(4px);
   border-color: var(--color-primary);
 }
@@ -220,24 +221,21 @@
   min-width: 0;
 }
 
-/* IMPORTANT: Customer name - uses text-primary for automatic theme switching */
+/* Customer name - uses --text-primary which switches with theme */
 .customer-name {
   font-weight: 600;
-  color: var(--color-text-primary);
+  color: var(--text-primary);
   margin-bottom: 4px;
   white-space: nowrap;
   overflow: hidden;
-  overflow-y: visible;
   text-overflow: ellipsis;
-  line-height: 1.3;
-  height: 1.3em;
-  padding-bottom: 4px;
+  line-height: 1.4;
 }
 
-/* IMPORTANT: Customer VSA - uses text-secondary for automatic theme switching */
+/* Customer VSA - uses --text-secondary which switches with theme */
 .customer-vsa {
   font-size: 13px;
-  color: var(--color-text-secondary);
+  color: var(--text-secondary);
   margin-bottom: 6px;
 }
 
@@ -260,7 +258,7 @@
 }
 
 .milestone-segment.current {
-  box-shadow: 0 0 0 1.5px var(--color-card-background), 0 0 0 3px var(--milestone-color);
+  box-shadow: 0 0 0 1.5px var(--bg-card), 0 0 0 3px var(--milestone-color);
   z-index: 1;
 }
 
@@ -286,12 +284,12 @@
 }
 
 .milestone-segment:not(.complete):not(.current):not(.past) {
-  background: var(--color-background-tertiary);
-  border: 1px solid var(--color-border);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
 }
 
 .milestone-segment:not(.complete):not(.current):not(.past) .milestone-segment-label {
-  color: var(--color-text-tertiary);
+  color: var(--text-tertiary);
 }
 
 /* Old badge - hidden */
@@ -305,7 +303,7 @@
   align-items: center;
   justify-content: center;
   height: 100%;
-  color: var(--color-text-tertiary);
+  color: var(--text-tertiary);
   text-align: center;
   padding: 40px 20px;
 }
@@ -316,7 +314,7 @@
 
 .empty-hint {
   font-size: 14px;
-  color: var(--color-text-secondary);
+  color: var(--text-secondary);
 }
 
 @media (max-width: 768px) {
@@ -346,28 +344,4 @@
   .customer-vsa {
     font-size: 14px;
   }
-}
-
-/* ============================================
-   DARK MODE - Explicit colors (no variables)
-   ============================================ */
-[data-theme="dark"] .customer-item {
-  background: #334155 !important;
-  border-color: #475569 !important;
-}
-
-[data-theme="dark"] .customer-item:hover {
-  background: #3f4f63 !important;
-}
-
-[data-theme="dark"] .customer-item.active {
-  background: rgba(34, 211, 238, 0.15) !important;
-}
-
-[data-theme="dark"] .customer-name {
-  color: #f1f5f9 !important;
-}
-
-[data-theme="dark"] .customer-vsa {
-  color: #94a3b8 !important;
 }

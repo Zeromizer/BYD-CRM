@@ -8,13 +8,11 @@ import CustomerForm from '../CustomerForm/CustomerForm';
 import { MILESTONES, isMilestoneComplete } from '../../constants/milestones';
 import { useToast } from '../Toast/Toast';
 import { CustomerListSkeleton } from '../Skeleton/Skeleton';
-import { useTheme } from '../../context/ThemeContext';
 import './CustomerList.css';
 
 function CustomerList() {
   const { customers, selectedCustomerId, selectCustomer, addCustomerWithFolder, updateChecklistItem, saveCustomerToFolder, isLoading } = useCustomerStore();
   const { isSignedIn } = useAuthStore();
-  const { isDark } = useTheme();
   const toast = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -270,10 +268,7 @@ function CustomerList() {
                   onClick={() => selectCustomer(customer.id)}
                 >
                   <div className="customer-info">
-                    <div
-                      className="customer-name"
-                      style={isDark ? { color: '#f1f5f9' } : {}}
-                    >
+                    <div className="customer-name">
                       {customer.name || 'Unnamed'}
                       {customer.archiveStatus && (
                         <span className={`archive-status-badge ${customer.archiveStatus}`}>
@@ -281,10 +276,7 @@ function CustomerList() {
                         </span>
                       )}
                     </div>
-                    <div
-                      className="customer-vsa"
-                      style={isDark ? { color: '#94a3b8' } : {}}
-                    >{customer.vsaNo || 'No VSA'}</div>
+                    <div className="customer-vsa">{customer.vsaNo || 'No VSA'}</div>
                     <div className="customer-milestone-progress">
                       {MILESTONES.map((milestone, milestoneIndex) => {
                         const isComplete = isMilestoneComplete(milestone.id, customer.checklist);
