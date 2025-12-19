@@ -13,10 +13,11 @@
   width: 100%;
 }
 
-@media (max-width: 768px) {
+/* Remove padding on mobile and foldable devices (up to 1024px) */
+@media (max-width: 1024px) {
   .app-main {
-    padding: 0;
-    max-width: 100vw; /* Prevent overflow on mobile */
+    padding: 0 !important;
+    max-width: 100vw;
     overflow-x: hidden;
   }
 }
