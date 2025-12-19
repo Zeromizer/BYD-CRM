@@ -487,64 +487,65 @@
 
 /* ============================================
    Foldable Phone Layout - Unfolded State
-   Show status panel as a compact right sidebar
+   Show status panel as right sidebar
+   With customer list hidden, we have more room
    ============================================ */
 @media (min-width: 600px) and (max-width: 1024px) {
   .customer-status-panel {
     display: flex;
-    width: 280px;
-    min-width: 280px;
+    width: 300px;
+    min-width: 300px;
     padding: 16px;
     gap: 16px;
   }
 
   .status-section {
-    padding: 12px;
+    padding: 14px;
     border-radius: 10px;
   }
 
   .status-section-title {
-    font-size: 12px;
-    margin-bottom: 10px;
+    font-size: 13px;
+    margin-bottom: 12px;
   }
 
   .milestone-dropdown-trigger {
-    padding: 10px 14px;
-    font-size: 13px;
+    padding: 12px 16px;
+    font-size: 14px;
   }
 
   .checklist-items-compact {
-    gap: 6px;
+    gap: 8px;
   }
 
   .item-text {
-    font-size: 12px;
+    font-size: 13px;
   }
 
   .milestone-quick-name {
-    font-size: 11px;
+    font-size: 12px;
   }
 
   .mini-progress-bar {
-    width: 32px;
+    width: 40px;
   }
 
   .mini-progress-text {
-    font-size: 10px;
-    min-width: 24px;
+    font-size: 11px;
+    min-width: 28px;
   }
 
   .task-item-compact {
-    padding: 6px 8px;
+    padding: 8px 10px;
   }
 
   .task-text {
-    font-size: 11px;
+    font-size: 12px;
   }
 
   .task-milestone-badge {
-    font-size: 8px;
-    padding: 2px 4px;
+    font-size: 9px;
+    padding: 2px 6px;
   }
 }
 

@@ -74,61 +74,51 @@
    Foldable Phone Layout - Unfolded State
    Targets devices like Samsung Galaxy Z Fold
    when unfolded (typically 600-1024px width)
+
+   Behavior: Like mobile (single panel navigation)
+   but with status panel visible when viewing details
    ============================================ */
 @media (min-width: 600px) and (max-width: 1024px) {
   .dashboard {
-    padding: var(--spacing-md);
+    padding: 0;
   }
 
   .dashboard-grid {
-    grid-template-columns: 320px 1fr;
-    gap: var(--spacing-md);
-    position: relative;
+    grid-template-columns: 1fr;
+    gap: 0;
   }
 
   .customer-list-panel,
   .customer-details-panel {
-    position: relative;
-    grid-column: auto;
-    grid-row: auto;
-  }
-
-  .customer-list-panel {
-    width: 320px;
-  }
-
-  .customer-details-panel {
+    grid-column: 1;
+    grid-row: 1;
+    border-radius: 0;
+    box-shadow: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
     width: 100%;
+    height: 100%;
+    z-index: 1;
   }
 
-  .dashboard-card {
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-md);
-    position: relative;
-    top: auto;
-    left: auto;
-    right: auto;
-    bottom: auto;
-  }
-
-  /* Show both panels on foldable unfolded state */
+  /* Hide panels based on selection state (same as mobile) */
   .mobile-hidden {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
+
+  /* Show the active panel */
+  .customer-list-panel:not(.mobile-hidden),
+  .customer-details-panel:not(.mobile-hidden) {
     display: flex !important;
     visibility: visible !important;
     opacity: 1 !important;
-    pointer-events: auto !important;
-  }
-}
-
-/* Support for screen spanning (foldable hinge detection) */
-@media (horizontal-viewport-segments: 2) {
-  .dashboard-grid {
-    grid-template-columns: env(viewport-segment-width 0 0) 1fr;
-    gap: env(viewport-segment-inline-gap, 16px);
-  }
-
-  .customer-list-panel {
-    width: 100%;
+    z-index: 10;
   }
 }
 
