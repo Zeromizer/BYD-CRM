@@ -9,20 +9,20 @@
   gap: 20px;
 }
 
-.customer-info {
+.populate-customer-info {
   background: #f7fafc;
   padding: 15px 20px;
   border-radius: 8px;
   border: 2px solid #e0e0e0;
 }
 
-.customer-info h4 {
+.populate-customer-info h4 {
   color: #2c3e50;
   margin: 0 0 5px 0;
   font-size: 16px;
 }
 
-.customer-info p {
+.populate-customer-info p {
   color: #7f8c8d;
   margin: 0;
   font-size: 14px;
