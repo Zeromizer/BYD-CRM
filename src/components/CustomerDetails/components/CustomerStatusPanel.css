@@ -484,3 +484,37 @@
     display: none;
   }
 }
+
+/* ============================================= */
+/* Dark Theme Overrides                          */
+/* ============================================= */
+
+:root[data-theme="dark"] .target-date.overdue {
+  background: rgba(248, 113, 113, 0.2);
+  color: #f87171;
+}
+
+:root[data-theme="dark"] .target-date.urgent {
+  background: rgba(251, 191, 36, 0.2);
+  color: #fbbf24;
+}
+
+:root[data-theme="dark"] .target-date.soon {
+  background: rgba(250, 204, 21, 0.2);
+  color: #facc15;
+}
+
+:root[data-theme="dark"] .target-date.upcoming {
+  background: rgba(52, 211, 153, 0.2);
+  color: #34d399;
+}
+
+:root[data-theme="dark"] .all-complete-message {
+  background: rgba(52, 211, 153, 0.15);
+  color: #34d399;
+}
+
+:root[data-theme="dark"] .task-item-compact.overdue:not(.completed) {
+  background: rgba(248, 113, 113, 0.15);
+  border-color: rgba(248, 113, 113, 0.4);
+}

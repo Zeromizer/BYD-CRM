@@ -829,3 +829,113 @@
     font-size: 12px;
   }
 }
+
+/* ============================================= */
+/* Dark Theme Overrides                          */
+/* ============================================= */
+
+:root[data-theme="dark"] .milestone-actions-bar {
+  background: rgba(251, 191, 36, 0.15);
+  border-color: rgba(251, 191, 36, 0.4);
+}
+
+:root[data-theme="dark"] .unsaved-indicator {
+  color: var(--color-warning);
+}
+
+:root[data-theme="dark"] .milestone-actions-bar .btn-secondary {
+  background: var(--color-background-tertiary);
+  color: var(--color-text-primary);
+  border-color: var(--color-border);
+}
+
+:root[data-theme="dark"] .milestone-actions-bar .btn-secondary:hover:not(:disabled) {
+  background: var(--color-background-secondary);
+}
+
+:root[data-theme="dark"] .milestone-date-section {
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.15) 0%, rgba(14, 165, 233, 0.25) 100%);
+  border-color: rgba(14, 165, 233, 0.4);
+}
+
+:root[data-theme="dark"] .milestone-date-label {
+  color: #38bdf8;
+}
+
+:root[data-theme="dark"] .milestone-date-input {
+  background: var(--color-card-background);
+  border-color: rgba(14, 165, 233, 0.4);
+  color: var(--color-text-primary);
+}
+
+:root[data-theme="dark"] .milestone-date-input:focus {
+  border-color: #0284c7;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.25);
+}
+
+:root[data-theme="dark"] .days-remaining.upcoming {
+  background: rgba(52, 211, 153, 0.2);
+  color: #34d399;
+}
+
+:root[data-theme="dark"] .days-remaining.soon {
+  background: rgba(251, 191, 36, 0.2);
+  color: #fbbf24;
+}
+
+:root[data-theme="dark"] .days-remaining.urgent {
+  background: rgba(248, 113, 113, 0.2);
+  color: #f87171;
+}
+
+:root[data-theme="dark"] .days-remaining.overdue {
+  background: #dc2626;
+  color: white;
+}
+
+:root[data-theme="dark"] .checklist-item {
+  background: var(--color-background-secondary);
+  border-color: var(--color-border);
+}
+
+:root[data-theme="dark"] .checklist-item:hover {
+  background: var(--color-background-tertiary);
+  border-color: var(--color-border-light);
+}
+
+:root[data-theme="dark"] .checklist-item.checked {
+  background: rgba(52, 211, 153, 0.15);
+  border-color: rgba(52, 211, 153, 0.4);
+}
+
+:root[data-theme="dark"] .custom-checkbox {
+  border-color: var(--color-border);
+}
+
+:root[data-theme="dark"] .checklist-item:hover .custom-checkbox {
+  border-color: var(--color-text-tertiary);
+}
+
+:root[data-theme="dark"] .checklist-item-label {
+  color: var(--color-text-on-card);
+}
+
+:root[data-theme="dark"] .checklist-item.checked .checklist-item-label {
+  color: var(--color-text-tertiary);
+}
+
+:root[data-theme="dark"] .checklist-section.expanded {
+  background: rgba(0, 188, 212, 0.08);
+}
+
+:root[data-theme="dark"] .checklist-section.expanded .checklist-header {
+  background: rgba(0, 188, 212, 0.1);
+}
+
+:root[data-theme="dark"] .checklist-section.expanded .checklist-header:hover {
+  background: rgba(0, 188, 212, 0.15);
+}
+
+:root[data-theme="dark"] .stage-button.complete:not(.active) {
+  background: rgba(5, 150, 105, 0.15);
+}
