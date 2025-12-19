@@ -289,7 +289,7 @@ function CustomerList() {
                             className={`milestone-segment ${isComplete ? 'complete' : ''} ${isCurrent ? 'current' : ''} ${isPast ? 'past' : ''}`}
                             style={{
                               '--milestone-color': milestone.color,
-                              background: isComplete || isPast ? milestone.color : isCurrent ? milestone.color : '#e2e8f0',
+                              background: (isComplete || isPast || isCurrent) ? milestone.color : undefined,
                               opacity: isComplete || isCurrent || isPast ? 1 : 0.4,
                               flex: isCurrent ? 2 : 1,
                             }}
