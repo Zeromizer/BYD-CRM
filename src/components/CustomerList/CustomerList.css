@@ -213,9 +213,14 @@
   display: none;
 }
 
-.customer-info {
+/* Scoped to customer-item to avoid conflict with other .customer-info classes */
+.customer-item .customer-info {
   flex: 1;
   min-width: 0;
+  background: transparent;
+  padding: 0;
+  border: none;
+  border-radius: 0;
 }
 
 /* Customer name - uses --text-primary which switches with theme */
