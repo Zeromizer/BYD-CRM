@@ -2004,7 +2004,7 @@
 
 .pricing-row {
   display: grid;
-  grid-template-columns: 180px 1fr;
+  grid-template-columns: 180px auto 1fr;
   align-items: center;
   gap: 12px;
   padding: 6px 0;
@@ -2013,11 +2013,6 @@
 
 .pricing-row:last-child {
   border-bottom: none;
-}
-
-/* Right-align the second column content */
-.pricing-row > *:nth-child(2) {
-  justify-self: end;
 }
 
 .pricing-row label {
@@ -2310,7 +2305,10 @@
     font-size: 11px;
   }
 
-  .price-input,
+  .price-input {
+    width: 100%;
+  }
+
   .price-display {
     max-width: none;
     width: 100%;
