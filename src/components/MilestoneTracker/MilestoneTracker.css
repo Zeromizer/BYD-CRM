@@ -915,5 +915,5 @@
 }
 
 :root[data-theme="dark"] .checklist-title {
-  color: var(--color-text-primary);
+  color: #ffffff;
 }
