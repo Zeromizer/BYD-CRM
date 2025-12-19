@@ -337,7 +337,11 @@
 }
 
 :root[data-theme="dark"] .customer-name {
-  color: #f1f5f9;
+  color: #f1f5f9 !important;
+}
+
+:root[data-theme="dark"] .customer-vsa {
+  color: #cbd5e1 !important;
 }
 
 :root[data-theme="dark"] .btn-toggle-archived {
