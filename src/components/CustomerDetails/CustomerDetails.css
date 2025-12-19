@@ -37,10 +37,12 @@
   .customer-details {
     border-radius: 0 !important;
     box-shadow: none !important;
+    margin: 0 !important;
   }
 
   .customer-details-layout {
     flex-direction: row;
+    gap: 0 !important;
   }
 
   .customer-details-main {
@@ -49,8 +51,8 @@
   }
 
   .customer-details-header {
-    padding: 6px 10px !important;
-    gap: 10px !important;
+    padding: 4px 8px !important;
+    gap: 8px !important;
   }
 
   .customer-details-header h2 {
@@ -58,16 +60,27 @@
   }
 
   .customer-details-content {
-    padding: 6px 10px !important;
+    padding: 4px 8px !important;
   }
 
   .customer-tabs {
     padding: 0 !important;
+    margin: 0 !important;
   }
 
   .customer-tabs .tab {
     padding: 8px 10px !important;
     font-size: 13px !important;
+  }
+
+  .section-title {
+    padding-left: 0 !important;
+    margin-left: 0 !important;
+  }
+
+  .info-grid {
+    padding: 0 !important;
+    margin: 0 !important;
   }
 
   /* Show back arrow on foldable (mobile-style navigation) */
