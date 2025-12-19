@@ -492,15 +492,16 @@
    ============================================ */
 @media (min-width: 600px) and (max-width: 1024px) {
   .customer-status-panel {
-    display: flex;
-    width: 270px;
-    min-width: 270px;
-    padding: 8px 10px;
-    gap: 12px;
+    display: flex !important;
+    width: 260px !important;
+    min-width: 260px !important;
+    padding: 6px 8px !important;
+    gap: 10px !important;
+    border-left: none !important;
   }
 
   .status-section {
-    padding: 12px;
+    padding: 10px !important;
     border-radius: 8px;
   }
 
