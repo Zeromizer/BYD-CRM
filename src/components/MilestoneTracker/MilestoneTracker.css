@@ -521,11 +521,11 @@
   align-items: center;
   gap: 12px;
   padding: 12px 14px;
-  background: #f8fafc;
+  background: var(--color-background-secondary);
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--color-border-light);
   animation: checklistItemFadeIn 0.35s ease both;
 }
 
@@ -552,8 +552,8 @@
 }
 
 .checklist-item:hover {
-  background: #f1f5f9;
-  border-color: #cbd5e1;
+  background: var(--color-background-tertiary);
+  border-color: var(--color-border);
   transform: translateX(4px);
 }
 
@@ -562,8 +562,8 @@
 }
 
 .checklist-item.checked {
-  background: #ecfdf5;
-  border-color: #a7f3d0;
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.3);
   opacity: 1;
 }
 
@@ -574,7 +574,7 @@
 .custom-checkbox {
   width: 20px;
   height: 20px;
-  border: 2px solid #cbd5e1;
+  border: 2px solid var(--color-border);
   border-radius: 4px;
   display: flex;
   align-items: center;
@@ -603,19 +603,19 @@
 }
 
 .checklist-item:hover .custom-checkbox {
-  border-color: #94a3b8;
+  border-color: var(--color-text-tertiary);
   transform: scale(1.1);
 }
 
 .checklist-item-label {
   font-size: 14px;
-  color: #1e293b;
+  color: var(--color-text-on-card);
   line-height: 1.4;
   flex: 1;
 }
 
 .checklist-item.checked .checklist-item-label {
-  color: #64748b;
+  color: var(--color-text-tertiary);
   text-decoration: line-through;
 }
 
@@ -893,35 +893,9 @@
   color: white;
 }
 
-:root[data-theme="dark"] .checklist-item {
-  background: var(--color-background-secondary);
-  border-color: var(--color-border);
-}
-
-:root[data-theme="dark"] .checklist-item:hover {
-  background: var(--color-background-tertiary);
-  border-color: var(--color-border-light);
-}
-
 :root[data-theme="dark"] .checklist-item.checked {
   background: rgba(52, 211, 153, 0.15);
   border-color: rgba(52, 211, 153, 0.4);
-}
-
-:root[data-theme="dark"] .custom-checkbox {
-  border-color: var(--color-border);
-}
-
-:root[data-theme="dark"] .checklist-item:hover .custom-checkbox {
-  border-color: var(--color-text-tertiary);
-}
-
-:root[data-theme="dark"] .checklist-item-label {
-  color: var(--color-text-on-card);
-}
-
-:root[data-theme="dark"] .checklist-item.checked .checklist-item-label {
-  color: var(--color-text-tertiary);
 }
 
 :root[data-theme="dark"] .checklist-section.expanded {
