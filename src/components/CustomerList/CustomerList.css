@@ -336,12 +336,20 @@
   background: var(--color-background-primary);
 }
 
-:root[data-theme="dark"] .customer-name {
+:root[data-theme="dark"] .customer-name,
+:root[data-theme="dark"] .customer-list .customer-name,
+:root[data-theme="dark"] .customer-item .customer-name,
+:root[data-theme="dark"] .customer-info .customer-name {
   color: #f1f5f9 !important;
+  -webkit-text-fill-color: #f1f5f9 !important;
 }
 
-:root[data-theme="dark"] .customer-vsa {
+:root[data-theme="dark"] .customer-vsa,
+:root[data-theme="dark"] .customer-list .customer-vsa,
+:root[data-theme="dark"] .customer-item .customer-vsa,
+:root[data-theme="dark"] .customer-info .customer-vsa {
   color: #cbd5e1 !important;
+  -webkit-text-fill-color: #cbd5e1 !important;
 }
 
 :root[data-theme="dark"] .btn-toggle-archived {
@@ -359,6 +367,11 @@
 :root[data-theme="dark"] .customer-item {
   background: var(--color-card-background);
   border: 1px solid var(--color-border);
+  color: #f1f5f9;
+}
+
+:root[data-theme="dark"] .customer-info {
+  color: #f1f5f9;
 }
 
 :root[data-theme="dark"] .customer-item:hover {
