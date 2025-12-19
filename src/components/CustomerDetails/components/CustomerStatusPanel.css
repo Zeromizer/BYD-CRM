@@ -493,18 +493,20 @@
 @media (min-width: 600px) and (max-width: 1024px) {
   .customer-status-panel {
     display: flex !important;
-    width: 260px !important;
-    min-width: 260px !important;
-    padding: 4px 6px !important;
-    gap: 8px !important;
+    width: 250px !important;
+    min-width: 250px !important;
+    padding: 2px 4px !important;
+    gap: 6px !important;
     border-left: none !important;
     border-radius: 0 !important;
     box-shadow: none !important;
+    margin: 0 !important;
   }
 
   .status-section {
-    padding: 8px !important;
+    padding: 6px !important;
     border-radius: 6px;
+    margin: 0 !important;
   }
 
   .status-section-title {
