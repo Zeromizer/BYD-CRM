@@ -1,5 +1,5 @@
 import { useMemo, useState, useCallback } from 'react';
-import { Car, Handshake, ClipboardCheck, Package, Star, Calendar, Clock, CheckCircle2, Circle, ChevronDown, ChevronUp, ListTodo } from 'lucide-react';
+import { Car, Handshake, ClipboardCheck, Package, Star, Calendar, Clock, CheckCircle2, Circle, ChevronDown, ChevronUp, ListTodo, Plus, Trash2 } from 'lucide-react';
 import useTodoStore from '../../../stores/useTodoStore';
 import useCustomerStore from '../../../stores/useCustomerStore';
 import useAuthStore from '../../../stores/useAuthStore';
@@ -22,11 +22,13 @@ const getMilestoneIcon = (iconName, size = 16, color = 'currentColor') => {
 };
 
 function CustomerStatusPanel({ customer }) {
-  const { todos } = useTodoStore();
+  const { todos, addTodo, toggleStandaloneTodo, deleteTodo } = useTodoStore();
   const { updateCustomer, saveToLocalStorage, saveCustomerToFolder } = useCustomerStore();
-  const { isSignedIn } = useAuthStore();
+  const { isSignedIn, currentUserEmail } = useAuthStore();
   const [expandedMilestone, setExpandedMilestone] = useState(null);
   const [showMilestoneDropdown, setShowMilestoneDropdown] = useState(false);
+  const [newTaskText, setNewTaskText] = useState('');
+  const [showAddTask, setShowAddTask] = useState(false);
 
   const checklist = customer?.checklist || getDefaultChecklistState();
   const milestoneDates = customer?.milestoneDates || {};
@@ -104,6 +106,39 @@ function CustomerStatusPanel({ customer }) {
       }
     }
   }, [customer, checklist, updateCustomer, saveToLocalStorage, saveCustomerToFolder, isSignedIn]);
+
+  // Handle adding a new task
+  const handleAddTask = useCallback(() => {
+    if (!newTaskText.trim() || !customer) return;
+
+    addTodo({
+      text: newTaskText.trim(),
+      customerId: customer.id,
+      customerName: customer.name,
+      milestoneId: currentMilestoneId,
+      priority: 'medium',
+    }, currentUserEmail, isSignedIn);
+
+    setNewTaskText('');
+    setShowAddTask(false);
+  }, [newTaskText, customer, currentMilestoneId, addTodo, currentUserEmail, isSignedIn]);
+
+  // Handle task toggle (for standalone tasks only)
+  const handleTaskToggle = useCallback((task) => {
+    // If task is linked to a checklist item, toggle via checklist
+    if (task.checklistItemId && task.milestoneId) {
+      const currentState = customer?.checklist?.[task.milestoneId]?.[task.checklistItemId] || false;
+      handleChecklistToggle(task.milestoneId, task.checklistItemId, !currentState);
+    } else {
+      // Standalone task - toggle directly
+      toggleStandaloneTodo(task.id, currentUserEmail, isSignedIn);
+    }
+  }, [customer, handleChecklistToggle, toggleStandaloneTodo, currentUserEmail, isSignedIn]);
+
+  // Handle task deletion
+  const handleDeleteTask = useCallback((taskId) => {
+    deleteTodo(taskId, currentUserEmail, isSignedIn);
+  }, [deleteTodo, currentUserEmail, isSignedIn]);
 
   return (
     <div className="customer-status-panel">
@@ -296,9 +331,44 @@ function CustomerStatusPanel({ customer }) {
           {customerTasks.length > 0 && (
             <span className="count-badge">{customerTasks.filter(t => !getTodoCompletion(t)).length}</span>
           )}
+          <button
+            className="add-task-btn"
+            onClick={() => setShowAddTask(!showAddTask)}
+            title="Add new task"
+          >
+            <Plus size={14} />
+          </button>
         </h4>
 
-        {customerTasks.length === 0 ? (
+        {/* Add Task Input */}
+        {showAddTask && (
+          <div className="add-task-form">
+            <input
+              type="text"
+              className="add-task-input"
+              placeholder="Add a task..."
+              value={newTaskText}
+              onChange={(e) => setNewTaskText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleAddTask();
+                if (e.key === 'Escape') {
+                  setShowAddTask(false);
+                  setNewTaskText('');
+                }
+              }}
+              autoFocus
+            />
+            <button
+              className="add-task-submit"
+              onClick={handleAddTask}
+              disabled={!newTaskText.trim()}
+            >
+              Add
+            </button>
+          </div>
+        )}
+
+        {customerTasks.length === 0 && !showAddTask ? (
           <div className="empty-tasks">
             <span>No tasks for this customer</span>
           </div>
@@ -311,11 +381,17 @@ function CustomerStatusPanel({ customer }) {
 
               return (
                 <li key={task.id} className={`task-item-compact ${isCompleted ? 'completed' : ''} ${isOverdue ? 'overdue' : ''}`}>
-                  {isCompleted ? (
-                    <CheckCircle2 size={14} className="task-check" style={{ color: milestone?.color || '#10b981' }} />
-                  ) : (
-                    <Circle size={14} className="task-check" />
-                  )}
+                  <button
+                    className="task-toggle-btn"
+                    onClick={() => handleTaskToggle(task)}
+                    title={isCompleted ? 'Mark as incomplete' : 'Mark as complete'}
+                  >
+                    {isCompleted ? (
+                      <CheckCircle2 size={14} style={{ color: milestone?.color || '#10b981' }} />
+                    ) : (
+                      <Circle size={14} />
+                    )}
+                  </button>
                   <span className="task-text">{task.text}</span>
                   {task.dueDate && (
                     <span className={`task-due ${isOverdue ? 'overdue' : ''}`}>
@@ -330,6 +406,16 @@ function CustomerStatusPanel({ customer }) {
                       {milestone.shortName}
                     </span>
                   )}
+                  <button
+                    className="task-delete-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteTask(task.id);
+                    }}
+                    title="Delete task"
+                  >
+                    <Trash2 size={12} />
+                  </button>
                 </li>
               );
             })}
