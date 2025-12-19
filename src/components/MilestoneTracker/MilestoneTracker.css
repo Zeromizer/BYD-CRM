@@ -1,290 +1,307 @@
+/* MilestoneTracker.css - Milestone tracking and checklist component styles */
+
+/* Container and Layout */
 .milestone-tracker {
-  padding: 0 0 1rem 0;
-}
-
-/* Actions Bar */
-.milestone-actions-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
-  background: #fef3c7;
-  border: 1px solid #fcd34d;
-  border-radius: 10px;
-  margin-bottom: 1rem;
-  gap: 12px;
-}
-
-.unsaved-indicator {
-  font-size: 14px;
-  font-weight: 500;
-  color: #92400e;
-}
-
-.milestone-actions-buttons {
-  display: flex;
-  gap: 8px;
-}
-
-.milestone-actions-bar .btn {
-  padding: 8px 16px;
-  border-radius: 6px;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  border: none;
-}
-
-.milestone-actions-bar .btn-secondary {
-  background: white;
-  color: #374151;
-  border: 1px solid #d1d5db;
-}
-
-.milestone-actions-bar .btn-secondary:hover:not(:disabled) {
-  background: #f3f4f6;
-}
-
-.milestone-actions-bar .btn-primary {
-  background: #10b981;
-  color: white;
-}
-
-.milestone-actions-bar .btn-primary:hover:not(:disabled) {
-  background: #059669;
-}
-
-.milestone-actions-bar .btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-/* Progress Bar Container */
-.milestone-progress-container {
-  padding: 1.25rem 1.5rem;
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-  border-radius: 16px;
-  margin-bottom: 1rem;
-  border: none;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-}
-
-.milestone-progress-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  position: relative;
-}
-
-/* The connecting line behind the steps */
-.milestone-progress-bar::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 24px;
-  right: 24px;
-  height: 3px;
-  background: rgba(255, 255, 255, 0.15);
-  transform: translateY(-50%);
-  border-radius: 2px;
-  z-index: 0;
-}
-
-.milestone-step {
+  width: 100%;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  position: relative;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  z-index: 1;
-  padding: 0 8px;
+  gap: 24px;
+  padding: 0;
 }
 
-.milestone-step:hover {
-  transform: scale(1.05);
-}
-
-/* Hide old connector */
-.milestone-connector {
-  display: none;
-}
-
-/* Milestone Circle - Modern pill style */
-.milestone-circle {
-  width: auto;
-  min-width: 44px;
-  height: 44px;
-  border-radius: 22px;
-  padding: 0 16px;
-  border: none;
+/* Stage Progress Bar */
+.stage-progress-container {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  z-index: 1;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-}
-
-.milestone-circle.current {
-  transform: scale(1.08);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-}
-
-.milestone-circle.complete {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
-}
-
-.milestone-number {
-  font-size: 15px;
-  font-weight: 700;
-  color: rgba(255, 255, 255, 0.6);
-}
-
-.milestone-circle.current .milestone-number {
-  color: white;
-}
-
-/* Milestone Label - integrated into pill */
-.milestone-label {
-  display: none;
-}
-
-.milestone-name {
-  font-size: 13px;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.7);
-  white-space: nowrap;
-  transition: color 0.3s ease;
-}
-
-.milestone-circle.current .milestone-name,
-.milestone-circle.complete .milestone-name {
-  color: white;
-}
-
-.milestone-progress-text {
-  display: none;
-}
-
-/* Show name inside the pill on larger screens */
-@media (min-width: 600px) {
-  .milestone-circle {
-    padding: 0 14px;
-  }
-
-  .milestone-circle .milestone-name {
-    display: inline;
-  }
-}
-
-/* Current Stage Selector - Modern card style */
-.current-stage-selector {
-  margin-bottom: 1rem;
-  padding: 1rem;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
   background: var(--color-card-background);
-  border-radius: 12px;
-  border: 1px solid var(--color-border-light);
-}
-
-.current-stage-selector label {
-  display: block;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--color-text-secondary);
-  margin-bottom: 0.75rem;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
 }
 
 .stage-buttons {
   display: flex;
-  flex-wrap: wrap;
   gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  width: 100%;
 }
 
 .stage-button {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
-  border: 1.5px solid;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 500;
+  flex: 1;
+  min-width: 80px;
+  max-width: 150px;
+  padding: 8px 12px;
+  border: 2px solid transparent;
+  border-radius: var(--radius-md);
+  font-size: 12px;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
-  background: transparent;
-}
-
-.stage-button:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.stage-button:active:not(:disabled) {
-  transform: translateY(0);
-}
-
-.stage-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  position: relative;
+  color: white;
 }
 
 .stage-button.active {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .stage-button.complete:not(.active) {
-  background: rgba(5, 150, 105, 0.08);
-  border-color: #059669;
-  color: #059669;
+  opacity: 0.7;
 }
 
-/* Default: Show full name, hide short name */
-.stage-button .stage-name-short {
-  display: none;
+.stage-button:hover:not(.active) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
-.stage-button .stage-name-full {
-  display: inline;
+.stage-icon {
+  width: 16px;
+  height: 16px;
 }
 
-/* Milestone Checklists */
-.milestone-checklists {
+/* Stage Colors */
+.stage-button.stage-test_drive {
+  background: var(--color-stage-test-drive);
+  border-color: var(--color-stage-test-drive);
+}
+
+.stage-button.stage-coe_bidding {
+  background: var(--color-stage-close-deal);
+  border-color: var(--color-stage-close-deal);
+}
+
+.stage-button.stage-registration {
+  background: var(--color-stage-registration);
+  border-color: var(--color-stage-registration);
+}
+
+.stage-button.stage-delivery {
+  background: var(--color-stage-delivery);
+  border-color: var(--color-stage-delivery);
+}
+
+.stage-button.stage-nps {
+  background: var(--color-stage-nps);
+  border-color: var(--color-stage-nps);
+}
+
+/* Milestone Timeline */
+.milestone-timeline {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 0;
+  position: relative;
+  overflow-x: auto;
+}
+
+.milestone-timeline::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: #e0e0e0;
+  transform: translateY(-50%);
+  z-index: 0;
+}
+
+.milestone-circle {
   display: flex;
   flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  z-index: 1;
+  background: var(--color-card-background);
+  padding: 0 10px;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.milestone-circle:hover {
+  transform: scale(1.05);
+}
+
+.milestone-icon-wrapper {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #e0e0e0;
+  color: #666;
+  transition: all 0.3s ease;
+  border: 3px solid transparent;
+}
+
+.milestone-icon-wrapper svg {
+  width: 20px;
+  height: 20px;
+}
+
+.milestone-circle.complete .milestone-icon-wrapper {
+  background: var(--color-success);
+  color: white;
+  border-color: var(--color-success);
+}
+
+.milestone-circle.current .milestone-icon-wrapper {
+  background: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 4px rgba(0, 188, 212, 0.2);
+}
+
+.milestone-name {
+  font-size: 11px;
+  font-weight: 500;
+  color: #666;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.milestone-circle.current .milestone-name,
+.milestone-circle.complete .milestone-name {
+  color: var(--color-text-on-card);
+  font-weight: 600;
+}
+
+/* Mobile Timeline */
+@media (max-width: 640px) {
+  .milestone-timeline {
+    padding: 16px 0;
+  }
+
+  .milestone-circle {
+    padding: 0 6px;
+  }
+
+  .milestone-circle .milestone-name {
+    font-size: 9px;
+  }
+
+  .milestone-icon-wrapper {
+    width: 32px;
+    height: 32px;
+  }
+
+  .milestone-icon-wrapper svg {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+/* Milestone Content Panels */
+.milestone-content-panel {
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+/* Checklists */
+.checklists-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 0;
+}
+
+/* Milestone Actions Bar */
+.milestone-actions-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  border-radius: var(--radius-md);
+  margin-bottom: 16px;
+}
+
+.milestone-actions-bar .unsaved-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #b45309;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+.milestone-actions-bar .unsaved-indicator svg {
+  flex-shrink: 0;
+}
+
+.milestone-actions-bar .action-buttons {
+  display: flex;
   gap: 8px;
 }
 
-.checklist-section {
-  background: var(--color-card-background);
-  border-radius: 12px;
-  border: 1px solid var(--color-border-light);
-  overflow: hidden;
+.milestone-actions-bar .btn-secondary {
+  padding: 6px 12px;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: white;
+  border: 1px solid #d1d5db;
+  color: #374151;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
   transition: all 0.2s ease;
 }
 
-.checklist-section.current {
-  border-color: var(--milestone-color, var(--color-border));
-  box-shadow: 0 0 0 1px var(--milestone-color, var(--color-border));
+.milestone-actions-bar .btn-secondary:hover:not(:disabled) {
+  background: #f9fafb;
+  border-color: #9ca3af;
+}
+
+.milestone-actions-bar .btn-secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.milestone-actions-bar .btn-primary {
+  padding: 6px 12px;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Checklist Section */
+.checklist-section {
+  background: var(--color-card-background);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  border: 2px solid transparent;
+  transition: all 0.25s ease;
+}
+
+.checklist-section:hover {
+  box-shadow: var(--shadow-md);
 }
 
 .checklist-section.expanded {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  background: rgba(0, 188, 212, 0.12);
-  border-color: var(--color-primary);
+  border-color: rgba(0, 188, 212, 0.3);
+  background: rgba(0, 188, 212, 0.02);
 }
 
 .checklist-section.expanded .checklist-header {
-  background: rgba(0, 188, 212, 0.15);
+  background: rgba(0, 188, 212, 0.05);
 }
 
 .checklist-section.expanded .checklist-header:hover {
-  background: rgba(0, 188, 212, 0.2);
+  background: rgba(0, 188, 212, 0.08);
 }
 
 /* Checklist Header */
@@ -335,24 +352,31 @@
 
 .current-badge {
   font-size: 10px;
-  font-weight: 700;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: var(--color-primary);
+  color: white;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  padding: 3px 8px;
-  border-radius: 10px;
-  color: white;
 }
 
 .checklist-header-right {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+}
+
+.checklist-progress-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .checklist-progress-bar {
   width: 60px;
   height: 6px;
-  background: var(--color-border-light);
+  background: rgba(0, 0, 0, 0.1);
   border-radius: 3px;
   overflow: hidden;
 }
@@ -366,30 +390,32 @@
 .checklist-header-right .checklist-progress-text {
   font-size: 12px;
   font-weight: 600;
-  color: var(--color-text-tertiary);
-  min-width: 32px;
+  color: #64748b;
+  min-width: 35px;
   text-align: right;
 }
 
 .chevron {
-  color: var(--color-text-tertiary);
-  transition: transform 0.2s ease;
+  width: 20px;
+  height: 20px;
+  color: #9ca3af;
+  transition: transform 0.25s ease;
 }
 
-.chevron.expanded {
+.checklist-section.expanded .chevron {
   transform: rotate(180deg);
 }
 
 /* Milestone Date Section */
 .milestone-date-section {
-  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-  border: 1px solid #bae6fd;
-  border-radius: 10px;
-  padding: 14px 16px;
-  margin-bottom: 12px;
   display: flex;
   flex-direction: column;
   gap: 12px;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+  border: 1px solid #7dd3fc;
+  border-radius: 8px;
+  margin: 0 16px;
 }
 
 .milestone-date-input-row {
@@ -455,21 +481,25 @@
 .days-remaining.overdue {
   background: #dc2626;
   color: white;
-  animation: pulse 1.5s infinite;
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
 }
 
+/* Create Todos Button */
 .create-todos-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   padding: 10px 16px;
-  background: var(--milestone-color, #0284c7);
+  background: var(--milestone-color, #64748b);
   color: white;
   border: none;
   border-radius: 8px;
@@ -480,35 +510,30 @@
   width: 100%;
 }
 
-.create-todos-btn:hover {
+.create-todos-btn:hover:not(:disabled) {
   filter: brightness(1.1);
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-.create-todos-btn:active {
-  transform: translateY(0);
-}
-
 .create-todos-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
-  transform: none;
 }
 
 /* Checklist Items */
 .checklist-items {
-  padding: 0 16px 16px 16px;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  animation: slideDown 0.2s ease;
+  padding: 0 16px 16px 16px;
+  animation: slideDown 0.25s ease;
 }
 
 @keyframes slideDown {
   from {
     opacity: 0;
-    transform: translateY(-8px);
+    transform: translateY(-10px);
   }
   to {
     opacity: 1;
@@ -520,278 +545,156 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 14px;
-  background: var(--color-background-secondary);
-  border-radius: 8px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: var(--radius-md);
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  border: 1px solid var(--color-border-light);
-  animation: checklistItemFadeIn 0.35s ease both;
+  transition: all 0.15s ease;
 }
 
-/* Staggered animation delays for checklist items */
-.checklist-item:nth-child(2) { animation-delay: 50ms; }
-.checklist-item:nth-child(3) { animation-delay: 100ms; }
-.checklist-item:nth-child(4) { animation-delay: 150ms; }
-.checklist-item:nth-child(5) { animation-delay: 200ms; }
-.checklist-item:nth-child(6) { animation-delay: 250ms; }
-.checklist-item:nth-child(7) { animation-delay: 300ms; }
-.checklist-item:nth-child(8) { animation-delay: 350ms; }
-.checklist-item:nth-child(9) { animation-delay: 400ms; }
-.checklist-item:nth-child(10) { animation-delay: 450ms; }
-
-@keyframes checklistItemFadeIn {
-  from {
-    opacity: 0;
-    transform: translateX(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-.checklist-item:hover {
-  background: var(--color-background-tertiary);
-  border-color: var(--color-border);
-  transform: translateX(4px);
-}
-
-.checklist-item:active {
-  transform: scale(0.98);
+.checklist-item:hover:not(.checked) {
+  background: rgba(0, 188, 212, 0.08);
+  border-color: rgba(0, 188, 212, 0.2);
 }
 
 .checklist-item.checked {
-  background: rgba(16, 185, 129, 0.1);
-  border-color: rgba(16, 185, 129, 0.3);
-  opacity: 1;
+  background: rgba(52, 211, 153, 0.1);
+  border-color: rgba(52, 211, 153, 0.3);
 }
 
-.checklist-item input[type="checkbox"] {
-  display: none;
+.checklist-item.checked .checklist-item-label {
+  text-decoration: line-through;
+  color: #9ca3af;
 }
 
+/* Custom Checkbox */
 .custom-checkbox {
+  position: relative;
   width: 20px;
   height: 20px;
-  border: 2px solid var(--color-border);
+  flex-shrink: 0;
+}
+
+.custom-checkbox input {
+  position: absolute;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  z-index: 1;
+}
+
+.checkbox-visual {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: 2px solid #d1d5db;
   border-radius: 4px;
+  transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s var(--ease-out-expo, ease);
-  flex-shrink: 0;
-  position: relative;
 }
 
-.custom-checkbox svg {
-  animation: checkmarkPop 0.3s var(--ease-spring, cubic-bezier(0.175, 0.885, 0.32, 1.275)) forwards;
+.custom-checkbox input:checked + .checkbox-visual {
+  background: var(--color-success);
+  border-color: var(--color-success);
 }
 
-@keyframes checkmarkPop {
-  0% {
-    transform: scale(0);
-    opacity: 0;
-  }
-  60% {
-    transform: scale(1.2);
-  }
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
+.checkbox-visual svg {
+  opacity: 0;
+  color: white;
+  transform: scale(0);
+  transition: all 0.2s ease;
 }
 
-.checklist-item:hover .custom-checkbox {
-  border-color: var(--color-text-tertiary);
-  transform: scale(1.1);
+.custom-checkbox input:checked + .checkbox-visual svg {
+  opacity: 1;
+  transform: scale(1);
 }
 
 .checklist-item-label {
   font-size: 14px;
   color: var(--color-text-on-card);
-  line-height: 1.4;
   flex: 1;
+  transition: all 0.2s ease;
 }
 
-.checklist-item.checked .checklist-item-label {
-  color: var(--color-text-tertiary);
-  text-decoration: line-through;
+/* Todo Status (when linked to a todo) */
+.checklist-item .todo-status {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 500;
 }
 
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .milestone-progress-container {
-    padding: 1rem 0.75rem;
-  }
+.checklist-item .todo-status.pending {
+  background: rgba(251, 191, 36, 0.15);
+  color: #b45309;
+}
 
-  .milestone-progress-bar::before {
-    left: 12px;
-    right: 12px;
-  }
+.checklist-item .todo-status.in-progress {
+  background: rgba(59, 130, 246, 0.15);
+  color: #1d4ed8;
+}
 
-  .milestone-step {
-    padding: 0 4px;
-  }
-
-  .milestone-circle {
-    min-width: 36px;
-    height: 36px;
-    padding: 0 10px;
-  }
-
-  .milestone-circle .milestone-name {
-    display: none;
-  }
-
-  .milestone-number {
-    font-size: 13px;
-  }
-
+/* Mobile Adjustments */
+@media (max-width: 640px) {
   .stage-buttons {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
   }
 
   .stage-button {
-    justify-content: center;
-    padding: 10px 12px;
-    font-size: 12px;
+    min-width: 60px;
+    max-width: 100px;
+    padding: 6px 8px;
+    font-size: 10px;
   }
 
-  .checklist-progress-bar {
-    width: 40px;
-  }
-
-  .checklist-item {
-    padding: 10px 12px;
+  .stage-button .stage-icon {
+    display: none;
   }
 
   .milestone-actions-bar {
     flex-direction: column;
-    align-items: stretch;
-    text-align: center;
-  }
-
-  .milestone-actions-buttons {
-    justify-content: center;
-  }
-
-  .checklist-item-label {
-    font-size: 13px;
-  }
-}
-
-@media (max-width: 480px) {
-  .milestone-progress-bar {
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 1rem;
-  }
-
-  .milestone-step {
-    flex: 0 0 auto;
-    width: calc(50% - 0.5rem);
-  }
-
-  .milestone-connector {
-    display: none;
-  }
-
-  /* Compact save bar for mobile */
-  .milestone-actions-bar {
-    flex-direction: row;
-    align-items: center;
-    padding: 8px 12px;
-    margin-bottom: 0.5rem;
-    border-radius: 8px;
-    gap: 8px;
-  }
-
-  .unsaved-indicator {
-    font-size: 11px;
-    flex: 1;
-    text-align: left;
-  }
-
-  .milestone-actions-buttons {
-    gap: 6px;
-  }
-
-  .milestone-actions-bar .btn {
-    padding: 6px 12px;
-    font-size: 11px;
-  }
-
-  /* Compact stage selector for mobile */
-  .current-stage-selector {
-    padding: 0.75rem;
-    margin-bottom: 0.5rem;
-  }
-
-  .current-stage-selector label {
-    display: none;
-  }
-
-  /* Horizontal stage buttons for mobile */
-  .stage-buttons {
-    display: flex;
-    flex-wrap: nowrap;
-    gap: 6px;
-  }
-
-  .stage-button {
-    flex: 1 1 auto;
-    justify-content: center;
-    padding: 6px 8px;
-    font-size: 11px;
-    gap: 0;
-    white-space: nowrap;
-  }
-
-  /* Hide icons on mobile stage buttons */
-  .stage-button svg {
-    display: none;
-  }
-
-  /* Show short name on mobile */
-  .stage-button .stage-name-full {
-    display: none;
-  }
-
-  .stage-button .stage-name-short {
-    display: inline;
-  }
-
-  /* Compact checklist cards for mobile */
-  .milestone-checklists {
-    gap: 4px;
-  }
-
-  .checklist-section {
-    border-radius: 8px;
-  }
-
-  .checklist-header {
+    gap: 10px;
     padding: 10px 12px;
   }
 
-  .checklist-indicator {
-    width: 22px;
-    height: 22px;
-  }
-
-  .checklist-indicator svg {
-    width: 10px;
-    height: 10px;
-  }
-
-  .checklist-title {
+  .milestone-actions-bar .unsaved-indicator {
     font-size: 13px;
   }
 
+  .milestone-actions-bar .action-buttons {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .milestone-actions-bar .btn-secondary,
+  .milestone-actions-bar .btn-primary {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+
+  .checklist-header {
+    padding: 12px;
+  }
+
+  .checklist-indicator {
+    width: 24px;
+    height: 24px;
+    font-size: 12px;
+  }
+
+  .checklist-title {
+    font-size: 14px;
+  }
+
   .current-badge {
-    font-size: 10px;
+    font-size: 9px;
     padding: 2px 6px;
   }
 
@@ -873,6 +776,10 @@
   box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.25);
 }
 
+:root[data-theme="dark"] .milestone-date-input::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+}
+
 :root[data-theme="dark"] .days-remaining.upcoming {
   background: rgba(52, 211, 153, 0.2);
   color: #34d399;
@@ -916,4 +823,21 @@
 
 :root[data-theme="dark"] .checklist-title {
   color: var(--color-text-primary);
+}
+
+:root[data-theme="dark"] .milestone-name {
+  color: #e2e8f0;
+}
+
+:root[data-theme="dark"] .checklist-item-label {
+  color: #cbd5e1;
+}
+
+:root[data-theme="dark"] .checklist-item.checked .checklist-item-label {
+  color: #64748b;
+}
+
+:root[data-theme="dark"] .current-badge {
+  background: #0891b2;
+  color: #ffffff;
 }
