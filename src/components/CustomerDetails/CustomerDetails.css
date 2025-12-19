@@ -587,7 +587,8 @@
 }
 
 .customer-tabs .tab {
-  padding: var(--spacing-md) var(--spacing-xl);
+  flex: 1;
+  padding: var(--spacing-md) var(--spacing-sm);
   background: transparent;
   border: none;
   cursor: pointer;
@@ -598,7 +599,7 @@
   transition: all 0.3s;
   outline: none;
   white-space: nowrap;
-  flex-shrink: 0;
+  text-align: center;
 }
 
 .customer-tabs .tab:hover {
@@ -614,12 +615,10 @@
 
 /* Icon-only tabs */
 .customer-tabs .tab.tab-icon {
-  padding: var(--spacing-md) var(--spacing-lg);
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 4px;
-  flex: 1;
 }
 
 .customer-tabs .tab.tab-icon .lock-icon {
