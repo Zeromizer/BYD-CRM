@@ -113,7 +113,7 @@
   background: var(--bg-primary);
 }
 
-/* Customer card - uses theme variables */
+/* Customer item - flat list style (no inner card) */
 .customer-item {
   display: flex;
   align-items: center;
@@ -122,15 +122,14 @@
   cursor: pointer;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   margin-bottom: var(--spacing-sm);
-  border: 1px solid var(--border-color);
   border-left: 4px solid transparent;
-  background: var(--bg-card);
+  background: transparent;
 }
 
 .customer-item:hover {
   background: var(--bg-tertiary);
   transform: translateX(4px);
-  border-color: var(--color-primary);
+  border-left-color: var(--color-primary);
 }
 
 .customer-item:active {
@@ -140,7 +139,6 @@
 .customer-item.active {
   background: var(--color-primary-light);
   border-left: 4px solid var(--color-primary);
-  border-color: var(--color-primary);
   animation: selectPulse 0.4s ease;
 }
 
@@ -160,7 +158,6 @@
 .customer-item.archived {
   opacity: 0.75;
   background: rgba(251, 191, 36, 0.1);
-  border-color: rgba(251, 191, 36, 0.3);
 }
 
 .customer-item.archived:hover {
@@ -347,7 +344,7 @@
 }
 
 /* ============================================
-   Dark Theme - Explicit overrides
+   Dark Theme - Explicit text color overrides
    ============================================ */
 .theme-dark .customer-name {
   color: #f1f5f9;
@@ -357,13 +354,8 @@
   color: #cbd5e1;
 }
 
-.theme-dark .customer-item {
-  background: #1e293b;
-  border-color: #475569;
-}
-
 .theme-dark .customer-item:hover {
-  background: #334155;
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .theme-dark .customer-item.active {
