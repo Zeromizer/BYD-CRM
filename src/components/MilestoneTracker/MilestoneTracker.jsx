@@ -259,7 +259,7 @@ const MilestoneTracker = memo(function MilestoneTracker({ customer, onSave }) {
                       getMilestoneIcon(milestone.iconName, 14, milestone.color)
                     )}
                   </div>
-                  <span className="checklist-title" style={{ color: isCurrent ? milestone.color : 'inherit' }}>
+                  <span className="checklist-title" style={{ color: isCurrent ? milestone.color : undefined }}>
                     {milestone.name}
                   </span>
                   {isCurrent && (
