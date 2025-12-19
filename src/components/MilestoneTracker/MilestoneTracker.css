@@ -939,3 +939,7 @@
 :root[data-theme="dark"] .stage-button.complete:not(.active) {
   background: rgba(5, 150, 105, 0.15);
 }
+
+:root[data-theme="dark"] .checklist-title {
+  color: var(--color-text-primary);
+}
