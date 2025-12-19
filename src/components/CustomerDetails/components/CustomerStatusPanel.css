@@ -495,14 +495,16 @@
     display: flex !important;
     width: 260px !important;
     min-width: 260px !important;
-    padding: 6px 8px !important;
-    gap: 10px !important;
+    padding: 4px 6px !important;
+    gap: 8px !important;
     border-left: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
   }
 
   .status-section {
-    padding: 10px !important;
-    border-radius: 8px;
+    padding: 8px !important;
+    border-radius: 6px;
   }
 
   .status-section-title {

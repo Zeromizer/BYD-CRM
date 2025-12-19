@@ -31,8 +31,14 @@
    Foldable Phone Layout - Unfolded State
    Show status panel as compact right sidebar
    Navigation same as mobile (back arrow visible)
+   Full-width layout with no card borders
    ============================================ */
 @media (min-width: 600px) and (max-width: 1024px) {
+  .customer-details {
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+
   .customer-details-layout {
     flex-direction: row;
   }
@@ -43,8 +49,8 @@
   }
 
   .customer-details-header {
-    padding: 8px 12px !important;
-    gap: 12px !important;
+    padding: 6px 10px !important;
+    gap: 10px !important;
   }
 
   .customer-details-header h2 {
@@ -52,7 +58,11 @@
   }
 
   .customer-details-content {
-    padding: 8px 12px !important;
+    padding: 6px 10px !important;
+  }
+
+  .customer-tabs {
+    padding: 0 !important;
   }
 
   .customer-tabs .tab {
