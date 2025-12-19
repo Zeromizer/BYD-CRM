@@ -2015,6 +2015,11 @@
   border-bottom: none;
 }
 
+/* Right-align the second column content */
+.pricing-row > *:nth-child(2) {
+  justify-self: end;
+}
+
 .pricing-row label {
   font-size: 13px;
   font-weight: 600;
@@ -2023,11 +2028,18 @@
   letter-spacing: 0.3px;
 }
 
+/* Price with tooltip wrapper */
+.price-with-tooltip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .price-input {
   display: flex;
   align-items: center;
   gap: 6px;
-  max-width: 200px;
+  width: 180px;
 }
 
 .price-input span {
