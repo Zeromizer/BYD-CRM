@@ -2746,3 +2746,200 @@
   border-color: #10b981;
   color: #059669;
 }
+
+/* ============================================
+   Dark Theme Overrides
+   ============================================ */
+:root[data-theme="dark"] .customer-tabs {
+  background: var(--color-background-secondary);
+}
+
+:root[data-theme="dark"] .customer-tabs .tab:hover {
+  background: var(--color-background-tertiary);
+}
+
+:root[data-theme="dark"] .document-item,
+:root[data-theme="dark"] .file-item {
+  background: var(--color-background-secondary);
+  border-color: var(--color-border);
+}
+
+:root[data-theme="dark"] .document-item:hover {
+  background: var(--color-background-tertiary);
+}
+
+:root[data-theme="dark"] .context-menu {
+  background: var(--color-card-background);
+  border-color: var(--color-border);
+}
+
+:root[data-theme="dark"] .context-menu-item:hover {
+  background: var(--color-background-tertiary);
+}
+
+:root[data-theme="dark"] .context-menu-item.context-menu-delete:hover {
+  background: rgba(248, 113, 113, 0.15);
+}
+
+:root[data-theme="dark"] .action-menu-item-danger:hover {
+  background: rgba(248, 113, 113, 0.15);
+}
+
+:root[data-theme="dark"] .action-menu-item-archive-completed:hover {
+  background: rgba(52, 211, 153, 0.15);
+}
+
+:root[data-theme="dark"] .action-menu-item-archive-lost:hover {
+  background: rgba(251, 191, 36, 0.15);
+}
+
+:root[data-theme="dark"] .action-menu-item-restore:hover {
+  background: rgba(96, 165, 250, 0.15);
+}
+
+:root[data-theme="dark"] .action-menu-item-deal:hover {
+  background: rgba(34, 211, 238, 0.15);
+}
+
+:root[data-theme="dark"] .btn-secondary {
+  background: var(--color-background-tertiary);
+  color: var(--color-text-primary);
+  border-color: var(--color-border);
+}
+
+:root[data-theme="dark"] .btn-secondary:hover {
+  background: var(--color-background-secondary);
+}
+
+:root[data-theme="dark"] .loading-state {
+  color: var(--color-text-tertiary);
+}
+
+:root[data-theme="dark"] .empty-state p {
+  color: var(--color-text-tertiary);
+}
+
+:root[data-theme="dark"] .breadcrumb-nav {
+  background: var(--color-background-secondary);
+}
+
+:root[data-theme="dark"] .folder-item {
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.15) 0%, rgba(14, 165, 233, 0.25) 100%);
+  border-color: rgba(14, 165, 233, 0.4);
+}
+
+:root[data-theme="dark"] .folder-item:hover {
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.25) 0%, rgba(14, 165, 233, 0.35) 100%);
+  border-color: #0ea5e9;
+}
+
+:root[data-theme="dark"] .move-modal-folder-btn {
+  background: var(--color-background-tertiary);
+  border-color: var(--color-border);
+  color: var(--color-text-primary);
+}
+
+:root[data-theme="dark"] .move-modal-folder-btn:hover {
+  background: rgba(34, 211, 238, 0.15);
+  border-color: var(--color-primary);
+}
+
+:root[data-theme="dark"] .delete-info {
+  background: rgba(251, 191, 36, 0.15);
+  color: var(--color-warning);
+}
+
+:root[data-theme="dark"] .inline-edit-item input:hover,
+:root[data-theme="dark"] .inline-edit-item select:hover,
+:root[data-theme="dark"] .inline-edit-full textarea:hover {
+  background: var(--color-background-tertiary);
+  border-color: var(--color-border);
+}
+
+:root[data-theme="dark"] .inline-edit-item input:focus,
+:root[data-theme="dark"] .inline-edit-item select:focus,
+:root[data-theme="dark"] .inline-edit-full textarea:focus {
+  background: var(--color-card-background);
+}
+
+:root[data-theme="dark"] .invoice-header-section {
+  background: linear-gradient(135deg, var(--color-card-background) 0%, var(--color-background-tertiary) 100%);
+}
+
+:root[data-theme="dark"] .invoice-disclaimer {
+  background: rgba(251, 191, 36, 0.15);
+  border-color: var(--color-warning);
+}
+
+:root[data-theme="dark"] .disclaimer-text {
+  color: var(--color-warning);
+}
+
+:root[data-theme="dark"] .whatsapp-recipient {
+  background: var(--color-background-secondary);
+}
+
+:root[data-theme="dark"] .whatsapp-doc-picker {
+  background: var(--color-background-secondary);
+}
+
+:root[data-theme="dark"] .whatsapp-preview-content {
+  background: var(--color-background-secondary);
+}
+
+:root[data-theme="dark"] .whatsapp-attached-doc {
+  background: rgba(52, 211, 153, 0.15);
+  border-color: rgba(52, 211, 153, 0.4);
+  color: var(--color-success);
+}
+
+:root[data-theme="dark"] .btn-add-attachment:hover {
+  background: rgba(34, 211, 238, 0.15);
+}
+
+:root[data-theme="dark"] .btn-copy-message:hover {
+  background: rgba(34, 211, 238, 0.15);
+}
+
+:root[data-theme="dark"] .btn-copy-message.copied {
+  background: rgba(52, 211, 153, 0.15);
+}
+
+:root[data-theme="dark"] .folder-menu-parent {
+  background: rgba(59, 130, 246, 0.15);
+  border-color: rgba(59, 130, 246, 0.4);
+}
+
+:root[data-theme="dark"] .folder-menu-parent .folder-menu-name {
+  color: var(--color-info);
+}
+
+:root[data-theme="dark"] .folder-menu-delete {
+  background: rgba(248, 113, 113, 0.15);
+  border-color: rgba(248, 113, 113, 0.4);
+}
+
+:root[data-theme="dark"] .mobile-action-danger:active {
+  background: rgba(248, 113, 113, 0.2);
+}
+
+/* Mobile folder styling dark mode */
+@media (max-width: 768px) {
+  :root[data-theme="dark"] .folder-item {
+    background: rgba(14, 165, 233, 0.2) !important;
+    border-color: rgba(14, 165, 233, 0.4) !important;
+  }
+
+  :root[data-theme="dark"] .folder-item:hover {
+    background: rgba(14, 165, 233, 0.3) !important;
+  }
+
+  :root[data-theme="dark"] .folder-item .chevron {
+    color: var(--color-primary);
+  }
+
+  :root[data-theme="dark"] .file-item {
+    background: var(--color-background-secondary);
+    border-color: var(--color-border);
+  }
+}
