@@ -336,6 +336,10 @@
   background: var(--color-background-primary);
 }
 
+:root[data-theme="dark"] .customer-name {
+  color: #f1f5f9;
+}
+
 :root[data-theme="dark"] .btn-toggle-archived {
   background: var(--color-background-secondary);
 }
