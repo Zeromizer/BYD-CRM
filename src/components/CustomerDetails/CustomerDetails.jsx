@@ -80,7 +80,6 @@ const extractVsaData = (customer) => ({
   upholstery: customer.vsa_upholstery || '',
   przType: customer.vsa_przType || '',
   package: customer.vsa_package || '',
-  sellingWithCOE: customer.vsa_sellingWithCOE || '',
   sellingPriceList: customer.vsa_sellingPriceList || '',
   purchasePriceWithCOE: customer.vsa_purchasePriceWithCOE || '',
   coeRebateLevel: customer.vsa_coeRebateLevel || '',

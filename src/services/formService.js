@@ -55,7 +55,6 @@ class FormService {
 
       // VSA Details - BYD New Car Package
       package: customer.vsa_package || '',
-      sellingWithCOE: customer.vsa_sellingWithCOE || '',
       sellingPriceList: customer.vsa_sellingPriceList || '',
       purchasePriceWithCOE: customer.vsa_purchasePriceWithCOE || '',
       coeRebateLevel: customer.vsa_coeRebateLevel || '',
