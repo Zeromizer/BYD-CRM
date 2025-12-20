@@ -65,6 +65,10 @@ const extractProposalData = (customer) => ({
   benefit3: customer.proposal_benefit3 || '',
   benefit4: customer.proposal_benefit4 || '',
   benefit5: customer.proposal_benefit5 || '',
+  benefit6: customer.proposal_benefit6 || '',
+  benefit7: customer.proposal_benefit7 || '',
+  benefit8: customer.proposal_benefit8 || '',
+  benefit9: customer.proposal_benefit9 || '',
   benefitsGiven: customer.proposal_benefitsGiven || '',
   remarks: customer.proposal_remarks || '',
 });

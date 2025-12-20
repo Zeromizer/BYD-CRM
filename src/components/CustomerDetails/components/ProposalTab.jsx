@@ -237,7 +237,7 @@ function ProposalTab({
       <div className="info-section">
         <h3>Benefits</h3>
         <div className="inline-edit-grid">
-          {[1, 2, 3, 4, 5].map((num) => (
+          {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
             <div className="inline-edit-item" key={num}>
               <label htmlFor={`proposal_benefit${num}`}>Benefit {num}</label>
               <select

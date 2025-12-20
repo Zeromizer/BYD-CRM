@@ -126,6 +126,10 @@ export const FIELD_TYPES = {
   proposalBenefit3: { label: 'Benefit 3', category: 'Proposal' },
   proposalBenefit4: { label: 'Benefit 4', category: 'Proposal' },
   proposalBenefit5: { label: 'Benefit 5', category: 'Proposal' },
+  proposalBenefit6: { label: 'Benefit 6', category: 'Proposal' },
+  proposalBenefit7: { label: 'Benefit 7', category: 'Proposal' },
+  proposalBenefit8: { label: 'Benefit 8', category: 'Proposal' },
+  proposalBenefit9: { label: 'Benefit 9', category: 'Proposal' },
   proposalBenefitsGiven: { label: 'Benefits Given', category: 'Proposal' },
   proposalRemarks: { label: 'Remarks', category: 'Proposal' },
 
@@ -354,6 +358,10 @@ export function getCustomerDataMapping(customer) {
     proposalBenefit3: customer.proposal_benefit3 || '',
     proposalBenefit4: customer.proposal_benefit4 || '',
     proposalBenefit5: customer.proposal_benefit5 || '',
+    proposalBenefit6: customer.proposal_benefit6 || '',
+    proposalBenefit7: customer.proposal_benefit7 || '',
+    proposalBenefit8: customer.proposal_benefit8 || '',
+    proposalBenefit9: customer.proposal_benefit9 || '',
     proposalBenefitsGiven: customer.proposal_benefitsGiven || '',
     proposalRemarks: customer.proposal_remarks || '',
 
@@ -471,6 +479,10 @@ export function getSampleCustomerData() {
     proposalBenefit3: 'Free tinting',
     proposalBenefit4: 'Free floor mats',
     proposalBenefit5: 'Complimentary first service',
+    proposalBenefit6: 'Ceramic Coating',
+    proposalBenefit7: 'Trapo Hex Mat',
+    proposalBenefit8: 'F&R Recording Cam',
+    proposalBenefit9: 'Number Retention',
     proposalBenefitsGiven: 'Charging cable, Extended warranty, Tinting',
     proposalRemarks: 'Customer is very interested, follow up in 2 days',
   };
