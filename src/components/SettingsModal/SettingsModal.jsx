@@ -13,6 +13,12 @@ import {
   setWorkflowConfig,
   isWorkflowEnabled
 } from '../../services/workflowService';
+import {
+  getScannerApiConfig,
+  setScannerApiConfig,
+  isScannerApiEnabled,
+  testScannerApiConnection
+} from '../../services/scannerApiService';
 import './SettingsModal.css';
 
 /**
@@ -43,10 +49,17 @@ function SettingsModal({ isOpen, onClose }) {
   const [webhookAppointment, setWebhookAppointment] = useState('');
   const [webhookFollowUp, setWebhookFollowUp] = useState('');
 
+  // Scanner API state
+  const [scannerEnabled, setScannerEnabledState] = useState(false);
+  const [scannerApiUrl, setScannerApiUrl] = useState('');
+  const [scannerApiKey, setScannerApiKey] = useState('');
+  const [showScannerKey, setShowScannerKey] = useState(false);
+  const [scannerTesting, setScannerTesting] = useState(false);
+
   // UI state
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState(null);
-  const [activeTab, setActiveTab] = useState('ai'); // 'ai', 'whatsapp', or 'workflows'
+  const [activeTab, setActiveTab] = useState('ai'); // 'ai', 'whatsapp', 'workflows', or 'scanner'
 
   // Load current settings when modal opens
   useEffect(() => {
@@ -80,6 +93,12 @@ function SettingsModal({ isOpen, onClose }) {
       setWebhookDocSigning(wfConfig.webhooks?.documentSigning || '');
       setWebhookAppointment(wfConfig.webhooks?.appointmentConfirmation || '');
       setWebhookFollowUp(wfConfig.webhooks?.followUp || '');
+
+      // Load Scanner API config
+      const scannerConfig = getScannerApiConfig();
+      setScannerEnabledState(scannerConfig.enabled || false);
+      setScannerApiUrl(scannerConfig.apiUrl || 'http://localhost:5000/api/v1');
+      setScannerApiKey(scannerConfig.apiKey || '');
 
       setMessage(null);
     }
@@ -201,6 +220,76 @@ function SettingsModal({ isOpen, onClose }) {
     }
   };
 
+  // Save Scanner API settings
+  const handleSaveScanner = async () => {
+    setSaving(true);
+    setMessage(null);
+
+    try {
+      await setScannerApiConfig({
+        enabled: scannerEnabled,
+        apiUrl: scannerApiUrl.trim(),
+        apiKey: scannerApiKey.trim()
+      });
+      setMessage({ type: 'success', text: 'Scanner API settings saved!' });
+    } catch (error) {
+      setMessage({ type: 'error', text: 'Failed to save: ' + error.message });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Test Scanner API connection
+  const handleTestScannerConnection = async () => {
+    setScannerTesting(true);
+    setMessage({ type: 'info', text: 'Testing connection...' });
+
+    try {
+      // Temporarily set the config for testing
+      const testConfig = {
+        enabled: true,
+        apiUrl: scannerApiUrl.trim(),
+        apiKey: scannerApiKey.trim()
+      };
+      await setScannerApiConfig(testConfig, false); // Don't sync to cloud yet
+
+      const result = await testScannerApiConnection();
+
+      if (result.success) {
+        setMessage({ type: 'success', text: result.message });
+      } else {
+        setMessage({ type: 'error', text: result.message });
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: 'Test failed: ' + error.message });
+    } finally {
+      setScannerTesting(false);
+    }
+  };
+
+  // Clear Scanner API key
+  const handleClearScanner = async () => {
+    if (!scannerApiKey) return;
+
+    if (window.confirm('Are you sure you want to remove the Scanner API key?')) {
+      setSaving(true);
+      try {
+        await setScannerApiConfig({
+          enabled: false,
+          apiUrl: scannerApiUrl,
+          apiKey: ''
+        });
+        setScannerApiKey('');
+        setScannerEnabledState(false);
+        setMessage({ type: 'success', text: 'Scanner API key removed' });
+      } catch (error) {
+        setMessage({ type: 'error', text: 'Failed to clear: ' + error.message });
+      } finally {
+        setSaving(false);
+      }
+    }
+  };
+
   const handleClearGemini = async () => {
     if (!apiKey) return;
 
@@ -221,6 +310,7 @@ function SettingsModal({ isOpen, onClose }) {
   const isGeminiConfigured = isGeminiAvailable();
   const isWhatsappConfigured = isWhatsAppEnabled();
   const isWorkflowConfigured = isWorkflowEnabled();
+  const isScannerConfigured = isScannerApiEnabled();
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Settings" size="medium">
@@ -256,6 +346,17 @@ function SettingsModal({ isOpen, onClose }) {
               <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"></path>
             </svg>
             Workflows
+          </button>
+          <button
+            className={`settings-tab ${activeTab === 'scanner' ? 'active' : ''}`}
+            onClick={() => { setActiveTab('scanner'); setMessage(null); }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="3" y1="9" x2="21" y2="9"></line>
+              <line x1="9" y1="21" x2="9" y2="9"></line>
+            </svg>
+            Scanner API
           </button>
         </div>
 
@@ -690,6 +791,118 @@ function SettingsModal({ isOpen, onClose }) {
               <button
                 className="btn btn-primary"
                 onClick={handleSaveWorkflows}
+                disabled={saving}
+              >
+                {saving ? 'Saving...' : 'Save'}
+              </button>
+            </div>
+          </section>
+        )}
+
+        {/* Scanner API Tab */}
+        {activeTab === 'scanner' && (
+          <section className="settings-section">
+            <h3 className="settings-section-title">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="3" y1="9" x2="21" y2="9"></line>
+                <line x1="9" y1="21" x2="9" y2="9"></line>
+              </svg>
+              Professional Document Scanner API
+            </h3>
+
+            <div className="settings-description">
+              <p>
+                Connect your external document scanner API for professional-grade document scanning.
+              </p>
+              <p className="settings-note">
+                Enter the API URL and key provided by your scanner service.
+              </p>
+            </div>
+
+            {/* Enable Toggle */}
+            <div className="settings-field">
+              <label className="settings-checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={scannerEnabled}
+                  onChange={(e) => setScannerEnabledState(e.target.checked)}
+                  disabled={saving}
+                />
+                <span>Enable Scanner API Integration</span>
+              </label>
+            </div>
+
+            {/* API URL */}
+            <div className="settings-field">
+              <label htmlFor="scanner-api-url">Scanner API URL</label>
+              <input
+                id="scanner-api-url"
+                type="text"
+                value={scannerApiUrl}
+                onChange={(e) => setScannerApiUrl(e.target.value)}
+                placeholder="http://localhost:5000/api/v1"
+                className="settings-input"
+                disabled={saving}
+              />
+              <span className="field-hint">Base URL for your scanner API (without /scan)</span>
+            </div>
+
+            {/* API Key */}
+            <div className="settings-field">
+              <label htmlFor="scanner-api-key">API Key</label>
+              <div className="api-key-input-container">
+                <input
+                  id="scanner-api-key"
+                  type={showScannerKey ? 'text' : 'password'}
+                  value={scannerApiKey}
+                  onChange={(e) => setScannerApiKey(e.target.value)}
+                  placeholder="Enter your Scanner API key..."
+                  className="settings-input"
+                  disabled={saving}
+                />
+                <button
+                  type="button"
+                  className="toggle-visibility-btn"
+                  onClick={() => setShowScannerKey(!showScannerKey)}
+                  title={showScannerKey ? 'Hide API key' : 'Show API key'}
+                >
+                  {showScannerKey ? '🙈' : '👁️'}
+                </button>
+              </div>
+              <span className="field-hint">The X-API-Key header value for authentication</span>
+            </div>
+
+            <div className="settings-status">
+              <span className={`status-indicator ${isScannerConfigured ? 'active' : 'inactive'}`}>
+                {isScannerConfigured ? 'Scanner API Active' : 'Scanner API Not Configured'}
+              </span>
+            </div>
+
+            {message && (
+              <div className={`settings-message ${message.type}`}>
+                {message.text}
+              </div>
+            )}
+
+            <div className="settings-actions">
+              <button
+                className="btn btn-secondary"
+                onClick={handleTestScannerConnection}
+                disabled={saving || scannerTesting || !scannerApiUrl || !scannerApiKey}
+              >
+                {scannerTesting ? 'Testing...' : 'Test Connection'}
+              </button>
+              <button
+                className="btn btn-secondary"
+                onClick={handleClearScanner}
+                disabled={saving || !scannerApiKey}
+              >
+                Clear Key
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={handleSaveScanner}
                 disabled={saving}
               >
                 {saving ? 'Saving...' : 'Save'}
