@@ -1727,7 +1727,7 @@
 
 /* Override label styles for checkbox labels - must come after the rule above */
 .inline-edit-item label.checkbox-label {
-  color: var(--color-text-primary);
+  color: var(--text-primary) !important;
   text-transform: none;
   font-size: 14px;
   letter-spacing: normal;
@@ -1736,7 +1736,7 @@
 }
 
 .inline-edit-item label.checkbox-label span {
-  color: var(--color-text-primary);
+  color: var(--text-primary) !important;
 }
 
 .inline-edit-item .required {
