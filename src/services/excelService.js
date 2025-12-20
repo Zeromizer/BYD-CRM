@@ -180,6 +180,10 @@ class ExcelService {
       proposalBenefit3: customer.proposal_benefit3 || '',
       proposalBenefit4: customer.proposal_benefit4 || '',
       proposalBenefit5: customer.proposal_benefit5 || '',
+      proposalBenefit6: customer.proposal_benefit6 || '',
+      proposalBenefit7: customer.proposal_benefit7 || '',
+      proposalBenefit8: customer.proposal_benefit8 || '',
+      proposalBenefit9: customer.proposal_benefit9 || '',
       proposalBenefitsGiven: customer.proposal_benefitsGiven || '',
       proposalRemarks: customer.proposal_remarks || '',
 
