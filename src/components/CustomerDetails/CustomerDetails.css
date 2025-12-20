@@ -1735,6 +1735,10 @@
   font-weight: normal;
 }
 
+.inline-edit-item label.checkbox-label span {
+  color: var(--color-text-primary);
+}
+
 .inline-edit-item .required {
   color: var(--color-error);
 }
