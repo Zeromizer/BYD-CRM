@@ -359,16 +359,6 @@
   user-select: none;
 }
 
-/* Override for checkbox labels inside inline-edit-item (higher specificity needed) */
-.inline-edit-item .checkbox-label {
-  color: var(--color-text-primary);
-  text-transform: none;
-  font-size: 14px;
-  letter-spacing: normal;
-  margin-bottom: 0;
-  font-weight: normal;
-}
-
 .customer-details-content {
   flex: 1;
   overflow-y: auto;
@@ -1733,6 +1723,16 @@
   letter-spacing: 0.5px;
   margin-bottom: 6px;
   font-weight: 700;
+}
+
+/* Override label styles for checkbox labels - must come after the rule above */
+.inline-edit-item label.checkbox-label {
+  color: var(--color-text-primary);
+  text-transform: none;
+  font-size: 14px;
+  letter-spacing: normal;
+  margin-bottom: 0;
+  font-weight: normal;
 }
 
 .inline-edit-item .required {
