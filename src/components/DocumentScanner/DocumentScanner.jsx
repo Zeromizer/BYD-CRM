@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import pdfGenerator from '../../services/pdfGenerator';
 import oneDriveService from '../../services/oneDriveService';
 import { isGeminiAvailable, analyzeDocumentWithGemini } from '../../services/geminiService';
+import { isScannerApiAvailable, scanDocument, downloadScannedPdf } from '../../services/scannerApiService';
 import './DocumentScanner.css';
 
 /**
@@ -78,6 +79,11 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [aiEnabled, setAiEnabled] = useState(true); // Enable AI by default
   const [showAiSuggestions, setShowAiSuggestions] = useState(true);
+
+  // Professional Scanner API state
+  const [isProfessionalScanning, setIsProfessionalScanning] = useState(false);
+  const [professionalScanProgress, setProfessionalScanProgress] = useState('');
+  const professionalScanInputRef = useRef(null);
 
   // Refs
   const videoRef = useRef(null);
@@ -1448,6 +1454,75 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
     }
   };
 
+  // ========================================
+  // PROFESSIONAL SCANNER API
+  // ========================================
+
+  const handleProfessionalScan = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Reset the input so the same file can be selected again
+    event.target.value = '';
+
+    if (!isScannerApiAvailable()) {
+      setError('Professional Scanner API is not available. Check Settings.');
+      return;
+    }
+
+    setIsProfessionalScanning(true);
+    setProfessionalScanProgress('Preparing document...');
+    setError(null);
+
+    try {
+      // Read file as base64
+      const reader = new FileReader();
+      const imageData = await new Promise((resolve, reject) => {
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      // Send to scanner API
+      const pdfBlob = await scanDocument(imageData, {}, (progress) => {
+        setProfessionalScanProgress(progress.stage);
+      });
+
+      // Generate filename
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      const filename = `scanned_${customerName || 'document'}_${timestamp}.pdf`;
+
+      // Download the PDF
+      downloadScannedPdf(pdfBlob, filename);
+
+      setProfessionalScanProgress('Scan complete! PDF downloaded.');
+
+      // Optionally upload to OneDrive if customer folder exists
+      if (customerFolderId) {
+        setProfessionalScanProgress('Uploading to OneDrive...');
+        try {
+          await oneDriveService.uploadFile(customerFolderId, filename, pdfBlob);
+          setProfessionalScanProgress('Saved to OneDrive!');
+        } catch (uploadErr) {
+          console.warn('OneDrive upload failed:', uploadErr);
+          // Don't show error - PDF was already downloaded
+        }
+      }
+
+      // Clear progress after a delay
+      setTimeout(() => {
+        setIsProfessionalScanning(false);
+        setProfessionalScanProgress('');
+      }, 2000);
+
+    } catch (err) {
+      console.error('Professional scan error:', err);
+      setError('Professional scan failed: ' + err.message);
+      setIsProfessionalScanning(false);
+      setProfessionalScanProgress('');
+    }
+  };
+
   const resetScanner = () => {
     stopCamera();
     setPages([]);
@@ -1480,6 +1555,15 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
     <div className="doc-scanner">
       <canvas ref={canvasRef} style={{ display: 'none' }} />
       <canvas ref={enhanceCanvasRef} style={{ display: 'none' }} />
+
+      {/* Hidden file input for professional scanner */}
+      <input
+        ref={professionalScanInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleProfessionalScan}
+        style={{ display: 'none' }}
+      />
 
       {error && (
         <div className="scanner-error">
@@ -1521,7 +1605,31 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
                   View Pages ({pages.length})
                 </button>
               )}
+
+              {/* Professional Scanner API button */}
+              {isScannerApiAvailable() && (
+                <button
+                  className="btn-professional-scan"
+                  onClick={() => professionalScanInputRef.current?.click()}
+                  disabled={isProfessionalScanning}
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2" />
+                    <line x1="3" y1="9" x2="21" y2="9" />
+                    <line x1="9" y1="21" x2="9" y2="9" />
+                  </svg>
+                  {isProfessionalScanning ? professionalScanProgress : 'Professional Scan'}
+                </button>
+              )}
             </div>
+
+            {/* Professional scan progress indicator */}
+            {isProfessionalScanning && (
+              <div className="professional-scan-progress">
+                <div className="progress-spinner" />
+                <span>{professionalScanProgress}</span>
+              </div>
+            )}
           </div>
 
           {onClose && (
