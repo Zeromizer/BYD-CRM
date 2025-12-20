@@ -97,6 +97,10 @@ const FIELD_NAMES = {
   proposalBenefit3: 'Proposal - Benefit 3',
   proposalBenefit4: 'Proposal - Benefit 4',
   proposalBenefit5: 'Proposal - Benefit 5',
+  proposalBenefit6: 'Proposal - Benefit 6',
+  proposalBenefit7: 'Proposal - Benefit 7',
+  proposalBenefit8: 'Proposal - Benefit 8',
+  proposalBenefit9: 'Proposal - Benefit 9',
   proposalBenefitsGiven: 'Proposal - Benefits Given',
   proposalRemarks: 'Proposal - Remarks',
 

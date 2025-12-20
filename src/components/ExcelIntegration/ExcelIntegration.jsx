@@ -100,6 +100,10 @@ const FIELD_NAMES = {
   proposalBenefit3: 'Proposal - Benefit 3',
   proposalBenefit4: 'Proposal - Benefit 4',
   proposalBenefit5: 'Proposal - Benefit 5',
+  proposalBenefit6: 'Proposal - Benefit 6',
+  proposalBenefit7: 'Proposal - Benefit 7',
+  proposalBenefit8: 'Proposal - Benefit 8',
+  proposalBenefit9: 'Proposal - Benefit 9',
   proposalBenefitsGiven: 'Proposal - Benefits Given',
   proposalRemarks: 'Proposal - Remarks',
 
@@ -1163,6 +1167,10 @@ function ExcelIntegration() {
                     <option value="proposalBenefit3">Benefit 3</option>
                     <option value="proposalBenefit4">Benefit 4</option>
                     <option value="proposalBenefit5">Benefit 5</option>
+                    <option value="proposalBenefit6">Benefit 6</option>
+                    <option value="proposalBenefit7">Benefit 7</option>
+                    <option value="proposalBenefit8">Benefit 8</option>
+                    <option value="proposalBenefit9">Benefit 9</option>
                     <option value="proposalBenefitsGiven">Benefits Given</option>
                     <option value="proposalRemarks">Remarks</option>
                   </optgroup>
