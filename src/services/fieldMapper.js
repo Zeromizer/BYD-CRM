@@ -55,7 +55,6 @@ export const FIELD_TYPES = {
 
   // VSA Details - BYD New Car Package
   package: { label: 'Package', category: 'Vehicle Package' },
-  sellingWithCOE: { label: 'Selling with COE', category: 'Vehicle Package' },
   sellingPriceList: { label: 'Selling Price on Price List', category: 'Vehicle Package' },
   purchasePriceWithCOE: { label: 'Purchase Price with COE', category: 'Vehicle Package' },
   coeRebateLevel: { label: 'COE Rebate Level', category: 'Vehicle Package' },
@@ -286,7 +285,6 @@ export function getCustomerDataMapping(customer) {
 
     // VSA Details - BYD New Car Package (currency fields formatted for document display)
     package: customer.vsa_package || '',
-    sellingWithCOE: formatCurrencyForDocument(customer.vsa_sellingWithCOE),
     sellingPriceList: formatCurrencyForDocument(customer.vsa_sellingPriceList),
     purchasePriceWithCOE: formatCurrencyForDocument(customer.vsa_purchasePriceWithCOE),
     coeRebateLevel: customer.vsa_coeRebateLevel || '',
@@ -421,7 +419,6 @@ export function getSampleCustomerData() {
 
     // Package
     package: 'Premium',
-    sellingWithCOE: '$185,888',
     sellingPriceList: '$180,000',
     purchasePriceWithCOE: '$185,888',
     coeRebateLevel: 'Level 1',

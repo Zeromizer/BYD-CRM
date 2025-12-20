@@ -30,7 +30,6 @@ const FIELD_NAMES = {
 
   // VSA Details - BYD New Car Package
   package: 'Package',
-  sellingWithCOE: 'Selling with COE',
   sellingPriceList: 'Selling Price on Price List',
   purchasePriceWithCOE: 'Purchase Price with COE',
   coeRebateLevel: 'COE Rebate Level',
@@ -1089,7 +1088,6 @@ function ExcelIntegration() {
 
                   <optgroup label="VSA - New Car Package">
                     <option value="package">Package</option>
-                    <option value="sellingWithCOE">Selling with COE</option>
                     <option value="sellingPriceList">Selling Price on Price List</option>
                     <option value="purchasePriceWithCOE">Purchase Price with COE</option>
                     <option value="coeRebateLevel">COE Rebate Level</option>

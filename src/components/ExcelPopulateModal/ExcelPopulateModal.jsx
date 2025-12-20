@@ -29,7 +29,6 @@ const FIELD_NAMES = {
 
   // VSA Details - BYD New Car Package
   package: 'Package',
-  sellingWithCOE: 'Selling with COE',
   sellingPriceList: 'Selling Price on Price List',
   purchasePriceWithCOE: 'Purchase Price with COE',
   coeRebateLevel: 'COE Rebate Level',

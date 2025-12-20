@@ -163,18 +163,6 @@ function VsaTab({
         <h3>Pricing & Deposit</h3>
         <div className="inline-edit-grid">
           <div className="inline-edit-item">
-            <label htmlFor="vsa_sellingWithCOE">Selling with COE</label>
-            <input
-              type="text"
-              id="vsa_sellingWithCOE"
-              name="sellingWithCOE"
-              value={getDisplayValue('sellingWithCOE')}
-              onChange={handleInputChange}
-              placeholder="$185,888"
-              disabled={isSubmitting}
-            />
-          </div>
-          <div className="inline-edit-item">
             <label htmlFor="vsa_sellingPriceList">Selling Price on Price List</label>
             <input
               type="text"
