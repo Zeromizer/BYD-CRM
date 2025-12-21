@@ -167,11 +167,16 @@ Return the data in this exact JSON format:
     const textResponse = data.candidates?.[0]?.content?.parts?.[0]?.text;
 
     if (!textResponse) {
+      console.error('Gemini response:', data);
       throw new Error('No response from Gemini');
     }
 
-    // Parse the JSON from the response
+    console.log('Gemini raw response:', textResponse.substring(0, 500));
+
+    // Parse the JSON from the response - improved extraction
     let jsonStr = textResponse.trim();
+
+    // Remove markdown code blocks
     if (jsonStr.startsWith('```json')) {
       jsonStr = jsonStr.slice(7);
     } else if (jsonStr.startsWith('```')) {
@@ -182,7 +187,40 @@ Return the data in this exact JSON format:
     }
     jsonStr = jsonStr.trim();
 
-    const result = JSON.parse(jsonStr);
+    // Try to extract JSON object using regex if simple extraction fails
+    if (!jsonStr.startsWith('{')) {
+      const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        jsonStr = jsonMatch[0];
+      }
+    }
+
+    // Clean up common issues
+    jsonStr = jsonStr
+      .replace(/[\x00-\x1F\x7F]/g, ' ')  // Remove control characters
+      .replace(/,\s*}/g, '}')            // Remove trailing commas
+      .replace(/,\s*]/g, ']');           // Remove trailing commas in arrays
+
+    let result;
+    try {
+      result = JSON.parse(jsonStr);
+    } catch (parseError) {
+      console.error('JSON parse error:', parseError.message);
+      console.error('Attempted to parse:', jsonStr.substring(0, 300));
+
+      // Return a default classification if parsing fails
+      result = {
+        documentType: 'other',
+        documentTypeName: 'Unknown Document',
+        confidence: 30,
+        folder: 'Other',
+        milestone: null,
+        extractedInfo: {},
+        quality: { overall: 50, readable: true, complete: false, signed: false },
+        suggestedActions: ['Manual review required - AI could not parse document'],
+        summary: 'Document analysis incomplete'
+      };
+    }
 
     if (onProgress) onProgress({ stage: 'Complete', progress: 100 });
 
