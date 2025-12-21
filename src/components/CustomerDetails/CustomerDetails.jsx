@@ -7,7 +7,6 @@ import Modal from '../Modal/Modal';
 import ExcelPopulateModal from '../ExcelPopulateModal/ExcelPopulateModal';
 import PrintManager from '../Documents/PrintManager/PrintManager';
 import DocumentViewer from '../DocumentViewer/DocumentViewer';
-import DocumentScanner from '../DocumentScanner/DocumentScanner';
 import ScannedDocsProcessor from '../ScannedDocsProcessor/ScannedDocsProcessor';
 import MilestoneTracker from '../MilestoneTracker/MilestoneTracker';
 import DealClosingWizard from '../DealClosingWizard/DealClosingWizard';
@@ -454,41 +453,6 @@ function CustomerDetails() {
       setIsSubmitting(false);
     }
   }, [customer, isSignedIn, deleteFolderChecked, deleteCustomerHybrid, toast]);
-
-  // Scan complete handler - now with AI classification support
-  const handleScanComplete = useCallback((uploadedFiles, metadata) => {
-    // Reload documents to show new files
-    if (documentManager.currentFolderId) {
-      documentManager.loadDocuments(documentManager.currentFolderId);
-    }
-
-    // If we have classification info and a checklist match, update the checklist
-    if (metadata?.checklistMatch && uploadedFiles?.length > 0) {
-      const { milestoneId, documentId } = metadata.checklistMatch;
-      const fileInfo = {
-        fileId: uploadedFiles[0].id,
-        fileName: uploadedFiles[0].name,
-        classification: metadata.classification,
-      };
-
-      // Import is at top, use the store action
-      const { addDocumentFile, saveToLocalStorage, saveCustomerToFolder } = useCustomerStore.getState();
-      addDocumentFile(customer.id, milestoneId, documentId, fileInfo);
-      saveToLocalStorage();
-
-      // Sync to OneDrive if signed in
-      if (isSignedIn) {
-        saveCustomerToFolder(customer, isSignedIn);
-      }
-
-      // Show toast with classification result
-      if (metadata.classification?.documentTypeName) {
-        toast.success(`${metadata.classification.documentTypeName} uploaded to ${metadata.folder || 'Documents'}`);
-      }
-    } else if (uploadedFiles?.length > 0) {
-      toast.success(`${uploadedFiles.length} file(s) uploaded successfully`);
-    }
-  }, [documentManager, customer, isSignedIn, toast]);
 
   // Open in OneDrive
   const handleOpenInDrive = useCallback(async () => {
@@ -971,7 +935,7 @@ function CustomerDetails() {
             <div key="scanner" className="tab-content-wrapper scanner-section">
               {!isSignedIn ? (
                 <div className="warning-banner animate-fadeIn">
-                  <p>Please sign in to OneDrive to use the scanner</p>
+                  <p>Please sign in to OneDrive to import documents</p>
                 </div>
               ) : !customer.driveFolderId ? (
                 <div className="empty-state animate-fadeIn">
@@ -979,33 +943,46 @@ function CustomerDetails() {
                   <p className="empty-state-hint">A folder will be created when you generate forms or Excel files</p>
                 </div>
               ) : (
-                <>
-                  {/* Genius Scan Import Button */}
-                  <div className="genius-scan-banner">
-                    <div className="genius-scan-info">
-                      <FolderInput size={20} />
-                      <div>
-                        <strong>Import from Genius Scan</strong>
-                        <span>Process documents scanned with Genius Scan mobile app</span>
-                      </div>
-                    </div>
-                    <button
-                      className="btn btn-primary genius-scan-btn"
-                      onClick={() => setIsScannedDocsOpen(true)}
-                    >
-                      <FolderInput size={16} />
-                      Process Scanned Docs
-                    </button>
+                <div className="genius-scan-full">
+                  {/* Genius Scan Import Section */}
+                  <div className="genius-scan-hero">
+                    <FolderInput size={48} />
+                    <h2>Import from Genius Scan</h2>
+                    <p>Process documents scanned with Genius Scan mobile app and saved to OneDrive</p>
                   </div>
 
-                  <DocumentScanner
-                    customerId={customer.id}
-                    customerName={customer.name}
-                    customerFolderId={customer.driveFolderId}
-                    onScanComplete={handleScanComplete}
-                    onClose={() => setActiveTab('documents')}
-                  />
-                </>
+                  <div className="genius-scan-steps">
+                    <div className="genius-scan-step">
+                      <span className="step-num">1</span>
+                      <div>
+                        <strong>Scan with Genius Scan</strong>
+                        <span>Use the mobile app to scan documents</span>
+                      </div>
+                    </div>
+                    <div className="genius-scan-step">
+                      <span className="step-num">2</span>
+                      <div>
+                        <strong>Auto-sync to OneDrive</strong>
+                        <span>Documents save to your Scanned Docs folder</span>
+                      </div>
+                    </div>
+                    <div className="genius-scan-step">
+                      <span className="step-num">3</span>
+                      <div>
+                        <strong>Process & Organize</strong>
+                        <span>AI classifies and routes to customer folders</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    className="btn btn-primary genius-scan-main-btn"
+                    onClick={() => setIsScannedDocsOpen(true)}
+                  >
+                    <FolderInput size={20} />
+                    Process Scanned Documents
+                  </button>
+                </div>
               )}
             </div>
           )}
