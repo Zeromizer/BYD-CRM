@@ -67,56 +67,20 @@ export async function classifyDocument(imageData, options = {}, onProgress = nul
 
   const documentTypes = getDocumentTypePrompt();
 
-  const prompt = `You are analyzing a scanned document for a car dealership CRM system in Singapore. Your task is to:
-
-1. **Identify the document type** from this list:
+  const prompt = `Analyze this scanned document for a car dealership CRM. Identify the document type from this list:
 ${documentTypes}
 
-2. **Extract key information** visible on the document (without exposing sensitive data)
-
-3. **Assess document quality and completeness**:
-   - Is the document fully visible?
-   - Is it properly signed (if required)?
-   - Are all required fields filled?
-
-4. **Provide routing recommendation**
-
-CONTEXT:
-- Customer Name: ${options.customerName || 'Unknown'}
-- Current Stage: ${options.currentMilestone || 'Unknown'}
-
-IMPORTANT:
-- Return ONLY valid JSON, no markdown or explanations
-- For identity documents, check if both front AND back are needed
-- For signed documents, verify if signature is present
-- Be specific about the document type - don't use "other" unless truly unidentifiable
-
-Return the data in this exact JSON format:
+Return ONLY valid JSON with these fields:
 {
-  "documentType": "nric_front",
-  "documentTypeName": "NRIC Front",
+  "documentType": "type_id_from_list",
+  "documentTypeName": "Human readable name",
   "confidence": 95,
-  "folder": "NIRC",
-  "milestone": "test_drive",
-  "extractedInfo": {
-    "title": "Document title or type visible",
-    "date": "Any date visible (YYYY-MM-DD format)",
-    "reference": "Any reference number visible"
-  },
-  "quality": {
-    "overall": 90,
-    "readable": true,
-    "complete": true,
-    "signed": true,
-    "signatureDetected": true
-  },
-  "suggestedActions": [
-    "Document is ready for filing",
-    "Consider scanning the back of the ID as well"
-  ],
-  "linkedChecklistItem": "nric",
-  "summary": "Singapore NRIC front side for customer identification"
-}`;
+  "folder": "Folder name",
+  "signed": true,
+  "summary": "Brief 10 word description"
+}
+
+Be specific - don't use "other" unless truly unidentifiable.`;
 
   if (onProgress) onProgress({ stage: 'Processing with AI...', progress: 30 });
 
@@ -236,17 +200,17 @@ Return the data in this exact JSON format:
       documentTypeName: result.documentTypeName || docType?.name || 'Other Document',
       confidence: result.confidence || 50,
       folder: result.folder || docType?.folder || 'Other',
-      milestone: result.milestone || docType?.milestone || null,
-      extractedInfo: result.extractedInfo || {},
+      milestone: docType?.milestone || null,
+      extractedInfo: {},
       quality: {
-        overall: result.quality?.overall || 70,
-        readable: result.quality?.readable !== false,
-        complete: result.quality?.complete !== false,
-        signed: result.quality?.signed !== false,
-        signatureDetected: result.quality?.signatureDetected || false,
+        overall: result.confidence || 70,
+        readable: true,
+        complete: true,
+        signed: result.signed === true,
+        signatureDetected: result.signed === true,
       },
-      suggestedActions: result.suggestedActions || [],
-      linkedChecklistItem: result.linkedChecklistItem || null,
+      suggestedActions: [],
+      linkedChecklistItem: docType?.id || null,
       summary: result.summary || '',
       method: 'gemini',
     };
