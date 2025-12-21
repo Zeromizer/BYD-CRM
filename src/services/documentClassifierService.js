@@ -195,11 +195,17 @@ Return the data in this exact JSON format:
       }
     }
 
-    // Clean up common issues
+    // Clean up common issues in JSON
     jsonStr = jsonStr
       .replace(/[\x00-\x1F\x7F]/g, ' ')  // Remove control characters
-      .replace(/,\s*}/g, '}')            // Remove trailing commas
-      .replace(/,\s*]/g, ']');           // Remove trailing commas in arrays
+      .replace(/\n/g, ' ')               // Replace newlines with spaces
+      .replace(/\r/g, ' ')               // Replace carriage returns
+      .replace(/\t/g, ' ')               // Replace tabs
+      .replace(/\s+/g, ' ')              // Collapse multiple spaces
+      .replace(/,\s*}/g, '}')            // Remove trailing commas before }
+      .replace(/,\s*]/g, ']')            // Remove trailing commas before ]
+      .replace(/"\s*:\s*"/g, '": "')     // Normalize key-value spacing
+      .replace(/"\s*,\s*"/g, '", "');    // Normalize comma spacing
 
     let result;
     try {
