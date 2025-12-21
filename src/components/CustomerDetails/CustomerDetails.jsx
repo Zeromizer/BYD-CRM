@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { FolderOpen, ScanLine, Archive, ArchiveRestore, MessageCircle, Paperclip, Folder, File, Image, FileText, FileSpreadsheet, X, Loader, Copy, Check, ClipboardCheck, ListChecks } from 'lucide-react';
+import { FolderOpen, ScanLine, Archive, ArchiveRestore, MessageCircle, Paperclip, Folder, File, Image, FileText, FileSpreadsheet, X, Loader, Copy, Check, ClipboardCheck, ListChecks, FolderInput } from 'lucide-react';
 import useCustomerStore from '../../stores/useCustomerStore';
 import useAuthStore from '../../stores/useAuthStore';
 import { getStorageService } from '../../services/storageServiceSelector';
@@ -8,6 +8,7 @@ import ExcelPopulateModal from '../ExcelPopulateModal/ExcelPopulateModal';
 import PrintManager from '../Documents/PrintManager/PrintManager';
 import DocumentViewer from '../DocumentViewer/DocumentViewer';
 import DocumentScanner from '../DocumentScanner/DocumentScanner';
+import ScannedDocsProcessor from '../ScannedDocsProcessor/ScannedDocsProcessor';
 import MilestoneTracker from '../MilestoneTracker/MilestoneTracker';
 import DealClosingWizard from '../DealClosingWizard/DealClosingWizard';
 import { useToast } from '../Toast/Toast';
@@ -186,6 +187,7 @@ function CustomerDetails() {
   const [deleteFolderChecked, setDeleteFolderChecked] = useState(false);
   const [showActionsMenu, setShowActionsMenu] = useState(false);
   const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false);
+  const [isScannedDocsOpen, setIsScannedDocsOpen] = useState(false);
   const [archiveType, setArchiveType] = useState(null); // 'lost' or 'completed'
   const [isWhatsAppModalOpen, setIsWhatsAppModalOpen] = useState(false);
   const [whatsAppMessage, setWhatsAppMessage] = useState('');
@@ -977,13 +979,33 @@ function CustomerDetails() {
                   <p className="empty-state-hint">A folder will be created when you generate forms or Excel files</p>
                 </div>
               ) : (
-                <DocumentScanner
-                  customerId={customer.id}
-                  customerName={customer.name}
-                  customerFolderId={customer.driveFolderId}
-                  onScanComplete={handleScanComplete}
-                  onClose={() => setActiveTab('documents')}
-                />
+                <>
+                  {/* Genius Scan Import Button */}
+                  <div className="genius-scan-banner">
+                    <div className="genius-scan-info">
+                      <FolderInput size={20} />
+                      <div>
+                        <strong>Import from Genius Scan</strong>
+                        <span>Process documents scanned with Genius Scan mobile app</span>
+                      </div>
+                    </div>
+                    <button
+                      className="btn btn-primary genius-scan-btn"
+                      onClick={() => setIsScannedDocsOpen(true)}
+                    >
+                      <FolderInput size={16} />
+                      Process Scanned Docs
+                    </button>
+                  </div>
+
+                  <DocumentScanner
+                    customerId={customer.id}
+                    customerName={customer.name}
+                    customerFolderId={customer.driveFolderId}
+                    onScanComplete={handleScanComplete}
+                    onClose={() => setActiveTab('documents')}
+                  />
+                </>
               )}
             </div>
           )}
@@ -1355,6 +1377,19 @@ function CustomerDetails() {
           </div>
         </div>
       </Modal>
+
+      {/* Scanned Docs Processor */}
+      <ScannedDocsProcessor
+        isOpen={isScannedDocsOpen}
+        onClose={() => setIsScannedDocsOpen(false)}
+        onProcessComplete={() => {
+          // Refresh documents if viewing documents tab
+          if (documentManager.currentFolderId) {
+            documentManager.loadDocuments(documentManager.currentFolderId);
+          }
+          toast.success('Document processed successfully');
+        }}
+      />
     </>
   );
 }

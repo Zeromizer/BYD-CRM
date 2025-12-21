@@ -699,6 +699,83 @@
   flex-direction: column;
 }
 
+/* Genius Scan Import Banner */
+.genius-scan-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 16px;
+  margin: 0 16px 16px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 10px;
+  color: white;
+}
+
+.genius-scan-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.genius-scan-info svg {
+  flex-shrink: 0;
+  opacity: 0.9;
+}
+
+.genius-scan-info div {
+  display: flex;
+  flex-direction: column;
+}
+
+.genius-scan-info strong {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.genius-scan-info span {
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+.genius-scan-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: white;
+  color: #667eea;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+
+.genius-scan-btn:hover {
+  background: #f0f0f0;
+  transform: translateY(-1px);
+}
+
+@media (max-width: 640px) {
+  .genius-scan-banner {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: center;
+  }
+
+  .genius-scan-info {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .genius-scan-btn {
+    justify-content: center;
+  }
+}
+
 .warning-banner {
   background: rgba(241, 196, 15, 0.1);
   border: 2px solid rgba(241, 196, 15, 0.3);
