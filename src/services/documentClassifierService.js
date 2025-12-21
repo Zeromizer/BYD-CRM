@@ -151,7 +151,7 @@ Return the data in this exact JSON format:
         }],
         generationConfig: {
           temperature: 0.2,
-          maxOutputTokens: 1024,
+          maxOutputTokens: 2048,
         }
       })
     });
@@ -195,17 +195,15 @@ Return the data in this exact JSON format:
       }
     }
 
-    // Clean up common issues in JSON
+    // Clean up common issues in JSON - be conservative to avoid breaking valid JSON
     jsonStr = jsonStr
-      .replace(/[\x00-\x1F\x7F]/g, ' ')  // Remove control characters
-      .replace(/\n/g, ' ')               // Replace newlines with spaces
-      .replace(/\r/g, ' ')               // Replace carriage returns
+      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')  // Remove control chars except \t\n\r
+      .replace(/\r\n/g, ' ')             // Replace Windows newlines
+      .replace(/\n/g, ' ')               // Replace Unix newlines
+      .replace(/\r/g, ' ')               // Replace old Mac newlines
       .replace(/\t/g, ' ')               // Replace tabs
-      .replace(/\s+/g, ' ')              // Collapse multiple spaces
       .replace(/,\s*}/g, '}')            // Remove trailing commas before }
-      .replace(/,\s*]/g, ']')            // Remove trailing commas before ]
-      .replace(/"\s*:\s*"/g, '": "')     // Normalize key-value spacing
-      .replace(/"\s*,\s*"/g, '", "');    // Normalize comma spacing
+      .replace(/,\s*]/g, ']');           // Remove trailing commas before ]
 
     let result;
     try {
