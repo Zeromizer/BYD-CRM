@@ -3,6 +3,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { getStorageService } from '../services/storageServiceSelector';
 import userStorage from '../services/userStorage';
 import { getDefaultChecklistState, getDefaultMilestoneDates } from '../constants/milestones';
+import { getDefaultDocumentChecklist, DOCUMENT_STATUS } from '../constants/documentRequirements';
 
 /**
  * Customer Store
@@ -40,6 +41,7 @@ const useCustomerStore = create((set, get) => ({
       dateAdded: new Date().toISOString(),
       checklist: getDefaultChecklistState(),
       milestoneDates: getDefaultMilestoneDates(),
+      documentChecklist: getDefaultDocumentChecklist(),
       dealClosed: false,
       archiveStatus: null, // null = active, 'lost' = lost lead, 'completed' = deal completed
       archivedAt: null,
@@ -83,6 +85,7 @@ const useCustomerStore = create((set, get) => ({
       dateAdded: new Date().toISOString(),
       checklist: getDefaultChecklistState(),
       milestoneDates: getDefaultMilestoneDates(),
+      documentChecklist: getDefaultDocumentChecklist(),
       dealClosed: false,
       archiveStatus: null, // null = active, 'lost' = lost lead, 'completed' = deal completed
       archivedAt: null,
@@ -343,6 +346,219 @@ const useCustomerStore = create((set, get) => ({
             milestoneDates: {
               ...milestoneDates,
               ...dates,
+            },
+            lastModified: new Date().toISOString(),
+          };
+        }
+        return c;
+      })
+    }));
+  },
+
+  // ==========================================
+  // DOCUMENT CHECKLIST METHODS
+  // ==========================================
+
+  /**
+   * Update a document checklist item status
+   * @param {number} customerId - Customer ID
+   * @param {string} milestoneId - Milestone ID (e.g., 'test_drive', 'close_deal')
+   * @param {string} documentId - Document requirement ID
+   * @param {object} updates - Status updates { status, uploadedFiles, notes, etc. }
+   */
+  updateDocumentChecklistItem: (customerId, milestoneId, documentId, updates) => {
+    set((state) => ({
+      customers: state.customers.map((c) => {
+        const cId = typeof c.id === 'string' ? parseInt(c.id) : c.id;
+        const targetId = typeof customerId === 'string' ? parseInt(customerId) : customerId;
+
+        if (cId === targetId) {
+          const documentChecklist = c.documentChecklist || getDefaultDocumentChecklist();
+          const currentItem = documentChecklist[milestoneId]?.[documentId] || {
+            status: DOCUMENT_STATUS.PENDING,
+            uploadedAt: null,
+            uploadedFiles: [],
+            reviewedAt: null,
+            reviewedBy: null,
+            notes: '',
+          };
+
+          return {
+            ...c,
+            documentChecklist: {
+              ...documentChecklist,
+              [milestoneId]: {
+                ...(documentChecklist[milestoneId] || {}),
+                [documentId]: {
+                  ...currentItem,
+                  ...updates,
+                },
+              },
+            },
+            lastModified: new Date().toISOString(),
+          };
+        }
+        return c;
+      })
+    }));
+  },
+
+  /**
+   * Add an uploaded file to a document checklist item
+   * @param {number} customerId - Customer ID
+   * @param {string} milestoneId - Milestone ID
+   * @param {string} documentId - Document requirement ID
+   * @param {object} fileInfo - { fileId, fileName, uploadedAt, classification }
+   */
+  addDocumentFile: (customerId, milestoneId, documentId, fileInfo) => {
+    set((state) => ({
+      customers: state.customers.map((c) => {
+        const cId = typeof c.id === 'string' ? parseInt(c.id) : c.id;
+        const targetId = typeof customerId === 'string' ? parseInt(customerId) : customerId;
+
+        if (cId === targetId) {
+          const documentChecklist = c.documentChecklist || getDefaultDocumentChecklist();
+          const currentItem = documentChecklist[milestoneId]?.[documentId] || {
+            status: DOCUMENT_STATUS.PENDING,
+            uploadedAt: null,
+            uploadedFiles: [],
+            reviewedAt: null,
+            reviewedBy: null,
+            notes: '',
+          };
+
+          const newFile = {
+            ...fileInfo,
+            uploadedAt: fileInfo.uploadedAt || new Date().toISOString(),
+          };
+
+          return {
+            ...c,
+            documentChecklist: {
+              ...documentChecklist,
+              [milestoneId]: {
+                ...(documentChecklist[milestoneId] || {}),
+                [documentId]: {
+                  ...currentItem,
+                  status: DOCUMENT_STATUS.UPLOADED,
+                  uploadedAt: currentItem.uploadedAt || new Date().toISOString(),
+                  uploadedFiles: [...(currentItem.uploadedFiles || []), newFile],
+                },
+              },
+            },
+            lastModified: new Date().toISOString(),
+          };
+        }
+        return c;
+      })
+    }));
+  },
+
+  /**
+   * Approve a document checklist item
+   * @param {number} customerId - Customer ID
+   * @param {string} milestoneId - Milestone ID
+   * @param {string} documentId - Document requirement ID
+   * @param {string} reviewerName - Name of the reviewer
+   */
+  approveDocument: (customerId, milestoneId, documentId, reviewerName = '') => {
+    set((state) => ({
+      customers: state.customers.map((c) => {
+        const cId = typeof c.id === 'string' ? parseInt(c.id) : c.id;
+        const targetId = typeof customerId === 'string' ? parseInt(customerId) : customerId;
+
+        if (cId === targetId) {
+          const documentChecklist = c.documentChecklist || getDefaultDocumentChecklist();
+          const currentItem = documentChecklist[milestoneId]?.[documentId] || {};
+
+          return {
+            ...c,
+            documentChecklist: {
+              ...documentChecklist,
+              [milestoneId]: {
+                ...(documentChecklist[milestoneId] || {}),
+                [documentId]: {
+                  ...currentItem,
+                  status: DOCUMENT_STATUS.APPROVED,
+                  reviewedAt: new Date().toISOString(),
+                  reviewedBy: reviewerName,
+                },
+              },
+            },
+            lastModified: new Date().toISOString(),
+          };
+        }
+        return c;
+      })
+    }));
+  },
+
+  /**
+   * Reject a document checklist item
+   * @param {number} customerId - Customer ID
+   * @param {string} milestoneId - Milestone ID
+   * @param {string} documentId - Document requirement ID
+   * @param {string} reason - Rejection reason
+   */
+  rejectDocument: (customerId, milestoneId, documentId, reason = '') => {
+    set((state) => ({
+      customers: state.customers.map((c) => {
+        const cId = typeof c.id === 'string' ? parseInt(c.id) : c.id;
+        const targetId = typeof customerId === 'string' ? parseInt(customerId) : customerId;
+
+        if (cId === targetId) {
+          const documentChecklist = c.documentChecklist || getDefaultDocumentChecklist();
+          const currentItem = documentChecklist[milestoneId]?.[documentId] || {};
+
+          return {
+            ...c,
+            documentChecklist: {
+              ...documentChecklist,
+              [milestoneId]: {
+                ...(documentChecklist[milestoneId] || {}),
+                [documentId]: {
+                  ...currentItem,
+                  status: DOCUMENT_STATUS.REJECTED,
+                  reviewedAt: new Date().toISOString(),
+                  notes: reason || currentItem.notes,
+                },
+              },
+            },
+            lastModified: new Date().toISOString(),
+          };
+        }
+        return c;
+      })
+    }));
+  },
+
+  /**
+   * Mark a document as not applicable for this customer
+   * @param {number} customerId - Customer ID
+   * @param {string} milestoneId - Milestone ID
+   * @param {string} documentId - Document requirement ID
+   */
+  markDocumentNotApplicable: (customerId, milestoneId, documentId) => {
+    set((state) => ({
+      customers: state.customers.map((c) => {
+        const cId = typeof c.id === 'string' ? parseInt(c.id) : c.id;
+        const targetId = typeof customerId === 'string' ? parseInt(customerId) : customerId;
+
+        if (cId === targetId) {
+          const documentChecklist = c.documentChecklist || getDefaultDocumentChecklist();
+          const currentItem = documentChecklist[milestoneId]?.[documentId] || {};
+
+          return {
+            ...c,
+            documentChecklist: {
+              ...documentChecklist,
+              [milestoneId]: {
+                ...(documentChecklist[milestoneId] || {}),
+                [documentId]: {
+                  ...currentItem,
+                  status: DOCUMENT_STATUS.NOT_APPLICABLE,
+                },
+              },
             },
             lastModified: new Date().toISOString(),
           };
@@ -1135,6 +1351,12 @@ export const useCustomerActions = () => useCustomerStore(
     saveCustomerToFolder: state.saveCustomerToFolder,
     repairCustomerFolders: state.repairCustomerFolders,
     createMissingFolders: state.createMissingFolders,
+    // Document checklist actions
+    updateDocumentChecklistItem: state.updateDocumentChecklistItem,
+    addDocumentFile: state.addDocumentFile,
+    approveDocument: state.approveDocument,
+    rejectDocument: state.rejectDocument,
+    markDocumentNotApplicable: state.markDocumentNotApplicable,
   }))
 );
 
