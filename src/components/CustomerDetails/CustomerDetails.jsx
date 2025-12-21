@@ -453,12 +453,40 @@ function CustomerDetails() {
     }
   }, [customer, isSignedIn, deleteFolderChecked, deleteCustomerHybrid, toast]);
 
-  // Scan complete handler
-  const handleScanComplete = useCallback(() => {
+  // Scan complete handler - now with AI classification support
+  const handleScanComplete = useCallback((uploadedFiles, metadata) => {
+    // Reload documents to show new files
     if (documentManager.currentFolderId) {
       documentManager.loadDocuments(documentManager.currentFolderId);
     }
-  }, [documentManager]);
+
+    // If we have classification info and a checklist match, update the checklist
+    if (metadata?.checklistMatch && uploadedFiles?.length > 0) {
+      const { milestoneId, documentId } = metadata.checklistMatch;
+      const fileInfo = {
+        fileId: uploadedFiles[0].id,
+        fileName: uploadedFiles[0].name,
+        classification: metadata.classification,
+      };
+
+      // Import is at top, use the store action
+      const { addDocumentFile, saveToLocalStorage, saveCustomerToFolder } = useCustomerStore.getState();
+      addDocumentFile(customer.id, milestoneId, documentId, fileInfo);
+      saveToLocalStorage();
+
+      // Sync to OneDrive if signed in
+      if (isSignedIn) {
+        saveCustomerToFolder(customer, isSignedIn);
+      }
+
+      // Show toast with classification result
+      if (metadata.classification?.documentTypeName) {
+        toast.success(`${metadata.classification.documentTypeName} uploaded to ${metadata.folder || 'Documents'}`);
+      }
+    } else if (uploadedFiles?.length > 0) {
+      toast.success(`${uploadedFiles.length} file(s) uploaded successfully`);
+    }
+  }, [documentManager, customer, isSignedIn, toast]);
 
   // Open in OneDrive
   const handleOpenInDrive = useCallback(async () => {

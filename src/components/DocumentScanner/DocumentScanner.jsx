@@ -4,6 +4,8 @@ import pdfGenerator from '../../services/pdfGenerator';
 import oneDriveService from '../../services/oneDriveService';
 import { isGeminiAvailable, analyzeDocumentWithGemini } from '../../services/geminiService';
 import { isScannerApiAvailable, scanDocument, downloadScannedPdf } from '../../services/scannerApiService';
+import { classifyDocument } from '../../services/documentClassifierService';
+import { findMatchingChecklistItem } from '../../services/documentUploadProcessor';
 import './DocumentScanner.css';
 
 /**
@@ -1331,7 +1333,7 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
     });
   };
 
-  const uploadToOneDrive = async () => {
+  const uploadToOneDrive = async (useSmartRouting = true) => {
     if (pages.length === 0 || !customerFolderId) return;
 
     setIsExporting(true);
@@ -1340,9 +1342,40 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
     try {
       const uploadedFiles = [];
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      let classification = null;
+      let targetFolderId = customerFolderId;
+      let folderName = null;
 
+      // Step 1: AI Classification (if enabled and available)
+      if (useSmartRouting && isGeminiAvailable() && pages.length > 0) {
+        setExportProgress(5);
+        try {
+          classification = await classifyDocument(pages[0].image, {
+            customerName: customerName,
+          });
+          folderName = classification?.folder;
+          console.log('Document classified as:', classification?.documentTypeName, '-> folder:', folderName);
+          setExportProgress(20);
+        } catch (classifyErr) {
+          console.warn('Classification failed, uploading to root folder:', classifyErr);
+        }
+      }
+
+      // Step 2: Get or create target subfolder
+      if (folderName && folderName !== 'Other') {
+        setExportProgress(25);
+        try {
+          targetFolderId = await oneDriveService.getOrCreateFolder(folderName, customerFolderId);
+          console.log('Using subfolder:', folderName, targetFolderId);
+        } catch (folderErr) {
+          console.warn('Could not create subfolder, using root:', folderErr);
+          targetFolderId = customerFolderId;
+        }
+      }
+
+      // Step 3: Upload files
       for (let i = 0; i < pages.length; i++) {
-        setExportProgress((i / pages.length) * 90);
+        setExportProgress(30 + (i / pages.length) * 60);
 
         const page = pages[i];
 
@@ -1356,21 +1389,35 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
         const byteArray = new Uint8Array(byteNumbers);
         const blob = new Blob([byteArray], { type: 'image/jpeg' });
 
+        // Use document type in filename if classified
+        const docType = classification?.documentType || 'scan';
         const filename = pages.length > 1
-          ? `Scan_${timestamp}_${i + 1}.jpg`
-          : `Scan_${timestamp}.jpg`;
+          ? `${docType}_${timestamp}_${i + 1}.jpg`
+          : `${docType}_${timestamp}.jpg`;
 
-        // Upload to OneDrive using the service
-        const fileId = await oneDriveService.uploadFileToFolder(filename, blob, customerFolderId);
-        uploadedFiles.push({ id: fileId, name: filename });
+        // Upload to OneDrive (to classified subfolder or root)
+        const fileId = await oneDriveService.uploadFileToFolder(filename, blob, targetFolderId);
+        uploadedFiles.push({
+          id: fileId,
+          name: filename,
+          folder: folderName,
+          classification: classification,
+        });
       }
 
       setExportProgress(100);
 
+      // Find matching checklist item for callback
+      const checklistMatch = classification ? findMatchingChecklistItem(classification) : null;
+
       setTimeout(() => {
         setIsExporting(false);
         if (onScanComplete) {
-          onScanComplete(uploadedFiles);
+          onScanComplete(uploadedFiles, {
+            classification,
+            folder: folderName,
+            checklistMatch,
+          });
         }
         resetScanner();
       }, 500);
@@ -1382,17 +1429,49 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
     }
   };
 
-  const uploadToOneDriveAsPDF = async () => {
+  const uploadToOneDriveAsPDF = async (useSmartRouting = true) => {
     if (pages.length === 0 || !customerFolderId) return;
 
     setIsExporting(true);
     setExportProgress(0);
 
     try {
+      let classification = null;
+      let targetFolderId = customerFolderId;
+      let folderName = null;
+
+      // Step 1: AI Classification using first page
+      if (useSmartRouting && isGeminiAvailable() && pages.length > 0) {
+        setExportProgress(5);
+        try {
+          classification = await classifyDocument(pages[0].image, {
+            customerName: customerName,
+          });
+          folderName = classification?.folder;
+          console.log('PDF classified as:', classification?.documentTypeName, '-> folder:', folderName);
+        } catch (classifyErr) {
+          console.warn('Classification failed, uploading to root folder:', classifyErr);
+        }
+      }
+
+      setExportProgress(15);
+
+      // Step 2: Get or create target subfolder
+      if (folderName && folderName !== 'Other') {
+        try {
+          targetFolderId = await oneDriveService.getOrCreateFolder(folderName, customerFolderId);
+        } catch (folderErr) {
+          console.warn('Could not create subfolder, using root:', folderErr);
+          targetFolderId = customerFolderId;
+        }
+      }
+
+      setExportProgress(20);
+
       const canvases = [];
 
       for (let i = 0; i < pages.length; i++) {
-        setExportProgress((i / pages.length) * 40);
+        setExportProgress(20 + (i / pages.length) * 30);
 
         const img = new Image();
         await new Promise((resolve) => {
@@ -1418,7 +1497,7 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
         canvases.push(canvas);
       }
 
-      setExportProgress(50);
+      setExportProgress(55);
 
       const pdf = await pdfGenerator.generateMultiPagePDF(canvases, {
         title: `Scan_${new Date().toISOString().slice(0, 10)}`,
@@ -1430,19 +1509,32 @@ function DocumentScanner({ customerId, customerName, customerFolderId, onScanCom
       // Get PDF as blob
       const pdfBlob = pdfGenerator.getPDFBlob(pdf);
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const filename = `Scan_${timestamp}.pdf`;
+      const docType = classification?.documentType || 'scan';
+      const filename = `${docType}_${timestamp}.pdf`;
 
       setExportProgress(85);
 
-      // Upload PDF to OneDrive
-      const fileId = await oneDriveService.uploadFileToFolder(filename, pdfBlob, customerFolderId);
+      // Upload PDF to OneDrive (to classified subfolder)
+      const fileId = await oneDriveService.uploadFileToFolder(filename, pdfBlob, targetFolderId);
 
       setExportProgress(100);
+
+      // Find matching checklist item
+      const checklistMatch = classification ? findMatchingChecklistItem(classification) : null;
 
       setTimeout(() => {
         setIsExporting(false);
         if (onScanComplete) {
-          onScanComplete([{ id: fileId, name: filename }]);
+          onScanComplete([{
+            id: fileId,
+            name: filename,
+            folder: folderName,
+            classification: classification,
+          }], {
+            classification,
+            folder: folderName,
+            checklistMatch,
+          });
         }
         resetScanner();
       }, 500);
