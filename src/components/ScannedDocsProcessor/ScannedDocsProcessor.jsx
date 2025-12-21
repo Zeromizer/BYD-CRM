@@ -36,6 +36,25 @@ import './ScannedDocsProcessor.css';
 // Default folder path for Genius Scan
 const DEFAULT_SCANNED_DOCS_PATH = 'BYD CRM/Scanned Docs';
 const SETTINGS_KEY = 'bydcrm_scanned_docs_folder';
+const AUTO_PROCESS_CONFIDENCE_THRESHOLD = 95;
+
+// Generate a proper filename based on classification and customer
+function generateFileName(classification, customerName, originalFileName) {
+  const ext = originalFileName.split('.').pop().toLowerCase();
+  const date = new Date().toLocaleDateString('en-GB').replace(/\//g, '-'); // dd-mm-yyyy
+
+  // Use document type name, sanitize for filename
+  const docType = (classification.documentTypeName || 'Document')
+    .replace(/[<>:"/\\|?*]/g, '-')
+    .replace(/\s+/g, '_');
+
+  // Sanitize customer name
+  const customer = (customerName || 'Unknown')
+    .replace(/[<>:"/\\|?*]/g, '-')
+    .replace(/\s+/g, '_');
+
+  return `${customer}_${docType}_${date}.${ext}`;
+}
 
 function ScannedDocsProcessor({ isOpen, onClose, onProcessComplete }) {
   // State
@@ -188,10 +207,11 @@ function ScannedDocsProcessor({ isOpen, onClose, onProcessComplete }) {
       setClassification(result);
 
       // Auto-select customer if we can match by extracted name
+      let matchedCustomer = null;
       if (!selectedCustomerId && result.customerName) {
         const extractedName = result.customerName.toLowerCase().trim();
         // Try to find a matching customer
-        const matchedCustomer = customers.find(c => {
+        matchedCustomer = customers.find(c => {
           const customerName = c.name.toLowerCase().trim();
           // Check if names match (partial match both ways)
           return customerName.includes(extractedName) ||
@@ -206,9 +226,103 @@ function ScannedDocsProcessor({ isOpen, onClose, onProcessComplete }) {
           console.log('Auto-matched customer:', matchedCustomer.name, 'from extracted name:', result.customerName);
         }
       }
+
+      // Auto-process if confidence >= threshold and customer is matched
+      if (result.confidence >= AUTO_PROCESS_CONFIDENCE_THRESHOLD && matchedCustomer) {
+        console.log(`Auto-processing: ${result.confidence}% confidence >= ${AUTO_PROCESS_CONFIDENCE_THRESHOLD}% threshold`);
+        // Use setTimeout to allow state to update first
+        setTimeout(() => {
+          autoProcess(selectedFile, result, matchedCustomer);
+        }, 100);
+      }
     } catch (err) {
       console.error('Classification failed:', err);
       setClassification({ error: err.message });
+    } finally {
+      setProcessing(null);
+    }
+  };
+
+  // Auto-process function for high confidence classifications
+  const autoProcess = async (file, classificationResult, customer) => {
+    if (!file || !customer || !classificationResult) return;
+
+    setProcessing(file.id);
+    setProcessResult({ success: true, message: 'Auto-processing...' });
+
+    try {
+      let customerFolderId = customer.driveFolderId;
+
+      // Auto-create customer folder if it doesn't exist
+      if (!customerFolderId) {
+        console.log('Creating OneDrive folder for customer:', customer.name);
+        const crmFolderId = await oneDriveService.getOrCreateFolder('BYD CRM', 'root');
+        const customersFolderId = await oneDriveService.getOrCreateFolder('Customers', crmFolderId);
+        const sanitizedName = customer.name.replace(/[<>:"/\\|?*]/g, '-').trim();
+        customerFolderId = await oneDriveService.getOrCreateFolder(sanitizedName, customersFolderId);
+
+        // Save folder ID to customer record
+        const { updateCustomer, saveToLocalStorage: save, saveCustomerToFolder: saveFolder } = useCustomerStore.getState();
+        updateCustomer(customer.id, { driveFolderId: customerFolderId });
+        save();
+        saveFolder({ ...customer, driveFolderId: customerFolderId }, true);
+      }
+
+      // Determine target subfolder
+      const folderName = classificationResult.folder || 'Other';
+      let targetFolderId = customerFolderId;
+
+      if (folderName && folderName !== 'Other') {
+        targetFolderId = await oneDriveService.getOrCreateFolder(folderName, customerFolderId);
+      }
+
+      // Generate new filename and rename
+      const newFileName = generateFileName(classificationResult, customer.name, file.name);
+      console.log('Auto-renaming file:', file.name, '→', newFileName);
+
+      try {
+        await oneDriveService.renameFile(file.id, newFileName);
+      } catch (e) {
+        console.warn('Could not rename file:', e);
+      }
+
+      // Move the file
+      await oneDriveService.moveFile(file.id, targetFolderId);
+
+      // Update customer checklist
+      const checklistMatch = findMatchingChecklistItem(classificationResult);
+      if (checklistMatch) {
+        addDocumentFile(customer.id, checklistMatch.milestoneId, checklistMatch.documentId, {
+          fileId: file.id,
+          fileName: newFileName,
+          classification: classificationResult,
+        });
+        saveToLocalStorage();
+        saveCustomerToFolder({ ...customer, driveFolderId: customerFolderId }, true);
+      }
+
+      setProcessResult({
+        success: true,
+        message: `Auto-processed: "${newFileName}" → ${customer.name}/${folderName}`,
+        checklistUpdated: !!checklistMatch,
+      });
+
+      // Remove from list
+      setFiles(prev => prev.filter(f => f.id !== file.id));
+
+      // Clear selection after delay
+      setTimeout(() => {
+        setSelectedFile(null);
+        setPreviewUrl(null);
+        setClassification(null);
+        setProcessResult(null);
+      }, 2500);
+
+      if (onProcessComplete) onProcessComplete();
+
+    } catch (err) {
+      console.error('Auto-process failed:', err);
+      setProcessResult({ error: 'Auto-process failed: ' + err.message });
     } finally {
       setProcessing(null);
     }
@@ -268,6 +382,17 @@ function ScannedDocsProcessor({ isOpen, onClose, onProcessComplete }) {
         }
       }
 
+      // Generate new filename and rename
+      const newFileName = generateFileName(classification, customer.name, selectedFile.name);
+      console.log('Renaming file:', selectedFile.name, '→', newFileName);
+
+      try {
+        await oneDriveService.renameFile(selectedFile.id, newFileName);
+      } catch (e) {
+        console.warn('Could not rename file:', e);
+        // Continue with move even if rename fails
+      }
+
       // Move the file
       await oneDriveService.moveFile(selectedFile.id, targetFolderId);
 
@@ -287,7 +412,7 @@ function ScannedDocsProcessor({ isOpen, onClose, onProcessComplete }) {
       const folderCreated = !customer.driveFolderId;
       setProcessResult({
         success: true,
-        message: `${classification.documentTypeName || 'Document'} moved to ${customer.name}/${folderName}${folderCreated ? ' (folder created)' : ''}`,
+        message: `Renamed to "${newFileName}" and moved to ${customer.name}/${folderName}${folderCreated ? ' (folder created)' : ''}`,
         checklistUpdated: !!checklistMatch,
       });
 
