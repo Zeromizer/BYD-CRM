@@ -577,7 +577,11 @@ const TemplateCard = memo(function TemplateCard({ template, onEditFields, onDele
     if (!dateStr) return 'Unknown';
     const date = new Date(dateStr);
     if (isNaN(date.getTime())) return 'Invalid Date';
-    return date.toLocaleDateString();
+    return date.toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
   };
 
   return (
