@@ -422,7 +422,13 @@ function ScannedDocsProcessor({ isOpen, onClose, onProcessComplete }) {
                     <div className="sdp-file-info">
                       <span className="sdp-file-name">{file.name}</span>
                       <span className="sdp-file-date">
-                        {new Date(file.lastModifiedDateTime).toLocaleString()}
+                        {new Date(file.lastModifiedDateTime).toLocaleDateString('en-GB', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
                       </span>
                     </div>
                     <button
