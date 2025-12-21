@@ -39,21 +39,22 @@ const SETTINGS_KEY = 'bydcrm_scanned_docs_folder';
 const AUTO_PROCESS_CONFIDENCE_THRESHOLD = 95;
 
 // Generate a proper filename based on classification and customer
+// Format: Name - Form - dd.mm.yyyy.ext
 function generateFileName(classification, customerName, originalFileName) {
   const ext = originalFileName.split('.').pop().toLowerCase();
-  const date = new Date().toLocaleDateString('en-GB').replace(/\//g, '-'); // dd-mm-yyyy
+  const date = new Date().toLocaleDateString('en-GB').replace(/\//g, '.'); // dd.mm.yyyy
 
   // Use document type name, sanitize for filename
   const docType = (classification.documentTypeName || 'Document')
     .replace(/[<>:"/\\|?*]/g, '-')
-    .replace(/\s+/g, '_');
+    .trim();
 
   // Sanitize customer name
   const customer = (customerName || 'Unknown')
     .replace(/[<>:"/\\|?*]/g, '-')
-    .replace(/\s+/g, '_');
+    .trim();
 
-  return `${customer}_${docType}_${date}.${ext}`;
+  return `${customer} - ${docType} - ${date}.${ext}`;
 }
 
 function ScannedDocsProcessor({ isOpen, onClose, onProcessComplete }) {
