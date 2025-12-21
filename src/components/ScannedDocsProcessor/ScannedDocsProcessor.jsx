@@ -104,7 +104,7 @@ function ScannedDocsProcessor({ isOpen, onClose, onProcessComplete }) {
       }
 
       // List files in the folder
-      const items = await oneDriveService.listFolderContents(folderId);
+      const items = await oneDriveService.listFolder(folderId);
 
       // Filter for images and PDFs only
       const docFiles = items.filter(item =>
@@ -142,11 +142,19 @@ function ScannedDocsProcessor({ isOpen, onClose, onProcessComplete }) {
     setClassification(null);
     setSelectedCustomerId(null);
     setProcessResult(null);
+    setPreviewUrl(null);
 
     try {
-      // Get preview/download URL
-      const url = await oneDriveService.getFileDownloadUrl(file.id);
-      setPreviewUrl(url);
+      // For PDFs, use the preview URL
+      if (file.name.toLowerCase().endsWith('.pdf')) {
+        const url = await oneDriveService.getPreviewUrl(file.id);
+        setPreviewUrl(url);
+      } else {
+        // For images, download as blob and create object URL
+        const blob = await oneDriveService.downloadFileAsBlob(file.id);
+        const url = URL.createObjectURL(blob);
+        setPreviewUrl(url);
+      }
     } catch (err) {
       console.error('Failed to get preview:', err);
       setPreviewUrl(null);
@@ -155,15 +163,14 @@ function ScannedDocsProcessor({ isOpen, onClose, onProcessComplete }) {
 
   // Classify document with AI
   const handleClassify = async () => {
-    if (!selectedFile || !previewUrl) return;
+    if (!selectedFile) return;
 
     setProcessing(selectedFile.id);
     setClassification(null);
 
     try {
-      // Download the file as base64 for AI processing
-      const response = await fetch(previewUrl);
-      const blob = await response.blob();
+      // Download the file directly from OneDrive as blob
+      const blob = await oneDriveService.downloadFileAsBlob(selectedFile.id);
 
       const base64 = await new Promise((resolve) => {
         const reader = new FileReader();
