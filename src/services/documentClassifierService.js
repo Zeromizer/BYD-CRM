@@ -27,6 +27,18 @@ function dataUrlToBase64(dataUrl) {
 }
 
 /**
+ * Extract mime type from base64 data URL
+ */
+function getMimeTypeFromDataUrl(dataUrl) {
+  const match = dataUrl.match(/^data:([^;]+);base64,/);
+  if (match) {
+    return match[1];
+  }
+  // Default to jpeg if can't detect
+  return 'image/jpeg';
+}
+
+/**
  * Get the document type definitions for the AI prompt
  */
 function getDocumentTypePrompt() {
@@ -108,6 +120,17 @@ Return the data in this exact JSON format:
 
   if (onProgress) onProgress({ stage: 'Processing with AI...', progress: 30 });
 
+  // Detect the correct mime type from the data URL
+  const mimeType = getMimeTypeFromDataUrl(imageData);
+  const base64Data = dataUrlToBase64(imageData);
+
+  // Validate that we have actual data
+  if (!base64Data || base64Data.length < 100) {
+    throw new Error('Invalid image data - file may be corrupted or empty');
+  }
+
+  console.log('Classifying document:', { mimeType, dataLength: base64Data.length });
+
   try {
     const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
       method: 'POST',
@@ -120,8 +143,8 @@ Return the data in this exact JSON format:
             { text: prompt },
             {
               inlineData: {
-                mimeType: 'image/jpeg',
-                data: dataUrlToBase64(imageData)
+                mimeType: mimeType,
+                data: base64Data
               }
             }
           ]
