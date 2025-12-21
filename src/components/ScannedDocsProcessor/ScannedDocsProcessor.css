@@ -340,6 +340,15 @@
   opacity: 0.7 !important;
 }
 
+.sdp-customer-name {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--color-primary, #00BCD4);
+  font-weight: 500;
+}
+
 /* Customer Select */
 .sdp-customer-select {
   width: 100%;

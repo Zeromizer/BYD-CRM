@@ -187,13 +187,23 @@ function ScannedDocsProcessor({ isOpen, onClose, onProcessComplete }) {
 
       setClassification(result);
 
-      // Auto-select customer if we can match by name or context
-      if (!selectedCustomerId && result.extractedInfo?.customerName) {
-        const matchedCustomer = customers.find(c =>
-          c.name.toLowerCase().includes(result.extractedInfo.customerName.toLowerCase())
-        );
+      // Auto-select customer if we can match by extracted name
+      if (!selectedCustomerId && result.customerName) {
+        const extractedName = result.customerName.toLowerCase().trim();
+        // Try to find a matching customer
+        const matchedCustomer = customers.find(c => {
+          const customerName = c.name.toLowerCase().trim();
+          // Check if names match (partial match both ways)
+          return customerName.includes(extractedName) ||
+                 extractedName.includes(customerName) ||
+                 // Also check individual words
+                 extractedName.split(/\s+/).some(word =>
+                   word.length > 2 && customerName.includes(word)
+                 );
+        });
         if (matchedCustomer) {
           setSelectedCustomerId(matchedCustomer.id);
+          console.log('Auto-matched customer:', matchedCustomer.name, 'from extracted name:', result.customerName);
         }
       }
     } catch (err) {
@@ -209,22 +219,50 @@ function ScannedDocsProcessor({ isOpen, onClose, onProcessComplete }) {
     if (!selectedFile || !selectedCustomerId || !classification) return;
 
     const customer = customers.find(c => c.id === selectedCustomerId);
-    if (!customer || !customer.driveFolderId) {
-      setProcessResult({ error: 'Customer does not have a OneDrive folder' });
+    if (!customer) {
+      setProcessResult({ error: 'Customer not found' });
       return;
     }
 
     setProcessing(selectedFile.id);
 
     try {
-      // Determine target folder
-      const folderName = classification.folder || 'Other';
-      let targetFolderId = customer.driveFolderId;
+      let customerFolderId = customer.driveFolderId;
 
-      // Create/get subfolder
+      // Auto-create customer folder if it doesn't exist
+      if (!customerFolderId) {
+        console.log('Creating OneDrive folder for customer:', customer.name);
+        try {
+          // Get or create BYD CRM/Customers root folder
+          const crmFolderId = await oneDriveService.getOrCreateFolder('BYD CRM', 'root');
+          const customersFolderId = await oneDriveService.getOrCreateFolder('Customers', crmFolderId);
+
+          // Create customer folder with their name
+          const sanitizedName = customer.name.replace(/[<>:"/\\|?*]/g, '-').trim();
+          customerFolderId = await oneDriveService.getOrCreateFolder(sanitizedName, customersFolderId);
+
+          // Save folder ID to customer record
+          const { updateCustomer, saveToLocalStorage: save, saveCustomerToFolder: saveFolder } = useCustomerStore.getState();
+          updateCustomer(customer.id, { driveFolderId: customerFolderId });
+          save();
+          saveFolder({ ...customer, driveFolderId: customerFolderId }, true);
+          console.log('Created customer folder:', customerFolderId);
+        } catch (e) {
+          console.error('Failed to create customer folder:', e);
+          setProcessResult({ error: 'Failed to create customer folder: ' + e.message });
+          setProcessing(null);
+          return;
+        }
+      }
+
+      // Determine target subfolder
+      const folderName = classification.folder || 'Other';
+      let targetFolderId = customerFolderId;
+
+      // Create/get subfolder for document type
       if (folderName && folderName !== 'Other') {
         try {
-          targetFolderId = await oneDriveService.getOrCreateFolder(folderName, customer.driveFolderId);
+          targetFolderId = await oneDriveService.getOrCreateFolder(folderName, customerFolderId);
         } catch (e) {
           console.warn('Could not create subfolder:', e);
         }
@@ -242,12 +280,14 @@ function ScannedDocsProcessor({ isOpen, onClose, onProcessComplete }) {
           classification: classification,
         });
         saveToLocalStorage();
-        saveCustomerToFolder(customer, true);
+        // Use updated customer with driveFolderId
+        saveCustomerToFolder({ ...customer, driveFolderId: customerFolderId }, true);
       }
 
+      const folderCreated = !customer.driveFolderId;
       setProcessResult({
         success: true,
-        message: `${classification.documentTypeName || 'Document'} moved to ${customer.name}/${folderName}`,
+        message: `${classification.documentTypeName || 'Document'} moved to ${customer.name}/${folderName}${folderCreated ? ' (folder created)' : ''}`,
         checklistUpdated: !!checklistMatch,
       });
 
@@ -459,6 +499,11 @@ function ScannedDocsProcessor({ isOpen, onClose, onProcessComplete }) {
                         <div>
                           <strong>{classification.documentTypeName}</strong>
                           <span>→ {classification.folder}</span>
+                          {classification.customerName && (
+                            <span className="sdp-customer-name">
+                              <User size={12} /> {classification.customerName}
+                            </span>
+                          )}
                           <span className="sdp-confidence">
                             {classification.confidence}% confident
                           </span>
@@ -480,9 +525,11 @@ function ScannedDocsProcessor({ isOpen, onClose, onProcessComplete }) {
                     >
                       <option value="">-- Select Customer --</option>
                       {customers
-                        .filter(c => !c.archiveStatus && c.driveFolderId)
+                        .filter(c => !c.archiveStatus)
                         .map(c => (
-                          <option key={c.id} value={c.id}>{c.name}</option>
+                          <option key={c.id} value={c.id}>
+                            {c.name}{!c.driveFolderId ? ' (new folder)' : ''}
+                          </option>
                         ))
                       }
                     </select>
