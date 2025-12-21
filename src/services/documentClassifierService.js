@@ -70,6 +70,8 @@ export async function classifyDocument(imageData, options = {}, onProgress = nul
   const prompt = `Analyze this scanned document for a car dealership CRM. Identify the document type from this list:
 ${documentTypes}
 
+Also extract the CUSTOMER NAME if visible on the document (buyer name, applicant name, or any person's name the document belongs to).
+
 Return ONLY valid JSON with these fields:
 {
   "documentType": "type_id_from_list",
@@ -77,10 +79,12 @@ Return ONLY valid JSON with these fields:
   "confidence": 95,
   "folder": "Folder name",
   "signed": true,
+  "customerName": "Customer full name if found",
   "summary": "Brief 10 word description"
 }
 
-Be specific - don't use "other" unless truly unidentifiable.`;
+If customer name is not visible, use empty string for customerName.
+Be specific about document type - don't use "other" unless truly unidentifiable.`;
 
   if (onProgress) onProgress({ stage: 'Processing with AI...', progress: 30 });
 
@@ -201,6 +205,7 @@ Be specific - don't use "other" unless truly unidentifiable.`;
       confidence: result.confidence || 50,
       folder: result.folder || docType?.folder || 'Other',
       milestone: docType?.milestone || null,
+      customerName: result.customerName || '',
       extractedInfo: {},
       quality: {
         overall: result.confidence || 70,
