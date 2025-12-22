@@ -467,7 +467,7 @@ function DocumentChecklistTab({ customer, onScanDocument, isSignedIn }) {
           padding: 12px;
           border-radius: 6px;
           margin-bottom: 6px;
-          background: var(--bg-tertiary);
+          background: rgba(148, 163, 184, 0.1);
           border: 1px solid var(--border-light);
         }
 
