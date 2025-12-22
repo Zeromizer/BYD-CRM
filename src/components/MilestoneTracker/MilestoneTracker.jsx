@@ -12,7 +12,11 @@ import {
   getDaysUntilMilestone,
   getMilestoneUrgency,
 } from '../../constants/milestones';
-import { Car, Handshake, ClipboardCheck, Package, Star, Calendar, Clock, ListTodo } from 'lucide-react';
+import {
+  REQUIRED_DOCUMENTS,
+  DOCUMENT_STATUS,
+} from '../../constants/documentRequirements';
+import { Car, Handshake, ClipboardCheck, Package, Star, Calendar, Clock, ListTodo, FileText, Upload, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import { SaveButton } from '../AnimatedButton/AnimatedButton';
 import './MilestoneTracker.css';
 
@@ -357,6 +361,55 @@ const MilestoneTracker = memo(function MilestoneTracker({ customer, onSave }) {
                       </label>
                     );
                   })}
+
+                  {/* Document Status Section */}
+                  {REQUIRED_DOCUMENTS[milestone.id]?.length > 0 && (
+                    <div className="milestone-documents-section">
+                      <div className="milestone-documents-header">
+                        <FileText size={14} />
+                        <span>Required Documents</span>
+                      </div>
+                      <div className="milestone-documents-list">
+                        {REQUIRED_DOCUMENTS[milestone.id].map((doc) => {
+                          const docState = customer?.documentChecklist?.[milestone.id]?.[doc.id];
+                          const status = docState?.status || DOCUMENT_STATUS.PENDING;
+                          const uploadedFiles = docState?.uploadedFiles || [];
+
+                          const getStatusIcon = () => {
+                            switch (status) {
+                              case DOCUMENT_STATUS.UPLOADED:
+                                return <Upload size={12} className="doc-status-icon uploaded" />;
+                              case DOCUMENT_STATUS.APPROVED:
+                                return <CheckCircle size={12} className="doc-status-icon approved" />;
+                              case DOCUMENT_STATUS.REJECTED:
+                                return <XCircle size={12} className="doc-status-icon rejected" />;
+                              case DOCUMENT_STATUS.EXPIRED:
+                                return <AlertCircle size={12} className="doc-status-icon expired" />;
+                              default:
+                                return <Clock size={12} className="doc-status-icon pending" />;
+                            }
+                          };
+
+                          return (
+                            <div key={doc.id} className={`milestone-doc-item ${status}`}>
+                              <div className="milestone-doc-info">
+                                {getStatusIcon()}
+                                <span className="milestone-doc-name">
+                                  {doc.name}
+                                  {doc.required && <span className="doc-required">*</span>}
+                                </span>
+                              </div>
+                              {uploadedFiles.length > 0 && (
+                                <span className="milestone-doc-count">
+                                  {uploadedFiles.length} file{uploadedFiles.length > 1 ? 's' : ''}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
