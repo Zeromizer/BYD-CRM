@@ -25,6 +25,9 @@ import {
   Trash2,
   Eye,
   Settings,
+  CheckSquare,
+  Square,
+  PlayCircle,
 } from 'lucide-react';
 import oneDriveService from '../../services/oneDriveService';
 import { classifyDocument } from '../../services/documentClassifierService';
@@ -67,10 +70,12 @@ function ScannedDocsProcessor({ isOpen, onClose, onProcessComplete }) {
   const [folderPath, setFolderPath] = useState(DEFAULT_SCANNED_DOCS_PATH);
   const [showSettings, setShowSettings] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
+  const [selectedFiles, setSelectedFiles] = useState([]); // Multi-select
   const [previewUrl, setPreviewUrl] = useState(null);
   const [classification, setClassification] = useState(null);
   const [selectedCustomerId, setSelectedCustomerId] = useState(null);
   const [processResult, setProcessResult] = useState(null);
+  const [batchProgress, setBatchProgress] = useState(null); // { current, total, results }
 
   // Get customers from store
   const customers = useCustomerStore((state) => state.customers);
@@ -329,6 +334,165 @@ function ScannedDocsProcessor({ isOpen, onClose, onProcessComplete }) {
     }
   };
 
+  // Toggle file selection for multi-select
+  const toggleFileSelection = (file, e) => {
+    e.stopPropagation();
+    setSelectedFiles(prev => {
+      const isSelected = prev.some(f => f.id === file.id);
+      if (isSelected) {
+        return prev.filter(f => f.id !== file.id);
+      } else {
+        return [...prev, file];
+      }
+    });
+  };
+
+  // Select all files
+  const selectAllFiles = () => {
+    if (selectedFiles.length === files.length) {
+      setSelectedFiles([]);
+    } else {
+      setSelectedFiles([...files]);
+    }
+  };
+
+  // Batch process all selected files
+  const handleBatchProcess = async () => {
+    if (selectedFiles.length === 0) return;
+
+    const filesToProcess = [...selectedFiles];
+    const results = [];
+    setBatchProgress({ current: 0, total: filesToProcess.length, results: [] });
+
+    for (let i = 0; i < filesToProcess.length; i++) {
+      const file = filesToProcess[i];
+      setBatchProgress(prev => ({ ...prev, current: i + 1 }));
+      setProcessing(file.id);
+
+      try {
+        // Download and classify
+        const blob = await oneDriveService.downloadFileAsBlob(file.id);
+        const base64 = await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result);
+          reader.readAsDataURL(blob);
+        });
+
+        const classificationResult = await classifyDocument(base64, {});
+
+        // Try to match customer
+        let matchedCustomer = null;
+        if (classificationResult.customerName) {
+          const extractedName = classificationResult.customerName.toLowerCase().trim();
+          matchedCustomer = customers.find(c => {
+            const customerName = c.name.toLowerCase().trim();
+            return customerName.includes(extractedName) ||
+                   extractedName.includes(customerName) ||
+                   extractedName.split(/\s+/).some(word =>
+                     word.length > 2 && customerName.includes(word)
+                   );
+          });
+        }
+
+        // Auto-process if confidence >= threshold and customer matched
+        if (classificationResult.confidence >= AUTO_PROCESS_CONFIDENCE_THRESHOLD && matchedCustomer) {
+          // Process the file
+          let customerFolderId = matchedCustomer.driveFolderId;
+
+          if (!customerFolderId) {
+            const crmFolderId = await oneDriveService.getOrCreateFolder('BYD CRM', 'root');
+            const customersFolderId = await oneDriveService.getOrCreateFolder('Customers', crmFolderId);
+            const sanitizedName = matchedCustomer.name.replace(/[<>:"/\\|?*]/g, '-').trim();
+            customerFolderId = await oneDriveService.getOrCreateFolder(sanitizedName, customersFolderId);
+
+            const { updateCustomer, saveToLocalStorage: save, saveCustomerToFolder: saveFolder } = useCustomerStore.getState();
+            updateCustomer(matchedCustomer.id, { driveFolderId: customerFolderId });
+            save();
+            saveFolder({ ...matchedCustomer, driveFolderId: customerFolderId }, true);
+          }
+
+          const folderName = classificationResult.folder || 'Other';
+          let targetFolderId = customerFolderId;
+          if (folderName && folderName !== 'Other') {
+            targetFolderId = await oneDriveService.getOrCreateFolder(folderName, customerFolderId);
+          }
+
+          const newFileName = generateFileName(classificationResult, matchedCustomer.name, file.name);
+          try {
+            await oneDriveService.renameFile(file.id, newFileName);
+          } catch (e) {
+            console.warn('Could not rename:', e);
+          }
+
+          await oneDriveService.moveFile(file.id, targetFolderId);
+
+          const checklistMatch = findMatchingChecklistItem(classificationResult);
+          if (checklistMatch) {
+            addDocumentFile(matchedCustomer.id, checklistMatch.milestoneId, checklistMatch.documentId, {
+              fileId: file.id,
+              fileName: newFileName,
+              classification: classificationResult,
+            });
+            saveToLocalStorage();
+            saveCustomerToFolder({ ...matchedCustomer, driveFolderId: customerFolderId }, true);
+          }
+
+          results.push({
+            file,
+            success: true,
+            auto: true,
+            message: `${newFileName} → ${matchedCustomer.name}/${folderName}`,
+            classification: classificationResult,
+            customer: matchedCustomer,
+          });
+
+          // Remove from files list
+          setFiles(prev => prev.filter(f => f.id !== file.id));
+        } else {
+          // Needs manual review
+          results.push({
+            file,
+            success: false,
+            auto: false,
+            message: `Needs review (${classificationResult.confidence}% confidence${matchedCustomer ? '' : ', no customer match'})`,
+            classification: classificationResult,
+            customer: matchedCustomer,
+          });
+        }
+      } catch (err) {
+        console.error('Batch process error for', file.name, err);
+        results.push({
+          file,
+          success: false,
+          error: err.message,
+        });
+      }
+
+      setBatchProgress(prev => ({ ...prev, results: [...results] }));
+    }
+
+    setProcessing(null);
+    setSelectedFiles([]);
+
+    // Show summary
+    const autoProcessed = results.filter(r => r.auto).length;
+    const needsReview = results.filter(r => !r.auto && !r.error).length;
+    const errors = results.filter(r => r.error).length;
+
+    setProcessResult({
+      success: true,
+      message: `Batch complete: ${autoProcessed} auto-processed, ${needsReview} need review, ${errors} errors`,
+      batchResults: results,
+    });
+
+    // Clear batch progress after delay
+    setTimeout(() => {
+      setBatchProgress(null);
+    }, 3000);
+
+    if (onProcessComplete) onProcessComplete();
+  };
+
   // Process and move file to customer folder
   const handleProcess = async () => {
     if (!selectedFile || !selectedCustomerId || !classification) return;
@@ -515,10 +679,38 @@ function ScannedDocsProcessor({ isOpen, onClose, onProcessComplete }) {
         <div className="sdp-content">
           {/* File List */}
           <div className="sdp-file-list">
-            <h3>
-              Pending Documents
-              {files.length > 0 && <span className="sdp-count">{files.length}</span>}
-            </h3>
+            <div className="sdp-file-list-header">
+              <h3>
+                Pending Documents
+                {files.length > 0 && <span className="sdp-count">{files.length}</span>}
+              </h3>
+              {files.length > 0 && (
+                <div className="sdp-batch-actions">
+                  <button
+                    className="sdp-btn small"
+                    onClick={selectAllFiles}
+                    title={selectedFiles.length === files.length ? 'Deselect All' : 'Select All'}
+                  >
+                    {selectedFiles.length === files.length ? (
+                      <CheckSquare size={16} />
+                    ) : (
+                      <Square size={16} />
+                    )}
+                  </button>
+                  {selectedFiles.length > 0 && (
+                    <button
+                      className="sdp-btn primary small"
+                      onClick={handleBatchProcess}
+                      disabled={processing || !isGeminiAvailable()}
+                      title={`Process ${selectedFiles.length} files`}
+                    >
+                      <PlayCircle size={16} />
+                      {selectedFiles.length}
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
 
             {loading && (
               <div className="sdp-loading">
@@ -541,10 +733,19 @@ function ScannedDocsProcessor({ isOpen, onClose, onProcessComplete }) {
                 {files.map(file => (
                   <div
                     key={file.id}
-                    className={`sdp-file-item ${selectedFile?.id === file.id ? 'selected' : ''}`}
+                    className={`sdp-file-item ${selectedFile?.id === file.id ? 'selected' : ''} ${selectedFiles.some(f => f.id === file.id) ? 'checked' : ''} ${processing === file.id ? 'processing' : ''}`}
                     onClick={() => handlePreview(file)}
                   >
-                    <FileText size={18} />
+                    <button
+                      className="sdp-checkbox"
+                      onClick={(e) => toggleFileSelection(file, e)}
+                    >
+                      {selectedFiles.some(f => f.id === file.id) ? (
+                        <CheckSquare size={18} />
+                      ) : (
+                        <Square size={18} />
+                      )}
+                    </button>
                     <div className="sdp-file-info">
                       <span className="sdp-file-name">{file.name}</span>
                       <span className="sdp-file-date">
@@ -557,13 +758,17 @@ function ScannedDocsProcessor({ isOpen, onClose, onProcessComplete }) {
                         })}
                       </span>
                     </div>
-                    <button
-                      className="sdp-btn icon small danger"
-                      onClick={(e) => { e.stopPropagation(); handleDelete(file); }}
-                      title="Delete"
-                    >
-                      <Trash2 size={14} />
-                    </button>
+                    {processing === file.id ? (
+                      <Loader className="spin" size={14} />
+                    ) : (
+                      <button
+                        className="sdp-btn icon small danger"
+                        onClick={(e) => { e.stopPropagation(); handleDelete(file); }}
+                        title="Delete"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
@@ -572,12 +777,39 @@ function ScannedDocsProcessor({ isOpen, onClose, onProcessComplete }) {
 
           {/* Processing Panel */}
           <div className="sdp-process-panel">
-            {!selectedFile ? (
+            {batchProgress && (
+              <div className="sdp-batch-progress">
+                <div className="sdp-batch-header">
+                  <Loader className="spin" size={20} />
+                  <span>Processing {batchProgress.current} of {batchProgress.total} files...</span>
+                </div>
+                <div className="sdp-progress-bar">
+                  <div
+                    className="sdp-progress-fill"
+                    style={{ width: `${(batchProgress.current / batchProgress.total) * 100}%` }}
+                  />
+                </div>
+                {batchProgress.results.length > 0 && (
+                  <div className="sdp-batch-results">
+                    {batchProgress.results.slice(-3).map((r, i) => (
+                      <div key={i} className={`sdp-batch-result ${r.auto ? 'success' : r.error ? 'error' : 'warning'}`}>
+                        {r.auto ? <Check size={14} /> : r.error ? <X size={14} /> : <Eye size={14} />}
+                        <span>{r.message || r.error}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            {!selectedFile && !batchProgress ? (
               <div className="sdp-empty">
                 <Eye size={48} />
                 <p>Select a document to preview and process</p>
+                {files.length > 0 && (
+                  <p className="sdp-hint">Or select multiple files and click the play button to batch process</p>
+                )}
               </div>
-            ) : (
+            ) : selectedFile && (
               <>
                 {/* Preview */}
                 <div className="sdp-preview">

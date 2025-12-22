@@ -108,23 +108,35 @@
 
 /* File List */
 .sdp-file-list {
-  width: 280px;
+  width: 320px;
   border-right: 1px solid var(--border-color, #e2e8f0);
   display: flex;
   flex-direction: column;
   background: var(--bg-secondary, #f8fafc);
 }
 
-.sdp-file-list h3 {
+.sdp-file-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-color, #e2e8f0);
+}
+
+.sdp-file-list-header h3 {
   display: flex;
   align-items: center;
   gap: 8px;
   margin: 0;
-  padding: 12px 16px;
   font-size: 14px;
   font-weight: 600;
-  border-bottom: 1px solid var(--border-color, #e2e8f0);
   color: var(--text-primary, #0f172a);
+}
+
+.sdp-batch-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .sdp-count {
@@ -133,6 +145,46 @@
   padding: 2px 8px;
   border-radius: 10px;
   font-size: 11px;
+}
+
+.sdp-btn.small {
+  padding: 6px 10px;
+  font-size: 12px;
+  min-height: auto;
+}
+
+.sdp-checkbox {
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--text-tertiary, #94a3b8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: auto;
+  min-height: auto;
+}
+
+.sdp-checkbox:hover {
+  color: var(--color-primary, #00BCD4);
+}
+
+.sdp-file-item.checked .sdp-checkbox {
+  color: var(--color-primary, #00BCD4);
+}
+
+.sdp-file-item.processing {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.sdp-file-item.processing::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--color-primary-light, rgba(0, 188, 212, 0.1));
+  border-radius: inherit;
 }
 
 .sdp-files {
@@ -150,6 +202,7 @@
   cursor: pointer;
   transition: all 0.15s;
   background: transparent;
+  position: relative;
 }
 
 .sdp-file-item:hover {
@@ -229,6 +282,73 @@
 
 .sdp-empty p {
   color: var(--text-secondary, #64748b);
+}
+
+.sdp-hint {
+  font-size: 12px;
+  opacity: 0.7;
+  margin-top: 8px;
+}
+
+/* Batch Progress */
+.sdp-batch-progress {
+  padding: 20px;
+  background: var(--bg-tertiary, #1e293b);
+  border-bottom: 1px solid var(--border-color, #334155);
+}
+
+.sdp-batch-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  color: var(--text-primary, #f1f5f9);
+  font-weight: 500;
+}
+
+.sdp-progress-bar {
+  height: 6px;
+  background: var(--bg-secondary, #334155);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.sdp-progress-fill {
+  height: 100%;
+  background: var(--color-primary, #00BCD4);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.sdp-batch-results {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sdp-batch-result {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm, 4px);
+  font-size: 12px;
+}
+
+.sdp-batch-result.success {
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--color-success, #10b981);
+}
+
+.sdp-batch-result.warning {
+  background: rgba(245, 158, 11, 0.15);
+  color: var(--color-warning, #f59e0b);
+}
+
+.sdp-batch-result.error {
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--color-error, #ef4444);
 }
 
 /* Preview */
