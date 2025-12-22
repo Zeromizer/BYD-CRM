@@ -11,7 +11,6 @@ import useTodoStore from '../stores/useTodoStore';
 import { getStorageService } from './storageServiceSelector';
 import userStorage from './userStorage';
 import { initializeGeminiService } from './geminiService';
-import { initializeScannerApiService } from './scannerApiService';
 
 class SyncCoordinator {
   constructor() {
@@ -91,7 +90,6 @@ class SyncCoordinator {
       await Promise.all([
         getStorageService().warmup(),
         initializeGeminiService(), // Load Gemini API key (localStorage fast path)
-        initializeScannerApiService(), // Load Scanner API config (localStorage fast path)
       ]);
       console.log(`Sync warmup: ${Date.now() - warmupStart}ms`);
 
