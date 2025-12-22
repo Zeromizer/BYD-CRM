@@ -13,31 +13,38 @@
  */
 export const DOCUMENT_TYPES = {
   // Identity Documents
+  ID_DOCUMENTS: {
+    id: 'id_documents',
+    name: 'ID Documents (NRIC & License)',
+    folder: 'NRIC',
+    keywords: ['nric', 'identity card', 'driving license', 'id documents', 'identification'],
+    milestone: 'test_drive',
+  },
   NRIC_FRONT: {
     id: 'nric_front',
     name: 'NRIC Front',
-    folder: 'NIRC',
+    folder: 'NRIC',
     keywords: ['nric', 'identity card', 'singapore id', 'fin'],
     milestone: 'test_drive',
   },
   NRIC_BACK: {
     id: 'nric_back',
     name: 'NRIC Back',
-    folder: 'NIRC',
+    folder: 'NRIC',
     keywords: ['nric back', 'address', 'identity card back'],
     milestone: 'test_drive',
   },
   DRIVING_LICENSE: {
     id: 'driving_license',
     name: 'Driving License',
-    folder: 'NIRC',
+    folder: 'NRIC',
     keywords: ['driving license', 'driver license', 'licence'],
     milestone: 'test_drive',
   },
   PASSPORT: {
     id: 'passport',
     name: 'Passport',
-    folder: 'NIRC',
+    folder: 'NRIC',
     keywords: ['passport', 'travel document'],
     milestone: 'test_drive',
   },
@@ -195,14 +202,14 @@ export const REQUIRED_DOCUMENTS = {
       id: 'nric',
       name: 'NRIC / ID',
       description: 'Front and back of Singapore NRIC or FIN card',
-      documentTypes: [DOCUMENT_TYPES.NRIC_FRONT.id, DOCUMENT_TYPES.NRIC_BACK.id],
+      documentTypes: [DOCUMENT_TYPES.ID_DOCUMENTS.id, DOCUMENT_TYPES.NRIC_FRONT.id, DOCUMENT_TYPES.NRIC_BACK.id],
       required: true,
     },
     {
       id: 'driving_license',
       name: 'Driving License',
       description: 'Valid Singapore driving license',
-      documentTypes: [DOCUMENT_TYPES.DRIVING_LICENSE.id],
+      documentTypes: [DOCUMENT_TYPES.ID_DOCUMENTS.id, DOCUMENT_TYPES.DRIVING_LICENSE.id],
       required: true,
     },
     {
