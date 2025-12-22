@@ -367,25 +367,26 @@ function DocumentChecklistTab({ customer, onScanDocument, isSignedIn }) {
           font-size: 18px;
           font-weight: 600;
           margin: 0 0 4px 0;
+          color: var(--text-primary);
         }
 
         .doc-checklist-subtitle {
-          color: #64748b;
+          color: var(--text-secondary);
           font-size: 14px;
           margin: 0;
         }
 
         .doc-milestone-section {
-          background: white;
+          background: var(--bg-card);
           border-radius: 8px;
           margin-bottom: 12px;
-          border: 1px solid #e2e8f0;
+          border: 1px solid var(--border-light);
           overflow: hidden;
         }
 
         .doc-milestone-section.current {
-          border-color: #3b82f6;
-          box-shadow: 0 0 0 1px #3b82f6;
+          border-color: var(--color-info);
+          box-shadow: 0 0 0 1px var(--color-info);
         }
 
         .doc-milestone-header {
@@ -394,12 +395,13 @@ function DocumentChecklistTab({ customer, onScanDocument, isSignedIn }) {
           justify-content: space-between;
           padding: 12px 16px;
           cursor: pointer;
-          background: #f8fafc;
+          background: var(--bg-secondary);
           user-select: none;
+          color: var(--text-primary);
         }
 
         .doc-milestone-header:hover {
-          background: #f1f5f9;
+          background: var(--bg-tertiary);
         }
 
         .doc-milestone-left {
@@ -416,12 +418,13 @@ function DocumentChecklistTab({ customer, onScanDocument, isSignedIn }) {
 
         .doc-milestone-name {
           font-weight: 500;
+          color: var(--text-primary);
         }
 
         .doc-current-badge {
           font-size: 11px;
           padding: 2px 6px;
-          background: #3b82f6;
+          background: var(--color-info);
           color: white;
           border-radius: 4px;
         }
@@ -435,7 +438,7 @@ function DocumentChecklistTab({ customer, onScanDocument, isSignedIn }) {
         .doc-progress-bar {
           width: 80px;
           height: 6px;
-          background: #e2e8f0;
+          background: var(--bg-tertiary);
           border-radius: 3px;
           overflow: hidden;
         }
@@ -447,13 +450,14 @@ function DocumentChecklistTab({ customer, onScanDocument, isSignedIn }) {
 
         .doc-progress-text {
           font-size: 12px;
-          color: #64748b;
+          color: var(--text-tertiary);
           min-width: 36px;
           text-align: right;
         }
 
         .doc-list {
           padding: 8px;
+          background: var(--bg-card);
         }
 
         .doc-item {
@@ -463,7 +467,7 @@ function DocumentChecklistTab({ customer, onScanDocument, isSignedIn }) {
           padding: 12px;
           border-radius: 6px;
           margin-bottom: 6px;
-          background: #f8fafc;
+          background: var(--bg-secondary);
           border: 1px solid transparent;
         }
 
@@ -472,18 +476,18 @@ function DocumentChecklistTab({ customer, onScanDocument, isSignedIn }) {
         }
 
         .doc-item.uploaded {
-          background: #eff6ff;
-          border-color: #bfdbfe;
+          background: rgba(59, 130, 246, 0.1);
+          border-color: rgba(59, 130, 246, 0.3);
         }
 
         .doc-item.approved {
-          background: #f0fdf4;
-          border-color: #bbf7d0;
+          background: rgba(34, 197, 94, 0.1);
+          border-color: rgba(34, 197, 94, 0.3);
         }
 
         .doc-item.rejected {
-          background: #fef2f2;
-          border-color: #fecaca;
+          background: rgba(239, 68, 68, 0.1);
+          border-color: rgba(239, 68, 68, 0.3);
         }
 
         .doc-item-main {
@@ -493,7 +497,7 @@ function DocumentChecklistTab({ customer, onScanDocument, isSignedIn }) {
         }
 
         .doc-item-icon {
-          color: #64748b;
+          color: var(--text-tertiary);
           padding-top: 2px;
         }
 
@@ -511,10 +515,11 @@ function DocumentChecklistTab({ customer, onScanDocument, isSignedIn }) {
         .doc-item-name {
           font-weight: 500;
           font-size: 14px;
+          color: var(--text-primary);
         }
 
         .doc-required {
-          color: #ef4444;
+          color: var(--color-error);
           margin-left: 2px;
         }
 
@@ -529,7 +534,7 @@ function DocumentChecklistTab({ customer, onScanDocument, isSignedIn }) {
         }
 
         .doc-item-description {
-          color: #64748b;
+          color: var(--text-secondary);
           font-size: 12px;
           margin: 4px 0 0 0;
         }
@@ -546,11 +551,11 @@ function DocumentChecklistTab({ customer, onScanDocument, isSignedIn }) {
           align-items: center;
           gap: 4px;
           padding: 4px 8px;
-          background: white;
-          border: 1px solid #e2e8f0;
+          background: var(--bg-card);
+          border: 1px solid var(--border-light);
           border-radius: 4px;
           font-size: 11px;
-          color: #475569;
+          color: var(--text-secondary);
         }
 
         .doc-item-notes {
@@ -559,10 +564,10 @@ function DocumentChecklistTab({ customer, onScanDocument, isSignedIn }) {
           gap: 4px;
           margin-top: 8px;
           padding: 8px;
-          background: #fff7ed;
+          background: rgba(249, 115, 22, 0.1);
           border-radius: 4px;
           font-size: 12px;
-          color: #9a3412;
+          color: #f97316;
         }
 
         .doc-item-actions {
@@ -580,14 +585,14 @@ function DocumentChecklistTab({ customer, onScanDocument, isSignedIn }) {
           border: none;
           border-radius: 6px;
           cursor: pointer;
-          background: white;
-          color: #64748b;
+          background: var(--bg-card);
+          color: var(--text-tertiary);
           transition: all 0.2s;
         }
 
         .doc-action-btn:hover {
-          background: #f1f5f9;
-          color: #1e293b;
+          background: var(--bg-tertiary);
+          color: var(--text-primary);
         }
 
         .doc-action-btn.scan {
@@ -595,8 +600,8 @@ function DocumentChecklistTab({ customer, onScanDocument, isSignedIn }) {
         }
 
         .doc-action-btn.scan:hover {
-          background: #f5f3ff;
-          color: #7c3aed;
+          background: rgba(139, 92, 246, 0.1);
+          color: #a78bfa;
         }
 
         .doc-action-menu {
@@ -604,10 +609,10 @@ function DocumentChecklistTab({ customer, onScanDocument, isSignedIn }) {
           top: 100%;
           right: 0;
           margin-top: 4px;
-          background: white;
-          border: 1px solid #e2e8f0;
+          background: var(--bg-card);
+          border: 1px solid var(--border-light);
           border-radius: 6px;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
           z-index: 10;
           min-width: 140px;
           overflow: hidden;
@@ -624,10 +629,11 @@ function DocumentChecklistTab({ customer, onScanDocument, isSignedIn }) {
           cursor: pointer;
           font-size: 13px;
           text-align: left;
+          color: var(--text-primary);
         }
 
         .doc-action-menu button:hover {
-          background: #f1f5f9;
+          background: var(--bg-secondary);
         }
 
         .doc-viewer-overlay {
@@ -636,7 +642,7 @@ function DocumentChecklistTab({ customer, onScanDocument, isSignedIn }) {
           left: 0;
           right: 0;
           bottom: 0;
-          background: rgba(0, 0, 0, 0.5);
+          background: var(--overlay-bg);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -644,10 +650,11 @@ function DocumentChecklistTab({ customer, onScanDocument, isSignedIn }) {
         }
 
         .doc-viewer-modal {
-          background: white;
+          background: var(--bg-card);
           padding: 24px;
           border-radius: 8px;
           min-width: 300px;
+          color: var(--text-primary);
         }
 
         @media (max-width: 640px) {
