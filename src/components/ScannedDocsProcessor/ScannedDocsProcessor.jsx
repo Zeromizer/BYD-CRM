@@ -43,6 +43,7 @@ const AUTO_PROCESS_CONFIDENCE_THRESHOLD = 95;
 
 // Generate a proper filename based on classification and customer
 // Format: Name - Form - dd.mm.yyyy.ext
+// Extracts page number from original filename if present
 function generateFileName(classification, customerName, originalFileName) {
   const ext = originalFileName.split('.').pop().toLowerCase();
   const date = new Date().toLocaleDateString('en-GB').replace(/\//g, '.'); // dd.mm.yyyy
@@ -56,6 +57,15 @@ function generateFileName(classification, customerName, originalFileName) {
   const customer = (customerName || 'Unknown')
     .replace(/[<>:"/\\|?*]/g, '-')
     .trim();
+
+  // Extract page number from original filename if present (e.g., "page_1", "page_2", "_1", "_2")
+  const pageMatch = originalFileName.match(/[_-]?page[_-]?(\d+)|[_-](\d+)\.[^.]+$/i);
+  const pageNum = pageMatch ? (pageMatch[1] || pageMatch[2]) : null;
+
+  // Build filename with optional page number
+  if (pageNum) {
+    return `${customer} - ${docType} - ${date} (${pageNum}).${ext}`;
+  }
 
   return `${customer} - ${docType} - ${date}.${ext}`;
 }
