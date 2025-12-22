@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { FolderOpen, ScanLine, Archive, ArchiveRestore, MessageCircle, Paperclip, Folder, File, Image, FileText, FileSpreadsheet, X, Loader, Copy, Check, ClipboardCheck, ListChecks, FolderInput } from 'lucide-react';
+import { FolderOpen, ScanLine, Archive, ArchiveRestore, MessageCircle, Paperclip, Folder, File, Image, FileText, FileSpreadsheet, X, Loader, Copy, Check, ClipboardCheck, FolderInput } from 'lucide-react';
 import useCustomerStore from '../../stores/useCustomerStore';
 import useAuthStore from '../../stores/useAuthStore';
 import { getStorageService } from '../../services/storageServiceSelector';
@@ -19,7 +19,6 @@ import VsaTab from './components/VsaTab';
 import InvoiceTab from './components/InvoiceTab';
 import DocumentsTab from './components/DocumentsTab';
 import CustomerStatusPanel from './components/CustomerStatusPanel';
-import DocumentChecklistTab from './components/DocumentChecklistTab';
 
 // Import custom hooks
 import { useCustomerForm, useGuarantors } from './hooks/useCustomerForm';
@@ -768,13 +767,6 @@ function CustomerDetails() {
             Status
           </button>
           <button
-            className={`tab tab-icon ${activeTab === 'checklist' ? 'active' : ''}`}
-            onClick={() => setActiveTab('checklist')}
-            title="Document Checklist"
-          >
-            <ListChecks size={18} />
-          </button>
-          <button
             className={`tab tab-icon ${activeTab === 'documents' ? 'active' : ''}`}
             onClick={() => setActiveTab('documents')}
             title="Documents"
@@ -872,19 +864,6 @@ function CustomerDetails() {
           {activeTab === 'status' && (
             <div key="status" className="tab-content-wrapper">
               <MilestoneTracker customer={customer} />
-            </div>
-          )}
-
-          {activeTab === 'checklist' && (
-            <div key="checklist" className="tab-content-wrapper">
-              <DocumentChecklistTab
-                customer={customer}
-                isSignedIn={isSignedIn}
-                onScanDocument={(docInfo) => {
-                  // Switch to scanner tab with document context
-                  setActiveTab('scanner');
-                }}
-              />
             </div>
           )}
 
