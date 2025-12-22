@@ -67,24 +67,23 @@ export async function classifyDocument(imageData, options = {}, onProgress = nul
 
   const documentTypes = getDocumentTypePrompt();
 
-  const prompt = `Analyze this scanned document for a car dealership CRM. Identify the document type from this list:
+  const prompt = `Analyze this scanned document for a car dealership CRM.
+
+IMPORTANT: If the image contains MULTIPLE document types (e.g., NRIC + Driving License scanned together), classify as "id_documents" (ID Documents).
+
+Document types:
 ${documentTypes}
 
-Also extract the CUSTOMER NAME if visible on the document (buyer name, applicant name, or any person's name the document belongs to).
+Extract the CUSTOMER NAME if visible (buyer/applicant/person's name).
 
-Return ONLY valid JSON with these fields:
-{
-  "documentType": "type_id_from_list",
-  "documentTypeName": "Human readable name",
-  "confidence": 95,
-  "folder": "Folder name",
-  "signed": true,
-  "customerName": "Customer full name if found",
-  "summary": "Brief 10 word description"
-}
+Return ONLY this JSON (no extra text):
+{"documentType":"type_id","documentTypeName":"Name","confidence":95,"folder":"Folder","signed":false,"customerName":"Name or empty","summary":"Brief description"}
 
-If customer name is not visible, use empty string for customerName.
-Be specific about document type - don't use "other" unless truly unidentifiable.`;
+Rules:
+- Multiple ID cards together = "id_documents"
+- NRIC only = "nric_front" or "nric_back"
+- License only = "driving_license"
+- Empty string for missing customerName`;
 
   if (onProgress) onProgress({ stage: 'Processing with AI...', progress: 30 });
 
