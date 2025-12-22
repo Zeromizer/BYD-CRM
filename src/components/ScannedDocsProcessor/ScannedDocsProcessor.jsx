@@ -43,8 +43,8 @@ const AUTO_PROCESS_CONFIDENCE_THRESHOLD = 95;
 
 // Generate a proper filename based on classification and customer
 // Format: Name - Form - dd.mm.yyyy.ext
-// Extracts page number from original filename if present
-function generateFileName(classification, customerName, originalFileName) {
+// Extracts page number from original filename if present, or adds unique suffix
+function generateFileName(classification, customerName, originalFileName, suffix = null) {
   const ext = originalFileName.split('.').pop().toLowerCase();
   const date = new Date().toLocaleDateString('en-GB').replace(/\//g, '.'); // dd.mm.yyyy
 
@@ -62,12 +62,44 @@ function generateFileName(classification, customerName, originalFileName) {
   const pageMatch = originalFileName.match(/[_-]?page[_-]?(\d+)|[_-](\d+)\.[^.]+$/i);
   const pageNum = pageMatch ? (pageMatch[1] || pageMatch[2]) : null;
 
-  // Build filename with optional page number
+  // Determine suffix: use page number if found, otherwise use provided suffix or timestamp
+  let fileSuffix = null;
   if (pageNum) {
-    return `${customer} - ${docType} - ${date} (${pageNum}).${ext}`;
+    fileSuffix = pageNum;
+  } else if (suffix !== null) {
+    fileSuffix = suffix;
+  } else {
+    // Generate unique suffix from timestamp (last 4 digits of milliseconds)
+    fileSuffix = String(Date.now()).slice(-4);
   }
 
-  return `${customer} - ${docType} - ${date}.${ext}`;
+  return `${customer} - ${docType} - ${date} (${fileSuffix}).${ext}`;
+}
+
+// Try to rename a file with retry on conflict
+async function renameFileWithRetry(fileId, classification, customerName, originalFileName) {
+  // First try with page number or timestamp suffix
+  let newFileName = generateFileName(classification, customerName, originalFileName);
+
+  try {
+    await oneDriveService.renameFile(fileId, newFileName);
+    return newFileName;
+  } catch (e) {
+    if (e.message && e.message.includes('already exists')) {
+      // Try with incremental suffix
+      for (let i = 1; i <= 10; i++) {
+        const suffixedName = generateFileName(classification, customerName, originalFileName, `${Date.now().toString().slice(-4)}-${i}`);
+        try {
+          await oneDriveService.renameFile(fileId, suffixedName);
+          return suffixedName;
+        } catch (retryErr) {
+          if (i === 10) throw retryErr;
+          continue;
+        }
+      }
+    }
+    throw e;
+  }
 }
 
 function ScannedDocsProcessor({ isOpen, onClose, onProcessComplete }) {
@@ -292,14 +324,14 @@ function ScannedDocsProcessor({ isOpen, onClose, onProcessComplete }) {
         targetFolderId = await oneDriveService.getOrCreateFolder(folderName, customerFolderId);
       }
 
-      // Generate new filename and rename
-      const newFileName = generateFileName(classificationResult, customer.name, file.name);
-      console.log('Auto-renaming file:', file.name, '→', newFileName);
-
+      // Generate new filename and rename with conflict handling
+      let newFileName;
       try {
-        await oneDriveService.renameFile(file.id, newFileName);
+        newFileName = await renameFileWithRetry(file.id, classificationResult, customer.name, file.name);
+        console.log('Auto-renamed file:', file.name, '→', newFileName);
       } catch (e) {
         console.warn('Could not rename file:', e);
+        newFileName = file.name; // Keep original name if rename fails
       }
 
       // Move the file
@@ -427,11 +459,13 @@ function ScannedDocsProcessor({ isOpen, onClose, onProcessComplete }) {
             targetFolderId = await oneDriveService.getOrCreateFolder(folderName, customerFolderId);
           }
 
-          const newFileName = generateFileName(classificationResult, matchedCustomer.name, file.name);
+          let newFileName;
           try {
-            await oneDriveService.renameFile(file.id, newFileName);
+            newFileName = await renameFileWithRetry(file.id, classificationResult, matchedCustomer.name, file.name);
+            console.log('Batch renamed:', file.name, '→', newFileName);
           } catch (e) {
             console.warn('Could not rename:', e);
+            newFileName = file.name;
           }
 
           await oneDriveService.moveFile(file.id, targetFolderId);
@@ -557,15 +591,14 @@ function ScannedDocsProcessor({ isOpen, onClose, onProcessComplete }) {
         }
       }
 
-      // Generate new filename and rename
-      const newFileName = generateFileName(classification, customer.name, selectedFile.name);
-      console.log('Renaming file:', selectedFile.name, '→', newFileName);
-
+      // Generate new filename and rename with conflict handling
+      let newFileName;
       try {
-        await oneDriveService.renameFile(selectedFile.id, newFileName);
+        newFileName = await renameFileWithRetry(selectedFile.id, classification, customer.name, selectedFile.name);
+        console.log('Renamed file:', selectedFile.name, '→', newFileName);
       } catch (e) {
         console.warn('Could not rename file:', e);
-        // Continue with move even if rename fails
+        newFileName = selectedFile.name; // Keep original name if rename fails
       }
 
       // Move the file
@@ -576,7 +609,7 @@ function ScannedDocsProcessor({ isOpen, onClose, onProcessComplete }) {
       if (checklistMatch) {
         addDocumentFile(customer.id, checklistMatch.milestoneId, checklistMatch.documentId, {
           fileId: selectedFile.id,
-          fileName: selectedFile.name,
+          fileName: newFileName,
           classification: classification,
         });
         saveToLocalStorage();
