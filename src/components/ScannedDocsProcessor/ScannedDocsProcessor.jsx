@@ -123,6 +123,15 @@ function ScannedDocsProcessor({ isOpen, onClose, onProcessComplete }) {
   const customers = useCustomerStore((state) => state.customers);
   const { addDocumentFile, saveToLocalStorage, saveCustomerToFolder } = useCustomerStore.getState();
 
+  // Cleanup blob URLs when previewUrl changes or component unmounts
+  useEffect(() => {
+    return () => {
+      if (previewUrl && previewUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
+
   // Load saved folder path
   useEffect(() => {
     const saved = localStorage.getItem(SETTINGS_KEY);
