@@ -7,40 +7,6 @@
   border-bottom: 1px solid var(--color-header-border, #334155);
 }
 
-/* Theme Toggle Button */
-.theme-toggle-btn {
-  width: 40px;
-  height: 40px;
-  border-radius: var(--radius-md);
-  border: 1px solid #475569;
-  background: #334155;
-  color: #ffffff;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.3s ease;
-  padding: 0;
-}
-
-.theme-toggle-btn:hover {
-  background: #475569;
-  border-color: var(--color-primary);
-  transform: scale(1.05);
-}
-
-.theme-toggle-btn:active {
-  transform: scale(0.95);
-}
-
-.theme-toggle-btn svg {
-  transition: transform 0.3s ease;
-}
-
-.theme-toggle-btn:hover svg {
-  transform: rotate(15deg);
-}
-
 .header-container {
   padding: 15px 40px;
   display: flex;
@@ -394,10 +360,5 @@
 
   .auth-button span:not(.status-dot) {
     display: none;
-  }
-
-  .theme-toggle-btn {
-    width: 48px;
-    height: 48px;
   }
 }
